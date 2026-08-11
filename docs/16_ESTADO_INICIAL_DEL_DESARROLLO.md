@@ -3,7 +3,7 @@
 - Fecha: `2026-08-10`
 - Estado: base local creada y verificada
 - Datos reales: ninguno
-- Servicios externos conectados: ninguno
+- Servicios externos conectados: repositorio privado de GitHub
 
 ## Resultado de esta etapa
 
@@ -29,10 +29,14 @@ reproducibles, sin vulnerabilidades reportadas por la instalacion.
 
 ```text
 src/
-  app/                         Pantalla y estilos iniciales
+  app/                         Pantallas, rutas de autenticacion y estilos
+  lib/supabase/                Clientes separados para navegador y servidor
   modules/
+    access/domain/             Decision identidad/autorizacion
     control-diario/
       domain/                  Reglas sin interfaz ni base de datos
+    purchases/domain/          Reglas confirmadas de compras
+supabase/migrations/           Esquema PostgreSQL versionado
 docs/                          Conocimiento y decisiones del proyecto
 ```
 
@@ -51,7 +55,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas de negocio | 5 de 5 aprobadas. |
+| Pruebas automatizadas | 18 de 18 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -62,22 +66,15 @@ para evitar errores de redondeo del lenguaje.
 - no se conecto Supabase;
 - no se creo autenticacion Google;
 - no se publico en Vercel;
-- no se creo ni conecto un repositorio remoto de GitHub;
 - no se copiaron datos de alumnos ni de la Plantilla Maestra;
 - no se modifico Sheets, Apps Script ni Panel Central;
 - no se implemento aun un formulario operativo.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe preparar la persistencia sin usar datos reales:
-
-1. definir el modelo inicial de usuarios, modalidades, periodos, empresas,
-   cuentas y compras;
-2. escribir sus reglas y pruebas antes de conectar una base remota;
-3. preparar migraciones PostgreSQL revisables;
-4. crear el repositorio privado de GitHub bajo propiedad de NODAL;
-5. conectar Supabase de desarrollo solamente cuando el modelo local este
-   revisado.
+La siguiente etapa debe crear y vincular un proyecto Supabase exclusivamente de
+desarrollo, aplicar y probar la migracion, y luego configurar Google OAuth sin
+habilitar todavia datos reales ni acceso de alumnos.
 
 Antes de crear cuentas externas se indicara al responsable de NODAL que debe
 hacer, que acceso conservar y que costo puede generar.

@@ -18,10 +18,11 @@ orden de lectura y los limites de responsabilidad.
 
 ## Estado
 
-- Aplicacion web: en definicion.
+- Aplicacion web: base tecnica en desarrollo, todavia no habilitada para alumnos.
 - Planilla actual: sistema de referencia y produccion.
 - Migracion: paralela, gradual y sin interrupcion del sistema actual.
-- Repositorio remoto de GitHub: pendiente de crear.
+- Repositorio remoto: privado en `mamaya-nodal/NODAL-App-v1`.
+- Base de datos: migracion inicial preparada; proyecto Supabase aun no vinculado.
 
 ## Primer inicio en Codex
 
@@ -65,4 +66,6 @@ los pendientes antes de proponer arquitectura.
   seguridad, servicios, ambientes, costos y orden de construccion.
 - `docs/16_ESTADO_INICIAL_DEL_DESARROLLO.md`: herramientas instaladas,
   verificaciones aprobadas y limites de la primera base local.
+- `docs/17_MODELO_INICIAL_DATOS_Y_ACCESO.md`: tablas iniciales, aislamiento,
+  reglas de compra confirmadas y pendientes antes de conectar Supabase.
 

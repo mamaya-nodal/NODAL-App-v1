@@ -10,3 +10,7 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 Thumbs.db
+
+# Estado interno generado por Supabase CLI.
+supabase/.temp/
+supabase/.branches/
