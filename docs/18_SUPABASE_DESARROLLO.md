@@ -35,19 +35,28 @@ servicios disponibles en ese momento.
 
 ## Historial de migraciones
 
-El SQL remoto coincide con la migracion versionada, pero la tabla interna de
-historial de Supabase CLI todavia no existe porque la primera aplicacion se hizo
-desde el panel. Antes de aplicar una segunda migracion se debe:
+El repositorio quedo vinculado al proyecto remoto
+`bluxgbxpepnfnjczwjgh`. El `2026-08-11` se reparo el historial con
+`migration repair` para registrar como aplicada la migracion inicial que se
+habia ejecutado desde el panel.
 
-1. autenticar Supabase CLI mediante un token personal de NODAL;
-2. vincular el repositorio con el proyecto de desarrollo;
-3. ejecutar `migration repair --status applied 20260811000000`;
-4. comprobar con `migration list` que Local y Remote coinciden;
-5. usar `db push --dry-run` antes de cada aplicacion posterior.
+La verificacion posterior confirmo:
 
-No se creara ni guardara ese token en Git. La herramienta local no puede usar
-el acceso automatico en el entorno no interactivo de Codex, por lo que la
-creacion del token requiere autorizacion explicita del propietario.
+- version local: `20260811000000`;
+- version remota: `20260811000000`;
+- `db push --dry-run`: base remota actualizada, sin migraciones pendientes.
+
+Las migraciones posteriores deben crearse como archivos versionados y probarse
+primero con `db push --dry-run`. No se deben ejecutar cambios manuales aislados
+desde el panel.
+
+Supabase CLI quedo autenticado localmente mediante un token personal de NODAL.
+El token se almacena fuera del repositorio y no debe copiarse a archivos del
+proyecto. Tiene vencimiento y debera renovarse cuando la herramienta lo indique.
+
+En este equipo, Supabase CLI necesita un paquete local de certificados de
+confianza de Windows para conectarse a la API. Ese archivo se genera dentro de
+`supabase/.temp/`, esta ignorado por Git y no forma parte del producto.
 
 ## Pendiente para Google
 
