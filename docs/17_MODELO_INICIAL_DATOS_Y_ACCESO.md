@@ -1,7 +1,7 @@
 # Modelo inicial de datos y acceso
 
 - Fecha: `2026-08-11`
-- Estado: primera base implementada localmente; pendiente de vincular a Supabase
+- Estado: base implementada localmente y aplicada a Supabase de desarrollo
 - Datos: exclusivamente estructura y catalogos confirmados, sin alumnos reales
 
 ## Proposito
@@ -63,8 +63,7 @@ nuevas migraciones cuando el area propietaria las confirme.
 
 ## Limitacion local conocida
 
-La computadora actual no tiene Docker instalado. Por eso la migracion queda
-revisable y versionada, pero su ejecucion real en PostgreSQL se comprobara al
-crear el proyecto Supabase de desarrollo o al disponer de un entorno local
-compatible. Esto no afecta las pruebas TypeScript, pero impide afirmar todavia
-que la migracion fue aplicada exitosamente a una base real.
+La computadora actual no tiene Docker instalado. La migracion fue aplicada y
+verificada en el PostgreSQL remoto de desarrollo, pero todavia no puede
+reproducirse con `db reset` en una base local. Esto no afecta las pruebas
+TypeScript ni autoriza el uso de datos reales.

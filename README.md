@@ -22,7 +22,7 @@ orden de lectura y los limites de responsabilidad.
 - Planilla actual: sistema de referencia y produccion.
 - Migracion: paralela, gradual y sin interrupcion del sistema actual.
 - Repositorio remoto: privado en `mamaya-nodal/NODAL-App-v1`.
-- Base de datos: migracion inicial preparada; proyecto Supabase aun no vinculado.
+- Base de datos: Supabase de desarrollo creado, migracion inicial aplicada y RLS verificado.
 
 ## Primer inicio en Codex
 
@@ -68,4 +68,6 @@ los pendientes antes de proponer arquitectura.
   verificaciones aprobadas y limites de la primera base local.
 - `docs/17_MODELO_INICIAL_DATOS_Y_ACCESO.md`: tablas iniciales, aislamiento,
   reglas de compra confirmadas y pendientes antes de conectar Supabase.
+- `docs/18_SUPABASE_DESARROLLO.md`: proyecto remoto de desarrollo, pruebas de
+  aislamiento y pasos pendientes para migraciones CLI y Google OAuth.
 

@@ -1,0 +1,2 @@
+-- Datos ficticios de desarrollo se agregaran aqui cuando existan casos
+-- anonimizados aprobados. Este archivo nunca debe contener datos productivos.

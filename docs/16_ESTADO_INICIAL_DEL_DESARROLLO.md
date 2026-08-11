@@ -3,7 +3,7 @@
 - Fecha: `2026-08-10`
 - Estado: base local creada y verificada
 - Datos reales: ninguno
-- Servicios externos conectados: repositorio privado de GitHub
+- Servicios externos conectados: GitHub privado y Supabase de desarrollo
 
 ## Resultado de esta etapa
 
@@ -63,7 +63,6 @@ para evitar errores de redondeo del lenguaje.
 
 ## Lo que deliberadamente no se hizo
 
-- no se conecto Supabase;
 - no se creo autenticacion Google;
 - no se publico en Vercel;
 - no se copiaron datos de alumnos ni de la Plantilla Maestra;
@@ -72,9 +71,8 @@ para evitar errores de redondeo del lenguaje.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe crear y vincular un proyecto Supabase exclusivamente de
-desarrollo, aplicar y probar la migracion, y luego configurar Google OAuth sin
-habilitar todavia datos reales ni acceso de alumnos.
+La siguiente etapa debe sincronizar el historial de Supabase CLI y configurar
+Google OAuth sin habilitar todavia datos reales ni acceso de alumnos.
 
 Antes de crear cuentas externas se indicara al responsable de NODAL que debe
 hacer, que acceso conservar y que costo puede generar.
