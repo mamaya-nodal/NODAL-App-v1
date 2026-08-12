@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { decideAccess } from "@/modules/access/domain/access-decision";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 import {
+  buildProgressSummary,
+  type ProgressSummary as ProgressSummaryData,
+  type SummaryAccountState,
+} from "@/modules/summary/domain/progress-summary";
+import {
   formatPeriodLabel,
   resolveWorkspaceSelection,
   type WorkspaceOption,
@@ -18,6 +23,7 @@ import {
   OperationRegister,
   type RegisterAccount,
 } from "./operation-register";
+import { ProgressSummary } from "./progress-summary";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -124,6 +130,12 @@ export default async function PrivateAppPage({
   let accountOptions: AccountView[] = [];
   let dailyControls: PersistedDailyControl[] = [];
   let operationEntries: OperationRegisterEntry[] = [];
+  let progressSummary: ProgressSummaryData = buildProgressSummary({
+    accountStates: [],
+    controls: [],
+    operationEntryCount: 0,
+    purchaseCostsInCents: [],
+  });
 
   if (allowed && selection?.period) {
     const [
@@ -153,7 +165,7 @@ export default async function PrivateAppPage({
         supabase
           .from("daily_controls")
           .select(
-            "control_number, kind, movement_cents, balance_after_cents, operating_result_cents",
+            "control_number, operated_on, kind, movement_cents, balance_after_cents, operating_result_cents",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
@@ -244,6 +256,26 @@ export default async function PrivateAppPage({
         },
       ];
     });
+    progressSummary = buildProgressSummary({
+      accountStates: (accountRows ?? []).map(
+        (account) => account.state as SummaryAccountState,
+      ),
+      controls: (dailyControlRows ?? []).map((control) => ({
+        balanceInCents: Number(control.balance_after_cents),
+        kind: control.kind,
+        movementInCents:
+          control.movement_cents === null ? null : Number(control.movement_cents),
+        operatedOn: control.operated_on,
+        operatingResultInCents:
+          control.operating_result_cents === null
+            ? null
+            : Number(control.operating_result_cents),
+      })),
+      operationEntryCount: operationEntries.length,
+      purchaseCostsInCents: (purchaseRows ?? []).map((purchase) =>
+        Number(purchase.price_cents),
+      ),
+    });
   }
 
   return (
@@ -282,7 +314,7 @@ export default async function PrivateAppPage({
             <a href="#compras">Compras</a>
             <a href="#control-diario">Control Diario</a>
             <a href="#registro">Registro</a>
-            <span>Resumen <small>Próximamente</small></span>
+            <a href="#resumen">Resumen</a>
             <form action="/auth/logout" className="logout-form" method="post">
               <button type="submit">Cerrar sesión</button>
             </form>
@@ -504,6 +536,10 @@ export default async function PrivateAppPage({
 
       {allowed && selection?.period && (
         <OperationRegister accounts={accountOptions} entries={operationEntries} />
+      )}
+
+      {allowed && selection?.period && (
+        <ProgressSummary summary={progressSummary} />
       )}
 
       {allowed && !selection && (

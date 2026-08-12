@@ -1085,6 +1085,135 @@ h1 {
   color: #9f2f2a;
 }
 
+.progress-summary-panel {
+  margin-top: 24px;
+  padding: 36px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  scroll-margin-top: 20px;
+}
+
+.summary-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.summary-heading h2 {
+  margin-bottom: 0;
+  font-size: 1.8rem;
+}
+
+.calculated-badge {
+  padding: 9px 13px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.progress-primary-grid,
+.progress-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.progress-primary-grid {
+  margin-top: 26px;
+}
+
+.progress-detail-grid {
+  margin-top: 14px;
+}
+
+.progress-card {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+}
+
+.progress-card.featured {
+  border-color: #a7d2ba;
+  background: var(--brand-soft);
+}
+
+.progress-card > span,
+.progress-card small {
+  color: var(--muted);
+}
+
+.progress-card strong {
+  font-size: 1.45rem;
+}
+
+.progress-card a {
+  width: fit-content;
+  margin-top: 5px;
+  color: var(--brand);
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.progress-detail {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.progress-detail h3 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+}
+
+.progress-detail dl {
+  margin: 0;
+}
+
+.progress-detail dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.progress-detail dl > div:last-child {
+  border-bottom: 0;
+}
+
+.progress-detail dt {
+  color: var(--muted);
+}
+
+.progress-detail dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.progress-detail p,
+.summary-scope-warning p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.summary-scope-warning {
+  margin-top: 14px;
+  padding: 18px;
+  border-left: 4px solid #d49d2f;
+  border-radius: 0 14px 14px 0;
+  background: #fff8e6;
+}
+
 @media (max-width: 720px) {
   .shell {
     padding: 64px 0;
@@ -1135,6 +1264,10 @@ h1 {
   }
 
   .operation-register-panel {
+    padding: 26px;
+  }
+
+  .progress-summary-panel {
     padding: 26px;
   }
 
@@ -1189,7 +1322,9 @@ h1 {
   .sync-balance-comparison,
   .contingency-form,
   .register-filters,
-  .register-summary {
+  .register-summary,
+  .progress-primary-grid,
+  .progress-detail-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1199,6 +1334,7 @@ h1 {
   .allocation-heading,
   .allocation-row,
   .register-heading,
+  .summary-heading,
   .register-account-title,
   .register-entry {
     align-items: flex-start;

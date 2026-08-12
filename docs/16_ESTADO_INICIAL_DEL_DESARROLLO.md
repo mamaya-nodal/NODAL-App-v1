@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 69 de 69 aprobadas. |
+| Pruebas automatizadas | 73 de 73 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -100,11 +100,12 @@ para evitar errores de redondeo del lenguaje.
 | Confirmacion desde interfaz | Deposito USD 5.000 y saldo USD 5.600 generaron resultado USD 600, tres participantes y tres registros por cuenta de USD 200. |
 | Persistencia visual | Tras recargar, el saldo y el historial confirmados reaparecieron desde Supabase. |
 | Estado preservado | Las cuentas participantes continuaron virgenes; Control Diario no cambia estados con resultados parciales. |
-| Limpieza de prueba | Los dos controles tecnicos, sus registros derivados y auditorias se retiraron despues de verificarlos; las compras existentes se conservaron. |
+| Limpieza de prueba | Los controles técnicos, sus registros derivados, las seis compras de demostración, sus cuentas y auditorías se retiraron después de verificarlos. La base funcional quedó vacía. |
 | Registro de Operaciones | Vista de solo lectura por empresa y cuenta conectada a las entradas derivadas de Control Diario. |
 | Fases visibles | Cada entrada muestra fase, fecha, rol lider/replica, destino broker, importe y origen en Control Diario. |
 | Resumen acotado | Suma `NETO BROKER +`, `NETO BROKER -` y resultado broker visible sin presentarlo como `TOTAL GANANCIA`. |
 | Actualizacion del Registro | Dos saldos consecutivos actualizaron automaticamente la cuenta lider y sus replicas; la prueba reversible fue retirada luego de comprobarla. |
+| Resumen inicial | Sección calculada y enlazada desde la navegación con saldo broker, resultado operativo registrado, cuentas, compras, actividad y movimientos separados. La ausencia de saldo no se representa como cero. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -125,10 +126,10 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 
 ## Siguiente etapa tecnica
 
-La transaccion, su conexion con Control Diario y el Registro de Operaciones de
-solo lectura ya fueron comprobados. El siguiente avance debe completar el
-detalle consultable de una cuenta o preparar el primer Resumen de progreso con
-los datos que ya sean inequívocos. La correccion historica, la actualizacion de
+La transacción, su conexión con Control Diario, el Registro de Operaciones de
+solo lectura y el primer Resumen de progreso ya fueron comprobados. El siguiente
+avance debe completar el detalle consultable de una cuenta o avanzar sobre una
+regla pendiente solamente cuando sus fuentes permitan equivalencia. La corrección histórica, la actualización de
 estados y el calculo completo de `TOTAL GANANCIA` siguen separados hasta validar
 sus reglas y casos de equivalencia. Todavia no se habilitan datos reales ni
 acceso general de alumnos.
