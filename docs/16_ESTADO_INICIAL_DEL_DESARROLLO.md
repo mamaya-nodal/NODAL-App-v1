@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 75 de 75 aprobadas. |
+| Pruebas automatizadas | 77 de 77 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -108,6 +108,7 @@ para evitar errores de redondeo del lenguaje.
 | Resumen inicial | Sección calculada y enlazada desde la navegación con saldo broker, resultado operativo registrado, cuentas, compras, actividad y movimientos separados. La ausencia de saldo no se representa como cero. |
 | Detalle de cuenta | La selección del Registro muestra ficha de compra, estado guardado, precio, origen, participación como líder o réplica y las seis fases con sus subtotales broker visibles. |
 | Verificación visual de cuenta | Se creó una compra técnica temporal de LUCID por USD 89, se revisó la ficha completa y luego se retiraron compra, cuenta y auditoría. La base volvió a cero compras y cero cuentas. |
+| Inicio del alumno | Síntesis automática de saldo, resultado operativo, cuentas y operatorias, con siguiente paso contextual y enlace directo al módulo correspondiente. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El

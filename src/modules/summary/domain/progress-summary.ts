@@ -21,6 +21,13 @@ export type ProgressSummary = Readonly<{
   withdrawalsInCents: number;
 }>;
 
+export type HomeNextStep = Readonly<{
+  description: string;
+  href: "#compras" | "#control-diario";
+  label: string;
+  title: string;
+}>;
+
 type ProgressSummaryInput = Readonly<{
   accountStates: SummaryAccountState[];
   controls: SummaryDailyControl[];
@@ -61,5 +68,35 @@ export function buildProgressSummary({
     withdrawalsInCents: controls
       .filter((control) => control.kind === "withdrawal")
       .reduce((total, control) => total + (control.movementInCents ?? 0), 0),
+  };
+}
+
+export function chooseHomeNextStep(summary: ProgressSummary): HomeNextStep {
+  if (summary.accountCount === 0) {
+    return {
+      description:
+        "La primera cuenta habilita la selección de empresa, líder y réplicas.",
+      href: "#compras",
+      label: "Registrar una compra",
+      title: "Comenzá registrando una cuenta",
+    };
+  }
+
+  if (summary.brokerBalanceInCents === null) {
+    return {
+      description:
+        "El depósito inicial establece el saldo de referencia para calcular las operatorias.",
+      href: "#control-diario",
+      label: "Informar depósito inicial",
+      title: "Establecé el saldo broker inicial",
+    };
+  }
+
+  return {
+    description:
+      "Elegí empresa, cuenta líder, réplicas y fase antes del siguiente saldo broker.",
+    href: "#control-diario",
+    label: "Preparar próxima operación",
+    title: "El espacio está listo para operar",
   };
 }

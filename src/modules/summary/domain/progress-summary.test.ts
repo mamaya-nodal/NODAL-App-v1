@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildProgressSummary } from "./progress-summary";
+import { buildProgressSummary, chooseHomeNextStep } from "./progress-summary";
 
 describe("resumen inicial de progreso", () => {
   it("mantiene separados saldo, movimientos y resultado operativo", () => {
@@ -37,5 +37,36 @@ describe("resumen inicial de progreso", () => {
     expect(summary.brokerBalanceInCents).toBeNull();
     expect(summary.brokerBalanceUpdatedOn).toBeNull();
     expect(summary.operatingResultInCents).toBe(0);
+  });
+
+  it("guía primero a registrar una cuenta y luego a establecer el saldo", () => {
+    const empty = buildProgressSummary({
+      accountStates: [], controls: [], operationEntryCount: 0, purchaseCostsInCents: [],
+    });
+    const accountWithoutBalance = buildProgressSummary({
+      accountStates: ["virgin"], controls: [], operationEntryCount: 0, purchaseCostsInCents: [8_900],
+    });
+
+    expect(chooseHomeNextStep(empty).href).toBe("#compras");
+    expect(chooseHomeNextStep(accountWithoutBalance).label).toBe(
+      "Informar depósito inicial",
+    );
+  });
+
+  it("indica preparar la operación cuando ya existen cuenta y saldo", () => {
+    const ready = buildProgressSummary({
+      accountStates: ["virgin"],
+      controls: [{
+        balanceInCents: 500_000,
+        kind: "deposit",
+        movementInCents: 500_000,
+        operatedOn: "2026-08-12",
+        operatingResultInCents: null,
+      }],
+      operationEntryCount: 0,
+      purchaseCostsInCents: [8_900],
+    });
+
+    expect(chooseHomeNextStep(ready).title).toBe("El espacio está listo para operar");
   });
 });

@@ -19,6 +19,7 @@ import {
   DailyControlPreview,
   type PersistedDailyControl,
 } from "./daily-control-preview";
+import { HomeOverview } from "./home-overview";
 import {
   OperationRegister,
   type RegisterAccount,
@@ -297,7 +298,7 @@ export default async function PrivateAppPage({
           <span className="development-badge">Prototipo de desarrollo</span>
         </div>
 
-        <div className="app-welcome" id="inicio">
+        <div className="app-welcome">
           <div>
             <p className="eyebrow">ESPACIO PRIVADO DEL ALUMNO</p>
             <h1 id="private-title">
@@ -414,6 +415,14 @@ export default async function PrivateAppPage({
             este período. Real y Práctica nunca se mezclarán.
           </p>
         </section>
+      )}
+
+      {allowed && selection?.period && (
+        <HomeOverview
+          modalityLabel={selection.workspace.modality === "real" ? "Real" : "Práctica"}
+          periodLabel={formatPeriodLabel(selection.period.periodMonth)}
+          summary={progressSummary}
+        />
       )}
 
       {allowed && selection?.period && (
