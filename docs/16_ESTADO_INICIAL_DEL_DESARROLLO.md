@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 40 de 40 aprobadas. |
+| Pruebas automatizadas | 47 de 47 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -79,6 +79,8 @@ para evitar errores de redondeo del lenguaje.
 | Alta transaccional | Fecha, numero, referencia, cuenta virgen y auditoria se generan juntos. |
 | Seguridad de compras | Sin escritura directa del navegador; funcion validada solo para usuario autorizado y periodo propio. |
 | Nucleo de Control Diario | Depositos, retiros y actualizaciones de saldo calculados con centavos enteros y sin mezclar capital con resultado. |
+| Vista previa de Control Diario | Simulacion interactiva aprobada: deposito USD 5.000 y saldo USD 5.500 producen resultado +USD 500. |
+| Ausencia de persistencia | Tras recargar, saldo e historial simulados desaparecen; no se escriben datos en Supabase. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El

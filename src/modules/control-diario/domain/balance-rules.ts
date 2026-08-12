@@ -8,6 +8,23 @@ export type DailyBalanceResult = Readonly<{
   operatingResultInCents: number | null;
 }>;
 
+export function parseControlAmountToCents(value: string): number {
+  const normalized = value.trim().replace(",", ".");
+
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
+    throw new Error("El importe debe tener hasta dos decimales.");
+  }
+
+  const [whole, fraction = ""] = normalized.split(".");
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+
+  if (!Number.isSafeInteger(cents)) {
+    throw new Error("El importe indicado es demasiado grande.");
+  }
+
+  return cents;
+}
+
 function assertNonnegativeIntegerCents(value: number, fieldName: string): void {
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new Error(`${fieldName} debe ser un importe no negativo en centavos.`);

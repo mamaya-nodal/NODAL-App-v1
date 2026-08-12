@@ -1,6 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateDailyBalance } from "./balance-rules";
+import {
+  calculateDailyBalance,
+  parseControlAmountToCents,
+} from "./balance-rules";
+
+describe("entrada monetaria de Control Diario", () => {
+  it.each([
+    ["5000", 500_000],
+    ["5500.25", 550_025],
+    ["4700,5", 470_050],
+  ])("convierte %s a centavos exactos", (value, expected) => {
+    expect(parseControlAmountToCents(value)).toBe(expected);
+  });
+
+  it.each(["", "-10", "1.234", "abc"])(
+    "rechaza el importe inválido %s",
+    (value) => {
+      expect(() => parseControlAmountToCents(value)).toThrow();
+    },
+  );
+});
 
 describe("saldo de referencia de Control Diario", () => {
   it("usa el primer depósito como saldo inicial sin generar resultado", () => {

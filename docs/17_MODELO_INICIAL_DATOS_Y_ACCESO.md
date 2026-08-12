@@ -98,6 +98,13 @@ Este servicio todavia no guarda registros. Los campos operativos completos, la
 seleccion de cuentas y el flujo de correcciones se conectaran solo al validar
 los casos que requieren Contabilidad y Operaciones.
 
+La aplicacion incluye una vista previa temporal para comprobar estas reglas sin
+crear datos economicos. Mantiene un historial exclusivamente en la memoria de
+la pantalla, indica de forma visible `No guarda datos` y elimina todo al
+recargar. No solicita empresa, cuenta, replicas ni fase porque esos campos solo
+se habilitaran cuando existan cuentas de desarrollo conscientes y se valide el
+guardado operativo completo.
+
 Estas decisiones no se completan con valores provisorios. Se agregaran mediante
 nuevas migraciones cuando el area propietaria las confirme.
 

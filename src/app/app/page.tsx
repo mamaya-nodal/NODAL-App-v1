@@ -9,6 +9,7 @@ import {
 } from "@/modules/workspace/domain/selection";
 
 import { createPurchase } from "./purchase-actions";
+import { DailyControlPreview } from "./daily-control-preview";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -388,6 +389,8 @@ export default async function PrivateAppPage({
           </div>
         </section>
       )}
+
+      {allowed && selection?.period && <DailyControlPreview />}
 
       {allowed && !selection && (
         <p className="notice">
