@@ -101,3 +101,37 @@ El `2026-08-12` se verifico en la aplicacion local el recorrido completo:
 La prueba confirma que identidad y autorizacion son controles independientes.
 El siguiente paso no es abrir el acceso general, sino definir y probar el alta
 administrativa del primer usuario autorizado de desarrollo.
+
+## Autorizacion controlada
+
+El `2026-08-12` se aplico la migracion
+`20260812000000_controlled_user_authorization.sql` y se sincronizo su version
+en el historial remoto de Supabase.
+
+La migracion incorpora:
+
+- una funcion privilegiada para autorizar un usuario que ya se identifico con
+  Google;
+- una funcion privilegiada para revocar su acceso;
+- normalizacion del correo y rechazo de identidades inexistentes;
+- motivo obligatorio para cada cambio;
+- auditoria separada de altas y revocaciones;
+- comportamiento idempotente cuando el estado solicitado ya esta vigente;
+- RLS y ausencia de permisos directos para `anon` y `authenticated`;
+- ejecucion reservada a `service_role` o al propietario de la base.
+
+Se autorizo al responsable de NODAL como primer usuario del ambiente de
+desarrollo, sin copiar su correo ni su identificador al repositorio. La prueba
+posterior de Google OAuth mostro `Acceso autorizado` y estado `Habilitado`.
+
+La verificacion remota de privilegios confirmo:
+
+| Control | Resultado |
+|---|---|
+| `anon` puede autorizar | No. |
+| `authenticated` puede autorizar | No. |
+| `service_role` puede autorizar | Si. |
+| RLS de la auditoria | Activo. |
+
+Este mecanismo no decide todavia la matriz definitiva de roles administrativos.
+Esa decision sigue abierta y no se reemplazo por un rol inventado.

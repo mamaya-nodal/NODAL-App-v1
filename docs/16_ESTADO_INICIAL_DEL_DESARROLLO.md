@@ -65,6 +65,10 @@ para evitar errores de redondeo del lenguaje.
 | Separacion identidad/autorizacion | Aprobada: identidad valida sin registro activo queda bloqueada. |
 | Cierre de sesion | Aprobado. |
 | Acceso directo a `/app` sin sesion | Bloqueado y redirigido al inicio. |
+| Primer usuario de desarrollo | Autorizado y verificado de extremo a extremo. |
+| Alta desde `anon` o `authenticated` | Bloqueada por permisos de PostgreSQL. |
+| Alta desde `service_role` | Permitida exclusivamente en servidor privilegiado. |
+| Auditoria de autorizaciones | RLS activo y acceso directo del alumno revocado. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -80,9 +84,9 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe crear el mecanismo administrativo controlado para
-autorizar usuarios NODAL y preparar el primer usuario de desarrollo, sin
-habilitar todavia datos reales ni acceso de alumnos.
+La siguiente etapa debe crear los espacios iniciales `Real` y `Practica` del
+primer usuario de desarrollo y definir como se seleccionara el periodo mensual,
+sin habilitar todavia datos reales ni acceso de alumnos.
 
 Antes de crear cuentas externas se indicara al responsable de NODAL que debe
 hacer, que acceso conservar y que costo puede generar.

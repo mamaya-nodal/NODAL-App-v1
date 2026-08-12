@@ -15,6 +15,7 @@ un formulario operativo ni reemplaza ninguna funcion de Sheets.
 | Registro | Responsabilidad |
 |---|---|
 | `nodal_users` | Vincula la identidad de Supabase/Google con la autorizacion previa de NODAL. |
+| `access_authorization_events` | Audita cada alta o revocacion de acceso, su responsable y motivo. |
 | `workspaces` | Separa los espacios `Real` y `Practica` de cada alumno. |
 | `periods` | Separa la informacion por mes dentro de cada modalidad. |
 | `companies` | Conserva el catalogo vigente y su validez temporal. |
@@ -39,6 +40,7 @@ dos acciones ocurran al mismo tiempo.
 4. No existen politicas de escritura economica directa para el navegador.
 5. La auditoria interna tampoco es consultable directamente desde el navegador.
 6. Las claves administrativas no forman parte del codigo ni de las variables publicas.
+7. Las altas y revocaciones solo se ejecutan mediante funciones restringidas al servidor privilegiado o al propietario de la base.
 
 ## Reglas de compra ya codificadas
 
