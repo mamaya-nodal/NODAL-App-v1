@@ -8,6 +8,12 @@ export type BrokerEntry =
   | { destination: "NETO_BROKER_NEGATIVE"; magnitudeInCents: number }
   | { destination: "NONE"; magnitudeInCents: 0 };
 
+export type EqualAllocation = {
+  accountId: string;
+  amountInCents: number;
+  role: "leader" | "replica";
+};
+
 function assertIntegerCents(value: number, fieldName: string): void {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`${fieldName} debe expresarse en centavos enteros.`);
@@ -33,6 +39,38 @@ export function validateAllocationTotal(
     isValid: distributedInCents === totalInCents,
     differenceInCents: distributedInCents - totalInCents,
   };
+}
+
+export function allocateResultEqually(
+  totalInCents: number,
+  leaderId: string,
+  replicaIds: string[],
+): EqualAllocation[] {
+  assertIntegerCents(totalInCents, "El resultado total");
+
+  if (!leaderId) {
+    throw new Error("Debe elegirse una cuenta líder.");
+  }
+
+  const participantIds = [leaderId, ...replicaIds];
+
+  if (new Set(participantIds).size !== participantIds.length) {
+    throw new Error("Una cuenta no puede participar más de una vez.");
+  }
+
+  if (totalInCents % participantIds.length !== 0) {
+    throw new Error(
+      "El resultado no se divide en centavos exactos entre las cuentas elegidas.",
+    );
+  }
+
+  const amountInCents = totalInCents / participantIds.length;
+
+  return participantIds.map((accountId, index) => ({
+    accountId,
+    amountInCents,
+    role: index === 0 ? "leader" : "replica",
+  }));
 }
 
 export function toBrokerEntry(resultInCents: number): BrokerEntry {

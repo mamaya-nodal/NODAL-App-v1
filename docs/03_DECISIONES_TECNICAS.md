@@ -33,6 +33,7 @@
 | APP-027 | Mientras la matriz completa de roles siga abierta, las altas y revocaciones de acceso se ejecutaran mediante funciones auditadas restringidas a la credencial privilegiada del servidor o al propietario de la base. No existira autorizacion desde el navegador del alumno. | Vigente |
 | APP-028 | Los espacios `Real` y `Practica` permanecen separados y se seleccionan de forma explicita. El selector mensual solo permite elegir periodos ya existentes: no crea ni abre meses automaticamente. La politica de apertura y cierre mensual sigue pendiente del area propietaria. | Vigente |
 | APP-029 | La compra se confirma mediante una unica transaccion validada: el alumno carga empresa, precio y uno de los dos origenes vigentes; el servidor genera fecha, numero general, referencia por empresa, cuenta virgen y auditoria. Hasta definir la politica de cargas tardias, la fecha automatica solo se registra en el mes calendario seleccionado. | Vigente |
+| APP-030 | La distribucion automatica de Control Diario solo se habilita cuando el resultado puede repartirse en centavos exactos entre las cuentas participantes. Si no cierra exactamente, la app bloquea la confirmacion hasta aplicar un ajuste excepcional validado; nunca asigna el sobrante de forma silenciosa. | Vigente |
 
 ## Propuestas pendientes de decision
 

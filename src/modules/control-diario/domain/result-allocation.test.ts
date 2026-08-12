@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { toBrokerEntry, validateAllocationTotal } from "./result-allocation";
+import {
+  allocateResultEqually,
+  toBrokerEntry,
+  validateAllocationTotal,
+} from "./result-allocation";
 
 describe("distribucion del resultado de Control Diario", () => {
   it("acepta una distribucion que coincide exactamente con el total", () => {
@@ -52,5 +56,39 @@ describe("destino del resultado broker", () => {
       destination: "NETO_BROKER_POSITIVE",
       magnitudeInCents: 12_500,
     });
+  });
+});
+
+describe("reparto automático exacto", () => {
+  it("distribuye entre líder y réplicas no consecutivas", () => {
+    expect(
+      allocateResultEqually(50_000, "FFF_1", ["FFF_4", "FFF_7", "FFF_8"]),
+    ).toEqual([
+      { accountId: "FFF_1", amountInCents: 12_500, role: "leader" },
+      { accountId: "FFF_4", amountInCents: 12_500, role: "replica" },
+      { accountId: "FFF_7", amountInCents: 12_500, role: "replica" },
+      { accountId: "FFF_8", amountInCents: 12_500, role: "replica" },
+    ]);
+  });
+
+  it("conserva el signo negativo del resultado económico", () => {
+    expect(allocateResultEqually(-50_000, "LUCID_1", ["LUCID_4"])).toEqual([
+      { accountId: "LUCID_1", amountInCents: -25_000, role: "leader" },
+      { accountId: "LUCID_4", amountInCents: -25_000, role: "replica" },
+    ]);
+  });
+
+  it("bloquea un reparto con centavos no divisibles en partes iguales", () => {
+    expect(() =>
+      allocateResultEqually(10_000, "FFF_1", ["FFF_4", "FFF_7"]),
+    ).toThrow(
+      "El resultado no se divide en centavos exactos entre las cuentas elegidas.",
+    );
+  });
+
+  it("impide repetir la líder dentro de las réplicas", () => {
+    expect(() => allocateResultEqually(50_000, "FFF_1", ["FFF_1"])).toThrow(
+      "Una cuenta no puede participar más de una vez.",
+    );
   });
 });

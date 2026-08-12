@@ -112,6 +112,14 @@ La seleccion operativa usa exclusivamente cuentas ya compradas en el periodo:
 - al quitar la lider tambien se limpian las replicas;
 - las seis fases conservan los nombres vigentes del sistema de referencia.
 
+Cuando la ultima carga produce un resultado operativo, la vista previa muestra
+una fila por cuenta participante, identifica lider y replicas, dirige ganancias
+a `NETO BROKER +` y perdidas a `NETO BROKER -`, y comprueba que la suma coincide
+exactamente con el total. Si el total no se puede dividir en centavos iguales,
+la app informa la situacion y no habilita la confirmacion. El eventual ajuste
+particular por cuenta sigue pendiente de completar; no se asignan diferencias
+silenciosamente.
+
 No se crearon cuentas ficticias para forzar una demostracion. Por eso, hasta
 que exista una compra consciente de desarrollo, la interfaz informa que la
 empresa seleccionada no tiene cuentas. La asignacion visual de colores por

@@ -14,6 +14,11 @@ import {
   toggleReplica,
   type DailyControlAccount,
 } from "@/modules/control-diario/domain/account-selection";
+import {
+  allocateResultEqually,
+  toBrokerEntry,
+  type EqualAllocation,
+} from "@/modules/control-diario/domain/result-allocation";
 
 type EntryKind = DailyBalanceEntry["kind"];
 
@@ -57,6 +62,29 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
     OPERATION_PHASES[0],
   );
   const companyAccounts = accountsForCompany(accounts, companyId);
+  const latestRow = rows.length > 0 ? rows[rows.length - 1] : null;
+  const latestOperatingResult = latestRow?.operatingResultInCents ?? null;
+  let allocation: EqualAllocation[] = [];
+  let allocationError: string | null = null;
+
+  if (latestOperatingResult !== null && leaderId) {
+    try {
+      allocation = allocateResultEqually(
+        latestOperatingResult,
+        leaderId,
+        replicaIds,
+      );
+    } catch (caughtError) {
+      allocationError =
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo calcular la distribución.";
+    }
+  }
+
+  const accountReferences = new Map(
+    companyAccounts.map((account) => [account.id, account.referenceNumber]),
+  );
 
   function addPreviewEntry(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -321,6 +349,80 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
                 })}
             </div>
           )}
+        </div>
+
+        <div className="allocation-preview" aria-live="polite">
+          <div className="allocation-heading">
+            <div>
+              <p className="status">VISTA PREVIA ANTES DE CONFIRMAR</p>
+              <h3>Distribución automática</h3>
+            </div>
+            <strong>
+              {latestOperatingResult === null
+                ? "Sin resultado pendiente"
+                : formatMoney(latestOperatingResult)}
+            </strong>
+          </div>
+
+          {latestOperatingResult === null ? (
+            <p className="empty-state">
+              Informá un nuevo saldo para obtener el resultado operativo a distribuir.
+            </p>
+          ) : !leaderId ? (
+            <p className="empty-state">
+              Elegí la cuenta líder para ver el reparto entre las cuentas participantes.
+            </p>
+          ) : allocationError ? (
+            <p className="purchase-message error" role="alert">
+              {allocationError} El ajuste excepcional sigue pendiente de validación.
+            </p>
+          ) : (
+            <>
+              <div className="allocation-list">
+                {allocation.map((entry) => {
+                  const brokerEntry = toBrokerEntry(entry.amountInCents);
+                  const destination =
+                    brokerEntry.destination === "NETO_BROKER_POSITIVE"
+                      ? "NETO BROKER +"
+                      : brokerEntry.destination === "NETO_BROKER_NEGATIVE"
+                        ? "NETO BROKER -"
+                        : "Sin resultado broker";
+
+                  return (
+                    <article className="allocation-row" key={entry.accountId}>
+                      <div>
+                        <strong>
+                          Cuenta {accountReferences.get(entry.accountId) ?? "—"}
+                        </strong>
+                        <span>{entry.role === "leader" ? "Líder" : "Réplica"}</span>
+                      </div>
+                      <div>
+                        <span>{destination}</span>
+                        <strong>{formatMoney(entry.amountInCents)}</strong>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <p className="allocation-check">
+                Total comprobado: {formatMoney(latestOperatingResult)} entre{" "}
+                {allocation.length} {allocation.length === 1 ? "cuenta" : "cuentas"}.
+              </p>
+            </>
+          )}
+
+          <button
+            className="primary-action"
+            disabled
+            title="El guardado definitivo todavía no está habilitado"
+            type="button"
+          >
+            Confirmar y crear registros
+          </button>
+          <p className="context-note">
+            El botón permanece bloqueado hasta terminar y probar el guardado
+            transaccional. Esta pantalla todavía no modifica datos.
+          </p>
         </div>
       </div>
 

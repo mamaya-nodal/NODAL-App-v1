@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 52 de 52 aprobadas. |
+| Pruebas automatizadas | 56 de 56 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -82,6 +82,8 @@ para evitar errores de redondeo del lenguaje.
 | Vista previa de Control Diario | Simulacion interactiva aprobada: deposito USD 5.000 y saldo USD 5.500 producen resultado +USD 500. |
 | Seleccion operativa | Empresa, cuenta lider, fase y replicas explicitas preparadas exclusivamente con cuentas existentes del periodo. |
 | Aislamiento de cuentas | Cada empresa carga su propia grilla; la lider no puede figurar tambien como replica. |
+| Distribucion previa | Muestra una fila por lider y replica, su destino `NETO BROKER +` o `NETO BROKER -` y comprueba el total exacto. |
+| Centavos no divisibles | La confirmacion queda bloqueada; no se asigna un sobrante silenciosamente. |
 | Ausencia de persistencia | Tras recargar, saldo e historial simulados desaparecen; no se escriben datos en Supabase. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
@@ -100,9 +102,9 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe probar la grilla completa con cuentas de desarrollo
-creadas conscientemente por el responsable NODAL y preparar el registro
-transaccional de Control Diario. La
+La siguiente etapa debe probar la grilla y la distribucion completa con cuentas
+de desarrollo creadas conscientemente por el responsable NODAL y preparar el
+registro transaccional de Control Diario. La
 correccion de compras anteriores y el guardado operativo definitivo siguen
 bloqueados hasta validar sus campos y casos de equivalencia. Todavia no se
 habilitan datos reales ni acceso general de alumnos.
