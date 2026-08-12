@@ -159,6 +159,98 @@ h1 {
   line-height: 1.55;
 }
 
+.context-panel {
+  margin-top: 24px;
+  padding: 36px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+}
+
+.context-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.context-heading h2 {
+  margin-bottom: 0;
+  font-size: 1.8rem;
+}
+
+.context-current {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 6px;
+  border-radius: 16px;
+  background: var(--paper);
+}
+
+.mode-tab {
+  padding: 14px 18px;
+  border-radius: 11px;
+  color: var(--muted);
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.mode-tab.selected {
+  background: var(--surface);
+  color: var(--brand);
+  box-shadow: 0 8px 24px rgb(24 61 40 / 8%);
+}
+
+.period-form {
+  margin-top: 28px;
+}
+
+.period-form label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 800;
+}
+
+.period-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.period-controls select {
+  flex: 1;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-transform: capitalize;
+}
+
+.inline-action {
+  margin-top: 0;
+}
+
+.context-note {
+  margin: 22px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 @media (max-width: 720px) {
   .shell {
     padding: 64px 0;
@@ -174,5 +266,19 @@ h1 {
     align-items: stretch;
     flex-direction: column;
     padding: 26px;
+  }
+
+  .context-panel {
+    padding: 26px;
+  }
+
+  .context-heading,
+  .period-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .context-current {
+    align-self: flex-start;
   }
 }

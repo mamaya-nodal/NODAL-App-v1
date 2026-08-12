@@ -135,3 +135,34 @@ La verificacion remota de privilegios confirmo:
 
 Este mecanismo no decide todavia la matriz definitiva de roles administrativos.
 Esa decision sigue abierta y no se reemplazo por un rol inventado.
+
+## Espacios y periodo de desarrollo
+
+El `2026-08-12` se aplico y registro la migracion
+`20260812010000_provision_user_workspaces.sql`.
+
+La funcion de provision inicial:
+
+- acepta un usuario NODAL activo, un primer dia de mes y un motivo obligatorio;
+- crea de forma idempotente sus espacios `Real` y `Practica`;
+- crea el periodo indicado dentro de cada espacio;
+- registra cuantos espacios y periodos fueron creados;
+- solo puede ejecutarse mediante `service_role` o por el propietario de la base.
+
+Para el primer usuario autorizado se crearon ambos espacios y un periodo de
+desarrollo para agosto de 2026. No se guardaron su correo ni identificadores en
+el repositorio. La interfaz local mostro el cambio entre ambas modalidades y
+rechazo de forma segura un mes inexistente enviado por URL.
+
+La verificacion remota de esta migracion confirmo:
+
+| Control | Resultado |
+|---|---|
+| `anon` puede provisionar | No. |
+| `authenticated` puede provisionar | No. |
+| `service_role` puede provisionar | Si. |
+| RLS de la auditoria | Activo. |
+| Migracion registrada | Si. |
+
+La seleccion mensual no abre ni cierra periodos. Ese procedimiento permanece
+pendiente de definicion por Contabilidad y Gestion.

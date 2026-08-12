@@ -16,6 +16,7 @@ un formulario operativo ni reemplaza ninguna funcion de Sheets.
 |---|---|
 | `nodal_users` | Vincula la identidad de Supabase/Google con la autorizacion previa de NODAL. |
 | `access_authorization_events` | Audita cada alta o revocacion de acceso, su responsable y motivo. |
+| `workspace_provisioning_events` | Audita la creacion controlada de espacios y periodos iniciales. |
 | `workspaces` | Separa los espacios `Real` y `Practica` de cada alumno. |
 | `periods` | Separa la informacion por mes dentro de cada modalidad. |
 | `companies` | Conserva el catalogo vigente y su validez temporal. |
@@ -41,6 +42,19 @@ dos acciones ocurran al mismo tiempo.
 5. La auditoria interna tampoco es consultable directamente desde el navegador.
 6. Las claves administrativas no forman parte del codigo ni de las variables publicas.
 7. Las altas y revocaciones solo se ejecutan mediante funciones restringidas al servidor privilegiado o al propietario de la base.
+8. La creacion inicial de espacios y periodos tambien esta restringida al servicio privilegiado, exige motivo y deja auditoria.
+
+## Contexto operativo inicial
+
+El primer usuario autorizado de desarrollo posee dos espacios independientes:
+`Real` y `Practica`. Ambos tienen un periodo de prueba para agosto de 2026. Este
+mes existe solo para construir y comprobar la aplicacion; no define una regla de
+apertura automatica ni representa un cierre contable aprobado.
+
+La pantalla permite seleccionar modalidad y uno de los periodos existentes del
+usuario. Si se intenta enviar por URL una modalidad o un mes inexistentes, el
+servidor usa un contexto valido accesible para ese usuario. No se mezclan datos
+entre modalidades y el selector nunca crea registros.
 
 ## Reglas de compra ya codificadas
 
@@ -54,10 +68,8 @@ dos acciones ocurran al mismo tiempo.
 
 - matriz definitiva de roles administrativos;
 - permisos para aprobar retiros, conciliaciones y cierres;
-- politica de cierre mensual;
+- politica de apertura y cierre mensual;
 - operacion transaccional completa de alta y correccion de compras;
-- proyecto remoto, region y plan de Supabase;
-- credenciales OAuth de Google;
 - casos anonimizados para comparar compras contra Sheets.
 
 Estas decisiones no se completan con valores provisorios. Se agregaran mediante
