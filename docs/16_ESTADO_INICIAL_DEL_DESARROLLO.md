@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 32 de 32 aprobadas. |
+| Pruebas automatizadas | 40 de 40 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -78,6 +78,7 @@ para evitar errores de redondeo del lenguaje.
 | Catalogos de compra | Solo `FFF`, `LUCID`, `TRADEFY`, `Aporte trader` y `Saldo generado`. |
 | Alta transaccional | Fecha, numero, referencia, cuenta virgen y auditoria se generan juntos. |
 | Seguridad de compras | Sin escritura directa del navegador; funcion validada solo para usuario autorizado y periodo propio. |
+| Nucleo de Control Diario | Depositos, retiros y actualizaciones de saldo calculados con centavos enteros y sin mezclar capital con resultado. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -94,10 +95,11 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe probar una compra de desarrollo con datos decididos por
-el responsable NODAL y luego comenzar Control Diario. La correccion de compras
-anteriores sigue bloqueada hasta que Contabilidad defina su tratamiento exacto.
-Todavia no se habilitan datos reales ni acceso general de alumnos.
+La siguiente etapa debe completar la vista previa de Control Diario y conectarla
+con cuentas de desarrollo creadas conscientemente por el responsable NODAL. La
+correccion de compras anteriores y el guardado operativo definitivo siguen
+bloqueados hasta validar sus campos y casos de equivalencia. Todavia no se
+habilitan datos reales ni acceso general de alumnos.
 
 Antes de crear cuentas externas se indicara al responsable de NODAL que debe
 hacer, que acceso conservar y que costo puede generar.

@@ -83,6 +83,21 @@ acepta cuando el periodo seleccionado coincide con el mes calendario actual.
 - politica para una compra cargada tarde o en un periodo historico;
 - casos anonimizados para comparar compras contra Sheets.
 
+## Nucleo calculado de Control Diario
+
+El calculo determinista ya preserva estos casos confirmados:
+
+- el primer deposito establece el saldo de referencia sin generar resultado;
+- un deposito posterior aumenta ese saldo sin contabilizar una ganancia;
+- un retiro reduce el saldo sin contabilizar una perdida;
+- un saldo nuevo sin movimiento calcula `saldo nuevo - saldo anterior`;
+- la ganancia conserva signo positivo y la perdida, signo negativo;
+- todos los importes se procesan en centavos enteros.
+
+Este servicio todavia no guarda registros. Los campos operativos completos, la
+seleccion de cuentas y el flujo de correcciones se conectaran solo al validar
+los casos que requieren Contabilidad y Operaciones.
+
 Estas decisiones no se completan con valores provisorios. Se agregaran mediante
 nuevas migraciones cuando el area propietaria las confirme.
 
