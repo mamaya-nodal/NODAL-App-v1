@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 23 de 23 aprobadas. |
+| Pruebas automatizadas | 32 de 32 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -74,6 +74,10 @@ para evitar errores de redondeo del lenguaje.
 | Periodo de desarrollo | Agosto de 2026 disponible en ambas modalidades. |
 | Selector de contexto | Cambio Real/Practica y periodo mensual aprobado de extremo a extremo. |
 | Parametros manipulados | Un mes inexistente se reemplaza por un contexto existente y permitido. |
+| Formulario inicial de compra | Muestra solo empresa, precio y origen de fondos. |
+| Catalogos de compra | Solo `FFF`, `LUCID`, `TRADEFY`, `Aporte trader` y `Saldo generado`. |
+| Alta transaccional | Fecha, numero, referencia, cuenta virgen y auditoria se generan juntos. |
+| Seguridad de compras | Sin escritura directa del navegador; funcion validada solo para usuario autorizado y periodo propio. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -84,16 +88,16 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 - no se publico en Vercel;
 - no se copiaron datos de alumnos ni de la Plantilla Maestra;
 - no se modifico Sheets, Apps Script ni Panel Central;
-- no se implemento aun un formulario operativo.
+- no se creo ninguna compra ficticia para completar una prueba visual.
 - no se concedio acceso NODAL automaticamente al usuario autenticado.
 - no se definio ni automatizo la apertura o el cierre mensual.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe implementar el primer flujo de compra sobre el espacio
-y periodo seleccionados, conservando numero y referencia automaticos, los
-origenes confirmados y la creacion de una cuenta virgen. Todavia no se habilitan
-datos reales ni acceso general de alumnos.
+La siguiente etapa debe probar una compra de desarrollo con datos decididos por
+el responsable NODAL y luego comenzar Control Diario. La correccion de compras
+anteriores sigue bloqueada hasta que Contabilidad defina su tratamiento exacto.
+Todavia no se habilitan datos reales ni acceso general de alumnos.
 
 Antes de crear cuentas externas se indicara al responsable de NODAL que debe
 hacer, que acceso conservar y que costo puede generar.

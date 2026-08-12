@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   INITIAL_ACCOUNT_STATE,
   nextConsecutive,
+  parsePurchasePriceToCents,
   validatePurchaseDraft,
 } from "./purchase-rules";
 
@@ -34,4 +35,20 @@ describe("reglas iniciales de compra", () => {
     expect(nextConsecutive(0)).toBe(1);
     expect(nextConsecutive(149)).toBe(150);
   });
+
+  it.each([
+    ["89", 8_900],
+    ["89.5", 8_950],
+    ["89,50", 8_950],
+    ["0", 0],
+  ])("convierte el precio %s a centavos sin redondeos", (value, expected) => {
+    expect(parsePurchasePriceToCents(value)).toBe(expected);
+  });
+
+  it.each(["", "-1", "1.234", "texto", "1,2.3"])(
+    "rechaza el precio inválido %s",
+    (value) => {
+      expect(() => parsePurchasePriceToCents(value)).toThrow();
+    },
+  );
 });

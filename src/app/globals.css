@@ -251,6 +251,142 @@ h1 {
   line-height: 1.55;
 }
 
+.purchase-panel {
+  margin-top: 24px;
+  padding: 36px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+}
+
+.purchase-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.purchase-heading h2 {
+  margin-bottom: 0;
+  font-size: 1.8rem;
+}
+
+.purchase-count {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.purchase-message {
+  margin: 24px 0 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.purchase-message.success {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.purchase-message.error {
+  background: #fff1f0;
+  color: #9f2f2a;
+}
+
+.purchase-form {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.form-field label {
+  display: block;
+  margin-bottom: 9px;
+  font-weight: 800;
+}
+
+.form-field input,
+.form-field select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  border-color: var(--brand);
+  outline: 3px solid var(--brand-soft);
+}
+
+.automatic-fields {
+  grid-column: 1 / -1;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--muted);
+}
+
+.automatic-fields p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.purchase-form .primary-action {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.purchase-list {
+  margin-top: 30px;
+  border-top: 1px solid var(--line);
+}
+
+.empty-state {
+  margin: 22px 0 0;
+  color: var(--muted);
+}
+
+.purchase-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.purchase-reference {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 850;
+}
+
+.purchase-meta {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.purchase-values {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 5px;
+  text-align: right;
+}
+
+.purchase-values span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 @media (max-width: 720px) {
   .shell {
     padding: 64px 0;
@@ -272,6 +408,10 @@ h1 {
     padding: 26px;
   }
 
+  .purchase-panel {
+    padding: 26px;
+  }
+
   .context-heading,
   .period-controls {
     align-items: stretch;
@@ -280,5 +420,20 @@ h1 {
 
   .context-current {
     align-self: flex-start;
+  }
+
+  .purchase-form {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-heading,
+  .purchase-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .purchase-values {
+    align-items: flex-start;
+    text-align: left;
   }
 }

@@ -166,3 +166,35 @@ La verificacion remota de esta migracion confirmo:
 
 La seleccion mensual no abre ni cierra periodos. Ese procedimiento permanece
 pendiente de definicion por Contabilidad y Gestion.
+
+## Alta segura de compras
+
+El `2026-08-12` se aplico la migracion
+`20260812020000_create_purchase_transaction.sql` mediante Supabase CLI. El
+historial local y remoto quedo sincronizado.
+
+La funcion `create_nodal_purchase` ejecuta como una sola transaccion:
+
+1. validacion de identidad, autorizacion y propiedad del periodo;
+2. validacion de empresa vigente, precio y origen de fondos;
+3. bloqueo transaccional del periodo para serializar consecutivos;
+4. calculo de numero general y referencia independiente por empresa;
+5. creacion de la cuenta con estado `virgin`;
+6. creacion de la compra con fecha del servidor en Buenos Aires;
+7. registro de auditoria.
+
+Una falla revierte todos los pasos. El navegador no puede insertar directamente
+en `accounts`, `purchases` ni `audit_events`.
+
+La verificacion remota confirmo:
+
+| Control | Resultado |
+|---|---|
+| `anon` puede ejecutar la compra | No. |
+| `authenticated` puede llamar la funcion validada | Si. |
+| `authenticated` puede insertar directamente en compras | No. |
+| Migracion registrada | Si. |
+
+No se creo una compra ficticia durante la prueba visual. Para confirmar la
+operacion completa se usaran empresa, precio y origen decididos por el
+responsable NODAL, sin inventar un registro economico.

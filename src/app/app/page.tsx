@@ -8,16 +8,56 @@ import {
   type WorkspaceOption,
 } from "@/modules/workspace/domain/selection";
 
+import { createPurchase } from "./purchase-actions";
+
 type PrivateAppPageProps = {
   searchParams: Promise<{
     mode?: string | string[];
     period?: string | string[];
+    purchase_result?: string | string[];
   }>;
 };
 
 function singleValue(value: string | string[] | undefined) {
   return typeof value === "string" ? value : undefined;
 }
+
+function currentMonthInBuenosAires(): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  return `${year}-${month}-01`;
+}
+
+function formatMoney(cents: number): string {
+  return new Intl.NumberFormat("es-AR", {
+    currency: "USD",
+    style: "currency",
+  }).format(cents / 100);
+}
+
+const purchaseMessages: Record<string, string> = {
+  created: "Compra confirmada. La cuenta quedó creada como Cuenta virgen.",
+  invalid_data: "Revisá la empresa, el precio y el origen de fondos.",
+  not_created: "La compra no pudo confirmarse. No se guardó ningún dato.",
+  period_not_current:
+    "Ese período no admite una compra con fecha automática. La carga histórica sigue pendiente de definición.",
+};
+
+type PurchaseView = {
+  companyCode: string;
+  fundsOrigin: string;
+  id: string;
+  priceCents: number;
+  purchaseNumber: number;
+  purchasedOn: string;
+  referenceNumber: number;
+  state: string;
+};
 
 export default async function PrivateAppPage({
   searchParams,
@@ -44,8 +84,9 @@ export default async function PrivateAppPage({
       : null,
   );
   const allowed = decision === "allowed";
-  const { mode, period } = await searchParams;
+  const { mode, period, purchase_result: purchaseResult } = await searchParams;
   let workspaceOptions: WorkspaceOption[] = [];
+  let companies: Array<{ code: string; displayName: string; id: string }> = [];
 
   if (allowed) {
     const { data: workspaces } = await supabase
@@ -68,6 +109,60 @@ export default async function PrivateAppPage({
     singleValue(mode),
     singleValue(period),
   );
+  let purchases: PurchaseView[] = [];
+
+  if (allowed && selection?.period) {
+    const [{ data: companyRows }, { data: accountRows }, { data: purchaseRows }] =
+      await Promise.all([
+        supabase
+          .from("companies")
+          .select("id, code, display_name")
+          .eq("is_active", true)
+          .order("code"),
+        supabase
+          .from("accounts")
+          .select("id, company_id, reference_number, state")
+          .eq("period_id", selection.period.id),
+        supabase
+          .from("purchases")
+          .select(
+            "id, account_id, purchase_number, purchased_on, price_cents, funds_origin",
+          )
+          .eq("period_id", selection.period.id)
+          .order("purchase_number", { ascending: false }),
+      ]);
+
+    companies = (companyRows ?? []).map((company) => ({
+      code: company.code,
+      displayName: company.display_name,
+      id: company.id,
+    }));
+    const accountsById = new Map(
+      (accountRows ?? []).map((account) => [account.id, account]),
+    );
+    const companiesById = new Map(
+      (companyRows ?? []).map((company) => [company.id, company]),
+    );
+
+    purchases = (purchaseRows ?? []).flatMap((purchase) => {
+      const account = accountsById.get(purchase.account_id);
+      const company = account ? companiesById.get(account.company_id) : null;
+      if (!account || !company) return [];
+
+      return [
+        {
+          companyCode: company.code,
+          fundsOrigin: purchase.funds_origin,
+          id: purchase.id,
+          priceCents: Number(purchase.price_cents),
+          purchaseNumber: purchase.purchase_number,
+          purchasedOn: purchase.purchased_on,
+          referenceNumber: account.reference_number,
+          state: account.state,
+        },
+      ];
+    });
+  }
 
   return (
     <main className="shell narrow-shell">
@@ -176,6 +271,121 @@ export default async function PrivateAppPage({
             Todos los registros futuros quedarán asociados a esta modalidad y a
             este período. Real y Práctica nunca se mezclarán.
           </p>
+        </section>
+      )}
+
+      {allowed && selection?.period && (
+        <section className="purchase-panel" aria-labelledby="purchase-title">
+          <div className="purchase-heading">
+            <div>
+              <p className="status">COMPRAS DEL PERÍODO</p>
+              <h2 id="purchase-title">Nueva compra de cuenta</h2>
+            </div>
+            <p className="purchase-count">
+              {purchases.length} {purchases.length === 1 ? "cuenta" : "cuentas"}
+            </p>
+          </div>
+
+          {singleValue(purchaseResult) &&
+            purchaseMessages[singleValue(purchaseResult) ?? ""] && (
+              <p
+                className={`purchase-message ${
+                  singleValue(purchaseResult) === "created" ? "success" : "error"
+                }`}
+                role="status"
+              >
+                {purchaseMessages[singleValue(purchaseResult) ?? ""]}
+              </p>
+            )}
+
+          {selection.period.periodMonth === currentMonthInBuenosAires() ? (
+            <form action={createPurchase} className="purchase-form">
+              <input name="mode" type="hidden" value={selection.workspace.modality} />
+              <input name="period" type="hidden" value={selection.period.periodMonth} />
+              <input name="period_id" type="hidden" value={selection.period.id} />
+
+              <div className="form-field">
+                <label htmlFor="company_id">Empresa</label>
+                <select id="company_id" name="company_id" required defaultValue="">
+                  <option disabled value="">
+                    Elegí una empresa
+                  </option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label htmlFor="price">Precio de compra (USD)</label>
+                <input
+                  id="price"
+                  inputMode="decimal"
+                  min="0"
+                  name="price"
+                  placeholder="Ejemplo: 89,00"
+                  required
+                  step="0.01"
+                  type="number"
+                />
+              </div>
+
+              <div className="form-field">
+                <label htmlFor="funds_origin">Origen de fondos</label>
+                <select id="funds_origin" name="funds_origin" required defaultValue="">
+                  <option disabled value="">
+                    Elegí el origen
+                  </option>
+                  <option value="Aporte trader">Aporte trader</option>
+                  <option value="Saldo generado">Saldo generado</option>
+                </select>
+              </div>
+
+              <div className="automatic-fields">
+                <p>
+                  <strong>Automático al confirmar:</strong> fecha de hoy, número
+                  general, referencia propia de la empresa y estado Cuenta virgen.
+                </p>
+              </div>
+
+              <button className="primary-action" type="submit">
+                Confirmar compra
+              </button>
+            </form>
+          ) : (
+            <p className="notice">
+              Este período es de consulta. La carga de una compra anterior se
+              habilitará cuando Contabilidad defina su tratamiento exacto.
+            </p>
+          )}
+
+          <div className="purchase-list" aria-label="Compras registradas">
+            {purchases.length === 0 ? (
+              <p className="empty-state">Todavía no hay compras en este período.</p>
+            ) : (
+              purchases.map((purchase) => (
+                <article className="purchase-row" key={purchase.id}>
+                  <div>
+                    <p className="purchase-reference">
+                      {purchase.companyCode} · Cuenta {purchase.referenceNumber}
+                    </p>
+                    <p className="purchase-meta">
+                      Compra {purchase.purchaseNumber} · {purchase.purchasedOn} ·{" "}
+                      {purchase.fundsOrigin}
+                    </p>
+                  </div>
+                  <div className="purchase-values">
+                    <strong>{formatMoney(purchase.priceCents)}</strong>
+                    <span>
+                      {purchase.state === "virgin" ? "Cuenta virgen" : purchase.state}
+                    </span>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
         </section>
       )}
 

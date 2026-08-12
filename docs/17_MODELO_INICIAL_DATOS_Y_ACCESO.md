@@ -63,13 +63,24 @@ entre modalidades y el selector nunca crea registros.
 - una compra nueva genera una `Cuenta virgen`;
 - precio e importes se representan en centavos enteros;
 - numero general y referencia por empresa son datos automaticos, no campos manuales.
+- la fecha de compra se obtiene en el servidor con la zona horaria de Buenos Aires;
+- cuenta y compra se crean juntas dentro de una transaccion;
+- la numeracion se serializa por periodo para impedir referencias duplicadas;
+- cada alta deja una auditoria con usuario, periodo y valores confirmados;
+- el alumno no posee permiso de insercion directa sobre `accounts` ni `purchases`.
+
+La pantalla solo pide empresa, precio y origen de fondos. La operacion valida
+nuevamente identidad, autorizacion, propiedad del periodo, vigencia de la
+empresa, importe y origen dentro de PostgreSQL. La fecha automatica solo se
+acepta cuando el periodo seleccionado coincide con el mes calendario actual.
 
 ## Deliberadamente pendiente
 
 - matriz definitiva de roles administrativos;
 - permisos para aprobar retiros, conciliaciones y cierres;
 - politica de apertura y cierre mensual;
-- operacion transaccional completa de alta y correccion de compras;
+- operacion transaccional de correccion de compras;
+- politica para una compra cargada tarde o en un periodo historico;
 - casos anonimizados para comparar compras contra Sheets.
 
 Estas decisiones no se completan con valores provisorios. Se agregaran mediante
