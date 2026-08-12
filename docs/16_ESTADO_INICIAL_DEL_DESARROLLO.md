@@ -87,7 +87,7 @@ para evitar errores de redondeo del lenguaje.
 | Preparacion previa | Empresa, lider, replicas y fase aparecen antes del saldo y permanecen visibles como configuracion activa. |
 | Recepcion NinjaTrader simulada | Un nuevo saldo abre una revision obligatoria con destino y distribucion; un segundo saldo queda bloqueado hasta resolver el primero. |
 | Contingencia simulada | Permite clasificar el error, indicar el saldo correcto, recalcular y mostrar que el original se reservara para auditoria. |
-| Persistencia de Control Diario | Esquema y transaccion aplicados en Supabase de desarrollo; interfaz todavia desconectada. |
+| Persistencia de Control Diario | Interfaz conectada con la transaccion segura: deposito, retiro y saldo confirmado reaparecen al recargar. |
 | Registros derivados | La transaccion crea participantes y una entrada por cuenta, con rol, fase, destino e importe. |
 | Idempotencia | Una confirmacion repetida o un evento repetido de NinjaTrader devuelve el control existente sin duplicar filas. |
 | Seguridad economica | El alumno no puede escribir directamente en Control Diario, participantes ni registros por cuenta. |
@@ -97,7 +97,10 @@ para evitar errores de redondeo del lenguaje.
 | Totales de fase | Calculo de broker positivo, broker negativo, retiro y arrastre negativo verificado contra formulas de la plantilla. |
 | Lectura de referencia | `PLANTILLA_LIMPIA!A1:F70` inspeccionada sin modificar la Plantilla Maestra. |
 | Presentacion provisional | Cabecera compacta, navegacion de modulos, identidad privada y recorrido completo revisados para demostracion. |
-| Ausencia de persistencia | Tras recargar, saldo e historial simulados desaparecen; no se escriben datos en Supabase. |
+| Confirmacion desde interfaz | Deposito USD 5.000 y saldo USD 5.600 generaron resultado USD 600, tres participantes y tres registros por cuenta de USD 200. |
+| Persistencia visual | Tras recargar, el saldo y el historial confirmados reaparecieron desde Supabase. |
+| Estado preservado | Las cuentas participantes continuaron virgenes; Control Diario no cambia estados con resultados parciales. |
+| Limpieza de prueba | Los dos controles tecnicos, sus registros derivados y auditorias se retiraron despues de verificarlos; las compras existentes se conservaron. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -113,19 +116,17 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 - no se concedio acceso NODAL automaticamente al usuario autenticado.
 - no se definio ni automatizo la apertura o el cierre mensual.
 - no se conecto todavia la API de NinjaTrader; la recepcion actual es una simulacion visual.
-- no se conecto todavia el boton visual con la transaccion remota.
 - no se actualizan todavia estados de cuenta desde los registros derivados.
 - no se copio la formula operativa de `TOTAL RETIRO`, pendiente de aprobacion y casos de equivalencia.
 
 ## Siguiente etapa tecnica
 
-La transaccion ya fue comprobada y el calculo contable de fase esta modelado.
-La siguiente etapa debe validar y portar el origen de `TOTAL RETIRO`, o definir
-como ingresa ese dato sin aumentar la carga manual. Recien entonces podran
-actualizarse estados y conectarse el boton de confirmacion.
-correccion de compras anteriores y el guardado operativo definitivo siguen
-bloqueados hasta validar sus campos y casos de equivalencia. Todavia no se
-habilitan datos reales ni acceso general de alumnos.
+La transaccion y su conexion con la interfaz ya fueron comprobadas. El siguiente
+avance puede exponer el Registro de Operaciones de solo lectura para revisar por
+cuenta lo creado desde Control Diario. La correccion historica, la actualizacion
+de estados y el calculo completo de `TOTAL GANANCIA` siguen separados hasta
+validar sus reglas y casos de equivalencia. Todavia no se habilitan datos reales
+ni acceso general de alumnos.
 
 Antes de crear cuentas externas se indicara al responsable de NODAL que debe
 hacer, que acceso conservar y que costo puede generar.

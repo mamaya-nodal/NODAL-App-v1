@@ -9,7 +9,10 @@ import {
 } from "@/modules/workspace/domain/selection";
 
 import { createPurchase } from "./purchase-actions";
-import { DailyControlPreview } from "./daily-control-preview";
+import {
+  DailyControlPreview,
+  type PersistedDailyControl,
+} from "./daily-control-preview";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -118,9 +121,15 @@ export default async function PrivateAppPage({
   );
   let purchases: PurchaseView[] = [];
   let accountOptions: AccountView[] = [];
+  let dailyControls: PersistedDailyControl[] = [];
 
   if (allowed && selection?.period) {
-    const [{ data: companyRows }, { data: accountRows }, { data: purchaseRows }] =
+    const [
+      { data: companyRows },
+      { data: accountRows },
+      { data: purchaseRows },
+      { data: dailyControlRows },
+    ] =
       await Promise.all([
         supabase
           .from("companies")
@@ -138,6 +147,13 @@ export default async function PrivateAppPage({
           )
           .eq("period_id", selection.period.id)
           .order("purchase_number", { ascending: false }),
+        supabase
+          .from("daily_controls")
+          .select(
+            "control_number, kind, movement_cents, balance_after_cents, operating_result_cents",
+          )
+          .eq("period_id", selection.period.id)
+          .order("control_number"),
       ]);
 
     companies = (companyRows ?? []).map((company) => ({
@@ -175,6 +191,19 @@ export default async function PrivateAppPage({
         },
       ];
     });
+    dailyControls = (dailyControlRows ?? []).map((control) => ({
+      balanceInCents: Number(control.balance_after_cents),
+      id: control.control_number,
+      kind: control.kind,
+      operatingResultInCents:
+        control.operating_result_cents === null
+          ? null
+          : Number(control.operating_result_cents),
+      valueInCents:
+        control.kind === "balance_update"
+          ? Number(control.balance_after_cents)
+          : Number(control.movement_cents),
+    }));
   }
 
   return (
@@ -428,6 +457,8 @@ export default async function PrivateAppPage({
             id: company.id,
             name: company.displayName,
           }))}
+          initialControls={dailyControls}
+          periodId={selection.period.id}
         />
       )}
 

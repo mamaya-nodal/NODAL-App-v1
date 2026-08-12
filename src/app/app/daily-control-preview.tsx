@@ -14,6 +14,7 @@ import {
   parseControlAmountToCents,
   type DailyBalanceEntry,
 } from "@/modules/control-diario/domain/balance-rules";
+import type { ControlOriginDestination } from "@/modules/control-diario/domain/control-catalogs";
 import {
   assertCanReceiveBrokerBalance,
   correctBrokerBalanceReview,
@@ -27,6 +28,8 @@ import {
   type EqualAllocation,
 } from "@/modules/control-diario/domain/result-allocation";
 
+import { confirmDailyControl } from "./daily-control-actions";
+
 type EntryKind = DailyBalanceEntry["kind"];
 
 type PreviewRow = {
@@ -36,6 +39,8 @@ type PreviewRow = {
   operatingResultInCents: number | null;
   valueInCents: number;
 };
+
+export type PersistedDailyControl = PreviewRow;
 
 const entryLabels: Record<EntryKind, string> = {
   balance_update: "Nuevo saldo",
@@ -53,6 +58,8 @@ const syncIssueReasons = [
 type DailyControlPreviewProps = {
   accounts: DailyControlAccount[];
   companies: Array<{ id: string; name: string }>;
+  initialControls: PersistedDailyControl[];
+  periodId: string;
 };
 
 function formatMoney(cents: number): string {
@@ -63,12 +70,24 @@ function formatMoney(cents: number): string {
   }).format(cents / 100);
 }
 
-export function DailyControlPreview({ accounts, companies }: DailyControlPreviewProps) {
-  const [balanceInCents, setBalanceInCents] = useState<number | null>(null);
-  const [entryKind, setEntryKind] = useState<EntryKind>("deposit");
+export function DailyControlPreview({
+  accounts,
+  companies,
+  initialControls,
+  periodId,
+}: DailyControlPreviewProps) {
+  const initialBalance = initialControls.at(-1)?.balanceInCents ?? null;
+  const [balanceInCents, setBalanceInCents] = useState<number | null>(initialBalance);
+  const [entryKind, setEntryKind] = useState<EntryKind>(
+    initialBalance === null ? "deposit" : "balance_update",
+  );
+  const [originDestination, setOriginDestination] =
+    useState<ControlOriginDestination>("Aporte trader");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [rows, setRows] = useState<PreviewRow[]>([]);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [rows, setRows] = useState<PreviewRow[]>(initialControls);
   const [companyId, setCompanyId] = useState("");
   const [leaderId, setLeaderId] = useState("");
   const [replicaIds, setReplicaIds] = useState<string[]>([]);
@@ -77,6 +96,10 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
   );
   const [pendingBalance, setPendingBalance] =
     useState<BrokerBalanceReview | null>(null);
+  const [movementConfirmationKey, setMovementConfirmationKey] =
+    useState<string | null>(null);
+  const [pendingConfirmationKey, setPendingConfirmationKey] =
+    useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [showContingency, setShowContingency] = useState(false);
   const [correctedAmount, setCorrectedAmount] = useState("");
@@ -109,6 +132,7 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
   }
 
   function appendRow(
+    id: number,
     kind: EntryKind,
     valueInCents: number,
     nextBalanceInCents: number,
@@ -118,7 +142,7 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
       ...currentRows,
       {
         balanceInCents: nextBalanceInCents,
-        id: currentRows.length + 1,
+        id,
         kind,
         operatingResultInCents,
         valueInCents,
@@ -127,8 +151,9 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
     setBalanceInCents(nextBalanceInCents);
   }
 
-  function addPreviewEntry(event: FormEvent<HTMLFormElement>) {
+  async function addPreviewEntry(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSuccessMessage(null);
 
     try {
       assertCanReceiveBrokerBalance(pendingBalance);
@@ -138,7 +163,7 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
         entryKind === "balance_update"
           ? { balanceInCents: valueInCents, kind: entryKind }
           : { amountInCents: valueInCents, kind: entryKind };
-      const result = calculateDailyBalance(balanceInCents, entry);
+      calculateDailyBalance(balanceInCents, entry);
 
       if (entryKind === "balance_update") {
         if (!companyId || !leaderId) {
@@ -147,20 +172,45 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
           );
         }
         setPendingBalance(createBrokerBalanceReview(balanceInCents, valueInCents));
+        setPendingConfirmationKey(crypto.randomUUID());
         setReviewOpen(true);
       } else {
+        const confirmationKey = movementConfirmationKey ?? crypto.randomUUID();
+        setMovementConfirmationKey(confirmationKey);
+        setIsSaving(true);
+        const result = await confirmDailyControl({
+          amountInCents: valueInCents,
+          balanceInCents: null,
+          companyId: null,
+          confirmationKey,
+          kind: entryKind,
+          leaderAccountId: null,
+          originDestination,
+          periodId,
+          phase: null,
+          receivedBalanceInCents: null,
+          replicaAccountIds: [],
+          syncIssueReason: null,
+        });
+        setIsSaving(false);
+
+        if (!result.ok) throw new Error(result.message);
         appendRow(
+          result.control.controlNumber,
           entryKind,
           valueInCents,
-          result.balanceInCents,
-          result.operatingResultInCents,
+          result.control.balanceAfterInCents,
+          result.control.operatingResultInCents,
         );
+        setMovementConfirmationKey(null);
         setEntryKind("balance_update");
+        setSuccessMessage("Movimiento guardado correctamente.");
       }
 
       setAmount("");
       setError(null);
     } catch (caughtError) {
+      setIsSaving(false);
       setError(
         caughtError instanceof Error
           ? caughtError.message
@@ -169,21 +219,62 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
     }
   }
 
-  function confirmPendingBalance() {
-    if (!pendingBalance || allocationError || pendingAllocation.length === 0) return;
+  async function confirmPendingBalance() {
+    if (
+      !pendingBalance ||
+      !pendingConfirmationKey ||
+      allocationError ||
+      pendingAllocation.length === 0
+    ) return;
 
     const effectiveBalance = effectiveBrokerBalance(pendingBalance);
-    appendRow(
-      "balance_update",
-      effectiveBalance,
-      effectiveBalance,
-      pendingBalance.operatingResultInCents,
-    );
-    setPendingBalance(null);
-    setReviewOpen(false);
-    setShowContingency(false);
-    setCorrectedAmount("");
-    setEntryKind("balance_update");
+    setIsSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const result = await confirmDailyControl({
+        amountInCents: null,
+        balanceInCents: effectiveBalance,
+        companyId,
+        confirmationKey: pendingConfirmationKey,
+        kind: "balance_update",
+        leaderAccountId: leaderId,
+        originDestination: null,
+        periodId,
+        phase,
+        receivedBalanceInCents: pendingBalance.receivedBalanceInCents,
+        replicaAccountIds: replicaIds,
+        syncIssueReason: pendingBalance.correctionReason,
+      });
+
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+
+      appendRow(
+        result.control.controlNumber,
+        "balance_update",
+        effectiveBalance,
+        result.control.balanceAfterInCents,
+        result.control.operatingResultInCents,
+      );
+      setPendingBalance(null);
+      setPendingConfirmationKey(null);
+      setReviewOpen(false);
+      setShowContingency(false);
+      setCorrectedAmount("");
+      setEntryKind("balance_update");
+      setSuccessMessage(
+        `Control guardado y ${result.control.operationEntriesCreated} registros por cuenta creados.`,
+      );
+    } catch {
+      setError(
+        "No se pudo comunicar con el servidor. Podés volver a confirmar sin duplicar registros.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function applyContingency(event: FormEvent<HTMLFormElement>) {
@@ -211,17 +302,6 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
     }
   }
 
-  function resetPreview() {
-    setBalanceInCents(null);
-    setEntryKind("deposit");
-    setAmount("");
-    setError(null);
-    setRows([]);
-    setPendingBalance(null);
-    setReviewOpen(false);
-    setShowContingency(false);
-  }
-
   function changeCompany(nextCompanyId: string) {
     setCompanyId(nextCompanyId);
     setLeaderId("");
@@ -244,6 +324,12 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
     setReplicaIds(toggleReplica(leaderId, replicaIds, accountId));
   }
 
+  function changeEntryKind(nextKind: EntryKind) {
+    setEntryKind(nextKind);
+    if (nextKind === "deposit") setOriginDestination("Aporte trader");
+    if (nextKind === "withdrawal") setOriginDestination("Retiro personal");
+  }
+
   return (
     <section
       className="daily-preview-panel"
@@ -252,15 +338,15 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
     >
       <div className="daily-preview-heading">
         <div>
-          <p className="status">CONTROL DIARIO · VISTA PREVIA</p>
+          <p className="status">CONTROL DIARIO · DESARROLLO</p>
           <h2 id="daily-preview-title">Preparar y revisar la operatoria</h2>
         </div>
-        <span className="preview-badge">No guarda datos</span>
+        <span className="preview-badge">Guardado habilitado</span>
       </div>
 
       <p className="context-note">
-        Simula el flujo futuro de NinjaTrader. Primero preparás dónde se registrará
-        la próxima operación y luego revisás el nuevo saldo recibido.
+        El ingreso del saldo simula temporalmente el flujo futuro de NinjaTrader.
+        Los movimientos confirmados ya se guardan en la base de desarrollo.
       </p>
 
       <div className={`operation-context-preview${pendingBalance ? " pending" : ""}`}>
@@ -388,13 +474,16 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
         </strong>
       </div>
 
-      <form className="daily-preview-form" onSubmit={addPreviewEntry}>
+      <form
+        className={`daily-preview-form${entryKind === "balance_update" ? "" : " with-origin"}`}
+        onSubmit={addPreviewEntry}
+      >
         <div className="form-field">
-          <label htmlFor="preview_entry_kind">Acción simulada</label>
+          <label htmlFor="preview_entry_kind">Acción</label>
           <select
-            disabled={Boolean(pendingBalance)}
+            disabled={Boolean(pendingBalance) || isSaving}
             id="preview_entry_kind"
-            onChange={(event) => setEntryKind(event.target.value as EntryKind)}
+            onChange={(event) => changeEntryKind(event.target.value as EntryKind)}
             value={entryKind}
           >
             <option value="deposit">
@@ -404,17 +493,43 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
               Retiro
             </option>
             <option disabled={balanceInCents === null} value="balance_update">
-              Recibir saldo de NinjaTrader
+              Simular saldo de NinjaTrader
             </option>
           </select>
         </div>
+
+        {entryKind !== "balance_update" && (
+          <div className="form-field">
+            <label htmlFor="preview_origin_destination">Origen / destino</label>
+            <select
+              disabled={Boolean(pendingBalance) || isSaving}
+              id="preview_origin_destination"
+              onChange={(event) =>
+                setOriginDestination(event.target.value as ControlOriginDestination)
+              }
+              value={originDestination}
+            >
+              {entryKind === "deposit" ? (
+                <>
+                  <option value="Aporte trader">Aporte trader</option>
+                  <option value="Saldo billetera">Saldo billetera</option>
+                </>
+              ) : (
+                <>
+                  <option value="Retiro personal">Retiro personal</option>
+                  <option value="Saldo billetera">Saldo billetera</option>
+                </>
+              )}
+            </select>
+          </div>
+        )}
 
         <div className="form-field">
           <label htmlFor="preview_amount">
             {entryKind === "balance_update" ? "Saldo recibido (USD)" : "Importe (USD)"}
           </label>
           <input
-            disabled={Boolean(pendingBalance)}
+            disabled={Boolean(pendingBalance) || isSaving}
             id="preview_amount"
             inputMode="decimal"
             onChange={(event) => setAmount(event.target.value)}
@@ -425,8 +540,16 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
           />
         </div>
 
-        <button className="primary-action" disabled={Boolean(pendingBalance)} type="submit">
-          {entryKind === "balance_update" ? "Simular recepción" : "Agregar movimiento"}
+        <button
+          className="primary-action"
+          disabled={Boolean(pendingBalance) || isSaving}
+          type="submit"
+        >
+          {isSaving
+            ? "Guardando…"
+            : entryKind === "balance_update"
+              ? "Revisar saldo recibido"
+              : "Guardar movimiento"}
         </button>
       </form>
 
@@ -436,7 +559,13 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
         </p>
       )}
 
-      <div className="preview-history" aria-label="Historial simulado">
+      {successMessage && (
+        <p className="purchase-message success" role="status">
+          {successMessage}
+        </p>
+      )}
+
+      <div className="preview-history" aria-label="Historial de Control Diario">
         {rows.length === 0 ? (
           <p className="empty-state">
             Comenzá con un depósito inicial para establecer el saldo de referencia.
@@ -465,12 +594,6 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
         )}
       </div>
 
-      {rows.length > 0 && (
-        <button className="secondary-action" onClick={resetPreview} type="button">
-          Limpiar simulación
-        </button>
-      )}
-
       {pendingBalance && reviewOpen && (
         <div className="sync-dialog-backdrop">
           <section
@@ -479,7 +602,7 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
             className="sync-dialog"
             role="dialog"
           >
-            <p className="status">NUEVO SALDO RECIBIDO DE NINJATRADER</p>
+            <p className="status">NUEVO SALDO SIMULADO DE NINJATRADER</p>
             <h3 id="sync-dialog-title">Revisá dónde se registrará</h3>
 
             <div className="sync-balance-comparison">
@@ -593,11 +716,15 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
               <div className="dialog-actions">
                 <button
                   className="primary-action"
-                  disabled={Boolean(allocationError) || pendingAllocation.length === 0}
+                  disabled={
+                    isSaving ||
+                    Boolean(allocationError) ||
+                    pendingAllocation.length === 0
+                  }
                   onClick={confirmPendingBalance}
                   type="button"
                 >
-                  Confirmar en la simulación
+                  {isSaving ? "Guardando…" : "Confirmar y crear registros"}
                 </button>
                 <button
                   className="secondary-action"
@@ -617,7 +744,8 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
             )}
 
             <p className="dialog-footnote">
-              Esta es una simulación visual: todavía no conecta NinjaTrader ni guarda datos.
+              NinjaTrader todavía no está conectado. Este saldo se identifica
+              expresamente como simulación de desarrollo y su confirmación sí se guarda.
             </p>
           </section>
         </div>

@@ -567,10 +567,10 @@ h1 {
 
 .preview-badge {
   padding: 9px 13px;
-  border: 1px solid #e5b8b4;
+  border: 1px solid #a7d2ba;
   border-radius: 999px;
-  background: #fff5f4;
-  color: #8f302b;
+  background: #effaf4;
+  color: var(--brand);
   font-size: 0.86rem;
   font-weight: 800;
 }
@@ -601,6 +601,10 @@ h1 {
   align-items: end;
   gap: 18px;
   margin-top: 24px;
+}
+
+.daily-preview-form.with-origin {
+  grid-template-columns: 1fr 1fr 1fr auto;
 }
 
 .daily-preview-form .primary-action {
