@@ -58,9 +58,46 @@ En este equipo, Supabase CLI necesita un paquete local de certificados de
 confianza de Windows para conectarse a la API. Ese archivo se genera dentro de
 `supabase/.temp/`, esta ignorado por Git y no forma parte del producto.
 
-## Pendiente para Google
+## Google OAuth de desarrollo
 
-La ruta de autenticacion ya esta programada, pero Google OAuth aun no esta
-habilitado. Faltan un proyecto de Google Cloud propiedad de NODAL, pantalla de
-consentimiento, Client ID, Client Secret y URLs de retorno. Esas credenciales
-se configuraran en los paneles protegidos; nunca en archivos versionados.
+El `2026-08-11` se completo la configuracion inicial de Google OAuth:
+
+- proyecto Google Cloud: `NODAL App Development`;
+- identificador del proyecto: `nodal-app-dev-505214`;
+- aplicacion OAuth: `NODAL App`;
+- audiencia externa en estado de prueba;
+- cliente web: `NODAL App Development Web`;
+- retorno de Google a Supabase:
+  `https://bluxgbxpepnfnjczwjgh.supabase.co/auth/v1/callback`;
+- retorno local autorizado en Supabase:
+  `http://localhost:3000/auth/callback`;
+- URL principal local: `http://localhost:3000`;
+- proveedor Google habilitado en Supabase;
+- un usuario NODAL autorizado como usuario de prueba en Google.
+
+El Client Secret vive exclusivamente en los paneles protegidos de Google y
+Supabase. No se copio al repositorio ni a `.env.local`.
+
+La autenticacion y la autorizacion siguen separadas. Google puede verificar la
+identidad de una persona, pero la aplicacion solo concede acceso operativo si
+existe un registro activo y coincidente en `nodal_users`.
+
+Antes de produccion se deberan configurar un ambiente, URLs y credenciales
+separadas para el dominio definitivo. La configuracion actual es solo de
+desarrollo y no admite datos reales.
+
+## Prueba integral
+
+El `2026-08-12` se verifico en la aplicacion local el recorrido completo:
+
+1. inicio de sesion con el usuario Google de prueba;
+2. retorno de Google a Supabase y de Supabase a NODAL App;
+3. creacion de sesion valida;
+4. lectura de autorizacion bajo RLS;
+5. bloqueo intencional por ausencia de un registro activo en `nodal_users`;
+6. cierre de sesion;
+7. redireccion al inicio ante acceso directo posterior a `/app`.
+
+La prueba confirma que identidad y autorizacion son controles independientes.
+El siguiente paso no es abrir el acceso general, sino definir y probar el alta
+administrativa del primer usuario autorizado de desarrollo.

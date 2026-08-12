@@ -1,9 +1,10 @@
 # Estado inicial del desarrollo
 
-- Fecha: `2026-08-10`
-- Estado: base local creada y verificada
+- Fecha de ultima verificacion: `2026-08-12`
+- Estado: base local y autenticacion Google verificadas
 - Datos reales: ninguno
-- Servicios externos conectados: GitHub privado y Supabase de desarrollo
+- Servicios externos conectados: GitHub privado, Supabase de desarrollo y
+  Google OAuth de desarrollo
 
 ## Resultado de esta etapa
 
@@ -60,19 +61,28 @@ para evitar errores de redondeo del lenguaje.
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
 | Auditoria de dependencias durante instalacion | 0 vulnerabilidades reportadas. |
+| Inicio de sesion Google | Aprobado con el usuario de prueba NODAL. |
+| Separacion identidad/autorizacion | Aprobada: identidad valida sin registro activo queda bloqueada. |
+| Cierre de sesion | Aprobado. |
+| Acceso directo a `/app` sin sesion | Bloqueado y redirigido al inicio. |
+
+En este equipo Windows, el servidor local debe iniciarse con el certificado de
+confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
+archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 
 ## Lo que deliberadamente no se hizo
 
-- no se creo autenticacion Google;
 - no se publico en Vercel;
 - no se copiaron datos de alumnos ni de la Plantilla Maestra;
 - no se modifico Sheets, Apps Script ni Panel Central;
 - no se implemento aun un formulario operativo.
+- no se concedio acceso NODAL automaticamente al usuario autenticado.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe sincronizar el historial de Supabase CLI y configurar
-Google OAuth sin habilitar todavia datos reales ni acceso de alumnos.
+La siguiente etapa debe crear el mecanismo administrativo controlado para
+autorizar usuarios NODAL y preparar el primer usuario de desarrollo, sin
+habilitar todavia datos reales ni acceso de alumnos.
 
 Antes de crear cuentas externas se indicara al responsable de NODAL que debe
 hacer, que acceso conservar y que costo puede generar.

@@ -29,6 +29,20 @@ export default function HomePage() {
           ))}
         </ul>
       </section>
+
+      <section className="access-panel" aria-labelledby="access-title">
+        <div>
+          <p className="status">ACCESO DE PRUEBA</p>
+          <h2 id="access-title">Ingresar al espacio privado</h2>
+          <p className="summary compact">
+            Google verifica tu identidad. El permiso para usar NODAL se valida
+            por separado dentro de la aplicacion.
+          </p>
+        </div>
+        <a className="primary-action" href="/auth/login">
+          Ingresar con Google
+        </a>
+      </section>
     </main>
   );
 }
