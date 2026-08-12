@@ -13,10 +13,12 @@ declare
   balance_confirmation_key uuid := '10000000-0000-4000-8000-000000000002';
   event_retry_confirmation_key uuid := '10000000-0000-4000-8000-000000000003';
   invalid_confirmation_key uuid := '10000000-0000-4000-8000-000000000004';
+  custom_confirmation_key uuid := '10000000-0000-4000-8000-000000000005';
   deposit_result record;
   balance_result record;
   retry_result record;
   correction_result record;
+  custom_result record;
   stored_control record;
   participant_total bigint;
   participant_count integer;
@@ -220,6 +222,56 @@ begin
         and previous_data is not null and current_data is not null) <> 1 then
     raise exception 'Correction did not preserve its audit snapshots';
   end if;
+
+  select * into custom_result
+  from public.confirm_nodal_daily_control_custom_allocation(
+    target_period_id => test_period_id,
+    target_operated_on => date '2099-01-10',
+    target_confirmation_key => custom_confirmation_key,
+    target_balance_cents => 601000,
+    target_company_id => test_company_id,
+    target_leader_account_id => test_leader_id,
+    target_replica_account_ids => array[test_replica_two_id, test_replica_three_id],
+    target_allocation_cents => array[12000, 20000, 18000]::bigint[],
+    target_phase => 'Evaluacion',
+    target_allocation_reason => 'Una replica tuvo una ejecucion diferente',
+    target_source => 'ninjatrader',
+    target_source_event_key => 'functional-test-event-custom-001',
+    target_received_balance_cents => 601000
+  );
+
+  if custom_result.operating_result_cents <> 50000
+    or custom_result.operation_entries_created <> 3
+    or (select sum(allocated_result_cents) from public.daily_control_participants
+        where daily_control_id = custom_result.daily_control_id) <> 50000
+    or (select count(*) from public.operation_entries
+        where daily_control_id = custom_result.daily_control_id
+          and magnitude_cents in (12000, 20000, 18000)) <> 3 then
+    raise exception 'Custom allocation did not preserve exact per-account amounts';
+  end if;
+
+  if (select count(*) from public.audit_events
+      where entity_id = custom_result.daily_control_id
+        and action = 'daily_control_confirmed_custom_allocation'
+        and reason = 'Una replica tuvo una ejecucion diferente') <> 1 then
+    raise exception 'Custom allocation did not preserve its reason in audit';
+  end if;
+
+  begin
+    perform * from public.correct_nodal_daily_control_balance(
+      target_period_id => test_period_id,
+      target_daily_control_id => custom_result.daily_control_id,
+      target_balance_cents => 599000,
+      target_reason => 'Intento sin redistribucion explicita'
+    );
+    raise exception 'Expected custom allocation protection did not run';
+  exception
+    when others then
+      if sqlerrm = 'Expected custom allocation protection did not run'
+        or position('explicit redistribution' in sqlerrm) = 0 then
+        raise;
+      end if;
+  end;
 end;
 $$;
 

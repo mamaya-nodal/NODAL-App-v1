@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   allocateResultEqually,
+  parseSignedAmountToCents,
   toBrokerEntry,
+  validateCustomAllocation,
   validateAllocationTotal,
 } from "./result-allocation";
 
@@ -40,6 +42,30 @@ describe("distribucion del resultado de Control Diario", () => {
     ]);
 
     expect(result).toEqual({ isValid: true, differenceInCents: 0 });
+  });
+});
+
+describe("distribución excepcional", () => {
+  it("acepta importes distintos cuando la suma coincide exactamente", () => {
+    expect(() => validateCustomAllocation(50_000, [
+      { accountId: "leader", amountInCents: 12_000, role: "leader" },
+      { accountId: "replica-1", amountInCents: 10_000, role: "replica" },
+      { accountId: "replica-2", amountInCents: 10_000, role: "replica" },
+      { accountId: "replica-3", amountInCents: 10_000, role: "replica" },
+      { accountId: "replica-4", amountInCents: 8_000, role: "replica" },
+    ])).not.toThrow();
+  });
+
+  it("bloquea una diferencia de un centavo", () => {
+    expect(() => validateCustomAllocation(50_000, [
+      { accountId: "leader", amountInCents: 25_000, role: "leader" },
+      { accountId: "replica", amountInCents: 25_001, role: "replica" },
+    ])).toThrow("1 centavos");
+  });
+
+  it("interpreta resultados positivos y negativos con dos decimales", () => {
+    expect(parseSignedAmountToCents("120,25")).toBe(12_025);
+    expect(parseSignedAmountToCents("-20.05")).toBe(-2_005);
   });
 });
 

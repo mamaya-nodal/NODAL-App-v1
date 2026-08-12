@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(10);
+select plan(12);
 
 select is(
   has_function_privilege(
@@ -22,6 +22,26 @@ select is(
   ),
   true,
   'authenticated users can call the validated transaction'
+);
+
+select is(
+  has_function_privilege(
+    'anon',
+    'public.confirm_nodal_daily_control_custom_allocation(uuid,date,uuid,bigint,uuid,uuid,uuid[],bigint[],public.operation_phase,text,text,public.daily_control_source,text,bigint,text)',
+    'EXECUTE'
+  ),
+  false,
+  'anonymous users cannot confirm custom allocations'
+);
+
+select is(
+  has_function_privilege(
+    'authenticated',
+    'public.confirm_nodal_daily_control_custom_allocation(uuid,date,uuid,bigint,uuid,uuid,uuid[],bigint[],public.operation_phase,text,text,public.daily_control_source,text,bigint,text)',
+    'EXECUTE'
+  ),
+  true,
+  'authenticated users can call the validated custom allocation transaction'
 );
 
 select is(

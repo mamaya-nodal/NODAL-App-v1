@@ -14,6 +14,8 @@ export type EqualAllocation = {
   role: "leader" | "replica";
 };
 
+export type CustomAllocation = EqualAllocation;
+
 function assertIntegerCents(value: number, fieldName: string): void {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`${fieldName} debe expresarse en centavos enteros.`);
@@ -39,6 +41,41 @@ export function validateAllocationTotal(
     isValid: distributedInCents === totalInCents,
     differenceInCents: distributedInCents - totalInCents,
   };
+}
+
+export function parseSignedAmountToCents(value: string): number {
+  const normalized = value.trim().replace(",", ".");
+  if (!/^-?\d+(?:\.\d{1,2})?$/.test(normalized)) {
+    throw new Error("Cada resultado debe tener hasta dos decimales.");
+  }
+  const negative = normalized.startsWith("-");
+  const unsigned = negative ? normalized.slice(1) : normalized;
+  const [whole, fraction = ""] = unsigned.split(".");
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  const signedCents = negative ? -cents : cents;
+  assertIntegerCents(signedCents, "El resultado por cuenta");
+  return signedCents;
+}
+
+export function validateCustomAllocation(
+  totalInCents: number,
+  allocations: CustomAllocation[],
+): void {
+  if (allocations.length === 0) {
+    throw new Error("Debe existir al menos una cuenta participante.");
+  }
+  if (new Set(allocations.map((entry) => entry.accountId)).size !== allocations.length) {
+    throw new Error("Una cuenta no puede participar más de una vez.");
+  }
+  if (allocations.filter((entry) => entry.role === "leader").length !== 1) {
+    throw new Error("La distribución debe conservar una única cuenta líder.");
+  }
+  const validation = validateAllocationTotal(totalInCents, allocations);
+  if (!validation.isValid) {
+    throw new Error(
+      `La distribución difiere del resultado total en ${validation.differenceInCents} centavos.`,
+    );
+  }
 }
 
 export function allocateResultEqually(

@@ -25,7 +25,10 @@ import {
 } from "@/modules/control-diario/domain/broker-sync-review";
 import {
   allocateResultEqually,
+  parseSignedAmountToCents,
   toBrokerEntry,
+  validateCustomAllocation,
+  type CustomAllocation,
   type EqualAllocation,
 } from "@/modules/control-diario/domain/result-allocation";
 
@@ -115,6 +118,11 @@ export function DailyControlPreview({
   const [correctionRow, setCorrectionRow] = useState<PreviewRow | null>(null);
   const [historicalCorrectedAmount, setHistoricalCorrectedAmount] = useState("");
   const [historicalCorrectionReason, setHistoricalCorrectionReason] = useState("");
+  const [customAllocationEnabled, setCustomAllocationEnabled] = useState(false);
+  const [customAllocationValues, setCustomAllocationValues] = useState<
+    Record<string, string>
+  >({});
+  const [customAllocationReason, setCustomAllocationReason] = useState("");
 
   const companyAccounts = accountsForCompany(accounts, companyId);
   const companyName =
@@ -138,6 +146,72 @@ export function DailyControlPreview({
           ? caughtError.message
           : "No se pudo calcular la distribución.";
     }
+  }
+
+  let customAllocation: CustomAllocation[] = [];
+  let customAllocationError: string | null = null;
+  if (pendingBalance && leaderId && customAllocationEnabled) {
+    customAllocation = [leaderId, ...replicaIds].map((accountId, index) => {
+      let amountInCents = 0;
+      try {
+        amountInCents = parseSignedAmountToCents(
+          customAllocationValues[accountId] ?? "",
+        );
+      } catch (caughtError) {
+        customAllocationError =
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Revisá los importes por cuenta.";
+      }
+      return {
+        accountId,
+        amountInCents,
+        role: index === 0 ? "leader" : "replica",
+      };
+    });
+    if (!customAllocationError) {
+      try {
+        validateCustomAllocation(
+          pendingBalance.operatingResultInCents,
+          customAllocation,
+        );
+      } catch (caughtError) {
+        customAllocationError =
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Revisá los importes por cuenta.";
+      }
+    }
+  }
+  const activeAllocation = customAllocationEnabled
+    ? customAllocation
+    : pendingAllocation;
+  const activeAllocationError = customAllocationEnabled
+    ? customAllocationError
+    : allocationError;
+
+  function resetCustomAllocation() {
+    setCustomAllocationEnabled(false);
+    setCustomAllocationValues({});
+    setCustomAllocationReason("");
+  }
+
+  function enableCustomAllocation() {
+    if (!pendingBalance || !leaderId) return;
+    const equalAmounts = new Map(
+      pendingAllocation.map((entry) => [entry.accountId, entry.amountInCents]),
+    );
+    setCustomAllocationValues(
+      Object.fromEntries(
+        [leaderId, ...replicaIds].map((accountId, index) => [
+          accountId,
+          ((equalAmounts.get(accountId) ??
+            (index === 0 ? pendingBalance.operatingResultInCents : 0)) / 100).toFixed(2),
+        ]),
+      ),
+    );
+    setCustomAllocationReason("");
+    setCustomAllocationEnabled(true);
   }
 
   function appendRow(
@@ -183,6 +257,7 @@ export function DailyControlPreview({
           );
         }
         setPendingBalance(createBrokerBalanceReview(balanceInCents, valueInCents));
+        resetCustomAllocation();
         setPendingConfirmationKey(crypto.randomUUID());
         setReviewOpen(true);
       } else {
@@ -236,8 +311,9 @@ export function DailyControlPreview({
     if (
       !pendingBalance ||
       !pendingConfirmationKey ||
-      allocationError ||
-      pendingAllocation.length === 0
+      activeAllocationError ||
+      activeAllocation.length === 0 ||
+      (customAllocationEnabled && !customAllocationReason.trim())
     ) return;
 
     const effectiveBalance = effectiveBrokerBalance(pendingBalance);
@@ -258,6 +334,10 @@ export function DailyControlPreview({
         receivedBalanceInCents: pendingBalance.receivedBalanceInCents,
         replicaAccountIds: replicaIds,
         syncIssueReason: pendingBalance.correctionReason,
+        customAllocation: customAllocationEnabled ? customAllocation : undefined,
+        customAllocationReason: customAllocationEnabled
+          ? customAllocationReason
+          : null,
       });
 
       if (!result.ok) {
@@ -278,6 +358,7 @@ export function DailyControlPreview({
       setReviewOpen(false);
       setShowContingency(false);
       setCorrectedAmount("");
+      resetCustomAllocation();
       setEntryKind("balance_update");
       setSuccessMessage(
         `Control guardado y ${result.control.operationEntriesCreated} registros por cuenta creados.`,
@@ -306,6 +387,7 @@ export function DailyControlPreview({
           syncIssueReason,
         ),
       );
+      resetCustomAllocation();
       setShowContingency(false);
       setError(null);
     } catch (caughtError) {
@@ -321,22 +403,26 @@ export function DailyControlPreview({
     setCompanyId(nextCompanyId);
     setLeaderId("");
     setReplicaIds([]);
+    resetCustomAllocation();
   }
 
   function changeLeader(nextLeaderId: string) {
     if (!nextLeaderId) {
       setLeaderId("");
       setReplicaIds([]);
+      resetCustomAllocation();
       return;
     }
 
     const selection = chooseLeader(nextLeaderId, replicaIds);
     setLeaderId(selection.leaderId);
     setReplicaIds(selection.replicaIds);
+    resetCustomAllocation();
   }
 
   function changeReplica(accountId: string) {
     setReplicaIds(toggleReplica(leaderId, replicaIds, accountId));
+    resetCustomAllocation();
   }
 
   function changeEntryKind(nextKind: EntryKind) {
@@ -778,13 +864,15 @@ export function DailyControlPreview({
               </strong>
             </div>
 
-            {allocationError ? (
+            {activeAllocationError ? (
               <p className="purchase-message error" role="alert">
-                {allocationError} La confirmación permanece bloqueada.
+                {activeAllocationError} La confirmación permanece bloqueada.
               </p>
-            ) : (
+            ) : null}
+
+            {activeAllocation.length > 0 && (
               <div className="allocation-list">
-                {pendingAllocation.map((entry) => {
+                {activeAllocation.map((entry) => {
                   const brokerEntry = toBrokerEntry(entry.amountInCents);
                   const destination =
                     brokerEntry.destination === "NETO_BROKER_POSITIVE"
@@ -801,12 +889,76 @@ export function DailyControlPreview({
                       </div>
                       <div>
                         <span>{destination}</span>
-                        <strong>{formatMoney(entry.amountInCents)}</strong>
+                        {customAllocationEnabled ? (
+                          <label className="custom-allocation-amount">
+                            <span className="sr-only">
+                              Resultado de cuenta {accountReferences.get(entry.accountId)}
+                            </span>
+                            <span>USD</span>
+                            <input
+                              inputMode="decimal"
+                              onChange={(event) =>
+                                setCustomAllocationValues((current) => ({
+                                  ...current,
+                                  [entry.accountId]: event.target.value,
+                                }))
+                              }
+                              type="text"
+                              value={customAllocationValues[entry.accountId] ?? ""}
+                            />
+                          </label>
+                        ) : (
+                          <strong>{formatMoney(entry.amountInCents)}</strong>
+                        )}
                       </div>
                     </article>
                   );
                 })}
               </div>
+            )}
+
+            {customAllocationEnabled ? (
+              <div className="custom-allocation-panel">
+                <div className="custom-allocation-total">
+                  <span>Suma distribuida</span>
+                  <strong>
+                    {formatMoney(
+                      customAllocation.reduce(
+                        (total, entry) => total + entry.amountInCents,
+                        0,
+                      ),
+                    )} de {formatMoney(pendingBalance.operatingResultInCents)}
+                  </strong>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="custom_allocation_reason">
+                    Motivo del ajuste excepcional
+                  </label>
+                  <input
+                    id="custom_allocation_reason"
+                    onChange={(event) => setCustomAllocationReason(event.target.value)}
+                    placeholder="Ejemplo: una cuenta no replicó una operación"
+                    required
+                    type="text"
+                    value={customAllocationReason}
+                  />
+                </div>
+                <button
+                  className="text-action"
+                  onClick={resetCustomAllocation}
+                  type="button"
+                >
+                  Volver a la distribución automática
+                </button>
+              </div>
+            ) : (
+              <button
+                className="text-action allocation-adjust-action"
+                onClick={enableCustomAllocation}
+                type="button"
+              >
+                Ajustar importes por cuenta
+              </button>
             )}
 
             {pendingBalance.correctionReason && (
@@ -858,8 +1010,9 @@ export function DailyControlPreview({
                   className="primary-action"
                   disabled={
                     isSaving ||
-                    Boolean(allocationError) ||
-                    pendingAllocation.length === 0
+                    Boolean(activeAllocationError) ||
+                    activeAllocation.length === 0 ||
+                    (customAllocationEnabled && !customAllocationReason.trim())
                   }
                   onClick={confirmPendingBalance}
                   type="button"

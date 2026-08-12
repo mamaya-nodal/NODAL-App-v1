@@ -25,6 +25,12 @@ export type ConfirmDailyControlInput = Readonly<{
   receivedBalanceInCents: number | null;
   replicaAccountIds: string[];
   syncIssueReason: string | null;
+  customAllocation?: ReadonlyArray<{
+    accountId: string;
+    amountInCents: number;
+    role: "leader" | "replica";
+  }>;
+  customAllocationReason?: string | null;
 }>;
 
 export type ConfirmDailyControlResult =
@@ -55,6 +61,10 @@ function currentDateInBuenosAires(): string {
 
 function isSafeCents(value: number | null): value is number {
   return value !== null && Number.isSafeInteger(value) && value >= 0;
+}
+
+function isSafeSignedCents(value: number): boolean {
+  return Number.isSafeInteger(value);
 }
 
 function isUuid(value: string): boolean {
@@ -112,6 +122,26 @@ function validateInput(input: ConfirmDailyControlInput): string | null {
     return "La cuenta líder y las réplicas no pueden repetirse.";
   }
 
+  if (input.customAllocation) {
+    const allocationIds = input.customAllocation.map((entry) => entry.accountId);
+    const expectedIds = new Set(participantIds);
+    if (
+      !input.customAllocationReason?.trim() ||
+      allocationIds.length !== participantIds.length ||
+      new Set(allocationIds).size !== allocationIds.length ||
+      allocationIds.some((accountId) => !expectedIds.has(accountId)) ||
+      input.customAllocation.some((entry) => !isSafeSignedCents(entry.amountInCents)) ||
+      input.customAllocation.filter((entry) => entry.role === "leader").length !== 1 ||
+      input.customAllocation[0]?.accountId !== input.leaderAccountId ||
+      input.customAllocation[0]?.role !== "leader" ||
+      input.customAllocation.slice(1).some((entry) => entry.role !== "replica")
+    ) {
+      return "Revisá los importes por cuenta y explicá el motivo del ajuste excepcional.";
+    }
+  } else if (input.customAllocationReason?.trim()) {
+    return "El motivo excepcional solo corresponde cuando se ajustan importes por cuenta.";
+  }
+
   return null;
 }
 
@@ -130,6 +160,15 @@ function friendlyDatabaseError(message: string): string {
   }
   if (message.includes("selected company and period")) {
     return "Todas las cuentas deben pertenecer a la empresa y al período seleccionados.";
+  }
+  if (message.includes("Custom allocations must equal")) {
+    return "La suma de los importes por cuenta debe coincidir exactamente con el resultado total.";
+  }
+  if (message.includes("custom allocation reason")) {
+    return "Explicá el motivo del ajuste excepcional por cuenta.";
+  }
+  if (message.includes("Custom allocations require an explicit redistribution")) {
+    return "Este control tiene un reparto excepcional. Para corregirlo también hay que confirmar nuevamente los importes por cuenta.";
   }
   if (message.includes("different")) {
     return "El saldo corregido debe ser diferente del saldo actual.";
@@ -156,28 +195,52 @@ export async function confirmDailyControl(
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
 
   const isBalanceUpdate = input.kind === "balance_update";
-  const { data, error } = await supabase.rpc("confirm_nodal_daily_control", {
-    target_amount_cents: input.amountInCents,
+  const commonBalanceParameters = {
     target_balance_cents: input.balanceInCents,
     target_company_id: input.companyId,
     target_confirmation_key: input.confirmationKey,
-    target_kind: input.kind,
     target_leader_account_id: input.leaderAccountId,
-    target_observations: isBalanceUpdate
-      ? "Recepción simulada durante el desarrollo previo a NinjaTrader"
-      : null,
+    target_observations: "Recepción simulada durante el desarrollo previo a NinjaTrader",
     target_operated_on: currentDateInBuenosAires(),
-    target_origin_destination: input.originDestination,
     target_period_id: input.periodId,
     target_phase: input.phase,
     target_received_balance_cents: input.receivedBalanceInCents,
     target_replica_account_ids: input.replicaAccountIds,
-    target_source: isBalanceUpdate ? "ninjatrader" : "manual",
-    target_source_event_key: isBalanceUpdate
-      ? `development-simulation:${input.confirmationKey}`
-      : null,
+    target_source: "ninjatrader" as const,
+    target_source_event_key: `development-simulation:${input.confirmationKey}`,
     target_sync_issue_reason: input.syncIssueReason?.trim() || null,
-  });
+  };
+
+  const { data, error } = input.customAllocation
+    ? await supabase.rpc("confirm_nodal_daily_control_custom_allocation", {
+        ...commonBalanceParameters,
+        target_allocation_cents: input.customAllocation.map(
+          (entry) => entry.amountInCents,
+        ),
+        target_allocation_reason: input.customAllocationReason?.trim() ?? "",
+      })
+    : await supabase.rpc("confirm_nodal_daily_control", {
+        target_amount_cents: input.amountInCents,
+        target_balance_cents: input.balanceInCents,
+        target_company_id: input.companyId,
+        target_confirmation_key: input.confirmationKey,
+        target_kind: input.kind,
+        target_leader_account_id: input.leaderAccountId,
+        target_observations: isBalanceUpdate
+          ? "Recepción simulada durante el desarrollo previo a NinjaTrader"
+          : null,
+        target_operated_on: currentDateInBuenosAires(),
+        target_origin_destination: input.originDestination,
+        target_period_id: input.periodId,
+        target_phase: input.phase,
+        target_received_balance_cents: input.receivedBalanceInCents,
+        target_replica_account_ids: input.replicaAccountIds,
+        target_source: isBalanceUpdate ? "ninjatrader" : "manual",
+        target_source_event_key: isBalanceUpdate
+          ? `development-simulation:${input.confirmationKey}`
+          : null,
+        target_sync_issue_reason: input.syncIssueReason?.trim() || null,
+      });
 
   if (error) return { ok: false, message: friendlyDatabaseError(error.message) };
 

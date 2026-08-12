@@ -262,3 +262,30 @@ cuentas. Además, una prueba visual temporal corrigió USD 5.600 a USD 5.500 y
 confirmó USD 500 tanto en Control Diario como en Registro. Al finalizar se
 eliminaron todos los datos técnicos y se verificaron cero compras, cuentas,
 controles y entradas.
+
+## Distribución excepcional por cuenta
+
+El `2026-08-12` se aplicó la migración
+`20260812050000_custom_daily_control_allocation.sql`. La distribución
+igualitaria continúa siendo la opción normal. Cuando una ejecución real difiere
+entre cuentas, el usuario puede habilitar el ajuste excepcional en la vista
+previa, editar importes firmados y explicar el motivo.
+
+El servidor confirma todo en una sola transacción y valida que:
+
+1. estén incluidas exactamente la líder y las réplicas seleccionadas;
+2. no haya cuentas repetidas y pertenezcan a la empresa y período elegidos;
+3. exista una única líder;
+4. la suma por cuenta coincida hasta el centavo con el resultado completo;
+5. el motivo quede guardado junto con la distribución y la auditoría.
+
+Una corrección histórica no puede convertir silenciosamente un reparto
+excepcional en uno igualitario. Hasta incorporar la pantalla de redistribución
+durante correcciones históricas, la base rechaza esa operación completa sin
+modificar registros.
+
+La verificación remota confirmó los 12 controles de permisos y seguridad. La
+prueba funcional creó dentro de `BEGIN` un resultado de USD 500 distribuido en
+USD 120, USD 200 y USD 180, verificó los registros derivados, la auditoría y el
+bloqueo de sobrescritura implícita, y finalizó con `ROLLBACK`. No dejó datos de
+prueba. El esquema remoto también pasó `db lint --linked` sin errores.
