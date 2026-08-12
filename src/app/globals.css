@@ -993,6 +993,50 @@ h1 {
   text-align: right;
 }
 
+.account-state {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+}
+
+.account-state.virgin {
+  background: #eef0ed;
+  color: var(--muted);
+}
+
+.account-state.live {
+  background: #fff4d6;
+  color: #624b0b;
+}
+
+.account-state.closed {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.account-file {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.account-file > div {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.account-file span,
+.account-file small,
+.phase-overview span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .register-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1027,6 +1071,32 @@ h1 {
   color: var(--muted);
   font-size: 0.86rem;
   line-height: 1.5;
+}
+
+.phase-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.phase-overview > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.phase-overview > div.active {
+  border-style: solid;
+  border-color: #a7d2ba;
+  background: var(--brand-soft);
+}
+
+.phase-overview strong {
+  font-size: 0.94rem;
 }
 
 .register-empty {
@@ -1323,6 +1393,8 @@ h1 {
   .contingency-form,
   .register-filters,
   .register-summary,
+  .account-file,
+  .phase-overview,
   .progress-primary-grid,
   .progress-detail-grid {
     grid-template-columns: 1fr;

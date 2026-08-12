@@ -3,6 +3,11 @@
 import { useMemo, useState } from "react";
 
 import {
+  ACCOUNT_PHASES,
+  summarizeAccountActivity,
+  summarizeAccountPhases,
+} from "@/modules/operations/domain/account-detail";
+import {
   entriesForAccount,
   summarizeBrokerEntries,
   type OperationRegisterEntry,
@@ -11,23 +16,19 @@ import {
 export type RegisterAccount = Readonly<{
   companyId: string;
   companyName: string;
+  fundsOrigin: string | null;
   id: string;
+  priceInCents: number | null;
+  purchaseNumber: number | null;
+  purchasedOn: string | null;
   referenceNumber: number;
+  state: "virgin" | "live" | "closed";
 }>;
 
 type OperationRegisterProps = Readonly<{
   accounts: RegisterAccount[];
   entries: OperationRegisterEntry[];
 }>;
-
-const phaseOrder = [
-  "Evaluacion",
-  "Primera vuelta",
-  "Segunda vuelta",
-  "Tercera vuelta",
-  "Cuarta vuelta",
-  "Quinta vuelta",
-] as const;
 
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -36,6 +37,12 @@ function formatMoney(cents: number): string {
     style: "currency",
   }).format(cents / 100);
 }
+
+const stateLabels: Record<RegisterAccount["state"], string> = {
+  closed: "Cuenta cerrada",
+  live: "Cuenta viva",
+  virgin: "Cuenta virgen",
+};
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("es-AR", { timeZone: "UTC" }).format(
@@ -70,6 +77,8 @@ export function OperationRegister({ accounts, entries }: OperationRegisterProps)
   const selectedAccount = orderedAccounts.find((account) => account.id === accountId);
   const visibleEntries = entriesForAccount(entries, accountId);
   const summary = summarizeBrokerEntries(visibleEntries);
+  const activity = summarizeAccountActivity(visibleEntries);
+  const phaseSummaries = summarizeAccountPhases(visibleEntries);
 
   function changeCompany(nextCompanyId: string) {
     const nextAccount = orderedAccounts.find(
@@ -142,8 +151,53 @@ export function OperationRegister({ accounts, entries }: OperationRegisterProps)
                 {selectedAccount?.companyName} · Cuenta {selectedAccount?.referenceNumber}
               </strong>
             </div>
-            <span>Estado automático aún no habilitado</span>
+            <strong className={`account-state ${selectedAccount?.state ?? "virgin"}`}>
+              {selectedAccount ? stateLabels[selectedAccount.state] : "Sin estado"}
+            </strong>
           </div>
+
+          {selectedAccount && (
+            <div className="account-file" aria-label="Ficha de la cuenta">
+              <div>
+                <span>Compra</span>
+                <strong>
+                  {selectedAccount.purchaseNumber === null
+                    ? "Sin compra vinculada"
+                    : `N.º ${selectedAccount.purchaseNumber}`}
+                </strong>
+                <small>
+                  {selectedAccount.purchasedOn
+                    ? formatDate(selectedAccount.purchasedOn)
+                    : "Fecha no disponible"}
+                </small>
+              </div>
+              <div>
+                <span>Precio</span>
+                <strong>
+                  {selectedAccount.priceInCents === null
+                    ? "No disponible"
+                    : formatMoney(selectedAccount.priceInCents)}
+                </strong>
+                <small>{selectedAccount.fundsOrigin ?? "Origen no disponible"}</small>
+              </div>
+              <div>
+                <span>Fases con actividad</span>
+                <strong>{activity.activePhaseCount} de 6</strong>
+                <small>
+                  {activity.lastOperatedOn
+                    ? `Última: ${formatDate(activity.lastOperatedOn)}`
+                    : "Todavía sin actividad"}
+                </small>
+              </div>
+              <div>
+                <span>Participación registrada</span>
+                <strong>{visibleEntries.length} entradas</strong>
+                <small>
+                  {activity.leaderEntryCount} como líder · {activity.replicaEntryCount} como réplica
+                </small>
+              </div>
+            </div>
+          )}
 
           <div className="register-summary" aria-label="Resumen broker de la cuenta">
             <div>
@@ -164,13 +218,28 @@ export function OperationRegister({ accounts, entries }: OperationRegisterProps)
             representa todavía el resultado final de la cuenta.
           </p>
 
+          <div className="phase-overview" aria-label="Estado de las fases">
+            {phaseSummaries.map(({ broker, phase }) => (
+              <div className={broker.entryCount > 0 ? "active" : ""} key={phase}>
+                <span>{phase}</span>
+                <strong>
+                  {broker.entryCount > 0 ? formatMoney(broker.netInCents) : "Sin actividad"}
+                </strong>
+              </div>
+            ))}
+          </div>
+          <p className="register-scope-note">
+            Los valores por fase son subtotales broker visibles. No incluyen todavía
+            TOTAL RETIRO ni se presentan como TOTAL GANANCIA.
+          </p>
+
           {visibleEntries.length === 0 ? (
             <p className="empty-state register-empty">
               Esta cuenta todavía no tiene operaciones confirmadas desde Control Diario.
             </p>
           ) : (
             <div className="phase-register-list">
-              {phaseOrder.map((phase) => {
+              {ACCOUNT_PHASES.map((phase) => {
                 const phaseEntries = visibleEntries.filter(
                   (entry) => entry.phase === phase,
                 );

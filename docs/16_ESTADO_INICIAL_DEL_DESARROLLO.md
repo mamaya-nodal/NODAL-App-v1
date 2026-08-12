@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 73 de 73 aprobadas. |
+| Pruebas automatizadas | 75 de 75 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -106,6 +106,8 @@ para evitar errores de redondeo del lenguaje.
 | Resumen acotado | Suma `NETO BROKER +`, `NETO BROKER -` y resultado broker visible sin presentarlo como `TOTAL GANANCIA`. |
 | Actualizacion del Registro | Dos saldos consecutivos actualizaron automaticamente la cuenta lider y sus replicas; la prueba reversible fue retirada luego de comprobarla. |
 | Resumen inicial | Sección calculada y enlazada desde la navegación con saldo broker, resultado operativo registrado, cuentas, compras, actividad y movimientos separados. La ausencia de saldo no se representa como cero. |
+| Detalle de cuenta | La selección del Registro muestra ficha de compra, estado guardado, precio, origen, participación como líder o réplica y las seis fases con sus subtotales broker visibles. |
+| Verificación visual de cuenta | Se creó una compra técnica temporal de LUCID por USD 89, se revisó la ficha completa y luego se retiraron compra, cuenta y auditoría. La base volvió a cero compras y cero cuentas. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -127,9 +129,9 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 ## Siguiente etapa tecnica
 
 La transacción, su conexión con Control Diario, el Registro de Operaciones de
-solo lectura y el primer Resumen de progreso ya fueron comprobados. El siguiente
-avance debe completar el detalle consultable de una cuenta o avanzar sobre una
-regla pendiente solamente cuando sus fuentes permitan equivalencia. La corrección histórica, la actualización de
+solo lectura, el detalle consultable de cuenta y el primer Resumen de progreso
+ya fueron comprobados. El siguiente avance debe abordar una regla pendiente
+solamente cuando sus fuentes permitan equivalencia. La corrección histórica, la actualización de
 estados y el calculo completo de `TOTAL GANANCIA` siguen separados hasta validar
 sus reglas y casos de equivalencia. Todavia no se habilitan datos reales ni
 acceso general de alumnos.

@@ -190,15 +190,24 @@ export default async function PrivateAppPage({
     const companiesById = new Map(
       (companyRows ?? []).map((company) => [company.id, company]),
     );
+    const purchasesByAccountId = new Map(
+      (purchaseRows ?? []).map((purchase) => [purchase.account_id, purchase]),
+    );
     accountOptions = (accountRows ?? []).flatMap((account) => {
       const company = companiesById.get(account.company_id);
       if (!company) return [];
+      const purchase = purchasesByAccountId.get(account.id);
       return [
         {
           companyId: account.company_id,
           companyName: company.display_name,
+          fundsOrigin: purchase?.funds_origin ?? null,
           id: account.id,
+          priceInCents: purchase ? Number(purchase.price_cents) : null,
+          purchaseNumber: purchase?.purchase_number ?? null,
+          purchasedOn: purchase?.purchased_on ?? null,
           referenceNumber: account.reference_number,
+          state: account.state as AccountView["state"],
         },
       ];
     });
