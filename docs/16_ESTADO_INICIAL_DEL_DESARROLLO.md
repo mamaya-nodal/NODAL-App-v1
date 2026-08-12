@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 77 de 77 aprobadas. |
+| Pruebas automatizadas | 80 de 80 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -109,6 +109,9 @@ para evitar errores de redondeo del lenguaje.
 | Detalle de cuenta | La selección del Registro muestra ficha de compra, estado guardado, precio, origen, participación como líder o réplica y las seis fases con sus subtotales broker visibles. |
 | Verificación visual de cuenta | Se creó una compra técnica temporal de LUCID por USD 89, se revisó la ficha completa y luego se retiraron compra, cuenta y auditoría. La base volvió a cero compras y cero cuentas. |
 | Inicio del alumno | Síntesis automática de saldo, resultado operativo, cuentas y operatorias, con siguiente paso contextual y enlace directo al módulo correspondiente. |
+| Corrección histórica de saldo | Desde el historial se corrige un nuevo saldo con motivo obligatorio; la transacción recalcula la cadena posterior, participantes y registros por cuenta, y conserva auditoría interna del antes y después. |
+| Integridad de correcciones | Una distribución indivisible en centavos o un retiro que supere el saldo recalculado revierte la operación completa sin cambios parciales. |
+| Verificación remota de corrección | USD 5.600 se corrigió a USD 5.500; resultado y Registro pasaron de USD 600 a USD 500. La prueba reversible y la prueba visual fueron retiradas; la base volvió a cero compras, cuentas, controles y entradas. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El

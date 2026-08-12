@@ -166,7 +166,7 @@ export default async function PrivateAppPage({
         supabase
           .from("daily_controls")
           .select(
-            "control_number, operated_on, kind, movement_cents, balance_after_cents, operating_result_cents",
+            "id, control_number, operated_on, kind, movement_cents, balance_after_cents, operating_result_cents",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
@@ -233,6 +233,7 @@ export default async function PrivateAppPage({
     });
     dailyControls = (dailyControlRows ?? []).map((control) => ({
       balanceInCents: Number(control.balance_after_cents),
+      controlId: control.id,
       id: control.control_number,
       kind: control.kind,
       operatingResultInCents:

@@ -214,8 +214,8 @@ La migracion incorpora:
 - RLS de lectura por periodo propio y prohibicion de escritura directa;
 - una funcion transaccional que valida, calcula, distribuye, guarda y audita
   todos los registros juntos;
-- bloqueo de cargas historicas fuera de secuencia hasta implementar la
-  correccion con recalculo posterior.
+- bloqueo de nuevas cargas históricas fuera de secuencia; las correcciones de
+  saldos existentes usan el flujo controlado con recálculo posterior.
 
 No se insertaron operaciones economicas para verificar la migracion. La
 comprobacion realizada fue estructural y no destructiva: aplicacion
@@ -239,3 +239,26 @@ un archivo SQL encerrado en `BEGIN` y `ROLLBACK`. Verifico como una unica unidad
 Al terminar, una consulta independiente confirmo cero periodos temporales y
 cero controles con el identificador funcional utilizado. No se conservaron
 datos economicos ni cuentas de prueba.
+
+## Corrección histórica de Control Diario
+
+El `2026-08-12` se aplicó la migración
+`20260812040000_correct_daily_control_balance.sql`. Agrega una función
+transaccional disponible para usuarios autenticados y no para `anon`.
+
+La corrección:
+
+1. acepta únicamente un `balance_update` existente del período propio;
+2. exige un saldo distinto y un motivo;
+3. recalcula en orden todos los saldos, depósitos, retiros y resultados
+   posteriores;
+4. reescribe la distribución y la entrada de cada participante;
+5. bloquea y revierte todo si una distribución deja de cerrar exactamente o un
+   retiro supera el saldo recalculado;
+6. conserva en auditoría instantáneas completas del antes y después.
+
+La prueba funcional remota se ejecutó con `BEGIN` y `ROLLBACK` usando tres
+cuentas. Además, una prueba visual temporal corrigió USD 5.600 a USD 5.500 y
+confirmó USD 500 tanto en Control Diario como en Registro. Al finalizar se
+eliminaron todos los datos técnicos y se verificaron cero compras, cuentas,
+controles y entradas.

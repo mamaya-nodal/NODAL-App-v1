@@ -29,12 +29,16 @@ import {
   type EqualAllocation,
 } from "@/modules/control-diario/domain/result-allocation";
 
-import { confirmDailyControl } from "./daily-control-actions";
+import {
+  confirmDailyControl,
+  correctDailyControlBalance,
+} from "./daily-control-actions";
 
 type EntryKind = DailyBalanceEntry["kind"];
 
 type PreviewRow = {
   balanceInCents: number;
+  controlId: string;
   id: number;
   kind: EntryKind;
   operatingResultInCents: number | null;
@@ -108,6 +112,9 @@ export function DailyControlPreview({
   const [syncIssueReason, setSyncIssueReason] = useState<string>(
     syncIssueReasons[0],
   );
+  const [correctionRow, setCorrectionRow] = useState<PreviewRow | null>(null);
+  const [historicalCorrectedAmount, setHistoricalCorrectedAmount] = useState("");
+  const [historicalCorrectionReason, setHistoricalCorrectionReason] = useState("");
 
   const companyAccounts = accountsForCompany(accounts, companyId);
   const companyName =
@@ -134,6 +141,7 @@ export function DailyControlPreview({
   }
 
   function appendRow(
+    controlId: string,
     id: number,
     kind: EntryKind,
     valueInCents: number,
@@ -144,6 +152,7 @@ export function DailyControlPreview({
       ...currentRows,
       {
         balanceInCents: nextBalanceInCents,
+        controlId,
         id,
         kind,
         operatingResultInCents,
@@ -198,6 +207,7 @@ export function DailyControlPreview({
 
         if (!result.ok) throw new Error(result.message);
         appendRow(
+          result.control.dailyControlId,
           result.control.controlNumber,
           entryKind,
           valueInCents,
@@ -256,6 +266,7 @@ export function DailyControlPreview({
       }
 
       appendRow(
+        result.control.dailyControlId,
         result.control.controlNumber,
         "balance_update",
         effectiveBalance,
@@ -332,6 +343,52 @@ export function DailyControlPreview({
     setEntryKind(nextKind);
     if (nextKind === "deposit") setOriginDestination("Aporte trader");
     if (nextKind === "withdrawal") setOriginDestination("Retiro personal");
+  }
+
+  function openHistoricalCorrection(row: PreviewRow) {
+    setCorrectionRow(row);
+    setHistoricalCorrectedAmount((row.balanceInCents / 100).toFixed(2));
+    setHistoricalCorrectionReason("");
+    setError(null);
+    setSuccessMessage(null);
+  }
+
+  async function submitHistoricalCorrection(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!correctionRow) return;
+
+    try {
+      const correctedBalanceInCents = parseControlAmountToCents(
+        historicalCorrectedAmount,
+      );
+      setIsSaving(true);
+      setError(null);
+      const result = await correctDailyControlBalance({
+        correctedBalanceInCents,
+        dailyControlId: correctionRow.controlId,
+        periodId,
+        reason: historicalCorrectionReason,
+      });
+      if (!result.ok) throw new Error(result.message);
+
+      setRows(result.controls);
+      setBalanceInCents(result.controls.at(-1)?.balanceInCents ?? null);
+      setCorrectionRow(null);
+      setHistoricalCorrectedAmount("");
+      setHistoricalCorrectionReason("");
+      setSuccessMessage(
+        `Saldo corregido. Se recalcularon ${result.affectedControls} controles y ${result.affectedOperationEntries} registros por cuenta.`,
+      );
+      router.refresh();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo corregir el saldo.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -592,11 +649,90 @@ export function DailyControlPreview({
                     ? "No corresponde"
                     : formatMoney(row.operatingResultInCents)}
                 </strong>
+                {row.kind === "balance_update" && (
+                  <button
+                    className="history-edit-action"
+                    disabled={isSaving}
+                    onClick={() => openHistoricalCorrection(row)}
+                    type="button"
+                  >
+                    Corregir saldo
+                  </button>
+                )}
               </div>
             </article>
           ))
         )}
       </div>
+
+      {correctionRow && (
+        <div className="sync-dialog-backdrop">
+          <section
+            aria-labelledby="historical-correction-title"
+            aria-modal="true"
+            className="sync-dialog historical-correction-dialog"
+            role="dialog"
+          >
+            <p className="status">CORRECCIÓN DE CONTROL DIARIO</p>
+            <h3 id="historical-correction-title">
+              Corregir saldo del control {correctionRow.id}
+            </h3>
+            <p className="context-note">
+              El saldo anterior se reemplazará en la vista. NODAL recalculará
+              automáticamente los controles posteriores y todos sus registros por cuenta.
+            </p>
+
+            <div className="historical-current-value">
+              <span>Saldo guardado actualmente</span>
+              <strong>{formatMoney(correctionRow.balanceInCents)}</strong>
+            </div>
+
+            <form className="historical-correction-form" onSubmit={submitHistoricalCorrection}>
+              <div className="form-field">
+                <label htmlFor="historical_corrected_balance">Saldo correcto (USD)</label>
+                <input
+                  disabled={isSaving}
+                  id="historical_corrected_balance"
+                  inputMode="decimal"
+                  onChange={(event) => setHistoricalCorrectedAmount(event.target.value)}
+                  required
+                  type="text"
+                  value={historicalCorrectedAmount}
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="historical_correction_reason">Motivo de la corrección</label>
+                <textarea
+                  disabled={isSaving}
+                  id="historical_correction_reason"
+                  minLength={3}
+                  onChange={(event) => setHistoricalCorrectionReason(event.target.value)}
+                  placeholder="Ejemplo: saldo anotado incorrectamente"
+                  required
+                  value={historicalCorrectionReason}
+                />
+              </div>
+              <p className="correction-integrity-note">
+                Si algún reparto deja de coincidir exactamente con el resultado total,
+                no se modificará ningún dato.
+              </p>
+              <div className="dialog-actions">
+                <button className="primary-action" disabled={isSaving} type="submit">
+                  {isSaving ? "Recalculando…" : "Confirmar corrección"}
+                </button>
+                <button
+                  className="text-action"
+                  disabled={isSaving}
+                  onClick={() => setCorrectionRow(null)}
+                  type="button"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
 
       {pendingBalance && reviewOpen && (
         <div className="sync-dialog-backdrop">

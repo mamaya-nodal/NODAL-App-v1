@@ -33,6 +33,7 @@ export type ConfirmDailyControlResult =
       control: {
         balanceAfterInCents: number;
         controlNumber: number;
+        dailyControlId: string;
         operationEntriesCreated: number;
         operatingResultInCents: number | null;
       };
@@ -130,6 +131,15 @@ function friendlyDatabaseError(message: string): string {
   if (message.includes("selected company and period")) {
     return "Todas las cuentas deben pertenecer a la empresa y al período seleccionados.";
   }
+  if (message.includes("different")) {
+    return "El saldo corregido debe ser diferente del saldo actual.";
+  }
+  if (message.includes("withdrawal exceed")) {
+    return "La corrección dejaría un retiro por encima del saldo disponible.";
+  }
+  if (message.includes("cannot be divided into exact cents")) {
+    return "La corrección afectaría una distribución que no cierra en centavos exactos.";
+  }
   return "No se pudo guardar el movimiento. No se creó ningún registro.";
 }
 
@@ -182,11 +192,94 @@ export async function confirmDailyControl(
     control: {
       balanceAfterInCents: Number(row.balance_after_cents),
       controlNumber: Number(row.control_number),
+      dailyControlId: row.daily_control_id,
       operationEntriesCreated: Number(row.operation_entries_created),
       operatingResultInCents:
         row.operating_result_cents === null
           ? null
           : Number(row.operating_result_cents),
     },
+  };
+}
+
+export type CorrectDailyControlBalanceInput = Readonly<{
+  correctedBalanceInCents: number;
+  dailyControlId: string;
+  periodId: string;
+  reason: string;
+}>;
+
+export type CorrectDailyControlBalanceResult =
+  | Readonly<{
+      ok: true;
+      affectedControls: number;
+      affectedOperationEntries: number;
+      controls: Array<{
+        balanceInCents: number;
+        controlId: string;
+        id: number;
+        kind: "deposit" | "withdrawal" | "balance_update";
+        operatingResultInCents: number | null;
+        valueInCents: number;
+      }>;
+    }>
+  | Readonly<{ ok: false; message: string }>;
+
+export async function correctDailyControlBalance(
+  input: CorrectDailyControlBalanceInput,
+): Promise<CorrectDailyControlBalanceResult> {
+  if (
+    !isUuid(input.periodId) ||
+    !isUuid(input.dailyControlId) ||
+    !isSafeCents(input.correctedBalanceInCents) ||
+    !input.reason.trim()
+  ) {
+    return { ok: false, message: "Indicá un saldo corregido y un motivo válido." };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+
+  const { data, error } = await supabase.rpc("correct_nodal_daily_control_balance", {
+    target_balance_cents: input.correctedBalanceInCents,
+    target_daily_control_id: input.dailyControlId,
+    target_period_id: input.periodId,
+    target_reason: input.reason.trim(),
+  });
+  if (error) return { ok: false, message: friendlyDatabaseError(error.message) };
+
+  const resultRow = Array.isArray(data) ? data[0] : data;
+  const { data: controlRows, error: readError } = await supabase
+    .from("daily_controls")
+    .select("id, control_number, kind, movement_cents, balance_after_cents, operating_result_cents")
+    .eq("period_id", input.periodId)
+    .order("control_number");
+  if (readError || !resultRow) {
+    return {
+      ok: false,
+      message: "La corrección se guardó, pero no pudo actualizarse la vista. Recargá la página.",
+    };
+  }
+
+  revalidatePath("/app");
+  return {
+    ok: true,
+    affectedControls: Number(resultRow.affected_controls),
+    affectedOperationEntries: Number(resultRow.affected_operation_entries),
+    controls: (controlRows ?? []).map((control) => ({
+      balanceInCents: Number(control.balance_after_cents),
+      controlId: control.id,
+      id: control.control_number,
+      kind: control.kind,
+      operatingResultInCents:
+        control.operating_result_cents === null
+          ? null
+          : Number(control.operating_result_cents),
+      valueInCents:
+        control.kind === "balance_update"
+          ? Number(control.balance_after_cents)
+          : Number(control.movement_cents),
+    })),
   };
 }

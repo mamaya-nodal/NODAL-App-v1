@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(10);
 
 select is(
   has_function_privilege(
@@ -22,6 +22,26 @@ select is(
   ),
   true,
   'authenticated users can call the validated transaction'
+);
+
+select is(
+  has_function_privilege(
+    'anon',
+    'public.correct_nodal_daily_control_balance(uuid,uuid,bigint,text)',
+    'EXECUTE'
+  ),
+  false,
+  'anonymous users cannot correct daily control'
+);
+
+select is(
+  has_function_privilege(
+    'authenticated',
+    'public.correct_nodal_daily_control_balance(uuid,uuid,bigint,text)',
+    'EXECUTE'
+  ),
+  true,
+  'authenticated users can call the validated correction transaction'
 );
 
 select is(has_table_privilege('authenticated', 'public.daily_controls', 'INSERT'), false,

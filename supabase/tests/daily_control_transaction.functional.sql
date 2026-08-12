@@ -16,6 +16,7 @@ declare
   deposit_result record;
   balance_result record;
   retry_result record;
+  correction_result record;
   stored_control record;
   participant_total bigint;
   participant_count integer;
@@ -188,6 +189,37 @@ begin
         raise;
       end if;
   end;
+
+  select * into correction_result
+  from public.correct_nodal_daily_control_balance(
+    target_period_id => test_period_id,
+    target_daily_control_id => balance_result.daily_control_id,
+    target_balance_cents => 551000,
+    target_reason => 'Correccion funcional de saldo mal informado'
+  );
+
+  if correction_result.affected_controls <> 1
+    or correction_result.affected_operation_entries <> 3 then
+    raise exception 'Correction did not report the affected rows';
+  end if;
+
+  if (select operating_result_cents from public.daily_controls
+      where id = balance_result.daily_control_id) <> 51000
+    or (select sum(allocated_result_cents) from public.daily_control_participants
+        where daily_control_id = balance_result.daily_control_id) <> 51000
+    or (select count(*) from public.operation_entries
+        where daily_control_id = balance_result.daily_control_id
+          and destination = 'NETO BROKER +'
+          and magnitude_cents = 17000) <> 3 then
+    raise exception 'Correction did not recalculate controls and derived rows';
+  end if;
+
+  if (select count(*) from public.audit_events
+      where entity_id = balance_result.daily_control_id
+        and action = 'daily_control_balance_corrected'
+        and previous_data is not null and current_data is not null) <> 1 then
+    raise exception 'Correction did not preserve its audit snapshots';
+  end if;
 end;
 $$;
 
