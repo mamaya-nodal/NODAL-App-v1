@@ -19,6 +19,14 @@ body {
   margin: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+nextjs-portal {
+  display: none;
+}
+
 body {
   background:
     radial-gradient(circle at 85% 5%, #dceee2 0, transparent 34rem),
@@ -31,6 +39,157 @@ body {
   width: min(1080px, calc(100% - 32px));
   margin: 0 auto;
   padding: 96px 0;
+}
+
+.narrow-shell {
+  max-width: 980px;
+  padding-top: 34px;
+}
+
+.app-header {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 24px 80px rgb(24 61 40 / 8%);
+}
+
+.app-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.app-brand {
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.app-brand span {
+  color: var(--brand);
+}
+
+.development-badge {
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #fff4d6;
+  color: #624b0b;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.app-welcome {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 36px;
+  padding: 34px 28px 30px;
+  scroll-margin-top: 20px;
+}
+
+.app-welcome h1 {
+  margin-bottom: 12px;
+  font-size: clamp(2.2rem, 6vw, 4rem);
+}
+
+.app-welcome .summary {
+  margin-bottom: 0;
+}
+
+.access-summary {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 5px;
+  max-width: 280px;
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+
+.access-summary.allowed {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.access-summary.blocked {
+  background: #fff4d6;
+  color: #624b0b;
+}
+
+.access-summary span {
+  font-weight: 850;
+}
+
+.access-summary small {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+}
+
+.app-navigation {
+  display: flex;
+  gap: 4px;
+  padding: 0 20px 16px;
+  overflow-x: auto;
+}
+
+.app-navigation a,
+.app-navigation > span {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.app-navigation a:hover {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.app-navigation > span {
+  opacity: 0.65;
+}
+
+.app-navigation small {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 0.63rem;
+  text-transform: uppercase;
+}
+
+.logout-form {
+  margin-left: auto;
+}
+
+.logout-form button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.logout-form button:hover {
+  background: #fff1f0;
+  color: #9f2f2a;
 }
 
 .hero {
@@ -142,10 +301,6 @@ h1 {
   color: var(--brand);
 }
 
-.narrow-shell {
-  max-width: 900px;
-}
-
 .single-panel {
   grid-template-columns: minmax(200px, 0.8fr) minmax(280px, 1.2fr);
 }
@@ -165,6 +320,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 24px;
   background: var(--surface);
+  scroll-margin-top: 20px;
 }
 
 .context-heading {
@@ -257,6 +413,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 24px;
   background: var(--surface);
+  scroll-margin-top: 20px;
 }
 
 .purchase-heading {
@@ -393,6 +550,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 24px;
   background: var(--surface);
+  scroll-margin-top: 20px;
 }
 
 .daily-preview-heading {
@@ -776,6 +934,26 @@ h1 {
     grid-template-columns: 1fr;
     gap: 28px;
     padding: 26px;
+  }
+
+  .narrow-shell {
+    padding-top: 18px;
+  }
+
+  .app-brand-row,
+  .app-welcome {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  .app-welcome {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .access-summary {
+    width: 100%;
+    max-width: none;
   }
 
   .access-panel {

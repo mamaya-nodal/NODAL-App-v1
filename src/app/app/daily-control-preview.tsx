@@ -245,7 +245,11 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
   }
 
   return (
-    <section className="daily-preview-panel" aria-labelledby="daily-preview-title">
+    <section
+      className="daily-preview-panel"
+      id="control-diario"
+      aria-labelledby="daily-preview-title"
+    >
       <div className="daily-preview-heading">
         <div>
           <p className="status">CONTROL DIARIO · VISTA PREVIA</p>

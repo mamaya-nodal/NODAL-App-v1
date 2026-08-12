@@ -96,6 +96,7 @@ para evitar errores de redondeo del lenguaje.
 | Regla de estados | Servicio determinista probado para virgen, viva y cerrada; escritura remota desconectada hasta completar `TOTAL GANANCIA`. |
 | Totales de fase | Calculo de broker positivo, broker negativo, retiro y arrastre negativo verificado contra formulas de la plantilla. |
 | Lectura de referencia | `PLANTILLA_LIMPIA!A1:F70` inspeccionada sin modificar la Plantilla Maestra. |
+| Presentacion provisional | Cabecera compacta, navegacion de modulos, identidad privada y recorrido completo revisados para demostracion. |
 | Ausencia de persistencia | Tras recargar, saldo e historial simulados desaparecen; no se escriben datos en Supabase. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de

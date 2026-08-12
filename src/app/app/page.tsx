@@ -179,35 +179,54 @@ export default async function PrivateAppPage({
 
   return (
     <main className="shell narrow-shell">
-      <section className="hero" aria-labelledby="private-title">
-        <p className="eyebrow">NODAL APP · ACCESO PRIVADO</p>
-        <h1 id="private-title">
-          {allowed ? "Acceso autorizado." : "Identidad verificada."}
-        </h1>
-        <p className="summary">
-          {allowed
-            ? "Tu usuario esta habilitado para ingresar al espacio NODAL."
-            : "Google confirmo quien sos, pero este usuario todavia no tiene permiso para operar dentro de NODAL."}
-        </p>
-      </section>
+      <header className="app-header" aria-labelledby="private-title">
+        <div className="app-brand-row">
+          <a className="app-brand" href="#inicio" aria-label="Ir al inicio">
+            NODAL <span>APP</span>
+          </a>
+          <span className="development-badge">Prototipo de desarrollo</span>
+        </div>
 
-      <section className="panel single-panel" aria-live="polite">
-        <div>
-          <p className="status">ESTADO DEL ACCESO</p>
-          <h2>{allowed ? "Habilitado" : "Pendiente de autorizacion"}</h2>
-        </div>
-        <div>
-          <p className="summary compact">
-            Usuario identificado: {user.email ?? "correo no disponible"}
-          </p>
-          {!allowed && (
-            <p className="notice">
-              Este bloqueo es intencional: iniciar sesion con Google no concede
-              acceso automatico a la informacion de NODAL.
+        <div className="app-welcome" id="inicio">
+          <div>
+            <p className="eyebrow">ESPACIO PRIVADO DEL ALUMNO</p>
+            <h1 id="private-title">
+              {allowed ? "Panel operativo" : "Identidad verificada"}
+            </h1>
+            <p className="summary">
+              {allowed
+                ? "Compras, saldos y operatorias organizados en un solo lugar."
+                : "Google confirmo quien sos, pero este usuario todavia no tiene permiso para operar dentro de NODAL."}
             </p>
-          )}
+          </div>
+          <div className={`access-summary ${allowed ? "allowed" : "blocked"}`}>
+            <span>{allowed ? "Acceso habilitado" : "Acceso pendiente"}</span>
+            <small>
+              {allowed ? "Identidad verificada con Google" : "Autorización NODAL requerida"}
+            </small>
+          </div>
         </div>
-      </section>
+
+        {allowed && (
+          <nav className="app-navigation" aria-label="Secciones de NODAL App">
+            <a href="#inicio">Inicio</a>
+            <a href="#compras">Compras</a>
+            <a href="#control-diario">Control Diario</a>
+            <span>Registro <small>Próximamente</small></span>
+            <span>Resumen <small>Próximamente</small></span>
+            <form action="/auth/logout" className="logout-form" method="post">
+              <button type="submit">Cerrar sesión</button>
+            </form>
+          </nav>
+        )}
+
+        {!allowed && (
+          <p className="notice">
+            Este bloqueo es intencional: iniciar sesion con Google no concede
+            acceso automatico a la informacion de NODAL.
+          </p>
+        )}
+      </header>
 
       {allowed && selection && (
         <section className="context-panel" aria-labelledby="context-title">
@@ -288,7 +307,7 @@ export default async function PrivateAppPage({
       )}
 
       {allowed && selection?.period && (
-        <section className="purchase-panel" aria-labelledby="purchase-title">
+        <section className="purchase-panel" id="compras" aria-labelledby="purchase-title">
           <div className="purchase-heading">
             <div>
               <p className="status">COMPRAS DEL PERÍODO</p>
@@ -419,11 +438,6 @@ export default async function PrivateAppPage({
         </p>
       )}
 
-      <form action="/auth/logout" method="post">
-        <button className="secondary-action" type="submit">
-          Cerrar sesion
-        </button>
-      </form>
     </main>
   );
 }
