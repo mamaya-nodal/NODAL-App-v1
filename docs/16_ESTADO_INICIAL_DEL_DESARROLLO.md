@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 47 de 47 aprobadas. |
+| Pruebas automatizadas | 52 de 52 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -80,6 +80,8 @@ para evitar errores de redondeo del lenguaje.
 | Seguridad de compras | Sin escritura directa del navegador; funcion validada solo para usuario autorizado y periodo propio. |
 | Nucleo de Control Diario | Depositos, retiros y actualizaciones de saldo calculados con centavos enteros y sin mezclar capital con resultado. |
 | Vista previa de Control Diario | Simulacion interactiva aprobada: deposito USD 5.000 y saldo USD 5.500 producen resultado +USD 500. |
+| Seleccion operativa | Empresa, cuenta lider, fase y replicas explicitas preparadas exclusivamente con cuentas existentes del periodo. |
+| Aislamiento de cuentas | Cada empresa carga su propia grilla; la lider no puede figurar tambien como replica. |
 | Ausencia de persistencia | Tras recargar, saldo e historial simulados desaparecen; no se escriben datos en Supabase. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
@@ -92,13 +94,15 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 - no se copiaron datos de alumnos ni de la Plantilla Maestra;
 - no se modifico Sheets, Apps Script ni Panel Central;
 - no se creo ninguna compra ficticia para completar una prueba visual.
+- no se inventaron colores para las empresas: su correspondencia exacta sigue pendiente de validacion.
 - no se concedio acceso NODAL automaticamente al usuario autenticado.
 - no se definio ni automatizo la apertura o el cierre mensual.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe completar la vista previa de Control Diario y conectarla
-con cuentas de desarrollo creadas conscientemente por el responsable NODAL. La
+La siguiente etapa debe probar la grilla completa con cuentas de desarrollo
+creadas conscientemente por el responsable NODAL y preparar el registro
+transaccional de Control Diario. La
 correccion de compras anteriores y el guardado operativo definitivo siguen
 bloqueados hasta validar sus campos y casos de equivalencia. Todavia no se
 habilitan datos reales ni acceso general de alumnos.

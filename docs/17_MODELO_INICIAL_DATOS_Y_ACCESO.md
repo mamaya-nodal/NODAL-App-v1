@@ -94,16 +94,29 @@ El calculo determinista ya preserva estos casos confirmados:
 - la ganancia conserva signo positivo y la perdida, signo negativo;
 - todos los importes se procesan en centavos enteros.
 
-Este servicio todavia no guarda registros. Los campos operativos completos, la
-seleccion de cuentas y el flujo de correcciones se conectaran solo al validar
-los casos que requieren Contabilidad y Operaciones.
+Este servicio todavia no guarda registros. La pantalla ya prepara la seleccion
+de empresa, cuenta lider, fase y replicas, pero el flujo de correcciones se
+conectara solo al validar los casos que requieren Contabilidad y Operaciones.
 
 La aplicacion incluye una vista previa temporal para comprobar estas reglas sin
 crear datos economicos. Mantiene un historial exclusivamente en la memoria de
 la pantalla, indica de forma visible `No guarda datos` y elimina todo al
-recargar. No solicita empresa, cuenta, replicas ni fase porque esos campos solo
-se habilitaran cuando existan cuentas de desarrollo conscientes y se valide el
-guardado operativo completo.
+recargar.
+
+La seleccion operativa usa exclusivamente cuentas ya compradas en el periodo:
+
+- cada empresa muestra su propia grilla y su numeracion correlativa;
+- la cuenta lider se elige por separado y nunca aparece como replica;
+- las replicas se seleccionan una por una, por lo que pueden ser no consecutivas;
+- al cambiar de empresa se limpian lider y replicas;
+- al quitar la lider tambien se limpian las replicas;
+- las seis fases conservan los nombres vigentes del sistema de referencia.
+
+No se crearon cuentas ficticias para forzar una demostracion. Por eso, hasta
+que exista una compra consciente de desarrollo, la interfaz informa que la
+empresa seleccionada no tiene cuentas. La asignacion visual de colores por
+empresa queda pendiente: las fuentes leidas no confirman la correspondencia
+exacta y la aplicacion no la inventa.
 
 Estas decisiones no se completan con valores provisorios. Se agregaran mediante
 nuevas migraciones cuando el area propietaria las confirme.

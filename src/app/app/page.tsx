@@ -60,6 +60,12 @@ type PurchaseView = {
   state: string;
 };
 
+type AccountView = {
+  companyId: string;
+  id: string;
+  referenceNumber: number;
+};
+
 export default async function PrivateAppPage({
   searchParams,
 }: PrivateAppPageProps) {
@@ -111,6 +117,7 @@ export default async function PrivateAppPage({
     singleValue(period),
   );
   let purchases: PurchaseView[] = [];
+  let accountOptions: AccountView[] = [];
 
   if (allowed && selection?.period) {
     const [{ data: companyRows }, { data: accountRows }, { data: purchaseRows }] =
@@ -141,6 +148,11 @@ export default async function PrivateAppPage({
     const accountsById = new Map(
       (accountRows ?? []).map((account) => [account.id, account]),
     );
+    accountOptions = (accountRows ?? []).map((account) => ({
+      companyId: account.company_id,
+      id: account.id,
+      referenceNumber: account.reference_number,
+    }));
     const companiesById = new Map(
       (companyRows ?? []).map((company) => [company.id, company]),
     );
@@ -390,7 +402,15 @@ export default async function PrivateAppPage({
         </section>
       )}
 
-      {allowed && selection?.period && <DailyControlPreview />}
+      {allowed && selection?.period && (
+        <DailyControlPreview
+          accounts={accountOptions}
+          companies={companies.map((company) => ({
+            id: company.id,
+            name: company.displayName,
+          }))}
+        />
+      )}
 
       {allowed && !selection && (
         <p className="notice">

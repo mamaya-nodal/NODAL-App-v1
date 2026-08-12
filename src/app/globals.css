@@ -477,6 +477,70 @@ h1 {
   font-size: 0.85rem;
 }
 
+.operation-context-preview {
+  margin-top: 32px;
+  padding-top: 30px;
+  border-top: 1px solid var(--line);
+}
+
+.operation-context-preview h3 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.operation-context-fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.replica-section {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+}
+
+.replica-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.replica-heading span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.replica-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 8px;
+  max-height: 320px;
+  margin-top: 18px;
+  overflow-y: auto;
+}
+
+.replica-account {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.replica-account.selected {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
+
 @media (max-width: 720px) {
   .shell {
     padding: 64px 0;
@@ -532,6 +596,10 @@ h1 {
   }
 
   .daily-preview-form {
+    grid-template-columns: 1fr;
+  }
+
+  .operation-context-fields {
     grid-template-columns: 1fr;
   }
 
