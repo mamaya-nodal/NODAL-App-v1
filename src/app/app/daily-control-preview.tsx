@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   OPERATION_PHASES,
@@ -76,6 +77,7 @@ export function DailyControlPreview({
   initialControls,
   periodId,
 }: DailyControlPreviewProps) {
+  const router = useRouter();
   const initialBalance = initialControls.at(-1)?.balanceInCents ?? null;
   const [balanceInCents, setBalanceInCents] = useState<number | null>(initialBalance);
   const [entryKind, setEntryKind] = useState<EntryKind>(
@@ -205,6 +207,7 @@ export function DailyControlPreview({
         setMovementConfirmationKey(null);
         setEntryKind("balance_update");
         setSuccessMessage("Movimiento guardado correctamente.");
+        router.refresh();
       }
 
       setAmount("");
@@ -268,6 +271,7 @@ export function DailyControlPreview({
       setSuccessMessage(
         `Control guardado y ${result.control.operationEntriesCreated} registros por cuenta creados.`,
       );
+      router.refresh();
     } catch {
       setError(
         "No se pudo comunicar con el servidor. Podés volver a confirmar sin duplicar registros.",

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { decideAccess } from "@/modules/access/domain/access-decision";
+import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 import {
   formatPeriodLabel,
   resolveWorkspaceSelection,
@@ -13,6 +14,10 @@ import {
   DailyControlPreview,
   type PersistedDailyControl,
 } from "./daily-control-preview";
+import {
+  OperationRegister,
+  type RegisterAccount,
+} from "./operation-register";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -63,11 +68,7 @@ type PurchaseView = {
   state: string;
 };
 
-type AccountView = {
-  companyId: string;
-  id: string;
-  referenceNumber: number;
-};
+type AccountView = RegisterAccount;
 
 export default async function PrivateAppPage({
   searchParams,
@@ -122,6 +123,7 @@ export default async function PrivateAppPage({
   let purchases: PurchaseView[] = [];
   let accountOptions: AccountView[] = [];
   let dailyControls: PersistedDailyControl[] = [];
+  let operationEntries: OperationRegisterEntry[] = [];
 
   if (allowed && selection?.period) {
     const [
@@ -129,6 +131,7 @@ export default async function PrivateAppPage({
       { data: accountRows },
       { data: purchaseRows },
       { data: dailyControlRows },
+      { data: operationEntryRows },
     ] =
       await Promise.all([
         supabase
@@ -154,6 +157,14 @@ export default async function PrivateAppPage({
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
+        supabase
+          .from("operation_entries")
+          .select(
+            "id, daily_control_id, account_id, operated_on, phase, participant_role, destination, magnitude_cents, created_at",
+          )
+          .eq("period_id", selection.period.id)
+          .order("operated_on", { ascending: false })
+          .order("created_at", { ascending: false }),
       ]);
 
     companies = (companyRows ?? []).map((company) => ({
@@ -164,14 +175,21 @@ export default async function PrivateAppPage({
     const accountsById = new Map(
       (accountRows ?? []).map((account) => [account.id, account]),
     );
-    accountOptions = (accountRows ?? []).map((account) => ({
-      companyId: account.company_id,
-      id: account.id,
-      referenceNumber: account.reference_number,
-    }));
     const companiesById = new Map(
       (companyRows ?? []).map((company) => [company.id, company]),
     );
+    accountOptions = (accountRows ?? []).flatMap((account) => {
+      const company = companiesById.get(account.company_id);
+      if (!company) return [];
+      return [
+        {
+          companyId: account.company_id,
+          companyName: company.display_name,
+          id: account.id,
+          referenceNumber: account.reference_number,
+        },
+      ];
+    });
 
     purchases = (purchaseRows ?? []).flatMap((purchase) => {
       const account = accountsById.get(purchase.account_id);
@@ -204,6 +222,28 @@ export default async function PrivateAppPage({
           ? Number(control.balance_after_cents)
           : Number(control.movement_cents),
     }));
+    const registerAccountsById = new Map(
+      accountOptions.map((account) => [account.id, account]),
+    );
+    operationEntries = (operationEntryRows ?? []).flatMap((entry) => {
+      const account = registerAccountsById.get(entry.account_id);
+      if (!account) return [];
+      return [
+        {
+          accountId: account.id,
+          accountReference: account.referenceNumber,
+          companyId: account.companyId,
+          companyName: account.companyName,
+          dailyControlId: entry.daily_control_id,
+          destination: entry.destination,
+          id: entry.id,
+          magnitudeInCents: Number(entry.magnitude_cents),
+          operatedOn: entry.operated_on,
+          participantRole: entry.participant_role,
+          phase: entry.phase,
+        },
+      ];
+    });
   }
 
   return (
@@ -241,7 +281,7 @@ export default async function PrivateAppPage({
             <a href="#inicio">Inicio</a>
             <a href="#compras">Compras</a>
             <a href="#control-diario">Control Diario</a>
-            <span>Registro <small>Próximamente</small></span>
+            <a href="#registro">Registro</a>
             <span>Resumen <small>Próximamente</small></span>
             <form action="/auth/logout" className="logout-form" method="post">
               <button type="submit">Cerrar sesión</button>
@@ -460,6 +500,10 @@ export default async function PrivateAppPage({
           initialControls={dailyControls}
           periodId={selection.period.id}
         />
+      )}
+
+      {allowed && selection?.period && (
+        <OperationRegister accounts={accountOptions} entries={operationEntries} />
       )}
 
       {allowed && !selection && (

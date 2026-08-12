@@ -101,6 +101,10 @@ para evitar errores de redondeo del lenguaje.
 | Persistencia visual | Tras recargar, el saldo y el historial confirmados reaparecieron desde Supabase. |
 | Estado preservado | Las cuentas participantes continuaron virgenes; Control Diario no cambia estados con resultados parciales. |
 | Limpieza de prueba | Los dos controles tecnicos, sus registros derivados y auditorias se retiraron despues de verificarlos; las compras existentes se conservaron. |
+| Registro de Operaciones | Vista de solo lectura por empresa y cuenta conectada a las entradas derivadas de Control Diario. |
+| Fases visibles | Cada entrada muestra fase, fecha, rol lider/replica, destino broker, importe y origen en Control Diario. |
+| Resumen acotado | Suma `NETO BROKER +`, `NETO BROKER -` y resultado broker visible sin presentarlo como `TOTAL GANANCIA`. |
+| Actualizacion del Registro | Dos saldos consecutivos actualizaron automaticamente la cuenta lider y sus replicas; la prueba reversible fue retirada luego de comprobarla. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -121,12 +125,13 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 
 ## Siguiente etapa tecnica
 
-La transaccion y su conexion con la interfaz ya fueron comprobadas. El siguiente
-avance puede exponer el Registro de Operaciones de solo lectura para revisar por
-cuenta lo creado desde Control Diario. La correccion historica, la actualizacion
-de estados y el calculo completo de `TOTAL GANANCIA` siguen separados hasta
-validar sus reglas y casos de equivalencia. Todavia no se habilitan datos reales
-ni acceso general de alumnos.
+La transaccion, su conexion con Control Diario y el Registro de Operaciones de
+solo lectura ya fueron comprobados. El siguiente avance debe completar el
+detalle consultable de una cuenta o preparar el primer Resumen de progreso con
+los datos que ya sean inequívocos. La correccion historica, la actualizacion de
+estados y el calculo completo de `TOTAL GANANCIA` siguen separados hasta validar
+sus reglas y casos de equivalencia. Todavia no se habilitan datos reales ni
+acceso general de alumnos.
 
 Antes de crear cuentas externas se indicara al responsable de NODAL que debe
 hacer, que acceso conservar y que costo puede generar.

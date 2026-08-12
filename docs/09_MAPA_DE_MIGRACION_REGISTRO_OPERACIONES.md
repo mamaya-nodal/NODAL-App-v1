@@ -171,9 +171,15 @@ recibe los resultados de compras, Control Diario y Registro de Operaciones.
 
 ## Estado tecnico inicial
 
-La base de desarrollo ya puede crear una entrada derivada por cuenta al
-confirmar Control Diario, conservando fase, fecha, rol, destino, importe y
-vinculo de origen. Esta escritura permanece desconectada de la interfaz.
+La base de desarrollo crea una entrada derivada por cuenta al confirmar Control
+Diario, conservando fase, fecha, rol, destino, importe y vinculo de origen. La
+interfaz ya muestra esas entradas en una vista de solo lectura filtrada por
+empresa y cuenta, sin exigir una segunda carga al alumno.
+
+La vista muestra subtotales de `NETO BROKER +`, `NETO BROKER -` y resultado
+broker visible. No denomina a este subtotal `TOTAL GANANCIA`, porque todavia no
+incluye todos los componentes de las vueltas. Tampoco permite correcciones ni
+actualiza estados en esta etapa.
 
 El servicio de estado de cuenta tambien conserva la regla vigente: sin datos
 operativos es virgen; con actividad y sin `TOTAL GANANCIA` positivo es viva; con
