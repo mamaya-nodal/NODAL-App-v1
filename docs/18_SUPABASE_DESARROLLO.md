@@ -198,3 +198,28 @@ La verificacion remota confirmo:
 No se creo una compra ficticia durante la prueba visual. Para confirmar la
 operacion completa se usaran empresa, precio y origen decididos por el
 responsable NODAL, sin inventar un registro economico.
+
+## Transaccion inicial de Control Diario
+
+El `2026-08-12` se aplico la migracion
+`20260812030000_daily_control_transaction.sql`. El historial local y remoto
+quedo sincronizado y `db lint --linked` no encontro errores de esquema.
+
+La migracion incorpora:
+
+- `daily_controls`, con saldo anterior y posterior, resultado, contexto,
+  origen manual o NinjaTrader e idempotencia;
+- `daily_control_participants`, con lider y replicas explicitas;
+- `operation_entries`, con la entrada derivada por cuenta, fase, rol y destino;
+- RLS de lectura por periodo propio y prohibicion de escritura directa;
+- una funcion transaccional que valida, calcula, distribuye, guarda y audita
+  todos los registros juntos;
+- bloqueo de cargas historicas fuera de secuencia hasta implementar la
+  correccion con recalculo posterior.
+
+No se insertaron operaciones economicas para verificar la migracion. La
+comprobacion realizada fue estructural y no destructiva: aplicacion
+transaccional, sincronizacion del historial, `db push --dry-run` sin pendientes
+y lint remoto sin errores. Las pruebas SQL de privilegios quedaron versionadas,
+pero su ejecucion local sigue requiriendo Docker, que no esta instalado en este
+equipo.

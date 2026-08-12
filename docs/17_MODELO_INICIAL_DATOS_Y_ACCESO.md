@@ -23,6 +23,9 @@ un formulario operativo ni reemplaza ninguna funcion de Sheets.
 | `accounts` | Identifica una cuenta por periodo, empresa y referencia. |
 | `purchases` | Conserva numero, fecha, precio, origen y cuenta creada. |
 | `audit_events` | Reserva la traza interna de acciones y correcciones sensibles. |
+| `daily_controls` | Conserva la secuencia de saldo, movimiento, contexto, fuente y confirmacion. |
+| `daily_control_participants` | Vincula cada control con su lider y replicas explicitas. |
+| `operation_entries` | Conserva el registro derivado por cuenta, fase y destino broker. |
 
 El catalogo inicial incluye `FFF`, `LUCID` y `TRADEFY`. Se conocen como
 vigentes, pero su fecha historica de alta no esta confirmada; por eso esa fecha
@@ -128,6 +131,29 @@ exacta y la aplicacion no la inventa.
 
 Estas decisiones no se completan con valores provisorios. Se agregaran mediante
 nuevas migraciones cuando el area propietaria las confirme.
+
+## Persistencia transaccional preparada
+
+La migracion `20260812030000_daily_control_transaction.sql` crea una unica
+funcion validada para confirmar un Control Diario. Dentro de la misma
+transaccion:
+
+1. valida identidad, autorizacion, periodo y orden de fecha;
+2. obtiene y bloquea la secuencia del periodo;
+3. calcula el nuevo saldo y el resultado desde el ultimo saldo confirmado;
+4. valida empresa, lider, replicas, fase y reparto exacto;
+5. guarda el Control Diario;
+6. guarda los participantes;
+7. crea una entrada derivada por cuenta;
+8. registra auditoria;
+9. devuelve el registro ya creado si se repite la misma confirmacion o evento
+   de NinjaTrader.
+
+El alumno puede leer exclusivamente los registros de sus periodos mediante
+RLS, pero no puede insertar, modificar ni eliminar directamente ninguna de las
+tres tablas. El boton visual todavia no llama a esta funcion. La activacion
+queda condicionada a las pruebas reversibles de equivalencia y al calculo de
+estado de cuenta, que no se completo con una regla parcial.
 
 ## Limitacion local conocida
 

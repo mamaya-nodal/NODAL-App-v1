@@ -87,6 +87,10 @@ para evitar errores de redondeo del lenguaje.
 | Preparacion previa | Empresa, lider, replicas y fase aparecen antes del saldo y permanecen visibles como configuracion activa. |
 | Recepcion NinjaTrader simulada | Un nuevo saldo abre una revision obligatoria con destino y distribucion; un segundo saldo queda bloqueado hasta resolver el primero. |
 | Contingencia simulada | Permite clasificar el error, indicar el saldo correcto, recalcular y mostrar que el original se reservara para auditoria. |
+| Persistencia de Control Diario | Esquema y transaccion aplicados en Supabase de desarrollo; interfaz todavia desconectada. |
+| Registros derivados | La transaccion crea participantes y una entrada por cuenta, con rol, fase, destino e importe. |
+| Idempotencia | Una confirmacion repetida o un evento repetido de NinjaTrader devuelve el control existente sin duplicar filas. |
+| Seguridad economica | El alumno no puede escribir directamente en Control Diario, participantes ni registros por cuenta. |
 | Ausencia de persistencia | Tras recargar, saldo e historial simulados desaparecen; no se escriben datos en Supabase. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
@@ -103,12 +107,14 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 - no se concedio acceso NODAL automaticamente al usuario autenticado.
 - no se definio ni automatizo la apertura o el cierre mensual.
 - no se conecto todavia la API de NinjaTrader; la recepcion actual es una simulacion visual.
+- no se conecto todavia el boton visual con la transaccion remota.
+- no se actualizan todavia estados de cuenta desde los registros derivados.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe probar la grilla y la distribucion completa con cuentas
-de desarrollo creadas conscientemente por el responsable NODAL y preparar el
-registro transaccional de Control Diario. La
+La siguiente etapa debe comprobar la transaccion con casos reversibles y
+anonimizados, completar el calculo de estado por cuenta y recien entonces
+conectar el boton de confirmacion. La
 correccion de compras anteriores y el guardado operativo definitivo siguen
 bloqueados hasta validar sus campos y casos de equivalencia. Todavia no se
 habilitan datos reales ni acceso general de alumnos.
