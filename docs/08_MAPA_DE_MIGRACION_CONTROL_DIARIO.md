@@ -74,6 +74,30 @@ previa antes de confirmar. Al confirmar:
 Esto es una mejora intencional respecto de Sheets. No cambia la informacion
 economica que obtiene el sistema; elimina una tarea manual repetida.
 
+### Preparacion previa y recepcion futura desde NinjaTrader
+
+Empresa, cuenta lider, replicas y fase se preparan antes del siguiente saldo.
+La configuracion queda visible como destino activo, pero cada confirmacion
+conserva su propia copia: cambiarla despues no modifica operaciones anteriores.
+
+Cuando NinjaTrader entregue un saldo, NODAL calculara el resultado contra el
+ultimo saldo confirmado y mostrara una revision obligatoria con tres caminos:
+
+1. confirmar y registrar;
+2. cambiar cuentas o fase y volver a revisar;
+3. informar un error de sincronizacion.
+
+No existe una accion normal `dejar pendiente` ni una carga manual alternativa
+para el mismo saldo. Mientras haya una recepcion sin resolver, otro saldo no se
+incorpora al saldo de referencia ni puede confirmarse por encima de ella.
+
+La contingencia exige clasificar el problema e indicar el saldo correcto. El
+dato original recibido se conserva para auditoria, pero no participa de los
+resultados vigentes. NODAL recalcula el resultado y vuelve a mostrar destino y
+distribucion antes de confirmar. La carga manual fuera de este flujo queda
+reservada para una futura politica de contingencia cuando la integracion no
+entregue ningun dato.
+
 ## Datos y comportamiento de la app
 
 | Elemento | Origen | Comportamiento en NODAL App | Estado |

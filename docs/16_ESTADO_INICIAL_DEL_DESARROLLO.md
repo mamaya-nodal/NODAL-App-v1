@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 56 de 56 aprobadas. |
+| Pruebas automatizadas | 60 de 60 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -84,6 +84,9 @@ para evitar errores de redondeo del lenguaje.
 | Aislamiento de cuentas | Cada empresa carga su propia grilla; la lider no puede figurar tambien como replica. |
 | Distribucion previa | Muestra una fila por lider y replica, su destino `NETO BROKER +` o `NETO BROKER -` y comprueba el total exacto. |
 | Centavos no divisibles | La confirmacion queda bloqueada; no se asigna un sobrante silenciosamente. |
+| Preparacion previa | Empresa, lider, replicas y fase aparecen antes del saldo y permanecen visibles como configuracion activa. |
+| Recepcion NinjaTrader simulada | Un nuevo saldo abre una revision obligatoria con destino y distribucion; un segundo saldo queda bloqueado hasta resolver el primero. |
+| Contingencia simulada | Permite clasificar el error, indicar el saldo correcto, recalcular y mostrar que el original se reservara para auditoria. |
 | Ausencia de persistencia | Tras recargar, saldo e historial simulados desaparecen; no se escriben datos en Supabase. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
@@ -99,6 +102,7 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 - no se inventaron colores para las empresas: su correspondencia exacta sigue pendiente de validacion.
 - no se concedio acceso NODAL automaticamente al usuario autenticado.
 - no se definio ni automatizo la apertura o el cierre mensual.
+- no se conecto todavia la API de NinjaTrader; la recepcion actual es una simulacion visual.
 
 ## Siguiente etapa tecnica
 

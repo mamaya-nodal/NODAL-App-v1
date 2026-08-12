@@ -34,6 +34,7 @@
 | APP-028 | Los espacios `Real` y `Practica` permanecen separados y se seleccionan de forma explicita. El selector mensual solo permite elegir periodos ya existentes: no crea ni abre meses automaticamente. La politica de apertura y cierre mensual sigue pendiente del area propietaria. | Vigente |
 | APP-029 | La compra se confirma mediante una unica transaccion validada: el alumno carga empresa, precio y uno de los dos origenes vigentes; el servidor genera fecha, numero general, referencia por empresa, cuenta virgen y auditoria. Hasta definir la politica de cargas tardias, la fecha automatica solo se registra en el mes calendario seleccionado. | Vigente |
 | APP-030 | La distribucion automatica de Control Diario solo se habilita cuando el resultado puede repartirse en centavos exactos entre las cuentas participantes. Si no cierra exactamente, la app bloquea la confirmacion hasta aplicar un ajuste excepcional validado; nunca asigna el sobrante de forma silenciosa. | Vigente |
+| APP-031 | Empresa, lider, replicas y fase se preparan antes de recibir el siguiente saldo. Un saldo recibido desde NinjaTrader exige revision: confirmar, cambiar el destino o informar un error de sincronizacion. No existe `dejar pendiente` ni carga manual como alternativa normal. La contingencia conserva el dato original, exige motivo y saldo corregido, recalcula en NODAL y deja auditoria. | Vigente |
 
 ## Propuestas pendientes de decision
 

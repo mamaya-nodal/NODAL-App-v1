@@ -3,17 +3,24 @@
 import { FormEvent, useState } from "react";
 
 import {
-  calculateDailyBalance,
-  parseControlAmountToCents,
-  type DailyBalanceEntry,
-} from "@/modules/control-diario/domain/balance-rules";
-import {
   OPERATION_PHASES,
   accountsForCompany,
   chooseLeader,
   toggleReplica,
   type DailyControlAccount,
 } from "@/modules/control-diario/domain/account-selection";
+import {
+  calculateDailyBalance,
+  parseControlAmountToCents,
+  type DailyBalanceEntry,
+} from "@/modules/control-diario/domain/balance-rules";
+import {
+  assertCanReceiveBrokerBalance,
+  correctBrokerBalanceReview,
+  createBrokerBalanceReview,
+  effectiveBrokerBalance,
+  type BrokerBalanceReview,
+} from "@/modules/control-diario/domain/broker-sync-review";
 import {
   allocateResultEqually,
   toBrokerEntry,
@@ -35,6 +42,13 @@ const entryLabels: Record<EntryKind, string> = {
   deposit: "Depósito",
   withdrawal: "Retiro",
 };
+
+const syncIssueReasons = [
+  "Saldo recibido incorrecto",
+  "Actualización faltante",
+  "Saldo duplicado",
+  "Desconexión de NinjaTrader",
+] as const;
 
 type DailyControlPreviewProps = {
   accounts: DailyControlAccount[];
@@ -61,16 +75,28 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
   const [phase, setPhase] = useState<(typeof OPERATION_PHASES)[number]>(
     OPERATION_PHASES[0],
   );
+  const [pendingBalance, setPendingBalance] =
+    useState<BrokerBalanceReview | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [showContingency, setShowContingency] = useState(false);
+  const [correctedAmount, setCorrectedAmount] = useState("");
+  const [syncIssueReason, setSyncIssueReason] = useState<string>(
+    syncIssueReasons[0],
+  );
+
   const companyAccounts = accountsForCompany(accounts, companyId);
-  const latestRow = rows.length > 0 ? rows[rows.length - 1] : null;
-  const latestOperatingResult = latestRow?.operatingResultInCents ?? null;
-  let allocation: EqualAllocation[] = [];
+  const companyName =
+    companies.find((company) => company.id === companyId)?.name ?? "Sin empresa";
+  const accountReferences = new Map(
+    companyAccounts.map((account) => [account.id, account.referenceNumber]),
+  );
+  let pendingAllocation: EqualAllocation[] = [];
   let allocationError: string | null = null;
 
-  if (latestOperatingResult !== null && leaderId) {
+  if (pendingBalance && leaderId) {
     try {
-      allocation = allocateResultEqually(
-        latestOperatingResult,
+      pendingAllocation = allocateResultEqually(
+        pendingBalance.operatingResultInCents,
         leaderId,
         replicaIds,
       );
@@ -82,14 +108,31 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
     }
   }
 
-  const accountReferences = new Map(
-    companyAccounts.map((account) => [account.id, account.referenceNumber]),
-  );
+  function appendRow(
+    kind: EntryKind,
+    valueInCents: number,
+    nextBalanceInCents: number,
+    operatingResultInCents: number | null,
+  ) {
+    setRows((currentRows) => [
+      ...currentRows,
+      {
+        balanceInCents: nextBalanceInCents,
+        id: currentRows.length + 1,
+        kind,
+        operatingResultInCents,
+        valueInCents,
+      },
+    ]);
+    setBalanceInCents(nextBalanceInCents);
+  }
 
   function addPreviewEntry(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     try {
+      assertCanReceiveBrokerBalance(pendingBalance);
+
       const valueInCents = parseControlAmountToCents(amount);
       const entry: DailyBalanceEntry =
         entryKind === "balance_update"
@@ -97,18 +140,24 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
           : { amountInCents: valueInCents, kind: entryKind };
       const result = calculateDailyBalance(balanceInCents, entry);
 
-      setRows((currentRows) => [
-        ...currentRows,
-        {
-          balanceInCents: result.balanceInCents,
-          id: currentRows.length + 1,
-          kind: entryKind,
-          operatingResultInCents: result.operatingResultInCents,
+      if (entryKind === "balance_update") {
+        if (!companyId || !leaderId) {
+          throw new Error(
+            "Prepará primero la empresa, la cuenta líder, las réplicas y la fase.",
+          );
+        }
+        setPendingBalance(createBrokerBalanceReview(balanceInCents, valueInCents));
+        setReviewOpen(true);
+      } else {
+        appendRow(
+          entryKind,
           valueInCents,
-        },
-      ]);
-      setBalanceInCents(result.balanceInCents);
-      setEntryKind("balance_update");
+          result.balanceInCents,
+          result.operatingResultInCents,
+        );
+        setEntryKind("balance_update");
+      }
+
       setAmount("");
       setError(null);
     } catch (caughtError) {
@@ -120,12 +169,57 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
     }
   }
 
+  function confirmPendingBalance() {
+    if (!pendingBalance || allocationError || pendingAllocation.length === 0) return;
+
+    const effectiveBalance = effectiveBrokerBalance(pendingBalance);
+    appendRow(
+      "balance_update",
+      effectiveBalance,
+      effectiveBalance,
+      pendingBalance.operatingResultInCents,
+    );
+    setPendingBalance(null);
+    setReviewOpen(false);
+    setShowContingency(false);
+    setCorrectedAmount("");
+    setEntryKind("balance_update");
+  }
+
+  function applyContingency(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!pendingBalance) return;
+
+    try {
+      const correctedBalanceInCents = parseControlAmountToCents(correctedAmount);
+      setPendingBalance(
+        correctBrokerBalanceReview(
+          pendingBalance,
+          balanceInCents,
+          correctedBalanceInCents,
+          syncIssueReason,
+        ),
+      );
+      setShowContingency(false);
+      setError(null);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo aplicar la contingencia.",
+      );
+    }
+  }
+
   function resetPreview() {
     setBalanceInCents(null);
     setEntryKind("deposit");
     setAmount("");
     setError(null);
     setRows([]);
+    setPendingBalance(null);
+    setReviewOpen(false);
+    setShowContingency(false);
   }
 
   function changeCompany(nextCompanyId: string) {
@@ -155,107 +249,26 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
       <div className="daily-preview-heading">
         <div>
           <p className="status">CONTROL DIARIO · VISTA PREVIA</p>
-          <h2 id="daily-preview-title">Probar saldo y resultado</h2>
+          <h2 id="daily-preview-title">Preparar y revisar la operatoria</h2>
         </div>
         <span className="preview-badge">No guarda datos</span>
       </div>
 
       <p className="context-note">
-        Esta simulación permite revisar el cálculo antes de conectar el guardado
-        real. Al recargar la página se borra por completo.
+        Simula el flujo futuro de NinjaTrader. Primero preparás dónde se registrará
+        la próxima operación y luego revisás el nuevo saldo recibido.
       </p>
 
-      <div className="balance-summary" aria-live="polite">
-        <span>Saldo de referencia simulado</span>
-        <strong>
-          {balanceInCents === null ? "Todavía no establecido" : formatMoney(balanceInCents)}
-        </strong>
-      </div>
-
-      <form className="daily-preview-form" onSubmit={addPreviewEntry}>
-        <div className="form-field">
-          <label htmlFor="preview_entry_kind">Acción</label>
-          <select
-            id="preview_entry_kind"
-            onChange={(event) => setEntryKind(event.target.value as EntryKind)}
-            value={entryKind}
-          >
-            <option value="deposit">
-              {balanceInCents === null ? "Depósito inicial" : "Depósito"}
-            </option>
-            <option disabled={balanceInCents === null} value="withdrawal">
-              Retiro
-            </option>
-            <option disabled={balanceInCents === null} value="balance_update">
-              Informar nuevo saldo
-            </option>
-          </select>
+      <div className={`operation-context-preview${pendingBalance ? " pending" : ""}`}>
+        <div className="operation-context-heading">
+          <div>
+            <p className="status">CONFIGURACIÓN ACTIVA PARA LA PRÓXIMA OPERACIÓN</p>
+            <h3>Empresa, líder, réplicas y fase</h3>
+          </div>
+          {companyId && leaderId && (
+            <span className="active-context-badge">Configuración preparada</span>
+          )}
         </div>
-
-        <div className="form-field">
-          <label htmlFor="preview_amount">
-            {entryKind === "balance_update" ? "Nuevo saldo (USD)" : "Importe (USD)"}
-          </label>
-          <input
-            id="preview_amount"
-            inputMode="decimal"
-            onChange={(event) => setAmount(event.target.value)}
-            placeholder={balanceInCents === null ? "Ejemplo: 5000" : "Ejemplo: 5500"}
-            required
-            type="text"
-            value={amount}
-          />
-        </div>
-
-        <button className="primary-action" type="submit">
-          Agregar a la simulación
-        </button>
-      </form>
-
-      {error && (
-        <p className="purchase-message error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="preview-history" aria-label="Historial simulado">
-        {rows.length === 0 ? (
-          <p className="empty-state">
-            Comenzá con un depósito inicial para establecer el saldo de referencia.
-          </p>
-        ) : (
-          rows.map((row) => (
-            <article className="preview-row" key={row.id}>
-              <div>
-                <p className="purchase-reference">
-                  {row.id}. {entryLabels[row.kind]} · {formatMoney(row.valueInCents)}
-                </p>
-                <p className="purchase-meta">
-                  Saldo posterior: {formatMoney(row.balanceInCents)}
-                </p>
-              </div>
-              <div className="preview-result">
-                <span>Resultado operativo</span>
-                <strong>
-                  {row.operatingResultInCents === null
-                    ? "No corresponde"
-                    : formatMoney(row.operatingResultInCents)}
-                </strong>
-              </div>
-            </article>
-          ))
-        )}
-      </div>
-
-      <div className="operation-context-preview">
-        <div>
-          <p className="status">CONTEXTO OPERATIVO PREPARADO</p>
-          <h3>Empresa, líder, réplicas y fase</h3>
-        </div>
-        <p className="context-note">
-          Esta selección usa solamente cuentas compradas en la empresa y período
-          actuales. La líder queda siempre separada de las réplicas.
-        </p>
 
         <div className="operation-context-fields">
           <div className="form-field">
@@ -351,35 +364,160 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
           )}
         </div>
 
-        <div className="allocation-preview" aria-live="polite">
-          <div className="allocation-heading">
+        {pendingBalance && !reviewOpen && (
+          <div className="pending-sync-alert" role="alert">
             <div>
-              <p className="status">VISTA PREVIA ANTES DE CONFIRMAR</p>
-              <h3>Distribución automática</h3>
+              <strong>Hay un saldo de NinjaTrader sin resolver.</strong>
+              <span>No se aceptará otro saldo hasta revisarlo.</span>
             </div>
-            <strong>
-              {latestOperatingResult === null
-                ? "Sin resultado pendiente"
-                : formatMoney(latestOperatingResult)}
-            </strong>
+            <button className="primary-action" onClick={() => setReviewOpen(true)} type="button">
+              Revisar ahora
+            </button>
           </div>
+        )}
+      </div>
 
-          {latestOperatingResult === null ? (
-            <p className="empty-state">
-              Informá un nuevo saldo para obtener el resultado operativo a distribuir.
-            </p>
-          ) : !leaderId ? (
-            <p className="empty-state">
-              Elegí la cuenta líder para ver el reparto entre las cuentas participantes.
-            </p>
-          ) : allocationError ? (
-            <p className="purchase-message error" role="alert">
-              {allocationError} El ajuste excepcional sigue pendiente de validación.
-            </p>
-          ) : (
-            <>
+      <div className="balance-summary" aria-live="polite">
+        <span>Último saldo confirmado</span>
+        <strong>
+          {balanceInCents === null ? "Todavía no establecido" : formatMoney(balanceInCents)}
+        </strong>
+      </div>
+
+      <form className="daily-preview-form" onSubmit={addPreviewEntry}>
+        <div className="form-field">
+          <label htmlFor="preview_entry_kind">Acción simulada</label>
+          <select
+            disabled={Boolean(pendingBalance)}
+            id="preview_entry_kind"
+            onChange={(event) => setEntryKind(event.target.value as EntryKind)}
+            value={entryKind}
+          >
+            <option value="deposit">
+              {balanceInCents === null ? "Depósito inicial" : "Depósito"}
+            </option>
+            <option disabled={balanceInCents === null} value="withdrawal">
+              Retiro
+            </option>
+            <option disabled={balanceInCents === null} value="balance_update">
+              Recibir saldo de NinjaTrader
+            </option>
+          </select>
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="preview_amount">
+            {entryKind === "balance_update" ? "Saldo recibido (USD)" : "Importe (USD)"}
+          </label>
+          <input
+            disabled={Boolean(pendingBalance)}
+            id="preview_amount"
+            inputMode="decimal"
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder={balanceInCents === null ? "Ejemplo: 5000" : "Ejemplo: 5500"}
+            required
+            type="text"
+            value={amount}
+          />
+        </div>
+
+        <button className="primary-action" disabled={Boolean(pendingBalance)} type="submit">
+          {entryKind === "balance_update" ? "Simular recepción" : "Agregar movimiento"}
+        </button>
+      </form>
+
+      {error && (
+        <p className="purchase-message error" role="alert">
+          {error}
+        </p>
+      )}
+
+      <div className="preview-history" aria-label="Historial simulado">
+        {rows.length === 0 ? (
+          <p className="empty-state">
+            Comenzá con un depósito inicial para establecer el saldo de referencia.
+          </p>
+        ) : (
+          rows.map((row) => (
+            <article className="preview-row" key={row.id}>
+              <div>
+                <p className="purchase-reference">
+                  {row.id}. {entryLabels[row.kind]} · {formatMoney(row.valueInCents)}
+                </p>
+                <p className="purchase-meta">
+                  Saldo posterior: {formatMoney(row.balanceInCents)}
+                </p>
+              </div>
+              <div className="preview-result">
+                <span>Resultado operativo</span>
+                <strong>
+                  {row.operatingResultInCents === null
+                    ? "No corresponde"
+                    : formatMoney(row.operatingResultInCents)}
+                </strong>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+
+      {rows.length > 0 && (
+        <button className="secondary-action" onClick={resetPreview} type="button">
+          Limpiar simulación
+        </button>
+      )}
+
+      {pendingBalance && reviewOpen && (
+        <div className="sync-dialog-backdrop">
+          <section
+            aria-labelledby="sync-dialog-title"
+            aria-modal="true"
+            className="sync-dialog"
+            role="dialog"
+          >
+            <p className="status">NUEVO SALDO RECIBIDO DE NINJATRADER</p>
+            <h3 id="sync-dialog-title">Revisá dónde se registrará</h3>
+
+            <div className="sync-balance-comparison">
+              <div>
+                <span>Saldo anterior confirmado</span>
+                <strong>{formatMoney(balanceInCents ?? 0)}</strong>
+              </div>
+              <div>
+                <span>Saldo recibido</span>
+                <strong>{formatMoney(pendingBalance.receivedBalanceInCents)}</strong>
+              </div>
+              {pendingBalance.correctedBalanceInCents !== null && (
+                <div className="corrected-balance">
+                  <span>Saldo corregido por contingencia</span>
+                  <strong>{formatMoney(pendingBalance.correctedBalanceInCents)}</strong>
+                </div>
+              )}
+              <div className="operating-result-card">
+                <span>Resultado calculado por NODAL</span>
+                <strong>{formatMoney(pendingBalance.operatingResultInCents)}</strong>
+              </div>
+            </div>
+
+            <div className="sync-destination">
+              <span>Se propone registrar en</span>
+              <strong>
+                {companyName} · Líder {accountReferences.get(leaderId) ?? "—"} ·{" "}
+                {replicaIds.length === 0
+                  ? "sin réplicas"
+                  : `réplicas ${replicaIds
+                      .map((id) => accountReferences.get(id))
+                      .join(", ")}`} · {phase}
+              </strong>
+            </div>
+
+            {allocationError ? (
+              <p className="purchase-message error" role="alert">
+                {allocationError} La confirmación permanece bloqueada.
+              </p>
+            ) : (
               <div className="allocation-list">
-                {allocation.map((entry) => {
+                {pendingAllocation.map((entry) => {
                   const brokerEntry = toBrokerEntry(entry.amountInCents);
                   const destination =
                     brokerEntry.destination === "NETO_BROKER_POSITIVE"
@@ -391,9 +529,7 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
                   return (
                     <article className="allocation-row" key={entry.accountId}>
                       <div>
-                        <strong>
-                          Cuenta {accountReferences.get(entry.accountId) ?? "—"}
-                        </strong>
+                        <strong>Cuenta {accountReferences.get(entry.accountId) ?? "—"}</strong>
                         <span>{entry.role === "leader" ? "Líder" : "Réplica"}</span>
                       </div>
                       <div>
@@ -404,32 +540,83 @@ export function DailyControlPreview({ accounts, companies }: DailyControlPreview
                   );
                 })}
               </div>
-              <p className="allocation-check">
-                Total comprobado: {formatMoney(latestOperatingResult)} entre{" "}
-                {allocation.length} {allocation.length === 1 ? "cuenta" : "cuentas"}.
+            )}
+
+            {pendingBalance.correctionReason && (
+              <p className="contingency-audit-note">
+                Contingencia aplicada: {pendingBalance.correctionReason}. El dato
+                original quedará reservado para auditoría.
               </p>
-            </>
-          )}
+            )}
 
-          <button
-            className="primary-action"
-            disabled
-            title="El guardado definitivo todavía no está habilitado"
-            type="button"
-          >
-            Confirmar y crear registros
-          </button>
-          <p className="context-note">
-            El botón permanece bloqueado hasta terminar y probar el guardado
-            transaccional. Esta pantalla todavía no modifica datos.
-          </p>
+            {showContingency ? (
+              <form className="contingency-form" onSubmit={applyContingency}>
+                <div className="form-field">
+                  <label htmlFor="sync_issue_reason">Problema detectado</label>
+                  <select
+                    id="sync_issue_reason"
+                    onChange={(event) => setSyncIssueReason(event.target.value)}
+                    value={syncIssueReason}
+                  >
+                    {syncIssueReasons.map((reason) => (
+                      <option key={reason} value={reason}>{reason}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="corrected_balance">Saldo correcto (USD)</label>
+                  <input
+                    id="corrected_balance"
+                    inputMode="decimal"
+                    onChange={(event) => setCorrectedAmount(event.target.value)}
+                    required
+                    type="text"
+                    value={correctedAmount}
+                  />
+                </div>
+                <div className="dialog-actions">
+                  <button className="primary-action" type="submit">Recalcular</button>
+                  <button
+                    className="text-action"
+                    onClick={() => setShowContingency(false)}
+                    type="button"
+                  >
+                    Volver
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="dialog-actions">
+                <button
+                  className="primary-action"
+                  disabled={Boolean(allocationError) || pendingAllocation.length === 0}
+                  onClick={confirmPendingBalance}
+                  type="button"
+                >
+                  Confirmar en la simulación
+                </button>
+                <button
+                  className="secondary-action"
+                  onClick={() => setReviewOpen(false)}
+                  type="button"
+                >
+                  Cambiar cuentas o fase
+                </button>
+                <button
+                  className="text-action danger-text"
+                  onClick={() => setShowContingency(true)}
+                  type="button"
+                >
+                  Informar error de sincronización
+                </button>
+              </div>
+            )}
+
+            <p className="dialog-footnote">
+              Esta es una simulación visual: todavía no conecta NinjaTrader ni guarda datos.
+            </p>
+          </section>
         </div>
-      </div>
-
-      {rows.length > 0 && (
-        <button className="secondary-action" onClick={resetPreview} type="button">
-          Limpiar simulación
-        </button>
       )}
     </section>
   );
