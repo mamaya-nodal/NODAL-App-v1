@@ -31,6 +31,10 @@ import {
   type CustomAllocation,
   type EqualAllocation,
 } from "@/modules/control-diario/domain/result-allocation";
+import {
+  recalculateAfterBalanceCorrection,
+  type RecalculatedHistoricalControl,
+} from "@/modules/control-diario/domain/historical-correction";
 
 import {
   confirmDailyControl,
@@ -40,11 +44,19 @@ import {
 type EntryKind = DailyBalanceEntry["kind"];
 
 type PreviewRow = {
+  allocationReason: string | null;
   balanceInCents: number;
   controlId: string;
   id: number;
   kind: EntryKind;
+  movementInCents: number | null;
   operatingResultInCents: number | null;
+  participants: Array<{
+    accountId: string;
+    accountReference: number;
+    amountInCents: number;
+    role: "leader" | "replica";
+  }>;
   valueInCents: number;
 };
 
@@ -118,6 +130,11 @@ export function DailyControlPreview({
   const [correctionRow, setCorrectionRow] = useState<PreviewRow | null>(null);
   const [historicalCorrectedAmount, setHistoricalCorrectedAmount] = useState("");
   const [historicalCorrectionReason, setHistoricalCorrectionReason] = useState("");
+  const [historicalCorrectionPreview, setHistoricalCorrectionPreview] =
+    useState<RecalculatedHistoricalControl[] | null>(null);
+  const [historicalAllocationValues, setHistoricalAllocationValues] = useState<
+    Record<string, Record<string, string>>
+  >({});
   const [customAllocationEnabled, setCustomAllocationEnabled] = useState(false);
   const [customAllocationValues, setCustomAllocationValues] = useState<
     Record<string, string>
@@ -221,15 +238,20 @@ export function DailyControlPreview({
     valueInCents: number,
     nextBalanceInCents: number,
     operatingResultInCents: number | null,
+    participants: PreviewRow["participants"] = [],
+    allocationReason: string | null = null,
   ) {
     setRows((currentRows) => [
       ...currentRows,
       {
+        allocationReason,
         balanceInCents: nextBalanceInCents,
         controlId,
         id,
         kind,
+        movementInCents: kind === "balance_update" ? null : valueInCents,
         operatingResultInCents,
+        participants,
         valueInCents,
       },
     ]);
@@ -352,6 +374,13 @@ export function DailyControlPreview({
         effectiveBalance,
         result.control.balanceAfterInCents,
         result.control.operatingResultInCents,
+        activeAllocation.map((entry) => ({
+          accountId: entry.accountId,
+          accountReference: accountReferences.get(entry.accountId) ?? 0,
+          amountInCents: entry.amountInCents,
+          role: entry.role,
+        })),
+        customAllocationEnabled ? customAllocationReason.trim() : null,
       );
       setPendingBalance(null);
       setPendingConfirmationKey(null);
@@ -435,11 +464,13 @@ export function DailyControlPreview({
     setCorrectionRow(row);
     setHistoricalCorrectedAmount((row.balanceInCents / 100).toFixed(2));
     setHistoricalCorrectionReason("");
+    setHistoricalCorrectionPreview(null);
+    setHistoricalAllocationValues({});
     setError(null);
     setSuccessMessage(null);
   }
 
-  async function submitHistoricalCorrection(event: FormEvent<HTMLFormElement>) {
+  function prepareHistoricalCorrection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!correctionRow) return;
 
@@ -447,21 +478,137 @@ export function DailyControlPreview({
       const correctedBalanceInCents = parseControlAmountToCents(
         historicalCorrectedAmount,
       );
+      const preview = recalculateAfterBalanceCorrection(
+        rows.map((row) => ({
+          balanceAfterInCents: row.balanceInCents,
+          hasCustomAllocation: Boolean(row.allocationReason),
+          id: row.controlId,
+          kind: row.kind,
+          movementInCents: row.movementInCents,
+          participantCount: row.participants.length,
+        })),
+        correctionRow.controlId,
+        correctedBalanceInCents,
+      );
+      const targetIndex = rows.findIndex(
+        (row) => row.controlId === correctionRow.controlId,
+      );
+      const values: Record<string, Record<string, string>> = {};
+      rows.forEach((row, index) => {
+        if (index < targetIndex || !row.allocationReason) return;
+        const recalculated = preview[index];
+        const resultDifference =
+          (recalculated.operatingResultInCents ?? 0) -
+          (row.operatingResultInCents ?? 0);
+        values[row.controlId] = Object.fromEntries(
+          row.participants.map((participant) => [
+            participant.accountId,
+            ((participant.amountInCents +
+              (participant.role === "leader" ? resultDifference : 0)) /
+              100).toFixed(2),
+          ]),
+        );
+      });
+      setHistoricalCorrectionPreview(preview);
+      setHistoricalAllocationValues(values);
+      setError(null);
+    } catch (caughtError) {
+      setHistoricalCorrectionPreview(null);
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo preparar la corrección.",
+      );
+    }
+  }
+
+  async function confirmHistoricalCorrection() {
+    if (!correctionRow || !historicalCorrectionPreview) return;
+
+    try {
+      const correctedBalanceInCents = parseControlAmountToCents(
+        historicalCorrectedAmount,
+      );
+      const targetIndex = rows.findIndex(
+        (row) => row.controlId === correctionRow.controlId,
+      );
+      const customRedistributions = rows.flatMap((row, index) => {
+        if (index < targetIndex || !row.allocationReason) return [];
+        const previewControl = historicalCorrectionPreview[index];
+        const allocations = row.participants.map((participant) => ({
+          accountId: participant.accountId,
+          amountInCents: parseSignedAmountToCents(
+            historicalAllocationValues[row.controlId]?.[participant.accountId] ?? "",
+          ),
+          role: participant.role,
+        }));
+        validateCustomAllocation(
+          previewControl.operatingResultInCents ?? 0,
+          allocations,
+        );
+        return [{ controlId: row.controlId, allocations }];
+      });
       setIsSaving(true);
       setError(null);
       const result = await correctDailyControlBalance({
         correctedBalanceInCents,
+        customRedistributions,
         dailyControlId: correctionRow.controlId,
         periodId,
         reason: historicalCorrectionReason,
       });
       if (!result.ok) throw new Error(result.message);
 
-      setRows(result.controls);
-      setBalanceInCents(result.controls.at(-1)?.balanceInCents ?? null);
+      const correctedById = new Map(
+        result.controls.map((control) => [control.controlId, control]),
+      );
+      const redistributionById = new Map(
+        customRedistributions.map((redistribution) => [
+          redistribution.controlId,
+          new Map(
+            redistribution.allocations.map((allocation) => [
+              allocation.accountId,
+              allocation.amountInCents,
+            ]),
+          ),
+        ]),
+      );
+      const nextRows = rows.map((row) => {
+        const corrected = correctedById.get(row.controlId);
+        if (!corrected) return row;
+        const redistributed = redistributionById.get(row.controlId);
+        return {
+          ...row,
+          balanceInCents: corrected.balanceInCents,
+          operatingResultInCents: corrected.operatingResultInCents,
+          participants: redistributed
+            ? row.participants.map((participant) => ({
+                ...participant,
+                amountInCents:
+                  redistributed.get(participant.accountId) ??
+                  participant.amountInCents,
+              }))
+            : row.participants.map((participant) => ({
+                ...participant,
+                amountInCents:
+                  corrected.operatingResultInCents === null
+                    ? participant.amountInCents
+                    : corrected.operatingResultInCents /
+                      row.participants.length,
+              })),
+          valueInCents:
+            row.kind === "balance_update"
+              ? corrected.balanceInCents
+              : row.valueInCents,
+        };
+      });
+      setRows(nextRows);
+      setBalanceInCents(nextRows.at(-1)?.balanceInCents ?? null);
       setCorrectionRow(null);
       setHistoricalCorrectedAmount("");
       setHistoricalCorrectionReason("");
+      setHistoricalCorrectionPreview(null);
+      setHistoricalAllocationValues({});
       setSuccessMessage(
         `Saldo corregido. Se recalcularon ${result.affectedControls} controles y ${result.affectedOperationEntries} registros por cuenta.`,
       );
@@ -474,6 +621,34 @@ export function DailyControlPreview({
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  let historicalRedistributionError: string | null = null;
+  if (correctionRow && historicalCorrectionPreview) {
+    const targetIndex = rows.findIndex(
+      (row) => row.controlId === correctionRow.controlId,
+    );
+    try {
+      rows.forEach((row, index) => {
+        if (index < targetIndex || !row.allocationReason) return;
+        const allocations = row.participants.map((participant) => ({
+          accountId: participant.accountId,
+          amountInCents: parseSignedAmountToCents(
+            historicalAllocationValues[row.controlId]?.[participant.accountId] ?? "",
+          ),
+          role: participant.role,
+        }));
+        validateCustomAllocation(
+          historicalCorrectionPreview[index].operatingResultInCents ?? 0,
+          allocations,
+        );
+      });
+    } catch (caughtError) {
+      historicalRedistributionError =
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Revisá la redistribución excepcional.";
     }
   }
 
@@ -773,11 +948,11 @@ export function DailyControlPreview({
               <strong>{formatMoney(correctionRow.balanceInCents)}</strong>
             </div>
 
-            <form className="historical-correction-form" onSubmit={submitHistoricalCorrection}>
+            <form className="historical-correction-form" onSubmit={prepareHistoricalCorrection}>
               <div className="form-field">
                 <label htmlFor="historical_corrected_balance">Saldo correcto (USD)</label>
                 <input
-                  disabled={isSaving}
+                  disabled={isSaving || Boolean(historicalCorrectionPreview)}
                   id="historical_corrected_balance"
                   inputMode="decimal"
                   onChange={(event) => setHistoricalCorrectedAmount(event.target.value)}
@@ -789,7 +964,7 @@ export function DailyControlPreview({
               <div className="form-field">
                 <label htmlFor="historical_correction_reason">Motivo de la corrección</label>
                 <textarea
-                  disabled={isSaving}
+                  disabled={isSaving || Boolean(historicalCorrectionPreview)}
                   id="historical_correction_reason"
                   minLength={3}
                   onChange={(event) => setHistoricalCorrectionReason(event.target.value)}
@@ -798,18 +973,113 @@ export function DailyControlPreview({
                   value={historicalCorrectionReason}
                 />
               </div>
+              {!historicalCorrectionPreview && (
+                <button className="primary-action" disabled={isSaving} type="submit">
+                  Revisar corrección y distribuciones
+                </button>
+              )}
+
+              {historicalCorrectionPreview && (
+                <div className="historical-redistribution-list">
+                  {rows.map((row, index) => {
+                    const targetIndex = rows.findIndex(
+                      (candidate) => candidate.controlId === correctionRow.controlId,
+                    );
+                    if (index < targetIndex || !row.allocationReason) return null;
+                    const recalculated = historicalCorrectionPreview[index];
+                    return (
+                      <section className="historical-redistribution" key={row.controlId}>
+                        <div className="custom-allocation-total">
+                          <div>
+                            <strong>Control {row.id} · reparto excepcional</strong>
+                            <span>{row.allocationReason}</span>
+                          </div>
+                          <div>
+                            <span>Nuevo resultado total</span>
+                            <strong>
+                              {formatMoney(recalculated.operatingResultInCents ?? 0)}
+                            </strong>
+                          </div>
+                        </div>
+                        {row.participants.map((participant) => (
+                          <label
+                            className="historical-allocation-row"
+                            key={participant.accountId}
+                          >
+                            <span>
+                              Cuenta {participant.accountReference} ·{" "}
+                              {participant.role === "leader" ? "Líder" : "Réplica"}
+                            </span>
+                            <span className="custom-allocation-amount">
+                              USD
+                              <input
+                                inputMode="decimal"
+                                onChange={(event) =>
+                                  setHistoricalAllocationValues((current) => ({
+                                    ...current,
+                                    [row.controlId]: {
+                                      ...current[row.controlId],
+                                      [participant.accountId]: event.target.value,
+                                    },
+                                  }))
+                                }
+                                type="text"
+                                value={
+                                  historicalAllocationValues[row.controlId]?.[
+                                    participant.accountId
+                                  ] ?? ""
+                                }
+                              />
+                            </span>
+                          </label>
+                        ))}
+                      </section>
+                    );
+                  })}
+                  {historicalRedistributionError && (
+                    <p className="purchase-message error" role="alert">
+                      {historicalRedistributionError}
+                    </p>
+                  )}
+                </div>
+              )}
               <p className="correction-integrity-note">
-                Si algún reparto deja de coincidir exactamente con el resultado total,
-                no se modificará ningún dato.
+                NODAL propone trasladar cualquier diferencia a la cuenta líder. Podés
+                ajustar los importes, pero la suma debe coincidir exactamente con cada
+                resultado total o no se modificará ningún dato.
               </p>
               <div className="dialog-actions">
-                <button className="primary-action" disabled={isSaving} type="submit">
-                  {isSaving ? "Recalculando…" : "Confirmar corrección"}
-                </button>
+                {historicalCorrectionPreview && (
+                  <button
+                    className="primary-action"
+                    disabled={isSaving || Boolean(historicalRedistributionError)}
+                    onClick={confirmHistoricalCorrection}
+                    type="button"
+                  >
+                    {isSaving ? "Recalculando…" : "Confirmar corrección completa"}
+                  </button>
+                )}
+                {historicalCorrectionPreview && (
+                  <button
+                    className="secondary-action"
+                    disabled={isSaving}
+                    onClick={() => {
+                      setHistoricalCorrectionPreview(null);
+                      setHistoricalAllocationValues({});
+                    }}
+                    type="button"
+                  >
+                    Cambiar saldo o motivo
+                  </button>
+                )}
                 <button
                   className="text-action"
                   disabled={isSaving}
-                  onClick={() => setCorrectionRow(null)}
+                  onClick={() => {
+                    setCorrectionRow(null);
+                    setHistoricalCorrectionPreview(null);
+                    setHistoricalAllocationValues({});
+                  }}
                   type="button"
                 >
                   Cancelar

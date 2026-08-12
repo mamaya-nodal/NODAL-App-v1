@@ -280,12 +280,36 @@ El servidor confirma todo en una sola transacción y valida que:
 5. el motivo quede guardado junto con la distribución y la auditoría.
 
 Una corrección histórica no puede convertir silenciosamente un reparto
-excepcional en uno igualitario. Hasta incorporar la pantalla de redistribución
-durante correcciones históricas, la base rechaza esa operación completa sin
-modificar registros.
+excepcional en uno igualitario. La pantalla calcula los resultados posteriores,
+muestra cada reparto excepcional afectado y exige confirmar sus nuevos importes
+antes de guardar.
 
 La verificación remota confirmó los 12 controles de permisos y seguridad. La
 prueba funcional creó dentro de `BEGIN` un resultado de USD 500 distribuido en
 USD 120, USD 200 y USD 180, verificó los registros derivados, la auditoría y el
 bloqueo de sobrescritura implícita, y finalizó con `ROLLBACK`. No dejó datos de
 prueba. El esquema remoto también pasó `db lint --linked` sin errores.
+
+## Corrección de repartos excepcionales
+
+El `2026-08-12` se aplicaron las migraciones
+`20260812060000_correct_custom_daily_control_allocation.sql` y
+`20260812061000_fix_custom_allocation_object_count.sql`. La segunda conserva
+sincronizado el historial remoto después de corregir una incompatibilidad
+detectada por la primera prueba; la transacción fallida se revirtió completa.
+
+El flujo final:
+
+1. recibe el saldo correcto y el motivo general;
+2. recalcula la cadena cronológica sin guardar;
+3. identifica todos los repartos excepcionales alcanzados;
+4. propone aplicar la diferencia a la líder y permite editar cada cuenta;
+5. valida cuentas, importes enteros en centavos y sumas exactas;
+6. actualiza saldos, participantes, registros y auditoría en una sola
+   transacción.
+
+La prueba remota corrigió un resultado excepcional de USD 500 a USD 480 y lo
+redistribuyó en USD 100, USD 200 y USD 180. También verificó el rechazo del
+intento sin redistribución, 14 controles de permisos, auditoría completa y lint
+sin errores. Finalizó con `ROLLBACK`; compras, cuentas, controles y registros
+permanecieron en cero.

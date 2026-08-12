@@ -144,6 +144,7 @@ export default async function PrivateAppPage({
       { data: accountRows },
       { data: purchaseRows },
       { data: dailyControlRows },
+      { data: dailyControlParticipantRows },
       { data: operationEntryRows },
     ] =
       await Promise.all([
@@ -166,10 +167,14 @@ export default async function PrivateAppPage({
         supabase
           .from("daily_controls")
           .select(
-            "id, control_number, operated_on, kind, movement_cents, balance_after_cents, operating_result_cents",
+            "id, control_number, operated_on, kind, movement_cents, balance_after_cents, operating_result_cents, allocation_reason",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
+        supabase
+          .from("daily_control_participants")
+          .select("daily_control_id, account_id, role, allocated_result_cents")
+          .eq("period_id", selection.period.id),
         supabase
           .from("operation_entries")
           .select(
@@ -231,11 +236,27 @@ export default async function PrivateAppPage({
         },
       ];
     });
+    const participantsByControlId = new Map<string, PersistedDailyControl["participants"]>();
+    for (const participant of dailyControlParticipantRows ?? []) {
+      const account = accountsById.get(participant.account_id);
+      if (!account) continue;
+      const current = participantsByControlId.get(participant.daily_control_id) ?? [];
+      current.push({
+        accountId: participant.account_id,
+        accountReference: account.reference_number,
+        amountInCents: Number(participant.allocated_result_cents),
+        role: participant.role,
+      });
+      participantsByControlId.set(participant.daily_control_id, current);
+    }
     dailyControls = (dailyControlRows ?? []).map((control) => ({
+      allocationReason: control.allocation_reason,
       balanceInCents: Number(control.balance_after_cents),
       controlId: control.id,
       id: control.control_number,
       kind: control.kind,
+      movementInCents:
+        control.movement_cents === null ? null : Number(control.movement_cents),
       operatingResultInCents:
         control.operating_result_cents === null
           ? null
@@ -244,6 +265,9 @@ export default async function PrivateAppPage({
         control.kind === "balance_update"
           ? Number(control.balance_after_cents)
           : Number(control.movement_cents),
+      participants: (participantsByControlId.get(control.id) ?? []).sort((left, right) =>
+        left.role === right.role ? left.accountReference - right.accountReference : left.role === "leader" ? -1 : 1,
+      ),
     }));
     const registerAccountsById = new Map(
       accountOptions.map((account) => [account.id, account]),

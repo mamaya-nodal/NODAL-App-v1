@@ -170,6 +170,15 @@ function friendlyDatabaseError(message: string): string {
   if (message.includes("Custom allocations require an explicit redistribution")) {
     return "Este control tiene un reparto excepcional. Para corregirlo también hay que confirmar nuevamente los importes por cuenta.";
   }
+  if (message.includes("affected custom allocation requires")) {
+    return "Revisá nuevamente todos los repartos excepcionales afectados por la corrección.";
+  }
+  if (message.includes("Custom redistributions must equal")) {
+    return "Cada redistribución debe coincidir exactamente con su nuevo resultado total.";
+  }
+  if (message.includes("redistribution accounts must match")) {
+    return "Las cuentas de la redistribución no coinciden con las participantes originales.";
+  }
   if (message.includes("different")) {
     return "El saldo corregido debe ser diferente del saldo actual.";
   }
@@ -267,6 +276,14 @@ export async function confirmDailyControl(
 
 export type CorrectDailyControlBalanceInput = Readonly<{
   correctedBalanceInCents: number;
+  customRedistributions: ReadonlyArray<{
+    controlId: string;
+    allocations: ReadonlyArray<{
+      accountId: string;
+      amountInCents: number;
+      role: "leader" | "replica";
+    }>;
+  }>;
   dailyControlId: string;
   periodId: string;
   reason: string;
@@ -295,7 +312,17 @@ export async function correctDailyControlBalance(
     !isUuid(input.periodId) ||
     !isUuid(input.dailyControlId) ||
     !isSafeCents(input.correctedBalanceInCents) ||
-    !input.reason.trim()
+    !input.reason.trim() ||
+    input.customRedistributions.some(
+      (redistribution) =>
+        !isUuid(redistribution.controlId) ||
+        redistribution.allocations.length === 0 ||
+        redistribution.allocations.some(
+          (allocation) =>
+            !isUuid(allocation.accountId) ||
+            !isSafeSignedCents(allocation.amountInCents),
+        ),
+    )
   ) {
     return { ok: false, message: "Indicá un saldo corregido y un motivo válido." };
   }
@@ -304,8 +331,17 @@ export async function correctDailyControlBalance(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
 
-  const { data, error } = await supabase.rpc("correct_nodal_daily_control_balance", {
+  const { data, error } = await supabase.rpc("correct_nodal_daily_control_balance_with_allocations", {
     target_balance_cents: input.correctedBalanceInCents,
+    target_custom_allocations: Object.fromEntries(
+      input.customRedistributions.map((redistribution) => [
+        redistribution.controlId,
+        redistribution.allocations.map((allocation) => ({
+          account_id: allocation.accountId,
+          amount_cents: allocation.amountInCents,
+        })),
+      ]),
+    ),
     target_daily_control_id: input.dailyControlId,
     target_period_id: input.periodId,
     target_reason: input.reason.trim(),

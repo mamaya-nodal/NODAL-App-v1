@@ -32,4 +32,13 @@ describe("corrección histórica de saldo", () => {
       { balanceAfterInCents: 560_000, id: "balance-1", kind: "balance_update", movementInCents: null, participantCount: 3 },
     ], "balance-1", 550_002)).toThrow("centavos exactos");
   });
+
+  it("permite preparar un reparto excepcional aunque el total no sea divisible", () => {
+    const result = recalculateAfterBalanceCorrection([
+      { balanceAfterInCents: 500_000, id: "deposit", kind: "deposit", movementInCents: 500_000, participantCount: 0 },
+      { balanceAfterInCents: 560_000, hasCustomAllocation: true, id: "balance-1", kind: "balance_update", movementInCents: null, participantCount: 3 },
+    ], "balance-1", 550_002);
+
+    expect(result[1].operatingResultInCents).toBe(50_002);
+  });
 });

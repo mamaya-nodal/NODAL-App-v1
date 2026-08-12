@@ -755,7 +755,42 @@ h1 {
 }
 
 .historical-correction-dialog {
-  max-width: 640px;
+  max-width: 720px;
+}
+
+.historical-redistribution-list,
+.historical-redistribution {
+  display: grid;
+  gap: 12px;
+}
+
+.historical-redistribution-list {
+  margin-top: 4px;
+}
+
+.historical-redistribution {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.historical-redistribution .custom-allocation-total > div {
+  display: grid;
+  gap: 4px;
+}
+
+.historical-redistribution .custom-allocation-total > div:last-child {
+  justify-items: end;
+}
+
+.historical-allocation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .historical-current-value {

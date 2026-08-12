@@ -272,6 +272,42 @@ begin
         raise;
       end if;
   end;
+
+  select * into correction_result
+  from public.correct_nodal_daily_control_balance_with_allocations(
+    target_period_id => test_period_id,
+    target_daily_control_id => custom_result.daily_control_id,
+    target_balance_cents => 599000,
+    target_reason => 'Correccion con redistribucion explicita',
+    target_custom_allocations => jsonb_build_object(
+      custom_result.daily_control_id::text,
+      jsonb_build_array(
+        jsonb_build_object('account_id', test_leader_id, 'amount_cents', 10000),
+        jsonb_build_object('account_id', test_replica_two_id, 'amount_cents', 20000),
+        jsonb_build_object('account_id', test_replica_three_id, 'amount_cents', 18000)
+      )
+    )
+  );
+
+  if correction_result.affected_controls <> 1
+    or correction_result.affected_operation_entries <> 3
+    or (select operating_result_cents from public.daily_controls
+        where id = custom_result.daily_control_id) <> 48000
+    or (select sum(allocated_result_cents) from public.daily_control_participants
+        where daily_control_id = custom_result.daily_control_id) <> 48000
+    or (select count(*) from public.operation_entries
+        where daily_control_id = custom_result.daily_control_id
+          and magnitude_cents in (10000, 20000, 18000)) <> 3 then
+    raise exception 'Explicit custom redistribution did not rewrite exact derived rows';
+  end if;
+
+  if (select count(*) from public.audit_events
+      where entity_id = custom_result.daily_control_id
+        and action = 'daily_control_balance_corrected_with_allocations'
+        and reason = 'Correccion con redistribucion explicita'
+        and previous_data is not null and current_data is not null) <> 1 then
+    raise exception 'Explicit custom redistribution did not preserve audit snapshots';
+  end if;
 end;
 $$;
 

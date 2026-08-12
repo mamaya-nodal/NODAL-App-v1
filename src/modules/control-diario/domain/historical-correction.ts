@@ -1,5 +1,6 @@
 export type HistoricalControl = Readonly<{
   balanceAfterInCents: number;
+  hasCustomAllocation?: boolean;
   id: string;
   kind: "deposit" | "withdrawal" | "balance_update";
   movementInCents: number | null;
@@ -55,7 +56,8 @@ export function recalculateAfterBalanceCorrection(
       operatingResultInCents = balanceAfterInCents - previousBalance;
       if (
         control.participantCount < 1 ||
-        operatingResultInCents % control.participantCount !== 0
+        (!control.hasCustomAllocation &&
+          operatingResultInCents % control.participantCount !== 0)
       ) {
         throw new Error(
           "La corrección produciría una distribución que no cierra en centavos exactos.",
