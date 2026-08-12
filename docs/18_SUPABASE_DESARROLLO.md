@@ -223,3 +223,19 @@ transaccional, sincronizacion del historial, `db push --dry-run` sin pendientes
 y lint remoto sin errores. Las pruebas SQL de privilegios quedaron versionadas,
 pero su ejecucion local sigue requiriendo Docker, que no esta instalado en este
 equipo.
+
+La prueba funcional se ejecuto directamente contra la base enlazada mediante
+un archivo SQL encerrado en `BEGIN` y `ROLLBACK`. Verifico como una unica unidad:
+
+1. deposito inicial de USD 5.000;
+2. saldo NinjaTrader de USD 5.600;
+3. resultado total de USD 600;
+4. lider y dos replicas con USD 200 cada una;
+5. tres entradas `NETO BROKER +`;
+6. una auditoria por control;
+7. repeticion del evento sin duplicacion;
+8. rechazo de una division no exacta en centavos.
+
+Al terminar, una consulta independiente confirmo cero periodos temporales y
+cero controles con el identificador funcional utilizado. No se conservaron
+datos economicos ni cuentas de prueba.

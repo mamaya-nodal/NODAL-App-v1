@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 60 de 60 aprobadas. |
+| Pruebas automatizadas | 69 de 69 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -91,6 +91,11 @@ para evitar errores de redondeo del lenguaje.
 | Registros derivados | La transaccion crea participantes y una entrada por cuenta, con rol, fase, destino e importe. |
 | Idempotencia | Una confirmacion repetida o un evento repetido de NinjaTrader devuelve el control existente sin duplicar filas. |
 | Seguridad economica | El alumno no puede escribir directamente en Control Diario, participantes ni registros por cuenta. |
+| Prueba remota reversible | Deposito USD 5.000, saldo USD 5.600 y tres entradas de USD 200 aprobados dentro de una transaccion luego revertida. |
+| Limpieza posterior | Cero periodos, controles o cuentas funcionales de prueba permanecieron en Supabase. |
+| Regla de estados | Servicio determinista probado para virgen, viva y cerrada; escritura remota desconectada hasta completar `TOTAL GANANCIA`. |
+| Totales de fase | Calculo de broker positivo, broker negativo, retiro y arrastre negativo verificado contra formulas de la plantilla. |
+| Lectura de referencia | `PLANTILLA_LIMPIA!A1:F70` inspeccionada sin modificar la Plantilla Maestra. |
 | Ausencia de persistencia | Tras recargar, saldo e historial simulados desaparecen; no se escriben datos en Supabase. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
@@ -109,12 +114,14 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 - no se conecto todavia la API de NinjaTrader; la recepcion actual es una simulacion visual.
 - no se conecto todavia el boton visual con la transaccion remota.
 - no se actualizan todavia estados de cuenta desde los registros derivados.
+- no se copio la formula operativa de `TOTAL RETIRO`, pendiente de aprobacion y casos de equivalencia.
 
 ## Siguiente etapa tecnica
 
-La siguiente etapa debe comprobar la transaccion con casos reversibles y
-anonimizados, completar el calculo de estado por cuenta y recien entonces
-conectar el boton de confirmacion. La
+La transaccion ya fue comprobada y el calculo contable de fase esta modelado.
+La siguiente etapa debe validar y portar el origen de `TOTAL RETIRO`, o definir
+como ingresa ese dato sin aumentar la carga manual. Recien entonces podran
+actualizarse estados y conectarse el boton de confirmacion.
 correccion de compras anteriores y el guardado operativo definitivo siguen
 bloqueados hasta validar sus campos y casos de equivalencia. Todavia no se
 habilitan datos reales ni acceso general de alumnos.

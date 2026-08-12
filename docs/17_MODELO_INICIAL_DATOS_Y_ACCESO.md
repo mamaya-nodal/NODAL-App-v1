@@ -155,6 +155,30 @@ tres tablas. El boton visual todavia no llama a esta funcion. La activacion
 queda condicionada a las pruebas reversibles de equivalencia y al calculo de
 estado de cuenta, que no se completo con una regla parcial.
 
+La transaccion fue comprobada remotamente dentro de `BEGIN` y `ROLLBACK` con un
+periodo y cuentas temporales: deposito de USD 5.000, saldo NinjaTrader de USD
+5.600, resultado de USD 600 y tres entradas de USD 200. Tambien se probaron la
+auditoria, la repeticion del evento sin duplicados y el bloqueo de una division
+no exacta. Una consulta posterior confirmo que no quedo ningun registro de esa
+prueba en la base.
+
+El calculo de estado ya existe como servicio determinista y reproduce la regla
+propietaria de virgen, viva y cerrada. Todavia no escribe `accounts.state`: un
+resultado de broker aislado no equivale al `TOTAL GANANCIA` completo de una
+fase, que tambien depende de campos operativos pendientes de modelar.
+
+Una lectura acotada de `PLANTILLA_LIMPIA!A1:F70` permitio separar dos capas:
+
+- el calculo contable confirmado de cada fase suma `NETO BROKER +`, resta
+  `NETO BROKER -` y agrega `TOTAL RETIRO` cuando corresponde;
+- si el total es negativo, su magnitud se arrastra a la fase siguiente;
+- el origen de `TOTAL RETIRO` depende de parametros operativos especificos que
+  no se copiaron ni se completaron por inferencia.
+
+La primera capa ya existe como servicio determinista. La segunda permanece
+pendiente de aprobacion y casos anonimizados. La consulta a Google Sheets fue
+exclusivamente de lectura.
+
 ## Limitacion local conocida
 
 La computadora actual no tiene Docker instalado. La migracion fue aplicada y

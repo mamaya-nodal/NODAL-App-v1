@@ -168,3 +168,27 @@ formularios adicionales que no esten justificados por una regla vigente.
 
 El siguiente mapa propuesto es `Resumen Operativo y Conciliaciones`, porque
 recibe los resultados de compras, Control Diario y Registro de Operaciones.
+
+## Estado tecnico inicial
+
+La base de desarrollo ya puede crear una entrada derivada por cuenta al
+confirmar Control Diario, conservando fase, fecha, rol, destino, importe y
+vinculo de origen. Esta escritura permanece desconectada de la interfaz.
+
+El servicio de estado de cuenta tambien conserva la regla vigente: sin datos
+operativos es virgen; con actividad y sin `TOTAL GANANCIA` positivo es viva; con
+algun `TOTAL GANANCIA` positivo es cerrada. No se conecto aun a PostgreSQL
+porque las entradas broker aisladas no bastan para reconstruir todos los
+componentes de `TOTAL GANANCIA` en cada fase. Actualizar el estado con una suma
+parcial produciria una equivalencia falsa con Sheets.
+
+La verificacion de solo lectura sobre `PLANTILLA_LIMPIA!A1:F70` confirmo que
+`TOTAL GANANCIA` usa las magnitudes de `NETO BROKER +`, `NETO BROKER -` y, en
+las vueltas, `TOTAL RETIRO`. Un total negativo se convierte en el arrastre de
+la fase siguiente. Este calculo contable y el arrastre ya estan codificados y
+probados en centavos enteros.
+
+La formula que produce `TOTAL RETIRO` contiene parametros operativos especificos
+y no se copio al repositorio. Su portacion requiere aprobacion expresa y casos
+anonimizados de equivalencia. La Plantilla Maestra fue consultada solamente en
+lectura y no recibio cambios.

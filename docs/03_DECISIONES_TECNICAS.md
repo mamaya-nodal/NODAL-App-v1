@@ -36,6 +36,7 @@
 | APP-030 | La distribucion automatica de Control Diario solo se habilita cuando el resultado puede repartirse en centavos exactos entre las cuentas participantes. Si no cierra exactamente, la app bloquea la confirmacion hasta aplicar un ajuste excepcional validado; nunca asigna el sobrante de forma silenciosa. | Vigente |
 | APP-031 | Empresa, lider, replicas y fase se preparan antes de recibir el siguiente saldo. Un saldo recibido desde NinjaTrader exige revision: confirmar, cambiar el destino o informar un error de sincronizacion. No existe `dejar pendiente` ni carga manual como alternativa normal. La contingencia conserva el dato original, exige motivo y saldo corregido, recalcula en NODAL y deja auditoria. | Vigente |
 | APP-032 | Hasta implementar el flujo de correccion y recalculo historico, Control Diario solo admite nuevas cargas en orden cronologico dentro del periodo. Una fecha anterior al ultimo control confirmado se bloquea en vez de alterar silenciosamente saldos y registros posteriores. | Vigente |
+| APP-033 | El estado de una cuenta no se actualizara desde un resultado broker aislado. La regla se aplicara cuando la app pueda calcular el `TOTAL GANANCIA` completo de cada fase; hasta entonces el servicio determinista queda probado pero desconectado de la escritura remota. | Vigente |
 
 ## Propuestas pendientes de decision
 
