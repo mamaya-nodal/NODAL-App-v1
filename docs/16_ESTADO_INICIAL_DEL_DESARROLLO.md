@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 87 de 87 aprobadas. |
+| Pruebas automatizadas | 88 de 88 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -115,6 +115,8 @@ para evitar errores de redondeo del lenguaje.
 | Historial de actividad | Nueva sección por período con compras, confirmaciones y correcciones ordenadas cronológicamente; las correcciones muestran motivo sin duplicar la operación vigente. |
 | Seguridad del historial | La función remota entrega solo campos preparados para el alumno y valida acceso al período. `audit_events` continúa sin permiso de lectura directa para usuarios autenticados. |
 | Verificación visual de actividad | Navegación, estado vacío, texto explicativo y distribución visual revisados en la aplicación local con la base de desarrollo vacía. |
+| Primer caso integral de equivalencia | Ocho compras LUCID, depósito USD 5.000, saldo USD 5.500, líder 1 y réplicas 4, 7 y 8 produjeron cuatro entradas de USD 125, Resumen coherente y diez eventos de Actividad. Las cuentas intermedias no participaron y los estados permanecieron vírgenes. |
+| Limpieza del caso integral | La prueba PostgreSQL completa finalizó con `ROLLBACK`; una consulta posterior confirmó cero compras, cuentas, controles y entradas. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -137,8 +139,11 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 
 La transacción, su conexión con Control Diario, el Registro de Operaciones de
 solo lectura, el detalle consultable de cuenta, el primer Resumen de progreso y
-el Historial de actividad ya fueron comprobados. El siguiente avance debe
-abordar una regla pendiente solamente cuando sus fuentes permitan equivalencia.
+el Historial de actividad ya fueron comprobados. El primer recorrido integral
+con reglas confirmadas también quedó automatizado. La comparación definitiva
+contra un caso real anonimizado de Sheets sigue pendiente de aprobación
+funcional. El siguiente avance debe abordar una regla pendiente solamente
+cuando sus fuentes permitan equivalencia.
 La actualización de estados y el cálculo completo de `TOTAL GANANCIA` siguen
 separados hasta validar sus reglas y casos de equivalencia. Todavía no se
 habilitan datos reales ni acceso general de alumnos.
