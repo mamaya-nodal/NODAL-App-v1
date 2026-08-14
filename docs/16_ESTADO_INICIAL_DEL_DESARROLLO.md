@@ -117,6 +117,7 @@ para evitar errores de redondeo del lenguaje.
 | Verificación visual de actividad | Navegación, estado vacío, texto explicativo y distribución visual revisados en la aplicación local con la base de desarrollo vacía. |
 | Primer caso integral de equivalencia | Ocho compras LUCID, depósito USD 5.000, saldo USD 5.500, líder 1 y réplicas 4, 7 y 8 produjeron cuatro entradas de USD 125, Resumen coherente y diez eventos de Actividad. Las cuentas intermedias no participaron y los estados permanecieron vírgenes. |
 | Limpieza del caso integral | La prueba PostgreSQL completa finalizó con `ROLLBACK`; una consulta posterior confirmó cero compras, cuentas, controles y entradas. |
+| Preview privada en Vercel | Publicación aprobada en `nodal-app-preview`, conectada solamente a Supabase de desarrollo. La portada abre por internet y el recorrido Google → autorización NODAL → panel privado fue verificado de extremo a extremo. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -124,7 +125,7 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 
 ## Lo que deliberadamente no se hizo
 
-- no se publico en Vercel;
+- no se publicó una versión de producción ni se habilitaron alumnos reales; la publicación existente es solamente una preview privada de desarrollo;
 - no se copiaron datos de alumnos ni de la Plantilla Maestra;
 - no se modifico Sheets, Apps Script ni Panel Central;
 - no se creo ninguna compra ficticia para completar una prueba visual.

@@ -372,7 +372,7 @@ export default async function PrivateAppPage({
           <a className="app-brand" href="#inicio" aria-label="Ir al inicio">
             NODAL <span>APP</span>
           </a>
-          <span className="development-badge">Prototipo de desarrollo</span>
+          <span className="development-badge">Versión privada de prueba</span>
         </div>
 
         <div className="app-welcome">
