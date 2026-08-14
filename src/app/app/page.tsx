@@ -2,6 +2,11 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { decideAccess } from "@/modules/access/domain/access-decision";
+import {
+  buildPeriodActivity,
+  type PeriodActivityItem,
+  type PeriodActivityRow,
+} from "@/modules/activity/domain/period-activity";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 import {
   buildProgressSummary,
@@ -15,6 +20,7 @@ import {
 } from "@/modules/workspace/domain/selection";
 
 import { createPurchase } from "./purchase-actions";
+import { ActivityHistory } from "./activity-history";
 import {
   DailyControlPreview,
   type PersistedDailyControl,
@@ -77,6 +83,23 @@ type PurchaseView = {
 
 type AccountView = RegisterAccount;
 
+type ActivityRpcRow = {
+  account_reference: number | null;
+  action: PeriodActivityRow["action"];
+  audit_event_id: number;
+  balance_after_cents: number | string | null;
+  company_name: string | null;
+  control_kind: PeriodActivityRow["controlKind"];
+  control_number: number | null;
+  funds_origin: string | null;
+  occurred_at: string;
+  operated_on: string | null;
+  phase: string | null;
+  primary_amount_cents: number | string | null;
+  purchase_number: number | null;
+  reason: string | null;
+};
+
 export default async function PrivateAppPage({
   searchParams,
 }: PrivateAppPageProps) {
@@ -131,6 +154,7 @@ export default async function PrivateAppPage({
   let accountOptions: AccountView[] = [];
   let dailyControls: PersistedDailyControl[] = [];
   let operationEntries: OperationRegisterEntry[] = [];
+  let periodActivity: PeriodActivityItem[] = [];
   let progressSummary: ProgressSummaryData = buildProgressSummary({
     accountStates: [],
     controls: [],
@@ -146,6 +170,7 @@ export default async function PrivateAppPage({
       { data: dailyControlRows },
       { data: dailyControlParticipantRows },
       { data: operationEntryRows },
+      { data: activityRows },
     ] =
       await Promise.all([
         supabase
@@ -183,6 +208,9 @@ export default async function PrivateAppPage({
           .eq("period_id", selection.period.id)
           .order("operated_on", { ascending: false })
           .order("created_at", { ascending: false }),
+        supabase.rpc("list_nodal_period_activity", {
+          target_period_id: selection.period.id,
+        }),
       ]);
 
     companies = (companyRows ?? []).map((company) => ({
@@ -291,6 +319,30 @@ export default async function PrivateAppPage({
         },
       ];
     });
+    periodActivity = buildPeriodActivity(
+      ((activityRows ?? []) as ActivityRpcRow[]).map((row) => ({
+        accountReference: row.account_reference,
+        action: row.action,
+        auditEventId: row.audit_event_id,
+        balanceAfterInCents:
+          row.balance_after_cents === null
+            ? null
+            : Number(row.balance_after_cents),
+        companyName: row.company_name,
+        controlKind: row.control_kind,
+        controlNumber: row.control_number,
+        fundsOrigin: row.funds_origin,
+        occurredAt: row.occurred_at,
+        operatedOn: row.operated_on,
+        phase: row.phase,
+        primaryAmountInCents:
+          row.primary_amount_cents === null
+            ? null
+            : Number(row.primary_amount_cents),
+        purchaseNumber: row.purchase_number,
+        reason: row.reason,
+      })),
+    );
     progressSummary = buildProgressSummary({
       accountStates: (accountRows ?? []).map(
         (account) => account.state as SummaryAccountState,
@@ -350,6 +402,7 @@ export default async function PrivateAppPage({
             <a href="#control-diario">Control Diario</a>
             <a href="#registro">Registro</a>
             <a href="#resumen">Resumen</a>
+            <a href="#actividad">Actividad</a>
             <form action="/auth/logout" className="logout-form" method="post">
               <button type="submit">Cerrar sesión</button>
             </form>
@@ -583,6 +636,10 @@ export default async function PrivateAppPage({
 
       {allowed && selection?.period && (
         <ProgressSummary summary={progressSummary} />
+      )}
+
+      {allowed && selection?.period && (
+        <ActivityHistory items={periodActivity} />
       )}
 
       {allowed && !selection && (

@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(17);
 
 select is(
   has_function_privilege(
@@ -82,6 +82,32 @@ select is(
   ),
   true,
   'authenticated users can call explicit custom redistribution'
+);
+
+select is(
+  has_function_privilege(
+    'anon',
+    'public.list_nodal_period_activity(uuid)',
+    'EXECUTE'
+  ),
+  false,
+  'anonymous users cannot list period activity'
+);
+
+select is(
+  has_function_privilege(
+    'authenticated',
+    'public.list_nodal_period_activity(uuid)',
+    'EXECUTE'
+  ),
+  true,
+  'authenticated users can list their allowed period activity'
+);
+
+select is(
+  has_table_privilege('authenticated', 'public.audit_events', 'SELECT'),
+  false,
+  'authenticated users still cannot read raw audit events'
 );
 
 select is(has_table_privilege('authenticated', 'public.daily_controls', 'INSERT'), false,

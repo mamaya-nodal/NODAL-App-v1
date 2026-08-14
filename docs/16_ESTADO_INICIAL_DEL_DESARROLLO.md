@@ -57,7 +57,7 @@ para evitar errores de redondeo del lenguaje.
 
 | Verificacion | Resultado |
 |---|---|
-| Pruebas automatizadas | 80 de 80 aprobadas. |
+| Pruebas automatizadas | 87 de 87 aprobadas. |
 | TypeScript estricto | Aprobado. |
 | ESLint | Aprobado. |
 | Compilacion de produccion | Aprobada con Next.js 16.3.0. |
@@ -112,6 +112,9 @@ para evitar errores de redondeo del lenguaje.
 | Corrección histórica de saldo | Desde el historial se corrige un nuevo saldo con motivo obligatorio; la transacción recalcula la cadena posterior, participantes y registros por cuenta, y conserva auditoría interna del antes y después. |
 | Integridad de correcciones | Una distribución indivisible en centavos o un retiro que supere el saldo recalculado revierte la operación completa sin cambios parciales. |
 | Verificación remota de corrección | USD 5.600 se corrigió a USD 5.500; resultado y Registro pasaron de USD 600 a USD 500. La prueba reversible y la prueba visual fueron retiradas; la base volvió a cero compras, cuentas, controles y entradas. |
+| Historial de actividad | Nueva sección por período con compras, confirmaciones y correcciones ordenadas cronológicamente; las correcciones muestran motivo sin duplicar la operación vigente. |
+| Seguridad del historial | La función remota entrega solo campos preparados para el alumno y valida acceso al período. `audit_events` continúa sin permiso de lectura directa para usuarios autenticados. |
+| Verificación visual de actividad | Navegación, estado vacío, texto explicativo y distribución visual revisados en la aplicación local con la base de desarrollo vacía. |
 
 En este equipo Windows, el servidor local debe iniciarse con el certificado de
 confianza `supabase/.temp/windows-ca.pem` mediante `NODE_EXTRA_CA_CERTS`. El
@@ -133,12 +136,12 @@ archivo es local, esta ignorado por Git y no se desactiva la validacion TLS.
 ## Siguiente etapa tecnica
 
 La transacción, su conexión con Control Diario, el Registro de Operaciones de
-solo lectura, el detalle consultable de cuenta y el primer Resumen de progreso
-ya fueron comprobados. El siguiente avance debe abordar una regla pendiente
-solamente cuando sus fuentes permitan equivalencia. La corrección histórica, la actualización de
-estados y el calculo completo de `TOTAL GANANCIA` siguen separados hasta validar
-sus reglas y casos de equivalencia. Todavia no se habilitan datos reales ni
-acceso general de alumnos.
+solo lectura, el detalle consultable de cuenta, el primer Resumen de progreso y
+el Historial de actividad ya fueron comprobados. El siguiente avance debe
+abordar una regla pendiente solamente cuando sus fuentes permitan equivalencia.
+La actualización de estados y el cálculo completo de `TOTAL GANANCIA` siguen
+separados hasta validar sus reglas y casos de equivalencia. Todavía no se
+habilitan datos reales ni acceso general de alumnos.
 
 Antes de crear cuentas externas se indicara al responsable de NODAL que debe
 hacer, que acceso conservar y que costo puede generar.

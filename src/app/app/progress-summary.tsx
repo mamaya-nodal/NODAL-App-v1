@@ -58,7 +58,7 @@ export function ProgressSummary({ summary }: ProgressSummaryProps) {
           <span>Actividad confirmada</span>
           <strong>{summary.controlCount}</strong>
           <small>{summary.operationEntryCount} entradas automáticas por cuenta</small>
-          <a href="#control-diario">Ver historial</a>
+          <a href="#actividad">Ver actividad completa</a>
         </article>
       </div>
 

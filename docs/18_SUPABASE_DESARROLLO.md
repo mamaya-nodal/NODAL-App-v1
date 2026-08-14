@@ -313,3 +313,27 @@ redistribuyó en USD 100, USD 200 y USD 180. También verificó el rechazo del
 intento sin redistribución, 14 controles de permisos, auditoría completa y lint
 sin errores. Finalizó con `ROLLBACK`; compras, cuentas, controles y registros
 permanecieron en cero.
+
+## Historial seguro de actividad del alumno
+
+El `2026-08-14` se aplicaron las migraciones
+`20260814000000_period_activity_history.sql` y
+`20260814010000_fix_period_activity_original_amounts.sql`. Agregan una lectura
+estable y acotada al período propio para construir la sección Actividad. La
+segunda asegura que una confirmación conserve el importe que tenía al ocurrir,
+aunque luego su saldo vigente haya sido corregido.
+
+La función:
+
+1. exige una sesión autenticada y acceso vigente al período solicitado;
+2. incluye solamente compras, confirmaciones de Control Diario y correcciones;
+3. devuelve campos preparados para la interfaz, no las instantáneas completas
+   del antes y después;
+4. mantiene revocado el acceso directo del alumno a `audit_events`;
+5. ordena los eventos desde el más reciente y conserva el motivo de una
+   corrección o distribución excepcional.
+
+La migración quedó sincronizada con la base enlazada. Se ejecutaron 17 controles
+SQL de permisos dentro de `BEGIN` y `ROLLBACK`, el lint remoto no encontró
+errores y la base funcional permaneció vacía. La vista local verificó el enlace
+de navegación y el estado sin actividad sin insertar datos económicos.

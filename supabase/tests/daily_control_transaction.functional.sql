@@ -26,6 +26,8 @@ declare
   leader_count integer;
   replica_count integer;
   audit_count integer;
+  activity_count integer;
+  original_balance_amount bigint;
 begin
   select users.id, spaces.id
   into test_actor_id, test_workspace_id
@@ -307,6 +309,30 @@ begin
         and reason = 'Correccion con redistribucion explicita'
         and previous_data is not null and current_data is not null) <> 1 then
     raise exception 'Explicit custom redistribution did not preserve audit snapshots';
+  end if;
+
+  select count(*)::integer
+  into activity_count
+  from public.list_nodal_period_activity(test_period_id);
+
+  if activity_count <> 5 then
+    raise exception 'Period activity did not return every allowed functional event';
+  end if;
+
+  select activity.primary_amount_cents
+  into original_balance_amount
+  from public.list_nodal_period_activity(test_period_id) as activity
+  where activity.entity_id = balance_result.daily_control_id
+    and activity.action = 'daily_control_confirmed';
+
+  if original_balance_amount <> 60000 then
+    raise exception 'Original activity amount was overwritten by the corrected value';
+  end if;
+
+  if (select reason from public.list_nodal_period_activity(test_period_id)
+      where action = 'daily_control_balance_corrected_with_allocations')
+      <> 'Correccion con redistribucion explicita' then
+    raise exception 'Period activity did not expose the correction reason';
   end if;
 end;
 $$;
