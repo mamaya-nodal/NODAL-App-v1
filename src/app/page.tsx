@@ -7,7 +7,7 @@ const foundations = [
 
 export default function HomePage() {
   return (
-    <main className="shell">
+    <main className="shell landing-shell">
       <section className="hero" aria-labelledby="page-title">
         <p className="eyebrow">NODAL APP · VERSIÓN PRIVADA DE PRUEBA</p>
         <h1 id="page-title">La base técnica ya está conectada.</h1>

@@ -3009,3 +3009,297 @@ html[data-theme="day"] .app-page-shell .register-entry-value > strong { color: #
   .app-page-shell .phase-overview { grid-template-columns: 1fr 1fr; }
   .app-page-shell .account-file { grid-template-columns: 1fr 1fr; }
 }
+
+/* Remaining product screens: the same visual language without altering their flows. */
+.app-page-shell .purchase-panel,
+.app-page-shell .progress-summary-panel,
+.app-page-shell .activity-history-panel {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 78%, var(--surface));
+  box-shadow: 0 18px 48px rgb(0 0 0 / 14%);
+}
+
+.app-page-shell .purchase-heading,
+.app-page-shell .summary-heading,
+.app-page-shell .activity-history-heading {
+  align-items: center;
+  gap: 18px;
+}
+
+.app-page-shell .purchase-heading h2,
+.app-page-shell .summary-heading h2,
+.app-page-shell .activity-history-heading h2 {
+  font-size: clamp(1.4rem, 2vw, 1.85rem);
+  letter-spacing: -0.04em;
+}
+
+.app-page-shell .purchase-count,
+.app-page-shell .calculated-badge,
+.app-page-shell .activity-count {
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 80%, var(--paper));
+  color: var(--brand);
+  font-weight: 750;
+}
+
+.app-page-shell .purchase-form {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--surface) 80%, var(--paper));
+}
+
+.app-page-shell .purchase-form label,
+.app-page-shell .summary-form label { color: var(--muted); font-weight: 700; }
+
+.app-page-shell .purchase-form input,
+.app-page-shell .purchase-form select,
+.app-page-shell .summary-form input,
+.app-page-shell .summary-form select {
+  border-color: var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.app-page-shell .purchase-row {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 70%, var(--surface));
+}
+
+.app-page-shell .purchase-row:hover {
+  border-color: color-mix(in srgb, var(--brand) 38%, var(--line));
+  transform: translateY(-1px);
+}
+
+.app-page-shell .purchase-reference { color: var(--ink); font-size: 1.02rem; }
+.app-page-shell .purchase-values strong { color: var(--brand); font-size: 1.08rem; }
+.app-page-shell .purchase-values span { color: var(--muted); }
+
+.app-page-shell .summary-section {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--surface) 72%, var(--paper));
+}
+
+.app-page-shell .summary-section > h3 {
+  color: var(--ink);
+  font-size: 1.02rem;
+  letter-spacing: -0.015em;
+}
+
+.app-page-shell .progress-card,
+.app-page-shell .progress-detail,
+.app-page-shell .conciliation-card {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 72%, var(--surface));
+}
+
+.app-page-shell .progress-card {
+  min-height: 118px;
+  display: grid;
+  align-content: space-between;
+}
+
+.app-page-shell .progress-card > strong {
+  color: var(--ink);
+  font-size: clamp(1.18rem, 2vw, 1.55rem);
+  letter-spacing: -0.045em;
+}
+
+.app-page-shell .progress-card.alert-card {
+  border-color: color-mix(in srgb, #ffbc52 50%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, #3b2b12 78%, var(--paper)), var(--paper));
+}
+
+.app-page-shell .summary-clear {
+  border-color: color-mix(in srgb, var(--brand) 30%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 78%, var(--paper));
+  color: var(--ink);
+}
+
+.app-page-shell .summary-alert {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 72%, var(--surface));
+}
+
+.app-page-shell .summary-alert-warning { border-left: 4px solid #f3ae43; }
+.app-page-shell .summary-alert-error { border-left: 4px solid #fb6370; }
+.app-page-shell .summary-alert-info { border-left: 4px solid var(--brand); }
+.app-page-shell .summary-alert a,
+.app-page-shell .text-action { color: var(--brand); font-weight: 750; }
+
+.app-page-shell .progress-detail dl > div {
+  border-color: var(--line);
+}
+
+.app-page-shell .progress-detail dd { color: var(--ink); font-weight: 750; }
+.app-page-shell .progress-detail dl > div:last-child dd { color: var(--brand); }
+
+.app-page-shell .conciliation-card h4 { color: var(--ink); }
+.app-page-shell .conciliation-side {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--surface) 86%, var(--paper));
+}
+.app-page-shell .conciliation-side a { color: var(--brand); }
+.app-page-shell .conciliation-side footer,
+.app-page-shell .conciliation-difference { border-color: var(--line); }
+.app-page-shell .conciliation-difference strong { color: var(--brand); }
+.app-page-shell .conciliation-difference.has-difference strong { color: #f3ae43; }
+
+.app-page-shell .summary-form {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 64%, var(--surface));
+}
+.app-page-shell .summary-form button { background: var(--brand); color: var(--brand-contrast); }
+.app-page-shell .summary-list {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--surface) 76%, var(--paper));
+}
+.app-page-shell .summary-list p + p { border-color: var(--line); }
+
+.app-page-shell .activity-history-panel { position: relative; overflow: hidden; }
+.app-page-shell .activity-history-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--brand), transparent 54%);
+}
+.app-page-shell .activity-list { border-color: var(--line); }
+.app-page-shell .activity-item { border-color: var(--line); }
+.app-page-shell .activity-marker {
+  border-color: color-mix(in srgb, var(--brand) 44%, var(--line));
+  background: var(--brand-soft);
+  color: var(--brand);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--paper) 80%, transparent);
+}
+.app-page-shell .activity-marker.correction { color: #f3ae43; background: #403016; }
+.app-page-shell .activity-reference { color: var(--brand); }
+.app-page-shell .activity-item-heading strong { color: var(--ink); }
+.app-page-shell .activity-details { color: var(--muted); }
+.app-page-shell .correction-badge {
+  border-color: #75551c;
+  background: #3d2e13;
+  color: #ffc86a;
+}
+
+/* Administration keeps its supervisory role, but gets the same simple visual hierarchy. */
+.admin-shell {
+  background: transparent;
+}
+.admin-shell .admin-header {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--surface) 80%, var(--paper));
+  box-shadow: 0 18px 48px rgb(0 0 0 / 12%);
+}
+.admin-shell .admin-context,
+.admin-shell .admin-student-list,
+.admin-shell .admin-user-form,
+.admin-shell .admin-user-list,
+.admin-shell .admin-detail-card,
+.admin-shell .admin-empty-detail {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 76%, var(--surface));
+  box-shadow: 0 16px 40px rgb(0 0 0 / 10%);
+}
+.admin-shell .admin-context form { gap: 10px; }
+.admin-shell .admin-context select,
+.admin-shell .admin-user-form input,
+.admin-shell .admin-user-list input {
+  border-color: var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+.admin-shell .admin-kpis > article {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--surface) 80%, var(--paper));
+}
+.admin-shell .admin-kpis strong { color: var(--brand); font-size: 1.42rem; }
+.admin-shell .admin-student-row,
+.admin-shell .admin-user-row,
+.admin-shell .admin-detail-card p { border-color: var(--line); }
+.admin-shell .admin-student-row {
+  background: color-mix(in srgb, var(--surface) 68%, var(--paper));
+}
+.admin-shell .admin-student-row:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
+.admin-shell .admin-student-name strong,
+.admin-shell .admin-user-row strong,
+.admin-shell .admin-detail-card h2 { color: var(--ink); }
+.admin-shell .admin-detail-link,
+.admin-shell .admin-manage-link { color: var(--brand); font-weight: 750; }
+.admin-shell .admin-state.active_today { color: var(--brand); }
+.admin-shell .admin-state.inactive { color: var(--muted); }
+.admin-shell .admin-value-warning { color: #f3ae43 !important; }
+.admin-shell .admin-revoke { border-color: #84434a; background: #421f25; color: #ffb3b9; }
+
+/* The small public entry point and recovery screens are deliberately calm and focused. */
+.landing-shell,
+.recovery-page {
+  min-height: 100vh;
+  display: grid;
+  align-content: center;
+  gap: 20px;
+  max-width: 880px;
+  padding-block: 56px;
+}
+.landing-shell .hero,
+.landing-shell .panel,
+.landing-shell .access-panel,
+.recovery-card {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--surface) 84%, var(--paper));
+  box-shadow: 0 22px 60px rgb(0 0 0 / 14%);
+}
+.landing-shell .hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-soft) 86%, var(--paper)), var(--surface) 56%);
+}
+.landing-shell .hero::after {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  right: -96px;
+  top: -145px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--brand) 44%, transparent), transparent 68%);
+}
+.landing-shell h1,
+.recovery-card h1 { letter-spacing: -0.055em; }
+.landing-shell .panel li { border-color: var(--line); }
+.landing-shell .access-panel { align-items: center; }
+.recovery-page { max-width: 640px; margin: 0 auto; }
+.recovery-card { padding: clamp(28px, 6vw, 54px); border-radius: 24px; }
+.recovery-card .primary-action { display: inline-flex; margin-top: 12px; }
+
+html[data-theme="day"] .app-page-shell .purchase-values strong,
+html[data-theme="day"] .app-page-shell .calculated-badge,
+html[data-theme="day"] .app-page-shell .activity-count,
+html[data-theme="day"] .app-page-shell .purchase-count,
+html[data-theme="day"] .app-page-shell .summary-alert a,
+html[data-theme="day"] .app-page-shell .text-action,
+html[data-theme="day"] .app-page-shell .activity-reference,
+html[data-theme="day"] .app-page-shell .conciliation-side a,
+html[data-theme="day"] .admin-shell .admin-kpis strong,
+html[data-theme="day"] .admin-shell .admin-detail-link,
+html[data-theme="day"] .admin-shell .admin-manage-link,
+html[data-theme="day"] .admin-shell .admin-state.active_today { color: #146f3b; }
+
+html[data-theme="day"] .app-page-shell .activity-marker { color: #146f3b; }
+html[data-theme="day"] .app-page-shell .progress-card.alert-card { background: #fff7e8; }
+html[data-theme="day"] .app-page-shell .activity-marker.correction { background: #fff4dc; }
+html[data-theme="day"] .app-page-shell .correction-badge { background: #fff4dc; color: #80570d; }
+html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: #9d2934; }
+
+@media (max-width: 720px) {
+  .app-page-shell .purchase-heading,
+  .app-page-shell .summary-heading,
+  .app-page-shell .activity-history-heading,
+  .landing-shell .access-panel { align-items: flex-start; }
+  .app-page-shell .progress-primary-grid,
+  .app-page-shell .progress-detail-grid,
+  .app-page-shell .conciliation-grid,
+  .app-page-shell .summary-forms { grid-template-columns: 1fr; }
+  .admin-shell .admin-kpis,
+  .admin-shell .admin-detail-grid,
+  .admin-shell .admin-user-grid { grid-template-columns: 1fr; }
+  .landing-shell { padding-block: 24px; }
+}
