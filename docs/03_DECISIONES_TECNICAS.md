@@ -54,6 +54,7 @@
 | APP-047 | Las alertas iniciales del Resumen se calculan desde datos y diferencias concretas: saldo broker ausente, conciliaciones de capital o ganancias, retiros aprobados sin cobro y estados de cuenta forzados. Informan el origen y conducen a revisarlo; nunca corrigen valores ni marcan un período como cerrado. | Vigente |
 
 | APP-048 | El asistente de alertas opera exclusivamente en lectura. Usa GPT-5.6 Luna con razonamiento bajo y escala automáticamente a GPT-5.6 Terra cuando el diagnóstico no queda verificado por reglas deterministas. Las respuestas se reutilizan mientras el expediente no cambie; ninguna IA puede corregir registros, resolver alertas ni cerrar períodos. | Vigente |
+| APP-049 | Las conciliaciones muestran su desglose calculado: componentes observable y esperado para capital, y ganancia cerrada contra reconstrucción para ganancias. Los vínculos llevan a los registros de origen; una diferencia sigue siendo una alerta, nunca un ajuste automático. | Vigente |
 
 ## Propuestas pendientes de decision
 
