@@ -57,6 +57,7 @@
 | APP-049 | Las conciliaciones muestran su desglose calculado: componentes observable y esperado para capital, y ganancia cerrada contra reconstrucción para ganancias. Los vínculos llevan a los registros de origen; una diferencia sigue siendo una alerta, nunca un ajuste automático. | Vigente |
 | APP-050 | El primer panel administrativo es exclusivamente de lectura. Su vista principal muestra actividad reciente, resultado realizado, capital neto y comisión estimada por alumno; la ficha individual abre el detalle económico calculado. El rol `admin` se asigna fuera del navegador, conserva a los alumnos aislados y no habilita escrituras económicas. | Vigente |
 | APP-051 | Un administrador NODAL puede autorizar o revocar exclusivamente alumnos desde el panel, siempre que ya se hayan identificado con Google. El alta prepara sus espacios Real y Práctica para un mes seleccionado; alta, baja y preparación quedan auditadas. No permite administrar otros administradores ni modificar operaciones económicas. | Vigente |
+| APP-052 | La integración futura con NinjaTrader usará un Add On local de NinjaScript y un receptor privado, no una conexión directa del navegador al broker. Antes de habilitar escrituras debe validarse por proveedor qué valor equivale al saldo de Sheets, cómo se identifica cada cuenta y cómo se agrupan las réplicas. La recepción actual seguirá siendo simulada hasta completar esa prueba. | Vigente |
 
 ## Propuestas pendientes de decision
 
