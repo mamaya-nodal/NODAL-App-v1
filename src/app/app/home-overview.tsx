@@ -7,6 +7,7 @@ type HomeOverviewProps = Readonly<{
   modalityLabel: string;
   periodLabel: string;
   summary: ProgressSummary;
+  userLabel: string;
 }>;
 
 function formatMoney(cents: number): string {
@@ -17,21 +18,25 @@ function formatMoney(cents: number): string {
   }).format(cents / 100);
 }
 
-export function HomeOverview({ modalityLabel, periodLabel, summary }: HomeOverviewProps) {
+function firstName(label: string) {
+  return label.split(/\s|@/).filter(Boolean)[0] ?? "Trader";
+}
+
+export function HomeOverview({ modalityLabel, periodLabel, summary, userLabel }: HomeOverviewProps) {
   const nextStep = chooseHomeNextStep(summary);
   const isPositiveResult = summary.operatingResultInCents >= 0;
 
   return (
     <section aria-labelledby="home-overview-title" className="home-overview-panel" id="inicio">
-      <div className="home-overview-heading">
+      <div className="home-overview-heading workspace-view-heading">
         <div>
-          <p className="status">INICIO</p>
-          <h2 id="home-overview-title">Tu situación actual</h2>
+          <p className="status">TU ESPACIO OPERATIVO</p>
+          <h2 id="home-overview-title">Buen día, {firstName(userLabel)}.</h2>
         </div>
-        <span>{modalityLabel} · {periodLabel}</span>
+        <p>Una mirada clara antes de operar. Lo importante, sin ruido.</p>
       </div>
 
-      <div className="home-overview-layout">
+      <div className="home-dashboard-grid">
         <div className="home-primary-card">
           <span>Saldo broker</span>
           <strong>
@@ -41,44 +46,39 @@ export function HomeOverview({ modalityLabel, periodLabel, summary }: HomeOvervi
           </strong>
           <p className={isPositiveResult ? "positive-result" : "negative-result"}>
             {isPositiveResult ? "+ " : ""}
-            {formatMoney(summary.operatingResultInCents)} resultado operativo
+            {formatMoney(summary.operatingResultInCents)} resultado visible este período
           </p>
-        </div>
-        <div className="home-snapshot" aria-label="Síntesis del período">
-          <article>
-            <span>Saldo broker</span>
-            <strong>
-              {summary.brokerBalanceInCents === null
-                ? "Sin informar"
-                : formatMoney(summary.brokerBalanceInCents)}
-            </strong>
-          </article>
-          <article>
-            <span>Resultado operativo</span>
-            <strong>{formatMoney(summary.operatingResultInCents)}</strong>
-          </article>
-          <article>
-            <span>Cuentas</span>
-            <strong>{summary.accountCount}</strong>
-          </article>
-          <article>
-            <span>Operatorias confirmadas</span>
-            <strong>{summary.controlCount}</strong>
-          </article>
+          <div className="home-card-chips">
+            <span>{summary.accountStates.live} cuentas vivas</span>
+            <span>{summary.accountStates.virgin} vírgenes</span>
+          </div>
         </div>
 
         <aside className="home-next-step">
-          <span>SIGUIENTE PASO</span>
-          <h3>{nextStep.title}</h3>
+          <div className="home-card-heading"><h3>Próximo paso</h3><span>Hoy</span></div>
+          <strong>{nextStep.title}</strong>
           <p>{nextStep.description}</p>
           <a href={nextStep.href}>{nextStep.label}</a>
         </aside>
-      </div>
 
-      <p className="home-overview-note">
-        Esta es una lectura rápida. El detalle y el origen de cada valor están en
-        Compras, Control Diario, Registro y Resumen.
-      </p>
+        <article className="home-detail-card">
+          <div className="home-card-heading"><h3>Cuentas operativas</h3><a href="#registro">Ver registro →</a></div>
+          <dl>
+            <div><dt>Vírgenes</dt><dd>{summary.accountStates.virgin}</dd></div>
+            <div><dt>Vivas</dt><dd>{summary.accountStates.live}</dd></div>
+            <div><dt>Cerradas</dt><dd>{summary.accountStates.closed}</dd></div>
+          </dl>
+        </article>
+
+        <article className="home-detail-card">
+          <div className="home-card-heading"><h3>Actividad del período</h3><span>{modalityLabel} · {periodLabel}</span></div>
+          <dl>
+            <div><dt>Controles confirmados</dt><dd>{summary.controlCount}</dd></div>
+            <div><dt>Registros por cuenta</dt><dd>{summary.operationEntryCount}</dd></div>
+            <div><dt>Último saldo</dt><dd>{summary.brokerBalanceUpdatedOn ?? "Sin informar"}</dd></div>
+          </dl>
+        </article>
+      </div>
     </section>
   );
 }

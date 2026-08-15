@@ -63,6 +63,7 @@
 
 | APP-054 | NODAL App tendra una interfaz privada en dos temas, Noche y Dia. El tema Noche sera inicial, el usuario podra cambiarlo y la eleccion quedara solo en su navegador. El rediseño completo aplica la misma jerarquia visual a Inicio, Compras, Control Diario, Registro, Resumen, Actividad, Administracion y estados de recuperacion, sin modificar flujos, permisos ni calculos. | Vigente |
 | APP-055 | El servidor local de desarrollo y el arranque local usaran los certificados de confianza del sistema operativo mediante la opcion segura de Node `--use-system-ca`. No se deshabilitara la validacion TLS. | Vigente |
+| APP-056 | La aplicacion privada deja de presentarse como una pagina extensa y adopta el espacio de trabajo aprobado en el mockup: navegacion lateral en escritorio, navegacion inferior en movil, barra superior persistente y una sola vista funcional activa. El cambio reorganiza la interfaz, pero conserva los mismos servicios, calculos, permisos, formularios y registros existentes. | Vigente |
 
 ## Propuestas pendientes de decision
 

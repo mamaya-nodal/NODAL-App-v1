@@ -43,6 +43,7 @@ import {
 } from "./operation-register";
 import { ProgressSummary } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
+import { AppWorkspace } from "./app-workspace";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -126,7 +127,7 @@ export default async function PrivateAppPage({
 
   const { data: nodalUser } = await supabase
     .from("nodal_users")
-    .select("id, email, access_state, access_role")
+    .select("id, email, display_name, access_state, access_role")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -434,7 +435,14 @@ export default async function PrivateAppPage({
   }
 
   return (
-    <main className="shell narrow-shell app-page-shell">
+    <AppWorkspace
+      authorized={allowed}
+      initialView={singleValue(purchaseResult) ? "purchases" : "home"}
+      isAdmin={nodalUser?.access_role === "admin"}
+      modalityLabel={selection?.workspace.modality === "real" ? "Real" : selection ? "Práctica" : undefined}
+      periodLabel={selection?.period ? formatPeriodLabel(selection.period.periodMonth) : undefined}
+      userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
+    >
       <header className="app-header" aria-labelledby="private-title">
         <div className="app-brand-row">
           <a className="app-brand" href="#inicio" aria-label="Ir al inicio">
@@ -572,6 +580,7 @@ export default async function PrivateAppPage({
           modalityLabel={selection.workspace.modality === "real" ? "Real" : "Práctica"}
           periodLabel={formatPeriodLabel(selection.period.periodMonth)}
           summary={progressSummary}
+          userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
         />
       )}
 
@@ -680,7 +689,11 @@ export default async function PrivateAppPage({
                   <div className="purchase-values">
                     <strong>{formatMoney(purchase.priceCents)}</strong>
                     <span>
-                      {purchase.state === "virgin" ? "Cuenta virgen" : purchase.state}
+                      {purchase.state === "virgin"
+                        ? "Cuenta virgen"
+                        : purchase.state === "live"
+                          ? "Cuenta viva"
+                          : "Cuenta cerrada"}
                     </span>
                   </div>
                 </article>
@@ -730,6 +743,6 @@ export default async function PrivateAppPage({
         </p>
       )}
 
-    </main>
+    </AppWorkspace>
   );
 }
