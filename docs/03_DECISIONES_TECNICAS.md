@@ -59,6 +59,8 @@
 | APP-051 | Un administrador NODAL puede autorizar o revocar exclusivamente alumnos desde el panel, siempre que ya se hayan identificado con Google. El alta prepara sus espacios Real y Práctica para un mes seleccionado; alta, baja y preparación quedan auditadas. No permite administrar otros administradores ni modificar operaciones económicas. | Vigente |
 | APP-052 | La integración futura con NinjaTrader usará un Add On local de NinjaScript y un receptor privado, no una conexión directa del navegador al broker. Antes de habilitar escrituras debe validarse por proveedor qué valor equivale al saldo de Sheets, cómo se identifica cada cuenta y cómo se agrupan las réplicas. La recepción actual seguirá siendo simulada hasta completar esa prueba. | Vigente |
 
+| APP-053 | Antes del piloto real, la aplicacion privada incorporara una pantalla de recuperacion ante errores, una ruta de salud sin datos privados, cabeceras basicas de proteccion y exclusion de buscadores. La creacion de Produccion seguira siendo un paso externo y separado de Preview, sin copiar datos reales desde Desarrollo sin una decision documentada. | Vigente |
+
 ## Propuestas pendientes de decision
 
 | ID | Propuesta | Estado |
