@@ -198,3 +198,19 @@ La formula que produce `TOTAL RETIRO` contiene parametros operativos especificos
 y no se copio al repositorio. Su portacion requiere aprobacion expresa y casos
 anonimizados de equivalencia. La Plantilla Maestra fue consultada solamente en
 lectura y no recibio cambios.
+
+## Actualización de implementación: 2026-08-15
+
+La app ya calcula y muestra `TOTAL GANANCIA` por cuenta y fase. La regla
+portada es `NETO BROKER + - NETO BROKER -` para Evaluación y, en cada vuelta,
+esa misma diferencia más el `TOTAL RETIRO` manual.
+
+`TOTAL RETIRO` es un importe real informado manualmente por el alumno. Esta
+decisión confirmada reemplaza para la app cualquier intento de inferirlo desde
+una fórmula, porque el pago de fondeo no es uniforme entre empresas.
+
+El control de estado ya está conectado al servidor con tres modos:
+`Automático`, `Forzar Cuenta viva` y `Forzar Cuenta cerrada`. Los forzados se
+conservan y auditan; en modo `Cuenta viva`, un total positivo se arrastra como
+`NETO BROKER +` a la vuelta siguiente. Al restaurar `Automático` se recupera
+el estado calculado.

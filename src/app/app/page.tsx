@@ -7,6 +7,9 @@ import {
   type PeriodActivityItem,
   type PeriodActivityRow,
 } from "@/modules/activity/domain/period-activity";
+import type {
+  AccountPhaseWithdrawal,
+} from "@/modules/operations/domain/account-phase-results";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 import {
   buildProgressSummary,
@@ -154,6 +157,7 @@ export default async function PrivateAppPage({
   let accountOptions: AccountView[] = [];
   let dailyControls: PersistedDailyControl[] = [];
   let operationEntries: OperationRegisterEntry[] = [];
+  let phaseWithdrawals: AccountPhaseWithdrawal[] = [];
   let periodActivity: PeriodActivityItem[] = [];
   let progressSummary: ProgressSummaryData = buildProgressSummary({
     accountStates: [],
@@ -170,6 +174,7 @@ export default async function PrivateAppPage({
       { data: dailyControlRows },
       { data: dailyControlParticipantRows },
       { data: operationEntryRows },
+      { data: phaseWithdrawalRows },
       { data: activityRows },
     ] =
       await Promise.all([
@@ -180,7 +185,7 @@ export default async function PrivateAppPage({
           .order("code"),
         supabase
           .from("accounts")
-          .select("id, company_id, reference_number, state")
+          .select("id, company_id, reference_number, state, state_origin")
           .eq("period_id", selection.period.id),
         supabase
           .from("purchases")
@@ -208,6 +213,10 @@ export default async function PrivateAppPage({
           .eq("period_id", selection.period.id)
           .order("operated_on", { ascending: false })
           .order("created_at", { ascending: false }),
+        supabase
+          .from("account_phase_withdrawals")
+          .select("account_id, phase, total_withdrawal_cents")
+          .eq("period_id", selection.period.id),
         supabase.rpc("list_nodal_period_activity", {
           target_period_id: selection.period.id,
         }),
@@ -242,6 +251,7 @@ export default async function PrivateAppPage({
           purchasedOn: purchase?.purchased_on ?? null,
           referenceNumber: account.reference_number,
           state: account.state as AccountView["state"],
+          stateOrigin: account.state_origin as AccountView["stateOrigin"],
         },
       ];
     });
@@ -318,6 +328,14 @@ export default async function PrivateAppPage({
           phase: entry.phase,
         },
       ];
+    });
+    phaseWithdrawals = (phaseWithdrawalRows ?? []).flatMap((withdrawal) => {
+      if (withdrawal.phase === "Evaluacion") return [];
+      return [{
+        accountId: withdrawal.account_id,
+        phase: withdrawal.phase as AccountPhaseWithdrawal["phase"],
+        totalWithdrawalInCents: Number(withdrawal.total_withdrawal_cents),
+      }];
     });
     periodActivity = buildPeriodActivity(
       ((activityRows ?? []) as ActivityRpcRow[]).map((row) => ({
@@ -631,7 +649,12 @@ export default async function PrivateAppPage({
       )}
 
       {allowed && selection?.period && (
-        <OperationRegister accounts={accountOptions} entries={operationEntries} />
+        <OperationRegister
+          accounts={accountOptions}
+          entries={operationEntries}
+          periodId={selection.period.id}
+          withdrawals={phaseWithdrawals}
+        />
       )}
 
       {allowed && selection?.period && (

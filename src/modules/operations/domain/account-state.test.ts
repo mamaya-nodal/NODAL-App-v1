@@ -39,6 +39,23 @@ describe("estado operativo de una cuenta", () => {
     ).toBe("closed");
   });
 
+  it("respeta los estados forzados hasta volver a Automatico", () => {
+    const evidence = {
+      hasOperationalData: true,
+      phaseTotalGainInCents: [5_000],
+    };
+
+    expect(deriveAccountOperationalState({ ...evidence, stateOrigin: "manual_live" })).toBe(
+      "live",
+    );
+    expect(deriveAccountOperationalState({ ...evidence, stateOrigin: "manual_closed" })).toBe(
+      "closed",
+    );
+    expect(deriveAccountOperationalState({ ...evidence, stateOrigin: "automatic" })).toBe(
+      "closed",
+    );
+  });
+
   it("rechaza totales que no esten expresados en centavos enteros", () => {
     expect(() =>
       deriveAccountOperationalState({

@@ -1457,6 +1457,35 @@ h1 {
   font-size: 0.84rem;
 }
 
+.account-state-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.45fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid #a7d2ba;
+  border-radius: 14px;
+  background: var(--brand-soft);
+}
+
+.account-state-control > div {
+  display: grid;
+  gap: 5px;
+}
+
+.account-state-control p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.inline-action {
+  min-height: 48px;
+  white-space: nowrap;
+}
+
 .register-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1517,6 +1546,56 @@ h1 {
 
 .phase-overview strong {
   font-size: 0.94rem;
+}
+
+.phase-total-overview > div {
+  align-content: start;
+}
+
+.phase-total-overview small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.phase-withdrawal-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: end;
+  margin-top: 4px;
+}
+
+.phase-withdrawal-field > span {
+  grid-column: 1 / -1;
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.phase-withdrawal-field input {
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.phase-withdrawal-field .text-action {
+  min-height: 40px;
+  padding: 0 4px;
+  font-size: 0.82rem;
+}
+
+.register-feedback {
+  margin: 16px 0 0;
+  color: var(--brand);
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .register-empty {
@@ -1818,6 +1897,7 @@ h1 {
   .register-filters,
   .register-summary,
   .account-file,
+  .account-state-control,
   .phase-overview,
   .progress-primary-grid,
   .progress-detail-grid {
@@ -1841,6 +1921,10 @@ h1 {
   .register-entry {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .inline-action {
+    width: 100%;
   }
 
   .allocation-row > div:last-child {
