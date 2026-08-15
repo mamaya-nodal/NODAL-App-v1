@@ -2711,3 +2711,160 @@ html[data-theme="day"] .app-page-shell .home-primary-card .positive-result { col
   .app-page-shell .home-primary-card { grid-column: auto; grid-row: auto; min-height: 180px; }
   .app-page-shell .home-next-step { min-height: 0; }
 }
+
+/* Control Diario: the working flow remains unchanged, with a clearer visual sequence. */
+.app-page-shell .daily-preview-heading {
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.app-page-shell .daily-preview-heading h2 {
+  font-size: clamp(1.85rem, 4vw, 2.55rem);
+  letter-spacing: -0.045em;
+}
+
+.app-page-shell .preview-badge {
+  border-color: color-mix(in srgb, var(--brand) 38%, var(--line));
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.app-page-shell .operation-context-preview {
+  border-color: color-mix(in srgb, var(--line) 88%, var(--brand));
+  border-radius: 19px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--paper) 88%, var(--surface)), var(--paper));
+}
+
+.app-page-shell .operation-context-preview.pending {
+  border-color: #d49d2f;
+  box-shadow: 0 0 0 3px rgb(212 157 47 / 18%);
+}
+
+.app-page-shell .operation-context-preview .status {
+  color: var(--brand);
+}
+
+.app-page-shell .operation-context-preview h3 {
+  font-size: 1.5rem;
+  letter-spacing: -0.035em;
+}
+
+.app-page-shell .active-context-badge {
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line));
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.app-page-shell .operation-context-fields {
+  gap: 12px;
+}
+
+.app-page-shell .replica-section {
+  border-color: var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 78%, var(--paper));
+}
+
+.app-page-shell .replica-heading strong { font-size: 1rem; }
+
+.app-page-shell .replica-grid {
+  grid-template-columns: repeat(auto-fill, minmax(43px, 1fr));
+  gap: 7px;
+  max-height: 275px;
+}
+
+.app-page-shell .replica-account {
+  min-height: 41px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--paper) 84%, var(--surface));
+}
+
+.app-page-shell .replica-account:hover {
+  border-color: color-mix(in srgb, var(--brand) 65%, var(--line));
+  color: var(--brand);
+}
+
+.app-page-shell .replica-account.selected {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--brand-contrast);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--brand) 22%, transparent);
+}
+
+.app-page-shell .balance-summary {
+  margin-top: 17px;
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line));
+  border-radius: 16px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 35%, var(--paper)), color-mix(in srgb, var(--brand-soft) 90%, var(--paper)));
+}
+
+.app-page-shell .balance-summary span { color: var(--ink); }
+.app-page-shell .balance-summary strong { color: var(--brand); font-size: 1.34rem; }
+
+.app-page-shell .daily-preview-form {
+  margin-top: 14px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+}
+
+.app-page-shell .daily-preview-form .primary-action {
+  min-width: 180px;
+  border-radius: 11px;
+}
+
+.app-page-shell .preview-history {
+  margin-top: 22px;
+}
+
+.app-page-shell .preview-row {
+  margin-top: 9px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--paper) 64%, var(--surface));
+}
+
+.app-page-shell .preview-result strong { color: var(--brand); font-size: 1.05rem; }
+
+.app-page-shell .history-edit-action {
+  margin-top: 4px;
+  color: var(--brand);
+}
+
+.app-page-shell .allocation-preview,
+.app-page-shell .sync-dialog {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.app-page-shell .allocation-row {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 74%, var(--surface));
+}
+
+.app-page-shell .pending-sync-alert {
+  border: 1px solid #d49d2f;
+  background: color-mix(in srgb, #d49d2f 12%, var(--paper));
+  color: var(--ink);
+}
+
+html[data-theme="day"] .app-page-shell .operation-context-preview {
+  background: linear-gradient(145deg, #ffffff, #edf4ed);
+}
+
+html[data-theme="day"] .app-page-shell .balance-summary {
+  background: linear-gradient(135deg, #dff4d9, #eff8ec);
+}
+
+html[data-theme="day"] .app-page-shell .balance-summary strong { color: #146f3b; }
+
+html[data-theme="day"] .app-page-shell .replica-account.selected { color: #0d1c0e; }
+
+@media (max-width: 720px) {
+  .app-page-shell .daily-preview-form { grid-template-columns: 1fr; padding: 14px; }
+  .app-page-shell .daily-preview-form .primary-action { width: 100%; }
+  .app-page-shell .operation-context-preview { padding: 19px; }
+  .app-page-shell .replica-grid { grid-template-columns: repeat(6, 1fr); }
+}
