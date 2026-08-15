@@ -2868,3 +2868,144 @@ html[data-theme="day"] .app-page-shell .replica-account.selected { color: #0d1c0
   .app-page-shell .operation-context-preview { padding: 19px; }
   .app-page-shell .replica-grid { grid-template-columns: repeat(6, 1fr); }
 }
+
+/* Registro de Operaciones: account detail is arranged as a readable financial file. */
+.app-page-shell .register-heading {
+  align-items: center;
+}
+
+.app-page-shell .register-heading h2 {
+  font-size: clamp(1.85rem, 4vw, 2.55rem);
+  letter-spacing: -0.045em;
+}
+
+.app-page-shell .read-only-badge {
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line));
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.app-page-shell .register-filters {
+  gap: 12px;
+  margin-top: 22px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--paper) 76%, var(--surface));
+}
+
+.app-page-shell .register-account-title {
+  margin-top: 16px;
+  border: 1px solid color-mix(in srgb, var(--brand) 33%, var(--line));
+  border-left: 4px solid var(--brand);
+  border-radius: 15px;
+  background: linear-gradient(125deg, color-mix(in srgb, var(--brand-soft) 95%, var(--paper)), var(--paper));
+}
+
+.app-page-shell .register-account-title > div > strong {
+  font-size: 1.3rem;
+  letter-spacing: -0.03em;
+}
+
+.app-page-shell .account-state.virgin {
+  background: color-mix(in srgb, var(--muted) 20%, var(--paper));
+  color: var(--muted);
+}
+
+.app-page-shell .account-state.live {
+  background: color-mix(in srgb, #d49d2f 18%, var(--paper));
+  color: #efbf5a;
+}
+
+.app-page-shell .account-state.closed {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.app-page-shell .account-file > div {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 72%, var(--surface));
+}
+
+.app-page-shell .account-file > div > strong {
+  color: var(--ink);
+  font-size: 1.08rem;
+}
+
+.app-page-shell .account-state-control {
+  border-color: color-mix(in srgb, var(--brand) 32%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 76%, var(--paper));
+}
+
+.app-page-shell .register-summary > div {
+  min-height: 102px;
+  align-content: center;
+  background: color-mix(in srgb, var(--paper) 70%, var(--surface));
+}
+
+.app-page-shell .register-summary > div > strong {
+  font-size: 1.22rem;
+  letter-spacing: -0.03em;
+}
+
+.app-page-shell .register-summary .register-net {
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-soft) 98%, var(--paper)), color-mix(in srgb, var(--brand) 13%, var(--paper)));
+  color: var(--brand);
+}
+
+.app-page-shell .phase-overview {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.app-page-shell .phase-overview > div {
+  min-height: 134px;
+  border-style: solid;
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 76%, var(--surface));
+}
+
+.app-page-shell .phase-overview > div.active {
+  border-color: color-mix(in srgb, var(--brand) 38%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 84%, var(--paper));
+}
+
+.app-page-shell .phase-overview > div.active > strong { color: var(--brand); }
+
+.app-page-shell .phase-withdrawal-field input {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.app-page-shell .phase-register {
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--paper) 70%, var(--surface));
+}
+
+.app-page-shell .phase-register-heading h3 {
+  color: var(--brand);
+  letter-spacing: -0.02em;
+}
+
+.app-page-shell .register-entry-value > strong {
+  color: var(--brand);
+  font-size: 1.02rem;
+}
+
+html[data-theme="day"] .app-page-shell .register-account-title {
+  background: linear-gradient(125deg, #e5f4e7, #f7fbf7);
+}
+
+html[data-theme="day"] .app-page-shell .account-state.live { color: #8b5d05; }
+html[data-theme="day"] .app-page-shell .register-summary .register-net { color: #146f3b; }
+html[data-theme="day"] .app-page-shell .phase-overview > div.active > strong { color: #146f3b; }
+html[data-theme="day"] .app-page-shell .phase-register-heading h3 { color: #146f3b; }
+html[data-theme="day"] .app-page-shell .register-entry-value > strong { color: #146f3b; }
+
+@media (max-width: 720px) {
+  .app-page-shell .register-filters { grid-template-columns: 1fr; }
+  .app-page-shell .register-summary { grid-template-columns: 1fr; }
+  .app-page-shell .phase-overview { grid-template-columns: 1fr 1fr; }
+  .app-page-shell .account-file { grid-template-columns: 1fr 1fr; }
+}
