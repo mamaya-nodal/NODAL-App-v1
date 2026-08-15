@@ -1,12 +1,25 @@
 :root {
+  color-scheme: dark;
+  --ink: #f2f7f3;
+  --muted: #9aa89f;
+  --paper: #0b0e0c;
+  --surface: #141a16;
+  --line: #2a352e;
+  --brand: #93ff3b;
+  --brand-contrast: #0b160c;
+  --brand-soft: #1d3423;
+}
+
+html[data-theme="day"] {
   color-scheme: light;
-  --ink: #17221c;
-  --muted: #617067;
-  --paper: #f4f7f4;
-  --surface: #ffffff;
-  --line: #dce5de;
-  --brand: #176f45;
-  --brand-soft: #e4f2e9;
+  --ink: #17251c;
+  --muted: #5c6c62;
+  --paper: #e9efe9;
+  --surface: #fbfdfb;
+  --line: #d0dbd2;
+  --brand: #187943;
+  --brand-contrast: #ffffff;
+  --brand-soft: #e2f0e4;
 }
 
 * {
@@ -29,7 +42,7 @@ nextjs-portal {
 
 body {
   background:
-    radial-gradient(circle at 85% 5%, #dceee2 0, transparent 34rem),
+    radial-gradient(circle at 82% 3%, rgb(115 235 62 / 12%) 0, transparent 34rem),
     var(--paper);
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
@@ -324,7 +337,7 @@ h1 {
 .primary-action {
   flex: 0 0 auto;
   background: var(--brand);
-  color: #ffffff;
+  color: var(--brand-contrast);
 }
 
 .secondary-action {
@@ -2426,4 +2439,275 @@ h1 {
     max-width: none;
     text-align: left;
   }
+}
+
+/* NODAL visual system: shared application shell and the first redesigned view. */
+.app-page-shell {
+  width: min(1180px, calc(100% - 32px));
+  max-width: none;
+  padding-top: 38px;
+}
+
+.app-page-shell .app-header {
+  border-color: color-mix(in srgb, var(--line) 86%, var(--brand));
+  border-radius: 28px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 96%, #000 4%), var(--surface));
+  box-shadow: 0 26px 90px rgb(0 0 0 / 26%);
+}
+
+.app-page-shell .app-brand-row {
+  min-height: 72px;
+  padding: 18px 26px;
+}
+
+.app-page-shell .app-brand {
+  display: inline-flex;
+  align-items: center;
+}
+
+.app-page-shell .app-brand img {
+  width: auto;
+  height: 30px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+.theme-toggle button {
+  min-height: 29px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0 9px;
+}
+
+.theme-toggle button[aria-pressed="true"] {
+  background: var(--brand);
+  color: var(--brand-contrast);
+}
+
+.app-page-shell .development-badge {
+  border: 1px solid color-mix(in srgb, var(--brand) 34%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 88%, transparent);
+  color: var(--brand);
+  letter-spacing: 0.05em;
+}
+
+.app-page-shell .app-welcome {
+  align-items: flex-start;
+  padding: 38px 30px 30px;
+}
+
+.app-page-shell .app-welcome h1 {
+  max-width: 640px;
+  font-size: clamp(2.7rem, 6vw, 4.7rem);
+  letter-spacing: -0.065em;
+}
+
+.app-page-shell .summary {
+  color: var(--muted);
+}
+
+.app-page-shell .access-summary {
+  min-width: 205px;
+  border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 88%, transparent);
+  color: var(--brand);
+}
+
+.app-page-shell .access-summary small { color: var(--muted); }
+
+.app-page-shell .app-navigation {
+  gap: 8px;
+  padding: 0 22px 19px;
+}
+
+.app-page-shell .app-navigation a,
+.app-page-shell .app-navigation > span,
+.app-page-shell .logout-form button {
+  border: 1px solid transparent;
+  color: var(--muted);
+}
+
+.app-page-shell .app-navigation a:hover,
+.app-page-shell .logout-form button:hover {
+  border-color: color-mix(in srgb, var(--brand) 30%, var(--line));
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.app-page-shell .context-panel,
+.app-page-shell .home-overview-panel,
+.app-page-shell .purchase-panel,
+.app-page-shell .daily-preview-panel,
+.app-page-shell .operation-register-panel,
+.app-page-shell .progress-summary-panel,
+.app-page-shell .activity-history-panel {
+  border-color: var(--line);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: 0 15px 45px rgb(0 0 0 / 10%);
+}
+
+.app-page-shell .home-overview-layout {
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.85fr);
+  grid-template-rows: auto auto;
+}
+
+.app-page-shell .home-primary-card {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-content: start;
+  min-height: 218px;
+  padding: 25px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #b6ff58, #79e937 58%, #368f2c);
+  color: #0d1b0e;
+}
+
+.app-page-shell .home-primary-card > span {
+  color: #244727;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.app-page-shell .home-primary-card strong {
+  margin-top: 28px;
+  font-size: clamp(2.1rem, 5vw, 3.6rem);
+  letter-spacing: -0.065em;
+  line-height: 1;
+}
+
+.app-page-shell .home-primary-card p {
+  margin: 11px 0 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.app-page-shell .home-primary-card .positive-result { color: #1d6227; }
+.app-page-shell .home-primary-card .negative-result { color: #873420; }
+
+.app-page-shell .home-next-step {
+  min-height: 128px;
+  background: linear-gradient(145deg, #214f2a, #112e19);
+  color: #ffffff;
+}
+
+.app-page-shell .home-next-step > span { color: #aafc62; }
+.app-page-shell .home-next-step p { color: #d4e4d6; }
+.app-page-shell .home-next-step a { background: #a6f653; color: #143218; }
+
+.app-page-shell .home-snapshot {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-page-shell .home-snapshot article:nth-child(-n + 2) { display: none; }
+
+.app-page-shell .home-snapshot article {
+  border-color: color-mix(in srgb, var(--line) 90%, var(--brand));
+  background: color-mix(in srgb, var(--paper) 72%, var(--surface));
+}
+
+.app-page-shell .home-snapshot strong { color: var(--ink); }
+
+html[data-theme="day"] .app-page-shell .app-header {
+  background: linear-gradient(145deg, #ffffff, #f4f8f4);
+  box-shadow: 0 26px 75px rgb(31 75 45 / 11%);
+}
+
+html[data-theme="day"] .app-page-shell .home-primary-card {
+  background: linear-gradient(135deg, #e6fac9, #a9e877 58%, #5cae48);
+}
+
+html[data-theme="day"] .app-page-shell .home-primary-card .positive-result { color: #126536; }
+
+@media (min-width: 961px) {
+  .app-page-shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    width: min(1320px, calc(100% - 48px));
+  }
+
+  .app-page-shell .app-header {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    grid-row: 1 / span 14;
+    flex-direction: column;
+    min-height: calc(100vh - 48px);
+    overflow: hidden;
+  }
+
+  .app-page-shell .app-brand-row {
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: auto;
+    padding: 23px 20px 18px;
+  }
+
+  .app-page-shell .app-brand { width: 100%; }
+  .app-page-shell .app-brand img { height: auto; max-width: 170px; }
+  .app-page-shell .development-badge { display: none; }
+  .app-page-shell .theme-toggle { margin: 12px 0 0; }
+  .app-page-shell .app-welcome { display: none; }
+  .app-page-shell .access-summary { display: none; }
+
+  .app-page-shell .app-navigation {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 5px;
+    padding: 13px 12px 16px;
+    overflow: visible;
+  }
+
+  .app-page-shell .app-navigation a,
+  .app-page-shell .app-navigation > span,
+  .app-page-shell .logout-form button {
+    width: 100%;
+    min-height: 43px;
+    padding: 0 11px;
+  }
+
+  .app-page-shell .logout-form {
+    width: 100%;
+    margin: auto 0 0;
+  }
+
+  .app-page-shell .context-panel,
+  .app-page-shell .home-overview-panel,
+  .app-page-shell .purchase-panel,
+  .app-page-shell .daily-preview-panel,
+  .app-page-shell .operation-register-panel,
+  .app-page-shell .progress-summary-panel,
+  .app-page-shell .activity-history-panel {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-page-shell { width: min(100% - 22px, 1180px); padding-top: 18px; }
+  .app-page-shell .app-brand-row { min-height: 62px; padding: 15px; }
+  .app-page-shell .app-brand img { height: 23px; }
+  .app-page-shell .development-badge { display: none; }
+  .app-page-shell .app-welcome { padding: 28px 20px 23px; }
+  .app-page-shell .app-welcome h1 { font-size: clamp(2.35rem, 14vw, 3.35rem); }
+  .app-page-shell .home-overview-layout { grid-template-columns: 1fr; grid-template-rows: auto; }
+  .app-page-shell .home-primary-card { grid-column: auto; grid-row: auto; min-height: 180px; }
+  .app-page-shell .home-next-step { min-height: 0; }
 }

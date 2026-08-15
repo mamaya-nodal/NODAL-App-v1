@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 import { createClient } from "@/lib/supabase/server";
 import { decideAccess } from "@/modules/access/domain/access-decision";
@@ -41,6 +42,7 @@ import {
   type RegisterAccount,
 } from "./operation-register";
 import { ProgressSummary } from "./progress-summary";
+import { ThemeToggle } from "./theme-toggle";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -432,12 +434,13 @@ export default async function PrivateAppPage({
   }
 
   return (
-    <main className="shell narrow-shell">
+    <main className="shell narrow-shell app-page-shell">
       <header className="app-header" aria-labelledby="private-title">
         <div className="app-brand-row">
           <a className="app-brand" href="#inicio" aria-label="Ir al inicio">
-            NODAL <span>APP</span>
+            <Image alt="NODAL Trading" height={30} priority src="/nodal-trading-lime.png" width={167} />
           </a>
+          <ThemeToggle />
           <span className="development-badge">Versión privada de prueba</span>
         </div>
 

@@ -19,6 +19,7 @@ function formatMoney(cents: number): string {
 
 export function HomeOverview({ modalityLabel, periodLabel, summary }: HomeOverviewProps) {
   const nextStep = chooseHomeNextStep(summary);
+  const isPositiveResult = summary.operatingResultInCents >= 0;
 
   return (
     <section aria-labelledby="home-overview-title" className="home-overview-panel" id="inicio">
@@ -31,6 +32,18 @@ export function HomeOverview({ modalityLabel, periodLabel, summary }: HomeOvervi
       </div>
 
       <div className="home-overview-layout">
+        <div className="home-primary-card">
+          <span>Saldo broker</span>
+          <strong>
+            {summary.brokerBalanceInCents === null
+              ? "Sin informar"
+              : formatMoney(summary.brokerBalanceInCents)}
+          </strong>
+          <p className={isPositiveResult ? "positive-result" : "negative-result"}>
+            {isPositiveResult ? "+ " : ""}
+            {formatMoney(summary.operatingResultInCents)} resultado operativo
+          </p>
+        </div>
         <div className="home-snapshot" aria-label="Síntesis del período">
           <article>
             <span>Saldo broker</span>
