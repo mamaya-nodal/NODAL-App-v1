@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/server";
 import { decideAccess } from "@/modules/access/domain/access-decision";
@@ -123,7 +124,7 @@ export default async function PrivateAppPage({
 
   const { data: nodalUser } = await supabase
     .from("nodal_users")
-    .select("id, email, access_state")
+    .select("id, email, access_state, access_role")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -468,6 +469,9 @@ export default async function PrivateAppPage({
             <a href="#registro">Registro</a>
             <a href="#resumen">Resumen</a>
             <a href="#actividad">Actividad</a>
+            {nodalUser?.access_role === "admin" && (
+              <Link href="/app/admin">Administración</Link>
+            )}
             <form action="/auth/logout" className="logout-form" method="post">
               <button type="submit">Cerrar sesión</button>
             </form>
