@@ -51,6 +51,8 @@
 | APP-045 | El estado admite Automático, Forzar Cuenta viva y Forzar Cuenta cerrada. El modo forzado queda guardado y auditado. Forzar viva conserva el arrastre positivo a la siguiente vuelta; al volver a Automático se recupera el estado calculado. | Vigente |
 | APP-046 | Resumen Operativo calcula capital, estados, flotante, ganancia realizada, comisión y conciliaciones desde los registros ya existentes. Billetera y retiros de fondeo se guardan como movimientos trazables: un retiro aprobado queda pendiente y solo integra billetera al confirmar su cobro. | Vigente |
 
+| APP-047 | Las alertas iniciales del Resumen se calculan desde datos y diferencias concretas: saldo broker ausente, conciliaciones de capital o ganancias, retiros aprobados sin cobro y estados de cuenta forzados. Informan el origen y conducen a revisarlo; nunca corrigen valores ni marcan un período como cerrado. | Vigente |
+
 ## Propuestas pendientes de decision
 
 | ID | Propuesta | Estado |

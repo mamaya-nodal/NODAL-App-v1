@@ -116,6 +116,8 @@ un enlace al origen. No debe limitarse a un semáforo sin explicación.
 
 ## 5. Información pendiente de validar
 
+Implementación inicial: el Resumen muestra alertas calculadas para las diferencias y datos pendientes que ya tienen fuente en la aplicación. La asignación de responsable, comentarios, estados de resolución y alertas de cierre siguen pendientes de la matriz de permisos y del procedimiento de cierre.
+
 1. Fórmulas completas de posición esperada y observable, incluidos los datos
    que entran y salen en cada cierre.
 2. Quién puede iniciar, revisar y aprobar un cierre semanal y mensual.

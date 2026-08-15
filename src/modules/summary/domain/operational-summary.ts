@@ -48,6 +48,7 @@ export type OperationalSummary = Readonly<{
   fundingCollectedInCents: number;
   fundingPendingInCents: number;
   fundingWithdrawals: FundingWithdrawal[];
+  manualAccountStateCount: number;
   periodResultInCents: number;
   positionDifferenceInCents: number;
   positionExpectedInCents: number;
@@ -102,6 +103,7 @@ export function buildOperationalSummary(input: Readonly<{
     live: input.accounts.filter((account) => account.state === "live").length,
     virgin: input.accounts.filter((account) => account.state === "virgin").length,
   };
+  const manualAccountStateCount = input.accounts.filter((account) => account.stateOrigin !== "automatic").length;
   const realizedGainInCents = sum(accountTotals.filter(({ account }) => account.state === "closed").map(({ total }) => total));
   const floatingInCents = Math.abs(sum(accountTotals.filter(({ account }) => account.state === "live").map(({ total }) => total)));
   const virginPriceInCents = sum(input.accounts.filter((account) => account.state === "virgin").map((account) => account.priceInCents));
@@ -134,6 +136,7 @@ export function buildOperationalSummary(input: Readonly<{
     fundingCollectedInCents: collected,
     fundingPendingInCents: Math.max(0, approved - collected),
     fundingWithdrawals: input.fundingWithdrawals,
+    manualAccountStateCount,
     periodResultInCents,
     positionDifferenceInCents: positionObservableInCents - positionExpectedInCents,
     positionExpectedInCents,
