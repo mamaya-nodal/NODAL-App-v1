@@ -18,8 +18,8 @@ export function AdminOverview({ modality, period, periods, students }: Props) {
   const commission = students.reduce((total, student) => total + student.commissionInCents, 0);
   return <main className="shell narrow-shell admin-shell">
     <header className="app-header admin-header">
-      <div className="app-brand-row"><Link className="app-brand" href="/app">NODAL <span>APP</span></Link><span className="development-badge">Administración · solo lectura</span></div>
-      <div className="app-welcome"><div><p className="eyebrow">PANEL DE ADMINISTRACIÓN</p><h1>Vista general</h1><p className="summary">Una señal simple por alumno. Entrá a su ficha solo cuando necesites revisar el detalle.</p></div></div>
+      <div className="app-brand-row"><Link className="app-brand" href="/app">NODAL <span>APP</span></Link><span className="development-badge">Administración</span></div>
+      <div className="app-welcome"><div><p className="eyebrow">PANEL DE ADMINISTRACIÓN</p><h1>Vista general</h1><p className="summary">Una señal simple por alumno. Entrá a su ficha solo cuando necesites revisar el detalle.</p></div><Link className="admin-manage-link" href="/app/admin/users">Gestionar accesos</Link></div>
     </header>
     <section className="admin-context" aria-label="Período del panel">
       <form action="/app/admin" method="get"><label htmlFor="mode">Modalidad</label><select defaultValue={modality} id="mode" name="mode"><option value="real">Real</option><option value="practice">Práctica</option></select><label htmlFor="period">Período</label><select defaultValue={period} id="period" name="period">{periods.map((value) => <option key={value} value={value}>{periodLabel(value)}</option>)}</select><button className="secondary-action" type="submit">Ver período</button></form>

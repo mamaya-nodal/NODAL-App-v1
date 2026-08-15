@@ -2094,6 +2094,116 @@ h1 {
   line-height: 1.5;
 }
 
+.admin-manage-link {
+  flex: 0 0 auto;
+  padding: 12px 15px;
+  border-radius: 11px;
+  background: var(--brand);
+  color: white;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.admin-result {
+  margin: 22px 0 0;
+  padding: 14px 18px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.admin-result.success {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.admin-result.error {
+  background: #fff1e6;
+  color: #924d19;
+}
+
+.admin-user-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(380px, 1.2fr);
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.admin-user-form,
+.admin-user-list {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.admin-user-form h2,
+.admin-user-list h2 {
+  margin: 0 0 18px;
+  font-size: 1.2rem;
+}
+
+.admin-user-form form {
+  display: grid;
+  gap: 13px;
+}
+
+.admin-user-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.87rem;
+  font-weight: 700;
+}
+
+.admin-user-form p:last-child {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.admin-user-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.admin-user-row > div,
+.admin-user-row form {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-user-row span,
+.admin-user-row small {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.admin-user-row .admin-state {
+  color: inherit;
+}
+
+.admin-user-row form {
+  grid-template-columns: minmax(130px, 1fr) auto;
+  margin-top: 7px;
+}
+
+.admin-revoke {
+  padding: 8px 10px;
+  border: 1px solid #e8bbb4;
+  border-radius: 9px;
+  background: #fff8f6;
+  color: #a54130;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 @media (max-width: 720px) {
   .shell {
     padding: 64px 0;
@@ -2231,6 +2341,12 @@ h1 {
   .admin-student-row { grid-template-columns: 1fr; gap: 11px; }
 
   .admin-detail-link { justify-self: start; }
+
+  .admin-user-grid { grid-template-columns: 1fr; }
+
+  .admin-user-row { flex-direction: column; }
+
+  .admin-user-row form { width: 100%; }
 
   .summary-alert {
     align-items: flex-start;
