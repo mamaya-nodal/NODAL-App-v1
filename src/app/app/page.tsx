@@ -17,6 +17,12 @@ import {
   type SummaryAccountState,
 } from "@/modules/summary/domain/progress-summary";
 import {
+  buildOperationalSummary,
+  type OperationalSummary,
+  type FundingWithdrawal,
+  type WalletMovement,
+} from "@/modules/summary/domain/operational-summary";
+import {
   formatPeriodLabel,
   resolveWorkspaceSelection,
   type WorkspaceOption,
@@ -158,12 +164,17 @@ export default async function PrivateAppPage({
   let dailyControls: PersistedDailyControl[] = [];
   let operationEntries: OperationRegisterEntry[] = [];
   let phaseWithdrawals: AccountPhaseWithdrawal[] = [];
+  let walletMovements: WalletMovement[] = [];
+  let fundingWithdrawals: FundingWithdrawal[] = [];
   let periodActivity: PeriodActivityItem[] = [];
   let progressSummary: ProgressSummaryData = buildProgressSummary({
     accountStates: [],
     controls: [],
     operationEntryCount: 0,
     purchaseCostsInCents: [],
+  });
+  let operationalSummary: OperationalSummary = buildOperationalSummary({
+    accounts: [], controls: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [], walletMovements: [],
   });
 
   if (allowed && selection?.period) {
@@ -175,6 +186,8 @@ export default async function PrivateAppPage({
       { data: dailyControlParticipantRows },
       { data: operationEntryRows },
       { data: phaseWithdrawalRows },
+      { data: walletMovementRows },
+      { data: fundingWithdrawalRows },
       { data: activityRows },
     ] =
       await Promise.all([
@@ -197,7 +210,7 @@ export default async function PrivateAppPage({
         supabase
           .from("daily_controls")
           .select(
-            "id, control_number, operated_on, kind, movement_cents, balance_after_cents, operating_result_cents, allocation_reason",
+            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, allocation_reason",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
@@ -217,6 +230,17 @@ export default async function PrivateAppPage({
           .from("account_phase_withdrawals")
           .select("account_id, phase, total_withdrawal_cents")
           .eq("period_id", selection.period.id),
+        supabase
+          .from("wallet_movements")
+          .select("id, occurred_on, kind, amount_cents, observation")
+          .eq("period_id", selection.period.id)
+          .order("occurred_on", { ascending: false }),
+        supabase
+          .from("funding_withdrawals")
+          .select("id, account_id, approved_on, amount_cents, collected_on")
+          .eq("period_id", selection.period.id)
+          .eq("is_active", true)
+          .order("approved_on", { ascending: false }),
         supabase.rpc("list_nodal_period_activity", {
           target_period_id: selection.period.id,
         }),
@@ -337,6 +361,15 @@ export default async function PrivateAppPage({
         totalWithdrawalInCents: Number(withdrawal.total_withdrawal_cents),
       }];
     });
+    walletMovements = (walletMovementRows ?? []).map((movement) => ({
+      amountInCents: Number(movement.amount_cents), id: movement.id,
+      kind: movement.kind as WalletMovement["kind"], occurredOn: movement.occurred_on,
+      observation: movement.observation,
+    }));
+    fundingWithdrawals = (fundingWithdrawalRows ?? []).map((withdrawal) => ({
+      accountId: withdrawal.account_id, amountInCents: Number(withdrawal.amount_cents),
+      approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, id: withdrawal.id,
+    }));
     periodActivity = buildPeriodActivity(
       ((activityRows ?? []) as ActivityRpcRow[]).map((row) => ({
         accountReference: row.account_reference,
@@ -380,6 +413,20 @@ export default async function PrivateAppPage({
       purchaseCostsInCents: (purchaseRows ?? []).map((purchase) =>
         Number(purchase.price_cents),
       ),
+    });
+    operationalSummary = buildOperationalSummary({
+      accounts: accountOptions.map((account) => ({
+        fundsOrigin: account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
+        id: account.id, priceInCents: account.priceInCents ?? 0, state: account.state,
+        stateOrigin: account.stateOrigin,
+      })),
+      controls: (dailyControlRows ?? []).map((control) => ({
+        balanceAfterInCents: Number(control.balance_after_cents), controlNumber: control.control_number,
+        kind: control.kind, movementInCents: control.movement_cents === null ? null : Number(control.movement_cents),
+        operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),
+        originDestination: control.origin_destination,
+      })),
+      entries: operationEntries, fundingWithdrawals, phaseWithdrawals, walletMovements,
     });
   }
 
@@ -658,7 +705,11 @@ export default async function PrivateAppPage({
       )}
 
       {allowed && selection?.period && (
-        <ProgressSummary summary={progressSummary} />
+        <ProgressSummary
+          accounts={accountOptions.map((account) => ({ id: account.id, label: `${account.companyName} · Cuenta ${account.referenceNumber}` }))}
+          periodId={selection.period.id}
+          summary={operationalSummary}
+        />
       )}
 
       {allowed && selection?.period && (

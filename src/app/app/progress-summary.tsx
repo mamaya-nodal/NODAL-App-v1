@@ -1,97 +1,29 @@
-import type { ProgressSummary as ProgressSummaryData } from "@/modules/summary/domain/progress-summary";
+"use client";
 
-type ProgressSummaryProps = Readonly<{ summary: ProgressSummaryData }>;
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
+import { collectFundingWithdrawal, createFundingWithdrawal, createWalletMovement } from "./summary-actions";
 
-function formatMoney(cents: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    currency: "USD",
-    signDisplay: "auto",
-    style: "currency",
-  }).format(cents / 100);
+type Props = Readonly<{ accounts: Array<{ id: string; label: string }>; periodId: string; summary: OperationalSummary }>;
+const money = (cents: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "USD", signDisplay: "auto" }).format(cents / 100);
+const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+const date = (value: string) => new Intl.DateTimeFormat("es-AR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+const labels = { external_contribution: "Aporte externo a billetera", personal_withdrawal: "Retiro personal desde billetera", prior_pending_collection: "Cobro pendiente anterior" } as const;
+function Card({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) { return <article className={`progress-card${alert ? " alert-card" : ""}`}><span>{label}</span><strong>{value}</strong></article>; }
+
+export function ProgressSummary({ accounts, periodId, summary }: Props) {
+  const router = useRouter(); const [message, setMessage] = useState<string | null>(null); const [saving, setSaving] = useState(false);
+  async function wallet(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); setSaving(true); const result = await createWalletMovement({ amount: String(form.get("amount") ?? ""), date: String(form.get("date") ?? ""), kind: String(form.get("kind") ?? ""), observation: String(form.get("observation") ?? ""), periodId }); setSaving(false); setMessage(result.message); if (result.ok) { event.currentTarget.reset(); router.refresh(); } }
+  async function withdrawal(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); setSaving(true); const result = await createFundingWithdrawal({ accountId: String(form.get("account") ?? ""), amount: String(form.get("amount") ?? ""), approvedOn: String(form.get("approved_on") ?? ""), periodId }); setSaving(false); setMessage(result.message); if (result.ok) { event.currentTarget.reset(); router.refresh(); } }
+  async function collect(id: string) { setSaving(true); const result = await collectFundingWithdrawal({ withdrawalId: id, collectedOn: today(), periodId }); setSaving(false); setMessage(result.message); if (result.ok) router.refresh(); }
+  return <section aria-labelledby="progress-summary-title" className="progress-summary-panel" id="resumen">
+    <div className="summary-heading"><div><p className="status">RESUMEN OPERATIVO</p><h2 id="progress-summary-title">Capital y conciliación</h2></div><span className="calculated-badge">Calculado automáticamente</span></div>
+    <p className="context-note">Cada valor se reconstruye desde Compras, Control Diario, Registro, Billetera y Retiros. No hay saldos editables sin origen.</p>
+    <Block title="Situación actual"><Card label="Saldo broker" value={summary.brokerBalanceInCents === null ? "Sin saldo informado" : money(summary.brokerBalanceInCents)} /><Card label="Saldo billetera" value={money(summary.walletBalanceInCents)} /><Card label="Retiros pendientes" value={money(summary.fundingPendingInCents)} /><Card label="Posición observable" value={money(summary.positionObservableInCents)} /></Block>
+    <Block title="Capital y resultado"><Card label="Capital neto aportado" value={money(summary.capitalNetInCents)} /><Card label="Resultado del período" value={money(summary.periodResultInCents)} /><Card label="Posición esperada" value={money(summary.positionExpectedInCents)} /><Card label="Diferencia de capital" value={money(summary.positionDifferenceInCents)} alert={summary.positionDifferenceInCents !== 0} /></Block>
+    <div className="summary-section"><h3>Estado operativo, ganancia y comisión</h3><div className="progress-detail-grid"><article className="progress-detail"><dl><div><dt>Cuentas vírgenes</dt><dd>{summary.accountStates.virgin}</dd></div><div><dt>Cuentas vivas</dt><dd>{summary.accountStates.live}</dd></div><div><dt>Cuentas cerradas</dt><dd>{summary.accountStates.closed}</dd></div><div><dt>Flotante de cobertura</dt><dd>{money(summary.floatingInCents)}</dd></div></dl></article><article className="progress-detail"><dl><div><dt>Ganancia realizada</dt><dd>{money(summary.realizedGainInCents)}</dd></div><div><dt>Ganancia conciliada</dt><dd>{money(summary.periodResultInCents + summary.floatingInCents + summary.virginPriceInCents)}</dd></div><div><dt>Diferencia de ganancias</dt><dd>{money(summary.realizedReconciliationDifferenceInCents)}</dd></div><div><dt>Precio cuentas vírgenes</dt><dd>{money(summary.virginPriceInCents)}</dd></div><div><dt>Comisión mesa ({summary.commissionRateLabel})</dt><dd>{money(summary.commissionInCents)}</dd></div><div><dt>Ganancia trader estimada</dt><dd>{money(summary.traderGainInCents)}</dd></div></dl></article></div></div>
+    <div className="summary-section summary-forms"><div><h3>Movimientos de billetera</h3><form className="summary-form" onSubmit={wallet}><input defaultValue={today()} name="date" type="date" required /><select defaultValue="external_contribution" name="kind">{Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><input inputMode="decimal" name="amount" placeholder="Importe USD" required /><input name="observation" placeholder="Observación (opcional)" /><button disabled={saving}>Guardar movimiento</button></form><div className="summary-list">{summary.walletMovements.length === 0 ? <p>Sin movimientos externos de billetera.</p> : summary.walletMovements.map((movement)=><p key={movement.id}><strong>{date(movement.occurredOn)}</strong> · {labels[movement.kind]} · {money(movement.amountInCents)}</p>)}</div></div><div><h3>Retiros de fondeo</h3><form className="summary-form" onSubmit={withdrawal}><select name="account" required defaultValue=""><option disabled value="">Cuenta</option>{accounts.map((account)=><option key={account.id} value={account.id}>{account.label}</option>)}</select><input defaultValue={today()} name="approved_on" type="date" required /><input inputMode="decimal" name="amount" placeholder="Importe aprobado" required /><button disabled={saving}>Registrar aprobado</button></form><div className="summary-list">{summary.fundingWithdrawals.length === 0 ? <p>Sin retiros de fondeo registrados.</p> : summary.fundingWithdrawals.map((item)=><p key={item.id}><strong>{date(item.approvedOn)}</strong> · {money(item.amountInCents)} · {item.collectedOn ? `Cobrado el ${date(item.collectedOn)}` : <button className="text-action" disabled={saving} onClick={()=>collect(item.id)} type="button">Confirmar cobro</button>}</p>)}</div></div></div>{message && <p className="register-feedback">{message}</p>}
+  </section>;
 }
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("es-AR", { timeZone: "UTC" }).format(
-    new Date(`${value}T00:00:00Z`),
-  );
-}
-
-export function ProgressSummary({ summary }: ProgressSummaryProps) {
-  return (
-    <section aria-labelledby="progress-summary-title" className="progress-summary-panel" id="resumen">
-      <div className="summary-heading">
-        <div>
-          <p className="status">RESUMEN DEL PERÍODO</p>
-          <h2 id="progress-summary-title">Progreso disponible</h2>
-        </div>
-        <span className="calculated-badge">Calculado automáticamente</span>
-      </div>
-
-      <p className="context-note">
-        Esta primera versión reúne solamente valores que la app ya puede explicar
-        desde Compras, Control Diario y Registro de Operaciones.
-      </p>
-
-      <div className="progress-primary-grid">
-        <article className="progress-card featured">
-          <span>Saldo broker actual</span>
-          <strong>{summary.brokerBalanceInCents === null ? "Sin saldo informado" : formatMoney(summary.brokerBalanceInCents)}</strong>
-          <small>{summary.brokerBalanceUpdatedOn ? `Actualizado el ${formatDate(summary.brokerBalanceUpdatedOn)}` : "Se establecerá con el primer depósito"}</small>
-          <a href="#control-diario">Ver Control Diario</a>
-        </article>
-
-        <article className="progress-card">
-          <span>Resultado operativo registrado</span>
-          <strong>{formatMoney(summary.operatingResultInCents)}</strong>
-          <small>Resultado de los nuevos saldos confirmados</small>
-          <a href="#registro">Ver registros por cuenta</a>
-        </article>
-
-        <article className="progress-card">
-          <span>Cuentas del período</span>
-          <strong>{summary.accountCount}</strong>
-          <small>{formatMoney(summary.purchaseCostInCents)} en compras registradas</small>
-          <a href="#compras">Ver compras</a>
-        </article>
-
-        <article className="progress-card">
-          <span>Actividad confirmada</span>
-          <strong>{summary.controlCount}</strong>
-          <small>{summary.operationEntryCount} entradas automáticas por cuenta</small>
-          <a href="#actividad">Ver actividad completa</a>
-        </article>
-      </div>
-
-      <div className="progress-detail-grid">
-        <article className="progress-detail">
-          <h3>Movimientos de Control Diario</h3>
-          <dl>
-            <div><dt>Depósitos informados</dt><dd>{formatMoney(summary.depositsInCents)}</dd></div>
-            <div><dt>Retiros informados</dt><dd>{formatMoney(summary.withdrawalsInCents)}</dd></div>
-          </dl>
-          <p>Estos movimientos no se presentan como ganancia o pérdida.</p>
-        </article>
-
-        <article className="progress-detail">
-          <h3>Estado operativo de cuentas</h3>
-          <dl>
-            <div><dt>Vírgenes</dt><dd>{summary.accountStates.virgin}</dd></div>
-            <div><dt>Vivas</dt><dd>{summary.accountStates.live}</dd></div>
-            <div><dt>Cerradas</dt><dd>{summary.accountStates.closed}</dd></div>
-          </dl>
-          <p>Los cambios automáticos de estado todavía no están habilitados.</p>
-        </article>
-      </div>
-
-      <aside className="summary-scope-warning">
-        <strong>Alcance actual</strong>
-        <p>
-          Aún no se muestran TOTAL GANANCIA, billetera, retiros de fondeo,
-          comisiones ni conciliaciones. Esos valores se incorporarán cuando sus
-          fórmulas y casos de equivalencia estén validados; no se estiman ni se
-          reemplazan por cifras incompletas.
-        </p>
-      </aside>
-    </section>
-  );
-}
+function Block({ children, title }: { children: React.ReactNode; title: string }) { return <div className="summary-section"><h3>{title}</h3><div className="progress-primary-grid">{children}</div></div>; }

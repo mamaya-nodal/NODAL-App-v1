@@ -203,3 +203,16 @@ Este mapa estara listo para orientar la implementacion cuando Contabilidad
 valide las formulas que falten, los cortes y los casos de prueba. El siguiente
 mapa sera el de Compras, movimientos de billetera y retiros, que completa las
 fuentes de datos del resumen.
+
+## Actualización de implementación: 2026-08-15
+
+La primera versión completa del Resumen ya está implementada en la app de
+desarrollo. Calcula capital neto, resultado del período, posición observable y
+esperada, estados de cuenta, flotante, ganancia realizada, comisión, ganancia
+estimada del trader y las dos diferencias de conciliación.
+
+También incorpora registros auditados para movimientos de billetera y retiros
+de fondeo. Un retiro se registra primero como aprobado y pendiente; al
+confirmarse el cobro se incorpora al saldo de billetera sin borrar su fecha de
+aprobación. Los cortes semanales/mensuales y snapshots siguen pendientes de la
+validación propietaria, por lo que no se automatizan todavía.

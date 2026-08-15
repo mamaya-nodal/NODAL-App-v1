@@ -1691,6 +1691,73 @@ h1 {
   gap: 14px;
 }
 
+.summary-section {
+  margin-top: 28px;
+}
+
+.summary-section > h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.alert-card {
+  border-color: #e1bc67 !important;
+  background: #fff8e7 !important;
+}
+
+.summary-forms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.summary-forms > div {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+}
+
+.summary-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summary-form input,
+.summary-form select {
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.summary-form button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--brand);
+  color: white;
+  font: inherit;
+  font-weight: 800;
+}
+
+.summary-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.summary-list p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .progress-primary-grid {
   margin-top: 26px;
 }
@@ -1901,6 +1968,11 @@ h1 {
   .phase-overview,
   .progress-primary-grid,
   .progress-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-forms,
+  .summary-form {
     grid-template-columns: 1fr;
   }
 
