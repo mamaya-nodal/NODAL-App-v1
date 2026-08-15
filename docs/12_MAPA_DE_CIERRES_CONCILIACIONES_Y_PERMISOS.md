@@ -118,6 +118,8 @@ un enlace al origen. No debe limitarse a un semáforo sin explicación.
 
 Implementación inicial: el Resumen muestra alertas calculadas para las diferencias y datos pendientes que ya tienen fuente en la aplicación. La asignación de responsable, comentarios, estados de resolución y alertas de cierre siguen pendientes de la matriz de permisos y del procedimiento de cierre.
 
+El asistente de diagnóstico agregado a estas alertas consulta únicamente el período propio, muestra evidencia y propone qué revisar. Luna atiende el caso inicial y Terra interviene automáticamente solo si la aplicación no puede verificar matemáticamente la primera respuesta. El análisis se conserva para evitar repetir consumo cuando no cambian los datos y nunca produce escrituras económicas.
+
 1. Fórmulas completas de posición esperada y observable, incluidos los datos
    que entran y salen en cada cierre.
 2. Quién puede iniciar, revisar y aprobar un cierre semanal y mensual.

@@ -1727,6 +1727,28 @@ h1 {
 .summary-alert p { margin: 5px 0 0; color: var(--muted); }
 .summary-alert a { flex: none; color: var(--brand); font-weight: 800; }
 
+.summary-alert-copy { flex: 1; }
+.diagnostic-chat { flex-basis: 100%; }
+.diagnostic-trigger { padding: 0; border: 0; background: transparent; color: var(--brand); font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
+.diagnostic-panel { display: grid; gap: 13px; margin-top: 12px; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.diagnostic-panel > div:first-child p, .diagnostic-evidence p { margin: 4px 0 0; }
+.diagnostic-message { max-width: 88%; margin: 0; padding: 10px 12px; border-radius: 12px; }
+.diagnostic-user { justify-self: end; background: var(--brand); color: #fff; }
+.diagnostic-assistant { justify-self: start; background: var(--paper); }
+.diagnostic-error { margin: 0; color: #9b2c2c; font-weight: 700; }
+.diagnostic-answer { display: grid; gap: 11px; padding: 16px; border: 1px solid #b8d5c5; border-radius: 12px; background: #f0f8f3; }
+.diagnostic-answer p, .diagnostic-answer small { margin: 0; }
+.diagnostic-answer small { display: block; color: var(--muted); }
+.diagnostic-answer-heading { display: flex; justify-content: space-between; gap: 15px; }
+.diagnostic-answer-heading span { color: var(--brand); font-size: .85rem; font-weight: 800; }
+.diagnostic-evidence { display: grid; gap: 6px; padding: 12px; border-radius: 9px; background: var(--surface); }
+.diagnostic-form { display: grid; gap: 7px; }
+.diagnostic-form label { font-weight: 800; }
+.diagnostic-form > div { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.diagnostic-form input { min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; font: inherit; }
+.diagnostic-form button { padding: 11px 15px; border: 0; border-radius: 9px; background: var(--brand); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.diagnostic-form button:disabled { cursor: wait; opacity: .6; }
+
 .alert-card {
   border-color: #e1bc67 !important;
   background: #fff8e7 !important;
@@ -2007,6 +2029,9 @@ h1 {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .diagnostic-answer-heading { flex-direction: column; }
+  .diagnostic-form > div { grid-template-columns: 1fr; }
 
   .home-overview-layout,
   .home-snapshot {
