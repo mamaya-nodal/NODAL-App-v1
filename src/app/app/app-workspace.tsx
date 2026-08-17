@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 
 import { ThemeToggle } from "./theme-toggle";
 
@@ -56,10 +56,13 @@ export function AppWorkspace({
   periodLabel,
   userLabel,
 }: Props) {
+  // Una actualizaciÃ³n de datos no debe reinterpretar avisos viejos de la URL
+  // ni sacar al usuario de la pantalla que estaba usando.
+  const initialViewRef = useRef(initialView);
   const activeView = useSyncExternalStore(
     subscribe,
-    () => viewFromHash(initialView),
-    () => initialView,
+    () => viewFromHash(initialViewRef.current),
+    () => initialViewRef.current,
   );
 
   if (!authorized) {

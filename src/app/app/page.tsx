@@ -31,6 +31,7 @@ import {
 } from "@/modules/workspace/domain/selection";
 
 import { createPurchase } from "./purchase-actions";
+import { DevelopmentPeriodReset } from "./development-period-reset";
 import { ActivityHistory } from "./activity-history";
 import {
   DailyControlPreview,
@@ -50,6 +51,7 @@ type PrivateAppPageProps = {
     mode?: string | string[];
     period?: string | string[];
     purchase_result?: string | string[];
+    reset_result?: string | string[];
   }>;
 };
 
@@ -81,6 +83,13 @@ const purchaseMessages: Record<string, string> = {
   not_created: "La compra no pudo confirmarse. No se guardó ningún dato.",
   period_not_current:
     "Ese período no admite una compra con fecha automática. La carga histórica sigue pendiente de definición.",
+};
+
+const resetMessages: Record<string, string> = {
+  confirmation_required: "Para reiniciar los datos escribí REINICIAR exactamente como se indica.",
+  invalid: "No se pudo identificar el período que querías reiniciar.",
+  not_reset: "No se pudieron reiniciar los datos. No se borró ningún registro.",
+  unavailable: "El reinicio de pruebas solo está disponible en la aplicación local.",
 };
 
 type PurchaseView = {
@@ -138,7 +147,7 @@ export default async function PrivateAppPage({
       : null,
   );
   const allowed = decision === "allowed";
-  const { mode, period, purchase_result: purchaseResult } = await searchParams;
+  const { mode, period, purchase_result: purchaseResult, reset_result: resetResult } = await searchParams;
   let workspaceOptions: WorkspaceOption[] = [];
   let companies: Array<{ code: string; displayName: string; id: string }> = [];
 
@@ -437,7 +446,7 @@ export default async function PrivateAppPage({
   return (
     <AppWorkspace
       authorized={allowed}
-      initialView={singleValue(purchaseResult) ? "purchases" : "home"}
+      initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "purchases" : "home"}
       isAdmin={nodalUser?.access_role === "admin"}
       modalityLabel={selection?.workspace.modality === "real" ? "Real" : selection ? "Práctica" : undefined}
       periodLabel={selection?.period ? formatPeriodLabel(selection.period.periodMonth) : undefined}
@@ -608,6 +617,18 @@ export default async function PrivateAppPage({
               </p>
             )}
 
+          {singleValue(resetResult) === "completed" ? (
+            <p className="purchase-message success" role="status">
+              Los datos de prueba de este período se reiniciaron. Podés cargar un caso nuevo.
+            </p>
+          ) : null}
+
+          {singleValue(resetResult) && resetMessages[singleValue(resetResult) ?? ""] ? (
+            <p className="purchase-message error" role="alert">
+              {resetMessages[singleValue(resetResult) ?? ""]}
+            </p>
+          ) : null}
+
           {selection.period.periodMonth === currentMonthInBuenosAires() ? (
             <form action={createPurchase} className="purchase-form">
               <input name="mode" type="hidden" value={selection.workspace.modality} />
@@ -644,10 +665,7 @@ export default async function PrivateAppPage({
 
               <div className="form-field">
                 <label htmlFor="funds_origin">Origen de fondos</label>
-                <select id="funds_origin" name="funds_origin" required defaultValue="">
-                  <option disabled value="">
-                    Elegí el origen
-                  </option>
+                <select id="funds_origin" name="funds_origin" required defaultValue="Aporte trader">
                   <option value="Aporte trader">Aporte trader</option>
                   <option value="Saldo generado">Saldo generado</option>
                 </select>
@@ -700,6 +718,14 @@ export default async function PrivateAppPage({
               ))
             )}
           </div>
+
+          {process.env.NODE_ENV === "development" ? (
+            <DevelopmentPeriodReset
+              mode={selection.workspace.modality}
+              period={selection.period.periodMonth}
+              periodId={selection.period.id}
+            />
+          ) : null}
         </section>
       )}
 

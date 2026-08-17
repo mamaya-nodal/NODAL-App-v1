@@ -3073,6 +3073,31 @@ html[data-theme="day"] .app-page-shell .register-entry-value > strong { color: #
 .app-page-shell .purchase-values strong { color: var(--brand); font-size: 1.08rem; }
 .app-page-shell .purchase-values span { color: var(--muted); }
 
+.app-page-shell .development-reset {
+  align-items: center;
+  border: 1px dashed color-mix(in srgb, var(--negative) 42%, transparent);
+  border-radius: 18px;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-top: 1.25rem;
+  padding: 1rem 1.15rem;
+}
+
+.app-page-shell .development-reset h3 { font-size: 1rem; margin: 0.12rem 0; }
+.app-page-shell .development-reset p:last-child { color: var(--muted); font-size: 0.88rem; margin: 0; }
+.app-page-shell .development-reset-form { align-items: end; display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: end; }
+.app-page-shell .development-reset-form label { font-size: 0.82rem; font-weight: 700; }
+.app-page-shell .development-reset-form input { max-width: 8rem; }
+.app-page-shell .development-reset-form > div { display: flex; gap: 0.55rem; }
+.app-page-shell .danger-action { border-color: color-mix(in srgb, var(--negative) 45%, transparent); }
+
+@media (max-width: 760px) {
+  .app-page-shell .development-reset { align-items: stretch; flex-direction: column; }
+  .app-page-shell .development-reset-form { align-items: stretch; flex-direction: column; }
+  .app-page-shell .development-reset-form input { max-width: none; }
+}
+
 .app-page-shell .summary-section {
   border-color: var(--line);
   background: color-mix(in srgb, var(--surface) 72%, var(--paper));
