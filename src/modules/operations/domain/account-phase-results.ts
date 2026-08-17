@@ -21,6 +21,7 @@ export type AccountPhaseWithdrawal = Readonly<{
 export type AccountPhaseResult = Readonly<{
   broker: BrokerRegisterSummary;
   carryInCents: number;
+  initialPurchasePriceInCents: number;
   phase: AccountPhase;
   totalGainInCents: number;
   totalWithdrawalInCents: number;
@@ -41,7 +42,9 @@ export function calculateAccountResult(
   entries: OperationRegisterEntry[],
   withdrawals: AccountPhaseWithdrawal[],
   stateOrigin: AccountStateOrigin = "automatic",
+  purchasePriceInCents = 0,
 ): AccountCalculatedResult {
+  assertCents(purchasePriceInCents, "Precio de compra");
   const withdrawalsByPhase = new Map<AccountPhase, number>();
   for (const withdrawal of withdrawals) {
     assertCents(withdrawal.totalWithdrawalInCents, "TOTAL RETIRO");
@@ -50,9 +53,18 @@ export function calculateAccountResult(
 
   let previousTotalGainInCents = 0;
   const phaseResults = ACCOUNT_PHASES.map((phase, phaseIndex) => {
-    const broker = summarizeBrokerEntries(
+    const persistedBroker = summarizeBrokerEntries(
       entries.filter((entry) => entry.phase === phase),
     );
+    // La compra ocupa el primer NETO BROKER - de Evaluación. Se calcula desde
+    // el dato de compra, sin crear ni duplicar una entrada de Control Diario.
+    const initialPurchasePriceInCents = phase === "Evaluacion" ? purchasePriceInCents : 0;
+    const broker: BrokerRegisterSummary = {
+      entryCount: persistedBroker.entryCount + (initialPurchasePriceInCents > 0 ? 1 : 0),
+      negativeInCents: persistedBroker.negativeInCents + initialPurchasePriceInCents,
+      netInCents: persistedBroker.netInCents - initialPurchasePriceInCents,
+      positiveInCents: persistedBroker.positiveInCents,
+    };
     const carryInCents =
       stateOrigin === "manual_live" && phaseIndex > 0 && previousTotalGainInCents > 0
         ? previousTotalGainInCents
@@ -66,6 +78,7 @@ export function calculateAccountResult(
     return {
       broker,
       carryInCents,
+      initialPurchasePriceInCents,
       phase,
       totalGainInCents,
       totalWithdrawalInCents,

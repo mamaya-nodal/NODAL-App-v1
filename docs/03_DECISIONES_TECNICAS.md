@@ -66,6 +66,8 @@
 | APP-056 | La aplicacion privada deja de presentarse como una pagina extensa y adopta el espacio de trabajo aprobado en el mockup: navegacion lateral en escritorio, navegacion inferior en movil, barra superior persistente y una sola vista funcional activa. El cambio reorganiza la interfaz, pero conserva los mismos servicios, calculos, permisos, formularios y registros existentes. | Vigente |
 | APP-057 | Durante las pruebas locales, el alumno puede reiniciar exclusivamente los datos del perÃ­odo actual que le pertenece, confirmÃ¡ndolo expresamente. El reinicio elimina los registros de prueba derivados para volver a cargar un caso, conserva los eventos de auditorÃ­a ya emitidos y agrega una traza resumida. La funciÃ³n no se muestra ni se permite desde Preview o ProducciÃ³n. | Vigente |
 
+| APP-058 | El precio de compra de cada cuenta ocupa automáticamente el primer `NETO BROKER -` de Evaluación. Se calcula desde la compra, se muestra como costo inicial en Registro y participa en TOTAL GANANCIA, estado automático, Resumen, Administración y diagnósticos, sin crear una segunda entrada ni exigir una carga manual. | Vigente |
+
 ## Propuestas pendientes de decision
 
 | ID | Propuesta | Estado |

@@ -18,8 +18,8 @@ describe("operational summary", () => {
       walletMovements: [{ id: "w", kind: "external_contribution", amountInCents: 3_000, occurredOn: "2026-08-01", observation: null }],
       fundingWithdrawals: [{ id: "r", accountId: "closed", amountInCents: 2_000, approvedOn: "2026-08-02", collectedOn: null }],
     });
-    expect(summary.realizedGainInCents).toBe(40_000);
-    expect(summary.floatingInCents).toBe(12_000);
+    expect(summary.realizedGainInCents).toBe(30_000);
+    expect(summary.floatingInCents).toBe(20_000);
     expect(summary.virginPriceInCents).toBe(5_000);
     expect(summary.capitalNetInCents).toBe(118_000);
     expect(summary.fundingPendingInCents).toBe(2_000);

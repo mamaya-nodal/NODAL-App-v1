@@ -35,11 +35,11 @@ describe("recorrido operativo completo listo para piloto", () => {
       accounts: [
         { fundsOrigin: "Aporte trader", id: "account-1", priceInCents: 8_900, state: "closed", stateOrigin: "automatic" },
         { fundsOrigin: "Aporte trader", id: "account-2", priceInCents: 8_900, state: "closed", stateOrigin: "automatic" },
-        { fundsOrigin: "Aporte trader", id: "account-3", priceInCents: 8_900, state: "live", stateOrigin: "automatic" },
+        { fundsOrigin: "Saldo generado", id: "account-3", priceInCents: 8_900, state: "live", stateOrigin: "automatic" },
       ],
       controls: [
         { balanceAfterInCents: 500_000, controlNumber: 1, kind: "deposit", movementInCents: 500_000, operatingResultInCents: null, originDestination: "Aporte trader" },
-        { balanceAfterInCents: 520_000, controlNumber: 2, kind: "balance_update", movementInCents: null, operatingResultInCents: 20_000, originDestination: null },
+        { balanceAfterInCents: 493_300, controlNumber: 2, kind: "balance_update", movementInCents: null, operatingResultInCents: -6_700, originDestination: null },
       ],
       entries: [entry("account-1", 10_000), entry("account-2", 10_000), entry("account-3", -7_800)],
       fundingWithdrawals: [{ accountId: "account-1", amountInCents: 18_900, approvedOn: "2026-08-15", collectedOn: "2026-08-15", id: "funding-1" }],
@@ -48,13 +48,13 @@ describe("recorrido operativo completo listo para piloto", () => {
     });
 
     expect(summary.accountStates).toEqual({ closed: 2, live: 1, virgin: 0 });
-    expect(summary.brokerBalanceInCents).toBe(520_000);
-    expect(summary.realizedGainInCents).toBe(20_000);
-    expect(summary.floatingInCents).toBe(7_800);
+    expect(summary.brokerBalanceInCents).toBe(493_300);
+    expect(summary.realizedGainInCents).toBe(2_200);
+    expect(summary.floatingInCents).toBe(16_700);
     expect(summary.fundingCollectedInCents).toBe(18_900);
-    expect(summary.walletBalanceInCents).toBe(18_900);
-    expect(summary.commissionInCents).toBe(10_000);
-    expect(summary.traderGainInCents).toBe(10_000);
+    expect(summary.walletBalanceInCents).toBe(10_000);
+    expect(summary.commissionInCents).toBe(1_100);
+    expect(summary.traderGainInCents).toBe(1_100);
     expect(summary.positionDifferenceInCents).toBe(0);
     expect(summary.realizedReconciliationDifferenceInCents).toBe(0);
     expect(buildSummaryAlerts(summary)).toEqual([]);

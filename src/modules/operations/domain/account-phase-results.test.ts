@@ -22,6 +22,21 @@ const entry = (
 });
 
 describe("TOTAL GANANCIA por cuenta", () => {
+  it("usa el precio de compra como el primer NETO BROKER - de Evaluación", () => {
+    const result = calculateAccountResult(
+      [entry("Evaluacion", "NETO BROKER +", 50_260)],
+      [],
+      "automatic",
+      42_228,
+    );
+
+    expect(result.phaseResults[0]).toMatchObject({
+      initialPurchasePriceInCents: 42_228,
+      broker: { negativeInCents: 42_228, netInCents: 8_032 },
+      totalGainInCents: 8_032,
+    });
+  });
+
   it("calcula Evaluacion solo desde NETO BROKER positivo y negativo", () => {
     const result = calculateAccountResult([
       entry("Evaluacion", "NETO BROKER +", 20_000),

@@ -13,7 +13,6 @@ import {
 } from "@/modules/operations/domain/account-phase-results";
 import {
   entriesForAccount,
-  summarizeBrokerEntries,
   type OperationRegisterEntry,
 } from "@/modules/operations/domain/operation-register";
 
@@ -127,16 +126,27 @@ export function OperationRegister({
   const visibleWithdrawals = withdrawals.filter(
     (withdrawal) => withdrawal.accountId === accountId,
   );
-  const summary = summarizeBrokerEntries(visibleEntries);
   const activity = summarizeAccountActivity(visibleEntries);
   const calculated = calculateAccountResult(
     visibleEntries,
     visibleWithdrawals,
     selectedAccount?.stateOrigin,
+    selectedAccount?.priceInCents ?? 0,
+  );
+  const summary = calculated.phaseResults.reduce(
+    (total, phase) => ({
+      entryCount: total.entryCount + phase.broker.entryCount,
+      negativeInCents: total.negativeInCents + phase.broker.negativeInCents,
+      netInCents: total.netInCents + phase.broker.netInCents,
+      positiveInCents: total.positiveInCents + phase.broker.positiveInCents,
+    }),
+    { entryCount: 0, negativeInCents: 0, netInCents: 0, positiveInCents: 0 },
   );
   const latestTotal = [...calculated.phaseResults]
     .reverse()
     .find((phase) => phase.totalGainInCents !== 0)?.totalGainInCents ?? 0;
+  const hasVisibleRegisterRows =
+    visibleEntries.length > 0 || (selectedAccount?.priceInCents ?? 0) > 0;
 
   function changeCompany(nextCompanyId: string) {
     const nextAccount = orderedAccounts.find(
@@ -342,7 +352,8 @@ export function OperationRegister({
             </div>
           </div>
           <p className="register-scope-note">
-            El resultado broker es {formatMoney(summary.netInCents)}. El TOTAL
+            El resultado broker es {formatMoney(summary.netInCents)}. El precio de
+            compra se incorpora como el primer NETO BROKER − de Evaluación. El TOTAL
             GANANCIA de cada fase incorpora el TOTAL RETIRO manual cuando existe.
           </p>
 
@@ -399,7 +410,7 @@ export function OperationRegister({
           </div>
           {feedback && <p className="register-feedback">{feedback}</p>}
 
-          {visibleEntries.length === 0 ? (
+          {!hasVisibleRegisterRows ? (
             <p className="empty-state register-empty">
               Esta cuenta todavía no tiene operaciones confirmadas desde Control Diario.
             </p>
@@ -409,17 +420,37 @@ export function OperationRegister({
                 const phaseEntries = visibleEntries.filter(
                   (entry) => entry.phase === phase,
                 );
-                if (phaseEntries.length === 0) return null;
+                const purchasePriceInCents =
+                  phase === "Evaluacion" ? selectedAccount?.priceInCents ?? 0 : 0;
+                if (phaseEntries.length === 0 && purchasePriceInCents === 0) return null;
 
                 return (
                   <section className="phase-register" key={phase}>
                     <div className="phase-register-heading">
                       <h3>{phase}</h3>
                       <span>
-                        {phaseEntries.length}{" "}
-                        {phaseEntries.length === 1 ? "entrada" : "entradas"}
+                        {phaseEntries.length + (purchasePriceInCents > 0 ? 1 : 0)}{" "}
+                        {phaseEntries.length + (purchasePriceInCents > 0 ? 1 : 0) === 1
+                          ? "entrada"
+                          : "entradas"}
                       </span>
                     </div>
+                    {purchasePriceInCents > 0 ? (
+                      <article className="register-entry register-purchase-entry">
+                        <div>
+                          <strong>
+                            {selectedAccount?.purchasedOn
+                              ? formatDate(selectedAccount.purchasedOn)
+                              : "Compra"}
+                          </strong>
+                          <span>Compra de cuenta · Costo inicial automático</span>
+                        </div>
+                        <div className="register-entry-value">
+                          <span>NETO BROKER -</span>
+                          <strong className="negative">{formatMoney(purchasePriceInCents)}</strong>
+                        </div>
+                      </article>
+                    ) : null}
                     {phaseEntries.map((entry) => (
                       <article className="register-entry" key={entry.id}>
                         <div>

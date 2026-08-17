@@ -96,6 +96,7 @@ export function buildOperationalSummary(input: Readonly<{
       input.entries.filter((entry) => entry.accountId === account.id),
       input.phaseWithdrawals.filter((withdrawal) => withdrawal.accountId === account.id),
       account.stateOrigin,
+      account.priceInCents,
     ).phaseResults].reverse().find((phase) => phase.totalGainInCents !== 0)?.totalGainInCents ?? 0,
   }));
   const states = {
