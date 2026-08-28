@@ -62,6 +62,17 @@ type PreviewRow = {
 
 export type PersistedDailyControl = PreviewRow;
 
+export type NinjaBrokerBalanceEvent = Readonly<{
+  balanceInCents: number;
+  id: string;
+  observedAt: string;
+  sourceAccounts: ReadonlyArray<{
+    accountName: string;
+    balanceInCents: number;
+    connectionName: string;
+  }>;
+}>;
+
 const entryLabels: Record<EntryKind, string> = {
   balance_update: "Nuevo saldo",
   deposit: "Depósito",
@@ -79,6 +90,8 @@ type DailyControlPreviewProps = {
   accounts: DailyControlAccount[];
   companies: Array<{ id: string; name: string }>;
   initialControls: PersistedDailyControl[];
+  incomingNinjaBalance: NinjaBrokerBalanceEvent | null;
+  ninjaBrokerSourceNotice: string | null;
   periodId: string;
 };
 
@@ -94,6 +107,8 @@ export function DailyControlPreview({
   accounts,
   companies,
   initialControls,
+  incomingNinjaBalance,
+  ninjaBrokerSourceNotice,
   periodId,
 }: DailyControlPreviewProps) {
   const router = useRouter();
@@ -115,13 +130,17 @@ export function DailyControlPreview({
   const [phase, setPhase] = useState<(typeof OPERATION_PHASES)[number]>(
     OPERATION_PHASES[0],
   );
+  const initialNinjaReview =
+    initialBalance !== null && incomingNinjaBalance
+      ? createBrokerBalanceReview(initialBalance, incomingNinjaBalance.balanceInCents)
+      : null;
   const [pendingBalance, setPendingBalance] =
-    useState<BrokerBalanceReview | null>(null);
+    useState<BrokerBalanceReview | null>(initialNinjaReview);
   const [movementConfirmationKey, setMovementConfirmationKey] =
     useState<string | null>(null);
   const [pendingConfirmationKey, setPendingConfirmationKey] =
-    useState<string | null>(null);
-  const [reviewOpen, setReviewOpen] = useState(false);
+    useState<string | null>(incomingNinjaBalance?.id ?? null);
+  const [reviewOpen, setReviewOpen] = useState(Boolean(initialNinjaReview));
   const [showContingency, setShowContingency] = useState(false);
   const [correctedAmount, setCorrectedAmount] = useState("");
   const [syncIssueReason, setSyncIssueReason] = useState<string>(
@@ -146,6 +165,9 @@ export function DailyControlPreview({
     companies.find((company) => company.id === companyId)?.name ?? "Sin empresa";
   const accountReferences = new Map(
     companyAccounts.map((account) => [account.id, account.referenceNumber]),
+  );
+  const accountNames = new Map(
+    companyAccounts.map((account) => [account.id, account.externalName ?? `Cuenta ${account.referenceNumber}`]),
   );
   let pendingAllocation: EqualAllocation[] = [];
   let allocationError: string | null = null;
@@ -314,6 +336,16 @@ export function DailyControlPreview({
         setMovementConfirmationKey(null);
         setEntryKind("balance_update");
         setSuccessMessage("Movimiento guardado correctamente.");
+        if (incomingNinjaBalance && !pendingBalance) {
+          setPendingBalance(
+            createBrokerBalanceReview(
+              result.control.balanceAfterInCents,
+              incomingNinjaBalance.balanceInCents,
+            ),
+          );
+          setPendingConfirmationKey(incomingNinjaBalance.id);
+          setReviewOpen(true);
+        }
         router.refresh();
       }
 
@@ -356,6 +388,7 @@ export function DailyControlPreview({
         receivedBalanceInCents: pendingBalance.receivedBalanceInCents,
         replicaAccountIds: replicaIds,
         syncIssueReason: pendingBalance.correctionReason,
+        ninjaBalanceEventId: incomingNinjaBalance?.id ?? null,
         customAllocation: customAllocationEnabled ? customAllocation : undefined,
         customAllocationReason: customAllocationEnabled
           ? customAllocationReason
@@ -714,7 +747,7 @@ export function DailyControlPreview({
               </option>
               {companyAccounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  Cuenta {account.referenceNumber}
+                  {account.externalName ?? `Cuenta ${account.referenceNumber}`}
                 </option>
               ))}
             </select>
@@ -768,7 +801,7 @@ export function DailyControlPreview({
                       onClick={() => changeReplica(account.id)}
                       type="button"
                     >
-                      {account.referenceNumber}
+                      {account.externalName ?? account.referenceNumber}
                     </button>
                   );
                 })}
@@ -785,6 +818,16 @@ export function DailyControlPreview({
             <button className="primary-action" onClick={() => setReviewOpen(true)} type="button">
               Revisar ahora
             </button>
+          </div>
+        )}
+
+        {ninjaBrokerSourceNotice && (
+          <div className="ninja-source-notice" role="status">
+            <span aria-hidden="true" className="ninja-source-notice-icon">!</span>
+            <div>
+              <strong>Conector activo · sin cuenta broker</strong>
+              <span>{ninjaBrokerSourceNotice}</span>
+            </div>
           </div>
         )}
       </div>
@@ -1007,7 +1050,7 @@ export function DailyControlPreview({
                             key={participant.accountId}
                           >
                             <span>
-                              Cuenta {participant.accountReference} ·{" "}
+                              {accounts.find((account) => account.id === participant.accountId)?.externalName ?? `Cuenta ${participant.accountReference}`} ·{" "}
                               {participant.role === "leader" ? "Líder" : "Réplica"}
                             </span>
                             <span className="custom-allocation-amount">
@@ -1098,7 +1141,11 @@ export function DailyControlPreview({
             className="sync-dialog"
             role="dialog"
           >
-            <p className="status">NUEVO SALDO SIMULADO DE NINJATRADER</p>
+            <p className="status">
+              {incomingNinjaBalance
+                ? "NUEVO SALDO RECIBIDO DE NINJATRADER"
+                : "NUEVO SALDO SIMULADO DE NINJATRADER"}
+            </p>
             <h3 id="sync-dialog-title">Revisá dónde se registrará</h3>
 
             <div className="sync-balance-comparison">
@@ -1122,14 +1169,31 @@ export function DailyControlPreview({
               </div>
             </div>
 
+            {incomingNinjaBalance && (
+              <div className="sync-source-list">
+                <span>Origen detectado</span>
+                <strong>
+                  {incomingNinjaBalance.sourceAccounts
+                    .map((account) => `${account.connectionName} · ${account.accountName}`)
+                    .join(" + ")}
+                </strong>
+                <small>
+                  Recibido {new Intl.DateTimeFormat("es-AR", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  }).format(new Date(incomingNinjaBalance.observedAt))}
+                </small>
+              </div>
+            )}
+
             <div className="sync-destination">
               <span>Se propone registrar en</span>
               <strong>
-                {companyName} · Líder {accountReferences.get(leaderId) ?? "—"} ·{" "}
+                {companyName} · Líder {accountNames.get(leaderId) ?? "—"} ·{" "}
                 {replicaIds.length === 0
                   ? "sin réplicas"
                   : `réplicas ${replicaIds
-                      .map((id) => accountReferences.get(id))
+                      .map((id) => accountNames.get(id))
                       .join(", ")}`} · {phase}
               </strong>
             </div>
@@ -1154,7 +1218,7 @@ export function DailyControlPreview({
                   return (
                     <article className="allocation-row" key={entry.accountId}>
                       <div>
-                        <strong>Cuenta {accountReferences.get(entry.accountId) ?? "—"}</strong>
+                        <strong>{accountNames.get(entry.accountId) ?? "Cuenta —"}</strong>
                         <span>{entry.role === "leader" ? "Líder" : "Réplica"}</span>
                       </div>
                       <div>
@@ -1162,7 +1226,7 @@ export function DailyControlPreview({
                         {customAllocationEnabled ? (
                           <label className="custom-allocation-amount">
                             <span className="sr-only">
-                              Resultado de cuenta {accountReferences.get(entry.accountId)}
+                              Resultado de {accountNames.get(entry.accountId) ?? "cuenta"}
                             </span>
                             <span>USD</span>
                             <input
@@ -1307,8 +1371,9 @@ export function DailyControlPreview({
             )}
 
             <p className="dialog-footnote">
-              NinjaTrader todavía no está conectado. Este saldo se identifica
-              expresamente como simulación de desarrollo y su confirmación sí se guarda.
+              {incomingNinjaBalance
+                ? "Este dato llegó desde el conector. Nada se registra hasta que confirmes el destino y la distribución."
+                : "Este saldo se identifica expresamente como simulación de desarrollo y su confirmación sí se guarda."}
             </p>
           </section>
         </div>

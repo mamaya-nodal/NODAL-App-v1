@@ -11,6 +11,7 @@ export type OperationPhase = (typeof OPERATION_PHASES)[number];
 
 export type DailyControlAccount = Readonly<{
   companyId: string;
+  externalName?: string | null;
   id: string;
   referenceNumber: number;
 }>;

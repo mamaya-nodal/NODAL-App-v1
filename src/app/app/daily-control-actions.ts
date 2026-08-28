@@ -25,6 +25,7 @@ export type ConfirmDailyControlInput = Readonly<{
   receivedBalanceInCents: number | null;
   replicaAccountIds: string[];
   syncIssueReason: string | null;
+  ninjaBalanceEventId?: string | null;
   customAllocation?: ReadonlyArray<{
     accountId: string;
     amountInCents: number;
@@ -79,6 +80,9 @@ function validateInput(input: ConfirmDailyControlInput): string | null {
   }
 
   if (input.kind === "deposit" || input.kind === "withdrawal") {
+    if (input.ninjaBalanceEventId) {
+      return "Un movimiento de capital no puede vincularse a un saldo de NinjaTrader.";
+    }
     if (
       !isSafeCents(input.amountInCents) ||
       !input.originDestination ||
@@ -87,6 +91,10 @@ function validateInput(input: ConfirmDailyControlInput): string | null {
       return "Revisá el importe y el origen o destino del movimiento.";
     }
     return null;
+  }
+
+  if (input.ninjaBalanceEventId && !isUuid(input.ninjaBalanceEventId)) {
+    return "No se pudo identificar el saldo recibido desde NinjaTrader.";
   }
 
   if (
@@ -204,19 +212,25 @@ export async function confirmDailyControl(
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
 
   const isBalanceUpdate = input.kind === "balance_update";
+  const isRealNinjaBalance = Boolean(input.ninjaBalanceEventId);
+  const sourceEventKey = isRealNinjaBalance
+    ? `ninja-balance:${input.ninjaBalanceEventId}`
+    : `development-simulation:${input.confirmationKey}`;
   const commonBalanceParameters = {
     target_balance_cents: input.balanceInCents,
     target_company_id: input.companyId,
     target_confirmation_key: input.confirmationKey,
     target_leader_account_id: input.leaderAccountId,
-    target_observations: "Recepción simulada durante el desarrollo previo a NinjaTrader",
+    target_observations: isRealNinjaBalance
+      ? "Saldo recibido automáticamente desde NinjaTrader"
+      : "Recepción simulada durante el desarrollo previo a NinjaTrader",
     target_operated_on: currentDateInBuenosAires(),
     target_period_id: input.periodId,
     target_phase: input.phase,
     target_received_balance_cents: input.receivedBalanceInCents,
     target_replica_account_ids: input.replicaAccountIds,
     target_source: "ninjatrader" as const,
-    target_source_event_key: `development-simulation:${input.confirmationKey}`,
+    target_source_event_key: sourceEventKey,
     target_sync_issue_reason: input.syncIssueReason?.trim() || null,
   };
 
@@ -236,7 +250,9 @@ export async function confirmDailyControl(
         target_kind: input.kind,
         target_leader_account_id: input.leaderAccountId,
         target_observations: isBalanceUpdate
-          ? "Recepción simulada durante el desarrollo previo a NinjaTrader"
+          ? isRealNinjaBalance
+            ? "Saldo recibido automáticamente desde NinjaTrader"
+            : "Recepción simulada durante el desarrollo previo a NinjaTrader"
           : null,
         target_operated_on: currentDateInBuenosAires(),
         target_origin_destination: input.originDestination,
@@ -245,9 +261,7 @@ export async function confirmDailyControl(
         target_received_balance_cents: input.receivedBalanceInCents,
         target_replica_account_ids: input.replicaAccountIds,
         target_source: isBalanceUpdate ? "ninjatrader" : "manual",
-        target_source_event_key: isBalanceUpdate
-          ? `development-simulation:${input.confirmationKey}`
-          : null,
+        target_source_event_key: isBalanceUpdate ? sourceEventKey : null,
         target_sync_issue_reason: input.syncIssueReason?.trim() || null,
       });
 
@@ -256,6 +270,24 @@ export async function confirmDailyControl(
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) {
     return { ok: false, message: "El servidor no devolvió la confirmación esperada." };
+  }
+
+
+  if (input.ninjaBalanceEventId) {
+    const { data: resolved, error: resolutionError } = await supabase.rpc(
+      "confirm_ninja_broker_balance_event",
+      {
+        target_daily_control_id: row.daily_control_id,
+        target_event_id: input.ninjaBalanceEventId,
+      },
+    );
+    if (resolutionError || resolved !== true) {
+      return {
+        ok: false,
+        message:
+          "El control se guardó, pero falta cerrar la recepción de NinjaTrader. Volvé a confirmar: no se duplicará.",
+      };
+    }
   }
 
   revalidatePath("/app");

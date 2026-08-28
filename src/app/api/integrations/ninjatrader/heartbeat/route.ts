@@ -1,0 +1,20 @@
+import { authenticateNinjaConnector, bearerToken } from "@/modules/ninja/server/connector-auth";
+import { bootstrapNinjaBrokerBalance } from "@/modules/ninja/server/broker-balance-processing";
+import { bootstrapNinjaTransitions } from "@/modules/ninja/server/transition-processing";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export async function POST(request: Request) {
+  const connector = await authenticateNinjaConnector(bearerToken(request));
+  if (connector) {
+    await Promise.all([
+      bootstrapNinjaTransitions(connector.connectorId),
+      bootstrapNinjaBrokerBalance(connector.connectorId),
+    ]);
+  }
+  return Response.json(
+    connector ? { accepted: true } : { error: "El conector no está autorizado." },
+    { headers: { "Cache-Control": "no-store, max-age=0" }, status: connector ? 202 : 401 },
+  );
+}

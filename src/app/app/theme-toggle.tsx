@@ -2,6 +2,8 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
+import { WorkspaceIcon } from "./workspace-icon";
+
 type Theme = "day" | "night";
 
 const storageKey = "nodal-app-theme";
@@ -36,12 +38,12 @@ export function ThemeToggle() {
   }
 
   return (
-    <div aria-label="Tema visual" className="theme-toggle">
-      <button aria-pressed={theme === "night"} onClick={() => changeTheme("night")} type="button">
-        Noche
+    <div aria-label="Tema visual" className="theme-toggle" role="group">
+      <button aria-label="Usar modo nocturno" aria-pressed={theme === "night"} onClick={() => changeTheme("night")} title="Modo nocturno" type="button">
+        <WorkspaceIcon name="moon" />
       </button>
-      <button aria-pressed={theme === "day"} onClick={() => changeTheme("day")} type="button">
-        Día
+      <button aria-label="Usar modo diurno" aria-pressed={theme === "day"} onClick={() => changeTheme("day")} title="Modo diurno" type="button">
+        <WorkspaceIcon name="sun" />
       </button>
     </div>
   );

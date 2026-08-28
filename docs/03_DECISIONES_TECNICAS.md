@@ -57,7 +57,16 @@
 | APP-049 | Las conciliaciones muestran su desglose calculado: componentes observable y esperado para capital, y ganancia cerrada contra reconstrucción para ganancias. Los vínculos llevan a los registros de origen; una diferencia sigue siendo una alerta, nunca un ajuste automático. | Vigente |
 | APP-050 | El primer panel administrativo es exclusivamente de lectura. Su vista principal muestra actividad reciente, resultado realizado, capital neto y comisión estimada por alumno; la ficha individual abre el detalle económico calculado. El rol `admin` se asigna fuera del navegador, conserva a los alumnos aislados y no habilita escrituras económicas. | Vigente |
 | APP-051 | Un administrador NODAL puede autorizar o revocar exclusivamente alumnos desde el panel, siempre que ya se hayan identificado con Google. El alta prepara sus espacios Real y Práctica para un mes seleccionado; alta, baja y preparación quedan auditadas. No permite administrar otros administradores ni modificar operaciones económicas. | Vigente |
-| APP-052 | La integración futura con NinjaTrader usará un Add On local de NinjaScript y un receptor privado, no una conexión directa del navegador al broker. Antes de habilitar escrituras debe validarse por proveedor qué valor equivale al saldo de Sheets, cómo se identifica cada cuenta y cómo se agrupan las réplicas. La recepción actual seguirá siendo simulada hasta completar esa prueba. | Vigente |
+| APP-052 | La integración con NinjaTrader usa un Add On local de NinjaScript y un receptor privado, no una conexión directa del navegador al broker. El inventario real se recibe en modo de solo lectura y queda separado de los registros económicos hasta que la cuenta sea clasificada, la conexión aprobada y el usuario confirme los datos contables requeridos. | Vigente; actualizada por la prueba real del conector |
+| APP-059 | Una cuenta nueva detectada en Ninja se presenta primero como pendiente de registro. La primera detección propone la fecha de compra, pero el alumno puede corregirla antes de confirmar. Precio y origen de fondos siguen siendo datos económicos requeridos. La compra manual queda como contingencia y una transición de fase no genera una compra nueva. | Vigente |
+| APP-060 | Cada inventario recibido desde el conector de NinjaTrader se conserva en una tabla técnica permanente e idempotente por identificador de evento. La instantánea se atribuye al conector autenticado, registra fecha y cuentas detectadas, pero no crea por sí sola compras ni movimientos económicos. El conector reintenta los envíos fallidos para no depender de que el usuario desconecte y reconecte Ninja. | Vigente; reemplaza su versión basada en Machine ID |
+| APP-061 | La identidad principal del conector es el usuario NODAL. El alumno autenticado con Google genera un código temporal de un solo uso y lo ingresa en el complemento; el servidor canjea ese código por credenciales revocables. No se utiliza Machine ID como identidad ni se confía en el nombre declarado de una conexión. | Vigente; reemplaza APP-061 anterior |
+| APP-062 | Las cuentas que ve el alumno proceden exclusivamente del último inventario de su conector activo y de conexiones aprobadas. Un usuario sin conector vinculado no ve inventarios y ningún alumno puede consultar los de otro. | Vigente; reemplaza APP-062 anterior |
+| APP-063 | Vincular un conector no autoriza todas sus conexiones. Cada identidad o conexión observada se aprueba explícitamente o permanece aislada. Solo las cuentas de conexiones aprobadas pueden entrar al flujo oficial; las conexiones nuevas, paralelas o no revisadas generan una señal administrativa y no afectan compras, saldos, registros ni conciliaciones. | Vigente |
+| APP-064 | Solo puede existir un conector activo por alumno. Vincular uno nuevo revoca el anterior. El acceso técnico dura diez minutos y se renueva con una credencial rotativa de hasta noventa días, almacenada con DPAPI para el usuario actual de Windows mediante la interfaz nativa compatible con NinjaTrader. El código temporal se elimina después del canje. No existe una clave universal ni una credencial permanente dentro del código. | Vigente; verificada en la primera vinculación real |
+| APP-065 | El conector envia una señal de actividad cada quince segundos y NODAL lo considera sin señal después de sesenta segundos. Su sesión técnica es independiente de la sesión web: cerrar Google o el navegador no detiene el envío mientras NinjaTrader y el complemento sigan funcionando. | Vigente |
+| APP-066 | La vinculacion de NinjaTrader es el segundo paso obligatorio del acceso, inmediatamente despues de identidad y autorizacion NODAL. Compras, Control Diario, Registro y Resumen solo se muestran con un conector activo y una señal reciente; una interrupcion no borra datos y el panel administrativo sigue accesible para administradores. | Vigente |
+| APP-067 | Administración comparte la navegación lateral, barra superior, temas Noche/Día y lenguaje visual de la aplicación. La revisión de conexiones muestra un único estado inequívoco y deshabilita la acción ya aplicada. Compras distingue una cuenta nueva de una cuenta Ninja ya registrada, evitando duplicados silenciosos. | Vigente |
 
 | APP-053 | Antes del piloto real, la aplicacion privada incorporara una pantalla de recuperacion ante errores, una ruta de salud sin datos privados, cabeceras basicas de proteccion y exclusion de buscadores. La creacion de Produccion seguira siendo un paso externo y separado de Preview, sin copiar datos reales desde Desarrollo sin una decision documentada. | Vigente |
 
@@ -80,3 +89,52 @@
 Cada decision debe indicar fecha, responsable, motivo, alternativas evaluadas,
 impacto, estado y decision reemplazada. Una recomendacion tecnica no pasa a
 vigente sin aprobacion y evidencia suficiente.
+### APP-068 - Clasificación automática limitada a nomenclaturas inequívocas de Ninja
+
+- **Estado:** Aprobada e implementada.
+- **Decisión:** El clasificador reconoce automáticamente los prefijos confirmados de Lucid Flex y MAXX, My Funded Futures, Topstep, Funded Futures Family, Tradeify y Take Profit Trader. La salida muestra empresa, producto y fase en inglés (`Evaluation`, `Funded`, `Live`).
+- **Límite:** Una cuenta Live numérica de Tradeify permanece clasificada como broker hasta disponer de evidencia adicional que la distinga. Las etiquetas enmascaradas de FundedNext no se usan como regla de Ninja.
+- **Motivo:** Evitar que NODAL cree compras o enlaces contables falsos por una coincidencia ambigua.
+
+### APP-069 - Motor determinista de vidas y transiciones Ninja
+
+- **Estado:** Aprobada e implementada en dominio; activación sobre inventarios reales pendiente de validar el campo de saldo.
+- **Decisión:** Cada aparición posterior a un reset crea una vida NODAL nueva sin sobrescribir la anterior. La quema se confirma por desaparición y piso vigente; `Evaluation → Funded` se enlaza automáticamente cuando objetivo, cantidades y programa son compatibles; `Funded → Live` siempre requiere confirmación humana.
+- **Reglas económicas:** Evaluación 50K inicia con piso US$48.000, mueve el piso únicamente entre jornadas según máximo EOD menos US$2.000 y alcanza objetivo en US$53.001. Funded mueve el piso a US$50.100 al tocar US$52.100, salvo Topstep, que lo hace en US$52.000.
+- **Límite:** El motor recibe un saldo de referencia explícito. No selecciona silenciosamente entre `CashValue` y `NetLiquidation` hasta validar cuál corresponde en cada proveedor.
+
+### APP-070 - Activación conservadora del saldo y persistencia de transiciones
+
+- **Estado:** Aprobada e implementada.
+- **Decisión:** El procesamiento real solo usa un saldo automáticamente cuando `CashValue` y `NetLiquidation` coinciden al centavo. Si falta uno o difieren, conserva el inventario pero genera revisión y no cambia la vida de la cuenta.
+- **Persistencia:** El estado técnico del motor y sus eventos se guardan por conector con revisión optimista y confirmación atómica. Las alertas automáticas y las que requieren intervención se muestran en Inicio.
+- **Separación:** Detectar una transición no modifica por sí solo compras, controles ni registros económicos. Las acciones económicas se incorporarán mediante funciones transaccionales específicas después de validar el evento.
+
+### APP-071 - Resolución económica transaccional de eventos Ninja
+
+- **Estado:** Aprobada e implementada.
+- **Automático:** Una quema confirmada por el motor cierra el vínculo y la cuenta. Un cambio coherente `Evaluation → Funded` cierra el vínculo externo anterior y crea el nuevo sobre la misma cuenta NODAL, preservando continuidad.
+- **Confirmación:** `Funded → Live` y una desaparición sin evidencia suficiente requieren decisión del alumno. Confirmar o descartar queda auditado.
+- **Reset:** Aunque la detección sea automática, el usuario debe informar fecha, precio y origen de fondos. La transacción cierra la vida anterior y crea una nueva cuenta y compra correlativa sin sobrescribir el historial.
+### APP-072 - Los saldos broker de Ninja ingresan por una bandeja confirmable
+
+- Estado: Decidido e implementado en desarrollo.
+- Fecha: 2026-08-28.
+- La fuente automática de Control Diario es la suma de las cuentas clasificadas
+  como broker dentro de conexiones aprobadas. Las cuentas prop y simuladas no
+  forman parte de ese saldo.
+- Un saldo solo se considera verificable cuando `CashValue` y `NetLiquidation`
+  coinciden al centavo en todas las cuentas broker incluidas. Ante una
+  inconsistencia no se genera un total parcial.
+- Cada cambio se conserva en una bandeja idempotente. El alumno revisa empresa,
+  líder, réplicas y fase antes de crear el Control Diario y sus registros.
+- La recepción sigue existiendo aunque la app no esté abierta. Confirmar o
+  corregir el dato vincula de forma auditable el evento de Ninja con el Control
+  Diario resultante.
+- El complemento vuelve a revisar el inventario en cada señal de actividad. De
+  este modo detecta conexiones o cuentas agregadas y retiradas aunque el
+  proveedor no emita un aviso de cambio; la huella del inventario evita envíos
+  duplicados cuando nada cambió.
+- La bandeja pendiente se consulta mediante una función de base de datos que
+  devuelve exclusivamente el evento más antiguo del conector perteneciente al
+  usuario autenticado.

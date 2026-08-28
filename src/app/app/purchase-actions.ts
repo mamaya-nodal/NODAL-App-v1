@@ -68,3 +68,46 @@ export async function createPurchase(formData: FormData): Promise<never> {
   revalidatePath("/app");
   redirect(safeContextUrl(mode, period, "created"));
 }
+
+export async function createDetectedPurchase(formData: FormData): Promise<never> {
+  const mode = formText(formData, "mode");
+  const period = formText(formData, "period");
+  const periodId = formText(formData, "period_id");
+  const companyId = formText(formData, "company_id");
+  const fundsOrigin = formText(formData, "funds_origin");
+  const purchasedOn = formText(formData, "purchased_on");
+  const firstSeenAt = formText(formData, "first_seen_at");
+  let priceCents: number;
+
+  try {
+    priceCents = parsePurchasePriceToCents(formText(formData, "price"));
+    validatePurchaseDraft({ companyId, fundsOrigin, priceCents });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(purchasedOn) || Number.isNaN(Date.parse(firstSeenAt))) throw new Error();
+  } catch {
+    redirect(safeContextUrl(mode, period, "invalid_data"));
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/");
+
+  const { error } = await supabase.rpc("create_nodal_detected_purchase", {
+    target_company_id: companyId,
+    target_connection_name: formText(formData, "connection_name"),
+    target_external_account_name: formText(formData, "external_account_name"),
+    target_first_seen_at: firstSeenAt,
+    target_funds_origin: fundsOrigin,
+    target_connector_id: formText(formData, "connector_id"),
+    target_period_id: periodId,
+    target_price_cents: priceCents,
+    target_purchased_on: purchasedOn,
+  });
+
+  if (error) {
+    const result = error.message.includes("already linked") ? "already_created" : "not_created";
+    redirect(safeContextUrl(mode, period, result));
+  }
+
+  revalidatePath("/app");
+  redirect(safeContextUrl(mode, period, "created"));
+}

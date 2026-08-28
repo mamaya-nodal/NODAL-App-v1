@@ -4,6 +4,8 @@ import Image from "next/image";
 
 import { createClient } from "@/lib/supabase/server";
 import { decideAccess } from "@/modules/access/domain/access-decision";
+import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
+import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
 import {
   buildPeriodActivity,
   type PeriodActivityItem,
@@ -32,9 +34,15 @@ import {
 
 import { createPurchase } from "./purchase-actions";
 import { DevelopmentPeriodReset } from "./development-period-reset";
+import { DetectedNinjaAccounts } from "./detected-ninja-accounts";
+import { NinjaConnectorGate } from "./ninja-connector-gate";
+import { NinjaConnectorMonitor } from "./ninja-connector-monitor";
+import { NinjaTransitionAlerts, type NinjaTransitionAlert } from "./ninja-transition-alerts";
+import type { NinjaConnectorStatus } from "./ninja-connector-panel";
 import { ActivityHistory } from "./activity-history";
 import {
   DailyControlPreview,
+  type NinjaBrokerBalanceEvent,
   type PersistedDailyControl,
 } from "./daily-control-preview";
 import { HomeOverview } from "./home-overview";
@@ -52,6 +60,8 @@ type PrivateAppPageProps = {
     period?: string | string[];
     purchase_result?: string | string[];
     reset_result?: string | string[];
+    connector_result?: string | string[];
+    transition_result?: string | string[];
   }>;
 };
 
@@ -78,6 +88,7 @@ function formatMoney(cents: number): string {
 }
 
 const purchaseMessages: Record<string, string> = {
+  already_created: "Esa cuenta de Ninja ya estaba vinculada. No se creó una compra duplicada.",
   created: "Compra confirmada. La cuenta quedó creada como Cuenta virgen.",
   invalid_data: "Revisá la empresa, el precio y el origen de fondos.",
   not_created: "La compra no pudo confirmarse. No se guardó ningún dato.",
@@ -92,8 +103,14 @@ const resetMessages: Record<string, string> = {
   unavailable: "El reinicio de pruebas solo está disponible en la aplicación local.",
 };
 
+const connectorMessages: Record<string, string> = {
+  revoked: "El conector fue desvinculado. Dejó de tener autorización para enviar datos.",
+  not_revoked: "No se pudo desvincular el conector.",
+};
+
 type PurchaseView = {
   companyCode: string;
+  externalName: string | null;
   fundsOrigin: string;
   id: string;
   priceCents: number;
@@ -122,6 +139,40 @@ type ActivityRpcRow = {
   reason: string | null;
 };
 
+type NinjaInventoryRpcRow = {
+  accounts: Array<NinjaAccountSnapshot & { firstSeenAt?: string }>;
+  connector_id: string;
+  observed_at: string;
+};
+
+type NinjaConnectorStatusRpcRow = {
+  connector_id: string;
+  connector_version: string;
+  is_online: boolean;
+  last_seen_at: string | null;
+  paired_at: string;
+  status: string;
+};
+
+type NinjaTransitionRpcRow = {
+  automatic: boolean;
+  connection_name: string;
+  event_type: string;
+  from_account_name: string | null;
+  id: string;
+  occurred_at: string;
+  reason: string;
+  resolution_status: string;
+  to_account_name: string | null;
+};
+
+type NinjaBrokerBalanceRpcRow = {
+  balance_cents: number | string;
+  id: string;
+  observed_at: string;
+  source_accounts: NinjaBrokerBalanceEvent["sourceAccounts"];
+};
+
 export default async function PrivateAppPage({
   searchParams,
 }: PrivateAppPageProps) {
@@ -147,15 +198,25 @@ export default async function PrivateAppPage({
       : null,
   );
   const allowed = decision === "allowed";
-  const { mode, period, purchase_result: purchaseResult, reset_result: resetResult } = await searchParams;
+  const { mode, period, purchase_result: purchaseResult, reset_result: resetResult, connector_result: connectorResult, transition_result: transitionResult } = await searchParams;
   let workspaceOptions: WorkspaceOption[] = [];
   let companies: Array<{ code: string; displayName: string; id: string }> = [];
+  let linkedNinjaAccountNames = new Set<string>();
+  let ninjaNamesByAccountId = new Map<string, string>();
+  let ninjaInventories: NinjaInventoryRpcRow[] = [];
+  let ninjaConnector: NinjaConnectorStatus | null = null;
+  let ninjaTransitionAlerts: NinjaTransitionAlert[] = [];
+  let incomingNinjaBalance: NinjaBrokerBalanceEvent | null = null;
+  let ninjaBrokerSourceNotice: string | null = null;
 
   if (allowed) {
-    const { data: workspaces } = await supabase
-      .from("workspaces")
-      .select("id, modality, periods(id, period_month)")
-      .order("modality");
+    const [{ data: workspaces }, { data: ninjaConnectorRows }] = await Promise.all([
+      supabase
+        .from("workspaces")
+        .select("id, modality, periods(id, period_month)")
+        .order("modality"),
+      supabase.rpc("get_current_user_ninja_connector_status"),
+    ]);
 
     workspaceOptions = (workspaces ?? []).map((workspace) => ({
       id: workspace.id,
@@ -165,6 +226,28 @@ export default async function PrivateAppPage({
         periodMonth: workspacePeriod.period_month,
       })),
     }));
+
+    const connectorRow = (ninjaConnectorRows?.[0] ?? null) as NinjaConnectorStatusRpcRow | null;
+    ninjaConnector = connectorRow ? {
+      connectorId: connectorRow.connector_id,
+      connectorVersion: connectorRow.connector_version,
+      isOnline: connectorRow.is_online,
+      lastSeenAt: connectorRow.last_seen_at,
+      pairedAt: connectorRow.paired_at,
+      status: connectorRow.status,
+    } : null;
+  }
+
+  const connectorOnline = Boolean(ninjaConnector?.isOnline && ninjaConnector.status === "active");
+
+  if (allowed && !connectorOnline) {
+    return (
+      <NinjaConnectorGate
+        connector={ninjaConnector}
+        isAdmin={nodalUser?.access_role === "admin"}
+        message={singleValue(connectorResult) === "revoked" ? connectorMessages.revoked : undefined}
+      />
+    );
   }
 
   const selection = resolveWorkspaceSelection(
@@ -202,6 +285,10 @@ export default async function PrivateAppPage({
       { data: walletMovementRows },
       { data: fundingWithdrawalRows },
       { data: activityRows },
+      { data: ninjaLinkRows },
+      { data: ninjaInventoryRows },
+      { data: ninjaTransitionRows },
+      { data: ninjaBrokerBalanceRows },
     ] =
       await Promise.all([
         supabase
@@ -257,6 +344,13 @@ export default async function PrivateAppPage({
         supabase.rpc("list_nodal_period_activity", {
           target_period_id: selection.period.id,
         }),
+        supabase
+          .from("ninja_account_links")
+          .select("account_id, external_account_name")
+          .is("closed_at", null),
+        supabase.rpc("get_current_user_ninja_inventory"),
+        supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
+        supabase.rpc("get_current_user_pending_ninja_broker_balance"),
       ]);
 
     companies = (companyRows ?? []).map((company) => ({
@@ -264,6 +358,47 @@ export default async function PrivateAppPage({
       displayName: company.display_name,
       id: company.id,
     }));
+    linkedNinjaAccountNames = new Set((ninjaLinkRows ?? []).map((link) => link.external_account_name));
+    ninjaNamesByAccountId = new Map((ninjaLinkRows ?? []).map((link) => [link.account_id, link.external_account_name]));
+    ninjaInventories = (ninjaInventoryRows ?? []) as NinjaInventoryRpcRow[];
+    const connectedNinjaAccounts = ninjaInventories.flatMap((inventory) =>
+      inventory.accounts.filter(
+        (account) => account.connectionStatus.toLowerCase() === "connected",
+      ),
+    );
+    const connectedBrokerAccounts = connectedNinjaAccounts.filter(
+      (account) =>
+        classifyNinjaAccount(account, account.firstSeenAt ?? new Date().toISOString()).type ===
+        "broker",
+    );
+    if (connectedNinjaAccounts.length > 0 && connectedBrokerAccounts.length === 0) {
+      ninjaBrokerSourceNotice =
+        "NinjaTrader está conectado, pero no informa ninguna cuenta broker. Los saldos automáticos se reanudarán cuando una cuenta broker vuelva a aparecer en Accounts.";
+    }
+    ninjaTransitionAlerts = ((ninjaTransitionRows ?? []) as NinjaTransitionRpcRow[])
+      .filter((row) => !(row.event_type === "new_account" && row.to_account_name && linkedNinjaAccountNames.has(row.to_account_name)))
+      .map((row) => ({
+        automatic: row.automatic,
+        connectionName: row.connection_name,
+        eventType: row.event_type,
+        fromAccountName: row.from_account_name,
+        id: row.id,
+        occurredAt: row.occurred_at,
+        reason: row.reason,
+        resolutionStatus: row.resolution_status,
+        toAccountName: row.to_account_name,
+      }));
+    const brokerBalanceRow = (ninjaBrokerBalanceRows?.[0] ?? null) as
+      | NinjaBrokerBalanceRpcRow
+      | null;
+    incomingNinjaBalance = brokerBalanceRow
+      ? {
+          balanceInCents: Number(brokerBalanceRow.balance_cents),
+          id: brokerBalanceRow.id,
+          observedAt: brokerBalanceRow.observed_at,
+          sourceAccounts: brokerBalanceRow.source_accounts,
+        }
+      : null;
     const accountsById = new Map(
       (accountRows ?? []).map((account) => [account.id, account]),
     );
@@ -281,6 +416,7 @@ export default async function PrivateAppPage({
         {
           companyId: account.company_id,
           companyName: company.display_name,
+          externalName: ninjaNamesByAccountId.get(account.id) ?? null,
           fundsOrigin: purchase?.funds_origin ?? null,
           id: account.id,
           priceInCents: purchase ? Number(purchase.price_cents) : null,
@@ -301,6 +437,7 @@ export default async function PrivateAppPage({
       return [
         {
           companyCode: company.code,
+          externalName: ninjaNamesByAccountId.get(account.id) ?? null,
           fundsOrigin: purchase.funds_origin,
           id: purchase.id,
           priceCents: Number(purchase.price_cents),
@@ -452,6 +589,7 @@ export default async function PrivateAppPage({
       periodLabel={selection?.period ? formatPeriodLabel(selection.period.periodMonth) : undefined}
       userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
     >
+      <NinjaConnectorMonitor online />
       <header className="app-header" aria-labelledby="private-title">
         <div className="app-brand-row">
           <a className="app-brand" href="#inicio" aria-label="Ir al inicio">
@@ -499,10 +637,17 @@ export default async function PrivateAppPage({
         )}
 
         {!allowed && (
-          <p className="notice">
-            Este bloqueo es intencional: iniciar sesion con Google no concede
-            acceso automatico a la informacion de NODAL.
-          </p>
+          <div className="blocked-access-actions">
+            <p className="notice">
+              Este bloqueo es intencional: iniciar sesión con Google no concede
+              acceso automático a la información de NODAL.
+            </p>
+            <form action="/auth/logout" method="post">
+              <button className="secondary-action" type="submit">
+                Cerrar sesión y usar otra cuenta
+              </button>
+            </form>
+          </div>
         )}
       </header>
 
@@ -593,6 +738,8 @@ export default async function PrivateAppPage({
         />
       )}
 
+      {allowed && selection?.period && <NinjaTransitionAlerts alerts={ninjaTransitionAlerts} mode={selection.workspace.modality} period={selection.period.periodMonth} periodId={selection.period.id} result={singleValue(transitionResult)} />}
+
       {allowed && selection?.period && (
         <section className="purchase-panel" id="compras" aria-labelledby="purchase-title">
           <div className="purchase-heading">
@@ -628,6 +775,26 @@ export default async function PrivateAppPage({
               {resetMessages[singleValue(resetResult) ?? ""]}
             </p>
           ) : null}
+
+          {singleValue(connectorResult) && connectorMessages[singleValue(connectorResult) ?? ""] ? (
+            <p className={`purchase-message ${singleValue(connectorResult) === "revoked" ? "success" : "error"}`} role="status">
+              {connectorMessages[singleValue(connectorResult) ?? ""]}
+            </p>
+          ) : null}
+
+          {ninjaInventories.map((inventory) => {
+            const accounts = inventory.accounts.map((account) => classifyNinjaAccount(
+              account,
+              account.firstSeenAt ?? inventory.observed_at,
+            ));
+            const companyIds = Object.fromEntries(companies.flatMap((company) => [[company.code.toLowerCase(), company.id], [company.displayName.toLowerCase(), company.id]]));
+            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} key={inventory.connector_id} linkedAccountNames={linkedNinjaAccountNames} mode={selection.workspace.modality} period={selection.period!.periodMonth} periodId={selection.period!.id} />;
+          })}
+
+          <div className="manual-purchase-heading">
+            <p className="status">CONTINGENCIA MANUAL</p>
+            <h3>Registrar una compra manualmente</h3>
+          </div>
 
           {selection.period.periodMonth === currentMonthInBuenosAires() ? (
             <form action={createPurchase} className="purchase-form">
@@ -697,7 +864,7 @@ export default async function PrivateAppPage({
                 <article className="purchase-row" key={purchase.id}>
                   <div>
                     <p className="purchase-reference">
-                      {purchase.companyCode} · Cuenta {purchase.referenceNumber}
+                      {purchase.companyCode} · {purchase.externalName ?? `Cuenta ${purchase.referenceNumber}`}
                     </p>
                     <p className="purchase-meta">
                       Compra {purchase.purchaseNumber} · {purchase.purchasedOn} ·{" "}
@@ -706,7 +873,7 @@ export default async function PrivateAppPage({
                   </div>
                   <div className="purchase-values">
                     <strong>{formatMoney(purchase.priceCents)}</strong>
-                    <span>
+                    <span className={`purchase-state purchase-state-${purchase.state}`}>
                       {purchase.state === "virgin"
                         ? "Cuenta virgen"
                         : purchase.state === "live"
@@ -731,12 +898,15 @@ export default async function PrivateAppPage({
 
       {allowed && selection?.period && (
         <DailyControlPreview
+          key={incomingNinjaBalance?.id ?? "no-ninja-balance"}
           accounts={accountOptions}
           companies={companies.map((company) => ({
             id: company.id,
             name: company.displayName,
           }))}
           initialControls={dailyControls}
+          incomingNinjaBalance={incomingNinjaBalance}
+          ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}
           periodId={selection.period.id}
         />
       )}
@@ -752,7 +922,7 @@ export default async function PrivateAppPage({
 
       {allowed && selection?.period && (
         <ProgressSummary
-          accounts={accountOptions.map((account) => ({ id: account.id, label: `${account.companyName} · Cuenta ${account.referenceNumber}` }))}
+          accounts={accountOptions.map((account) => ({ id: account.id, label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}` }))}
           periodId={selection.period.id}
           summary={operationalSummary}
         />

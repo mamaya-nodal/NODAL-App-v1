@@ -25,6 +25,7 @@ import {
 export type RegisterAccount = Readonly<{
   companyId: string;
   companyName: string;
+  externalName: string | null;
   fundsOrigin: string | null;
   id: string;
   priceInCents: number | null;
@@ -243,7 +244,7 @@ export function OperationRegister({
               >
                 {companyAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    Cuenta {account.referenceNumber}
+                    {account.externalName ?? `Cuenta ${account.referenceNumber}`}
                   </option>
                 ))}
               </select>
@@ -254,7 +255,7 @@ export function OperationRegister({
             <div>
               <span>Cuenta seleccionada</span>
               <strong>
-                {selectedAccount?.companyName} · Cuenta {selectedAccount?.referenceNumber}
+                {selectedAccount?.companyName} · {selectedAccount?.externalName ?? `Cuenta ${selectedAccount?.referenceNumber}`}
               </strong>
             </div>
             <strong className={`account-state ${selectedAccount?.state ?? "virgin"}`}>
