@@ -15,7 +15,7 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linke
   const detectedPropAccounts = accounts.filter((account) => account.type === "prop");
   const propAccounts = detectedPropAccounts.filter((account) => !linkedAccountNames.has(account.accountName));
   const registeredPropAccounts = detectedPropAccounts.filter((account) => linkedAccountNames.has(account.accountName));
-  const brokers = accounts.filter((account) => account.type === "broker").length;
+  const brokerAccounts = accounts.filter((account) => account.type === "broker");
   return (
     <section className="ninja-detections" aria-labelledby="ninja-detections-title">
       <div className="ninja-detections-heading">
@@ -35,7 +35,7 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linke
             <input name="connection_name" type="hidden" value={account.connectionName} />
             <input name="external_account_name" type="hidden" value={account.accountName} />
             <input name="first_seen_at" type="hidden" value={account.firstSeenAt} />
-            <div className="ninja-account-title"><div><strong>{account.company}{account.product ? ` · ${account.product}` : ""}</strong><span>{account.accountName}</span></div><span className={`ninja-phase ninja-phase-${account.phase?.toLowerCase()}`}>{account.phase}</span></div>
+            <div className="ninja-account-title"><div><strong>{account.company}{account.product ? ` · ${account.product}` : ""}</strong><span>{account.accountName}</span><small>{account.connectionName}</small></div><span className={`ninja-phase ninja-phase-${account.phase?.toLowerCase()}`}>{account.phase}</span></div>
             <div className="ninja-registration-fields">
               <label>Fecha de compra sugerida<input defaultValue={account.suggestedPurchaseDate} name="purchased_on" required type="date" /></label>
               <label>Precio de compra (USD)<input inputMode="decimal" min="0" name="price" placeholder="Completar" required step="0.01" type="number" /></label>
@@ -45,7 +45,17 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linke
           </form>
         ))}</div>
       ) : null}
-      {brokers > 0 ? <p className="ninja-secondary-detection">También se reconoció {brokers} cuenta broker.</p> : null}
+      {brokerAccounts.length > 0 ? (
+        <div className="ninja-broker-detections" aria-label="Cuentas broker detectadas">
+          <p className="status">CUENTAS BROKER DETECTADAS</p>
+          {brokerAccounts.map((account) => (
+            <article className="ninja-broker-card" key={`${account.connectionName}-${account.accountName}`}>
+              <div><strong>{account.connectionName}</strong><span>{account.accountName}</span></div>
+              <span className="ninja-broker-badge">Broker</span>
+            </article>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }
