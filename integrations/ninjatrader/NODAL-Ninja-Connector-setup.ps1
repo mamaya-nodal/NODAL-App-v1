@@ -1,5 +1,5 @@
 param(
-  [string]$BaseUrl = "http://localhost:3000",
+  [string]$BaseUrl = "https://nodal-app-preview.vercel.app",
   [string]$PairingCode = ""
 )
 
@@ -43,4 +43,4 @@ New-Item -ItemType Directory -Force -Path $addOnDirectory | Out-Null
 
 Copy-Item -LiteralPath $connectorSourcePath -Destination $installedConnectorPath -Force
 
-Write-Output "Conector instalado y configuración creada. Ahora compilá NodalNinjaConnector en NinjaTrader; el código se canjeará una sola vez."
+Write-Output "Conector instalado para NODAL App. Ahora compilá NodalNinjaConnector en NinjaTrader; el código se canjeará una sola vez."

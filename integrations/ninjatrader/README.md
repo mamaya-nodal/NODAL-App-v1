@@ -26,5 +26,7 @@ desde NODAL, y solo se admite un conector activo por alumno.
 - El archivo local de credenciales queda protegido para el usuario de Windows
   que realizó la vinculación.
 
-Durante una prueba local se usa `http://localhost:3000`. En producción debe
-usarse exclusivamente la dirección HTTPS oficial de NODAL.
+El instalador usa actualmente la dirección HTTPS privada de prueba de NODAL.
+`http://localhost:3000` queda reservado para desarrollo técnico explícito. Al
+publicar el dominio final deberá sustituirse la dirección de prueba por la URL
+oficial de producción.
