@@ -14,6 +14,10 @@ set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+drop policy if exists profile_photos_public_read on storage.objects;
+drop policy if exists profile_photos_insert_own on storage.objects;
+drop policy if exists profile_photos_update_own on storage.objects;
+
 create policy profile_photos_public_read
 on storage.objects for select
 to public
