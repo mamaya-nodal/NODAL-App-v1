@@ -583,11 +583,11 @@ export default async function PrivateAppPage({
   return (
     <AppWorkspace
       authorized={allowed}
+      avatarUrl={typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null}
       initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "purchases" : "home"}
       isAdmin={nodalUser?.access_role === "admin"}
-      modalityLabel={selection?.workspace.modality === "real" ? "Real" : selection ? "Práctica" : undefined}
-      periodLabel={selection?.period ? formatPeriodLabel(selection.period.periodMonth) : undefined}
       userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
+      username={typeof user.user_metadata?.username === "string" ? user.user_metadata.username : undefined}
     >
       <NinjaConnectorMonitor online />
       <header className="app-header" aria-labelledby="private-title">

@@ -21,12 +21,12 @@ const views: ReadonlyArray<Readonly<{ hash: string; icon: WorkspaceIconName; lab
 
 type Props = Readonly<{
   authorized: boolean;
+  avatarUrl?: string | null;
   children: ReactNode;
   initialView?: View;
   isAdmin: boolean;
-  modalityLabel?: string;
-  periodLabel?: string;
   userLabel: string;
+  username?: string;
 }>;
 
 function viewFromHash(fallback: View): View {
@@ -50,12 +50,12 @@ function initials(label: string) {
 
 export function AppWorkspace({
   authorized,
+  avatarUrl,
   children,
   initialView = "home",
   isAdmin,
-  modalityLabel,
-  periodLabel,
   userLabel,
+  username,
 }: Props) {
   // Una actualizaciÃ³n de datos no debe reinterpretar avisos viejos de la URL
   // ni sacar al usuario de la pantalla que estaba usando.
@@ -112,8 +112,6 @@ export function AppWorkspace({
         </nav>
 
         <div className="workspace-sidebar-footer">
-          <p>ESTRATEGIA · COBERTURA</p>
-          <p>FONDEO INTELIGENTE</p>
           <form action="/auth/logout" method="post">
             <button type="submit"><WorkspaceIcon name="logout" />Cerrar sesión</button>
           </form>
@@ -123,13 +121,16 @@ export function AppWorkspace({
       <div className="workspace-stage">
         <header className="workspace-topbar">
           <div>
-            <span>Espacio personal · {modalityLabel ?? "Sin modalidad"}</span>
             <strong>{activeLabel}</strong>
           </div>
           <div className="workspace-top-actions">
-            <span className="workspace-period"><WorkspaceIcon name="calendar" />{periodLabel ?? "Sin período"}</span>
             <ThemeToggle />
-            <span className="workspace-avatar" title={userLabel}>{initials(userLabel)}</span>
+            <div className="workspace-user" title={userLabel}>
+              <span>{username || userLabel}</span>
+              <span className="workspace-avatar">
+                {avatarUrl ? <img alt="" src={avatarUrl} /> : initials(userLabel)}
+              </span>
+            </div>
           </div>
         </header>
 

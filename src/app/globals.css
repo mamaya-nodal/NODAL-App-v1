@@ -3811,6 +3811,23 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   font-weight: 850;
 }
 
+.workspace-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--app-title, #f6f9f7);
+  font-size: .76rem;
+  font-weight: 750;
+}
+
+.workspace-avatar { overflow: hidden; }
+
+.workspace-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .workspace-topbar .theme-toggle {
   margin: 0;
   border-color: #344039;

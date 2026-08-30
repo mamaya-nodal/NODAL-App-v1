@@ -150,3 +150,14 @@ vigente sin aprobacion y evidencia suficiente.
 - **Excepciones:** Google conserva su fondo blanco de proveedor, pero utiliza la
   misma geometría e interacción. Navegación, pestañas e iconos compactos no se
   tratan como botones de acción y mantienen dimensiones propias.
+
+### APP-074 - Identidad visible y encabezado reducido del alumno
+
+- **Estado:** Aprobada e implementada.
+- **Fecha:** 2026-08-30.
+- **Decisión:** El encabezado del alumno muestra nombre de usuario y foto de
+  perfil, y elimina la fecha redundante y la leyenda de espacio personal. La
+  barra lateral conserva el cierre de sesión sin textos promocionales. Inicio
+  elimina el subtítulo introductorio para reducir ruido visual.
+- **Alcance:** Estructura compartida por todas las vistas del alumno y por los
+  temas diurno y nocturno.

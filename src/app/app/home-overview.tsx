@@ -33,7 +33,6 @@ export function HomeOverview({ modalityLabel, periodLabel, summary, userLabel }:
           <p className="status">TU ESPACIO OPERATIVO</p>
           <h2 id="home-overview-title">Buen día, {firstName(userLabel)}.</h2>
         </div>
-        <p>Una mirada clara antes de operar. Lo importante, sin ruido.</p>
       </div>
 
       <div className="home-dashboard-grid">
