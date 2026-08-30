@@ -138,3 +138,15 @@ vigente sin aprobacion y evidencia suficiente.
 - La bandeja pendiente se consulta mediante una función de base de datos que
   devuelve exclusivamente el evento más antiguo del conector perteneciente al
   usuario autenticado.
+
+### APP-073 - Sistema visual único para acciones
+
+- **Estado:** Aprobada e implementada.
+- **Fecha:** 2026-08-30.
+- **Decisión:** Todos los botones de acción comparten altura, radio, tipografía,
+  alineación, foco, hover, pulsación y estado deshabilitado. Se reconocen cuatro
+  familias: principal verde, secundaria de vidrio, destructiva roja y acción
+  terciaria de texto.
+- **Excepciones:** Google conserva su fondo blanco de proveedor, pero utiliza la
+  misma geometría e interacción. Navegación, pestañas e iconos compactos no se
+  tratan como botones de acción y mantienen dimensiones propias.
