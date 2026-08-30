@@ -734,10 +734,10 @@
 .authSubmit {
   min-height: 48px;
   margin-top: 5px;
-  border: 1px solid rgba(118, 255, 53, 0.4);
+  border: 1px solid rgba(118, 255, 53, 0.5);
   border-radius: 12px;
   color: #0b160c;
-  background: var(--lime);
+  background: var(--lime, #76ff35);
   font: inherit;
   font-weight: 850;
   cursor: pointer;
@@ -759,6 +759,7 @@
 .authSuccess { color: #baff9d; background: rgba(70, 185, 31, 0.14); }
 
 .profilePage {
+  --lime: #76ff35;
   min-height: 100svh;
   display: grid;
   place-items: center;
