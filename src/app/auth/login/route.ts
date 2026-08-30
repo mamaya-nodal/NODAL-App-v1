@@ -4,7 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
-  const redirectTo = new URL("/auth/callback", request.nextUrl.origin).toString();
+  const requestedNext = request.nextUrl.searchParams.get("next");
+  const next = requestedNext?.startsWith("/") && !requestedNext.startsWith("//")
+    ? requestedNext
+    : "/app";
+  const callbackUrl = new URL("/auth/callback", request.nextUrl.origin);
+  callbackUrl.searchParams.set("next", next);
+  const redirectTo = callbackUrl.toString();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo },
