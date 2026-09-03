@@ -16,16 +16,17 @@ import type {
 } from "@/modules/operations/domain/account-phase-results";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 import {
-  buildProgressSummary,
-  type ProgressSummary as ProgressSummaryData,
-  type SummaryAccountState,
-} from "@/modules/summary/domain/progress-summary";
-import {
   buildOperationalSummary,
   type OperationalSummary,
   type FundingWithdrawal,
   type WalletMovement,
 } from "@/modules/summary/domain/operational-summary";
+import {
+  buildCapitalHistory,
+  buildHomePerformance,
+  type CapitalHistoryPoint,
+  type HomePerformance,
+} from "@/modules/summary/domain/home-dashboard";
 import {
   formatPeriodLabel,
   resolveWorkspaceSelection,
@@ -263,15 +264,11 @@ export default async function PrivateAppPage({
   let walletMovements: WalletMovement[] = [];
   let fundingWithdrawals: FundingWithdrawal[] = [];
   let periodActivity: PeriodActivityItem[] = [];
-  let progressSummary: ProgressSummaryData = buildProgressSummary({
-    accountStates: [],
-    controls: [],
-    operationEntryCount: 0,
-    purchaseCostsInCents: [],
-  });
   let operationalSummary: OperationalSummary = buildOperationalSummary({
     accounts: [], controls: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [], walletMovements: [],
   });
+  let capitalHistory: CapitalHistoryPoint[] = [];
+  let homePerformance: HomePerformance = buildHomePerformance([]);
 
   if (allowed && selection?.period) {
     const [
@@ -289,6 +286,9 @@ export default async function PrivateAppPage({
       { data: ninjaInventoryRows },
       { data: ninjaTransitionRows },
       { data: ninjaBrokerBalanceRows },
+      { data: historicalPurchaseRows },
+      { data: historicalControlRows },
+      { data: historicalWalletMovementRows },
     ] =
       await Promise.all([
         supabase
@@ -351,6 +351,18 @@ export default async function PrivateAppPage({
         supabase.rpc("get_current_user_ninja_inventory"),
         supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
         supabase.rpc("get_current_user_pending_ninja_broker_balance"),
+        supabase
+          .from("purchases")
+          .select("period_id, price_cents, funds_origin")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
+        supabase
+          .from("daily_controls")
+          .select("period_id, kind, movement_cents, origin_destination")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
+        supabase
+          .from("wallet_movements")
+          .select("period_id, kind, amount_cents")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
       ]);
 
     companies = (companyRows ?? []).map((company) => ({
@@ -544,26 +556,6 @@ export default async function PrivateAppPage({
         reason: row.reason,
       })),
     );
-    progressSummary = buildProgressSummary({
-      accountStates: (accountRows ?? []).map(
-        (account) => account.state as SummaryAccountState,
-      ),
-      controls: (dailyControlRows ?? []).map((control) => ({
-        balanceInCents: Number(control.balance_after_cents),
-        kind: control.kind,
-        movementInCents:
-          control.movement_cents === null ? null : Number(control.movement_cents),
-        operatedOn: control.operated_on,
-        operatingResultInCents:
-          control.operating_result_cents === null
-            ? null
-            : Number(control.operating_result_cents),
-      })),
-      operationEntryCount: operationEntries.length,
-      purchaseCostsInCents: (purchaseRows ?? []).map((purchase) =>
-        Number(purchase.price_cents),
-      ),
-    });
     operationalSummary = buildOperationalSummary({
       accounts: accountOptions.map((account) => ({
         fundsOrigin: account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
@@ -577,6 +569,32 @@ export default async function PrivateAppPage({
         originDestination: control.origin_destination,
       })),
       entries: operationEntries, fundingWithdrawals, phaseWithdrawals, walletMovements,
+    });
+    homePerformance = buildHomePerformance((dailyControlRows ?? []).map((control) => ({
+      operatedOn: control.operated_on,
+      resultInCents: control.operating_result_cents === null
+        ? null
+        : Number(control.operating_result_cents),
+    })));
+    capitalHistory = buildCapitalHistory({
+      periods: selection.workspace.periods
+        .filter((workspacePeriod) => workspacePeriod.periodMonth <= selection.period!.periodMonth),
+      purchases: (historicalPurchaseRows ?? []).map((purchase) => ({
+        fundsOrigin: purchase.funds_origin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
+        periodId: purchase.period_id,
+        priceInCents: Number(purchase.price_cents),
+      })),
+      controls: (historicalControlRows ?? []).map((control) => ({
+        kind: control.kind,
+        movementInCents: control.movement_cents === null ? null : Number(control.movement_cents),
+        originDestination: control.origin_destination,
+        periodId: control.period_id,
+      })),
+      walletMovements: (historicalWalletMovementRows ?? []).map((movement) => ({
+        amountInCents: Number(movement.amount_cents),
+        kind: movement.kind,
+        periodId: movement.period_id,
+      })),
     });
   }
 
@@ -731,10 +749,10 @@ export default async function PrivateAppPage({
 
       {allowed && selection?.period && (
         <HomeOverview
-          modalityLabel={selection.workspace.modality === "real" ? "Real" : "Práctica"}
+          capitalHistory={capitalHistory}
+          performance={homePerformance}
           periodLabel={formatPeriodLabel(selection.period.periodMonth)}
-          summary={progressSummary}
-          userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
+          summary={operationalSummary}
         />
       )}
 

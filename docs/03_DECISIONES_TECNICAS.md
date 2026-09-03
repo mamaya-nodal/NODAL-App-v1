@@ -161,3 +161,17 @@ vigente sin aprobacion y evidencia suficiente.
   elimina el subtítulo introductorio para reducir ruido visual.
 - **Alcance:** Estructura compartida por todas las vistas del alumno y por los
   temas diurno y nocturno.
+
+### APP-075 - Inicio prioriza resultado, capital y rendimiento histórico
+
+- **Estado:** Aprobada e implementada.
+- **Fecha:** 2026-09-03.
+- **Decisión:** Inicio muestra como resultado neto la ganancia realizada de
+  cuentas cerradas del período seleccionado, el capital neto aportado del
+  período, la cantidad de payouts registrados y las métricas de mejor jornada,
+  peor jornada y promedio diario calculadas desde controles confirmados.
+- **Histórico:** El gráfico presenta exclusivamente capital neto acumulado mes
+  a mes para la modalidad activa. No mezcla capital, flujo y resultado ni
+  ofrece un selector entre magnitudes distintas.
+- **Presentación:** La pantalla conserva el sistema visual vigente de NODAL y
+  elimina saludos, próximos pasos y textos introductorios del panel anterior.
