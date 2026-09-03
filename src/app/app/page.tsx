@@ -241,7 +241,7 @@ export default async function PrivateAppPage({
 
   const connectorOnline = Boolean(ninjaConnector?.isOnline && ninjaConnector.status === "active");
 
-  if (allowed && !connectorOnline) {
+  if (allowed && (!ninjaConnector || ninjaConnector.status !== "active")) {
     return (
       <NinjaConnectorGate
         connector={ninjaConnector}
@@ -607,7 +607,12 @@ export default async function PrivateAppPage({
       userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
       username={typeof user.user_metadata?.username === "string" ? user.user_metadata.username : undefined}
     >
-      <NinjaConnectorMonitor online />
+      <NinjaConnectorMonitor online={connectorOnline} />
+      {!connectorOnline ? (
+        <p className="notice connector-offline-notice" role="status">
+          Conector sin señal. Estás viendo los últimos datos guardados.
+        </p>
+      ) : null}
       <header className="app-header" aria-labelledby="private-title">
         <div className="app-brand-row">
           <a className="app-brand" href="#inicio" aria-label="Ir al inicio">

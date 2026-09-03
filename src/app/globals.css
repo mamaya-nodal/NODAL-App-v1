@@ -5600,6 +5600,16 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 .history-edit-action:disabled,
 .diagnostic-trigger:disabled { cursor: not-allowed; opacity: 0.48; }
 
+.nodal-workspace .connector-offline-notice {
+  margin: 0 0 14px;
+  padding: 10px 13px;
+  border: 1px solid color-mix(in srgb, #f2b84b 38%, var(--app-border));
+  border-radius: 12px;
+  background: color-mix(in srgb, #f2b84b 8%, var(--app-panel));
+  color: var(--app-title);
+  font-size: 12px;
+}
+
 /* Inicio financiero: jerarquía validada en el mockup de contenido. */
 .home-financial-grid {
   display: grid;

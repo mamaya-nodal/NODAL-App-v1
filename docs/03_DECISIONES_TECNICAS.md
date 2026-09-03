@@ -175,3 +175,14 @@ vigente sin aprobacion y evidencia suficiente.
   ofrece un selector entre magnitudes distintas.
 - **Presentación:** La pantalla conserva el sistema visual vigente de NODAL y
   elimina saludos, próximos pasos y textos introductorios del panel anterior.
+
+### APP-076 - Un conector vinculado sin señal no bloquea la consulta
+
+- **Estado:** Aprobada e implementada.
+- **Fecha:** 2026-09-03.
+- **Decisión:** La vinculación inicial con NinjaTrader continúa siendo
+  obligatoria. Una vez que existe un conector activo, la ausencia temporal de
+  señal no bloquea el ingreso: el alumno puede consultar los últimos datos
+  guardados y recibe un aviso visible de desconexión.
+- **Actualización:** El panel continúa consultando el estado del conector y se
+  refresca automáticamente cuando la señal reaparece o se pierde.
