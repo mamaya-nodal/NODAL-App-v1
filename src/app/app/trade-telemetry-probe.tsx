@@ -40,7 +40,7 @@ export function TradeTelemetryProbe() {
     <section className="telemetry-probe" aria-labelledby="telemetry-probe-title">
       <div className="telemetry-probe-heading">
         <div><h2 id="telemetry-probe-title">Detección de operación</h2><p>Prueba técnica · no genera registros</p></div>
-        <span className={available ? "online" : "offline"}>{available ? "En vivo" : "Sin datos"}</span>
+        <span className={available ? "online" : "offline"}>{available ? "Canal listo" : "Sin conexión"}</span>
       </div>
       {probes.length === 0 ? <p className="telemetry-empty">Esperando la primera ejecución o posición del conector 0.4.</p> : (
         <div className="telemetry-probe-grid">
