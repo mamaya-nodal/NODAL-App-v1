@@ -1,4 +1,4 @@
-import { authenticateNinjaConnector, bearerToken } from "@/modules/ninja/server/connector-auth";
+import { authenticateNinjaConnector, bearerToken, rememberNinjaConnectorVersion } from "@/modules/ninja/server/connector-auth";
 import { bootstrapNinjaBrokerBalance } from "@/modules/ninja/server/broker-balance-processing";
 import { bootstrapNinjaTransitions } from "@/modules/ninja/server/transition-processing";
 
@@ -6,11 +6,13 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const body = await request.json().catch(() => ({})) as { connectorVersion?: unknown };
   const connector = await authenticateNinjaConnector(bearerToken(request));
   if (connector) {
     await Promise.all([
       bootstrapNinjaTransitions(connector.connectorId),
       bootstrapNinjaBrokerBalance(connector.connectorId),
+      rememberNinjaConnectorVersion(connector.connectorId, body.connectorVersion),
     ]);
   }
   return Response.json(

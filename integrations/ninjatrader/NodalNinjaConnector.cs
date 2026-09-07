@@ -354,7 +354,9 @@ namespace NinjaTrader.NinjaScript.AddOns
 		{
 			try
 			{
-				using (HttpResponseMessage response = await SendAuthorizedAsync("/api/integrations/ninjatrader/heartbeat", "{}"))
+				using (HttpResponseMessage response = await SendAuthorizedAsync(
+					"/api/integrations/ninjatrader/heartbeat",
+					"{\"connectorVersion\":\"" + ConnectorVersion + "\"}"))
 				{
 					bool healthy = response != null && response.IsSuccessStatusCode;
 					if (healthy && !heartbeatWasHealthy)

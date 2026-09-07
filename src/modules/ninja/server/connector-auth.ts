@@ -108,6 +108,15 @@ export async function authenticateNinjaConnector(accessToken: string | null): Pr
     : null;
 }
 
+export async function rememberNinjaConnectorVersion(connectorId: string, connectorVersion: unknown) {
+  if (typeof connectorVersion !== "string") return;
+  const cleanVersion = connectorVersion.trim();
+  if (!/^[0-9A-Za-z._-]{1,40}$/.test(cleanVersion)) return;
+  const supabase = serviceClient();
+  if (!supabase) return;
+  await supabase.from("ninja_connectors").update({ connector_version: cleanVersion }).eq("id", connectorId);
+}
+
 export function bearerToken(request: Request): string | null {
   const authorization = request.headers.get("authorization");
   if (!authorization?.startsWith("Bearer ")) return null;
