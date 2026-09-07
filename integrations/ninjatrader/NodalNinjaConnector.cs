@@ -31,6 +31,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 		private readonly SemaphoreSlim authorizationLock = new SemaphoreSlim(1, 1);
 		private readonly SemaphoreSlim telemetryFlushLock = new SemaphoreSlim(1, 1);
 		private readonly Dictionary<string, DateTime> lastBalanceSampleUtc = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+		private readonly Dictionary<string, string> lastBalanceFingerprint = new Dictionary<string, string>(StringComparer.Ordinal);
 		private readonly object telemetryFileLock = new object();
 		private readonly object sendLock = new object();
 		private string lastSentFingerprint = string.Empty;
@@ -206,23 +207,39 @@ namespace NinjaTrader.NinjaScript.AddOns
 		private void QueueBalanceSample(Account account, bool force)
 		{
 			if (account == null) return;
+			double cashValue = Read(account, AccountItem.CashValue);
+			double netLiquidation = Read(account, AccountItem.NetLiquidation);
+			double totalCashBalance = Read(account, AccountItem.TotalCashBalance);
+			double realizedProfitLoss = Read(account, AccountItem.RealizedProfitLoss);
+			double unrealizedProfitLoss = Read(account, AccountItem.UnrealizedProfitLoss);
+			string fingerprint = string.Join("|", new[] {
+				Number(cashValue),
+				Number(netLiquidation),
+				Number(totalCashBalance),
+				Number(realizedProfitLoss),
+				Number(unrealizedProfitLoss)
+			});
 			string key = ConnectionName(account) + "|" + account.Name;
 			lock (telemetryFileLock)
 			{
+				string previousFingerprint;
+				if (!force && lastBalanceFingerprint.TryGetValue(key, out previousFingerprint) && previousFingerprint == fingerprint)
+					return;
 				DateTime last;
 				if (!force && lastBalanceSampleUtc.TryGetValue(key, out last) && DateTime.UtcNow - last < TimeSpan.FromSeconds(1))
 					return;
 				lastBalanceSampleUtc[key] = DateTime.UtcNow;
+				lastBalanceFingerprint[key] = fingerprint;
 			}
 
 			string json = "{"
 				+ "\"kind\":\"balance\","
 				+ CommonTelemetryJson(account, DateTime.UtcNow)
-				+ "\"cashValue\":" + Number(Read(account, AccountItem.CashValue)) + ","
-				+ "\"netLiquidation\":" + Number(Read(account, AccountItem.NetLiquidation)) + ","
-				+ "\"totalCashBalance\":" + Number(Read(account, AccountItem.TotalCashBalance)) + ","
-				+ "\"realizedProfitLoss\":" + Number(Read(account, AccountItem.RealizedProfitLoss)) + ","
-				+ "\"unrealizedProfitLoss\":" + Number(Read(account, AccountItem.UnrealizedProfitLoss))
+				+ "\"cashValue\":" + Number(cashValue) + ","
+				+ "\"netLiquidation\":" + Number(netLiquidation) + ","
+				+ "\"totalCashBalance\":" + Number(totalCashBalance) + ","
+				+ "\"realizedProfitLoss\":" + Number(realizedProfitLoss) + ","
+				+ "\"unrealizedProfitLoss\":" + Number(unrealizedProfitLoss)
 				+ "}";
 			QueueTelemetry(json);
 		}

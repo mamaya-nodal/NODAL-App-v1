@@ -215,3 +215,7 @@ vigente sin aprobacion y evidencia suficiente.
 - **Límite:** Esta telemetría no crea compras, Control Diario, registros ni
   movimientos económicos. La automatización contable queda pendiente de una
   prueba real y conciliación aprobada.
+- **Prueba real 2026-09-07:** Sim101 registró entrada, posición `Long`, salida,
+  posición `Flat` y saldo final de USD 100.000,50. Se detectó y corrigió que las
+  muestras de saldo sin cambios saturaban la lectura: el conector deja de
+  reenviarlas y la consulta reserva visibilidad para ejecuciones y posiciones.
