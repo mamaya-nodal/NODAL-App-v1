@@ -2,6 +2,8 @@
   color: var(--ink);
   min-width: 0;
 }
+.desk-dialog a { color: var(--brand); }
+.desk-check input { accent-color: var(--brand); }
 dialog.desk-dialog {
   margin: auto;
 }

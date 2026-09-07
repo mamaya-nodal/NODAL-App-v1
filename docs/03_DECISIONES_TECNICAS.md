@@ -189,7 +189,7 @@ vigente sin aprobacion y evidencia suficiente.
 
 ### APP-077 - Administración Master de mesas y acuerdos individuales
 
-- **Estado:** Implementada en código y migración aplicada a la base de desarrollo el 2026-09-07. Publicación web pendiente de verificar.
+- **Estado:** Implementada y publicada en la preview el 2026-09-07; migración aplicada a la base de desarrollo. Verificada con sesión Master: carga de datos, temas día/noche, apertura de mesa y ficha de usuario sin modificar condiciones reales. La prueba de ramas anidadas con datos reales queda pendiente: no hay mesas derivadas creadas.
 - **Decisión de producto:** Confirmada por Mauricio en este hilo. El administrador de mesa siempre conserva su condición de operador y su mesa de pertenencia hasta un traslado explícito. Administrar una mesa no concede el rol global `admin`.
 - **Relaciones separadas:** Pertenencia operativa versionada por usuario, administración versionada de mesa y origen permanente de la mesa. Trasladar a una persona no mueve su workspace, cuentas ni registros históricos.
 - **Comisiones:** Acuerdo individual y acuerdo de mesa independientes, establecidos por Master. El acuerdo individual reemplaza los tramos/topes históricos solamente desde su vigencia; los períodos anteriores y usuarios sin acuerdo explícito conservan el cálculo anterior. Se comparte el cálculo entre admin, ficha y resumen operativo. Esta decisión sustituye las propuestas anteriores incompatibles sobre exención del administrador o comisión uniforme; no modifica las fuentes ni planillas de producción.
