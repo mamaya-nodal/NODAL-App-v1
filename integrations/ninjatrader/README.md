@@ -1,8 +1,9 @@
 # Conector NODAL para NinjaTrader
 
 El conector es un complemento de solo lectura. Observa las conexiones, cuentas
-y saldos disponibles en NinjaTrader y los envía a NODAL. No puede crear,
-modificar ni cerrar operaciones.
+y saldos disponibles en NinjaTrader y los envía a NODAL. La versión 0.4 también
+registra ejecuciones y cambios de posición para validar el inicio y cierre de
+una operatoria. No puede crear, modificar ni cerrar operaciones.
 
 ## Vinculación
 
@@ -20,6 +21,10 @@ desde NODAL, y solo se admite un conector activo por alumno.
 ## Estado y seguridad
 
 - Envía un latido cada 15 segundos.
+- Conserva temporalmente los eventos pendientes en una cola local cifrada y
+  vuelve a enviarlos después de una interrupción de red.
+- Muestrea saldos como máximo una vez por segundo y envía inmediatamente una
+  muestra al cambiar una posición.
 - NODAL puede considerar desconectado el complemento cuando deja de recibirlo.
 - Las conexiones nuevas quedan separadas hasta que un administrador las revise.
 - No utiliza Machine ID, una clave universal ni credenciales del broker.

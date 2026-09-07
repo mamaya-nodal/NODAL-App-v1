@@ -202,3 +202,16 @@ vigente sin aprobacion y evidencia suficiente.
 - **Sin datos ficticios:** Solo se crea la mesa principal vacía. No se asignan porcentajes a usuarios existentes ni se crean Carlos/Pepito como datos reales.
 - **Pendiente real:** La app no identifica períodos formalmente cerrados. Por eso no se activa la marca de sugerencia de ascenso, aunque existe la regla determinista; nivel manual disponible. El panel reducido y permisos específicos del administrador de mesa siguen pendientes de definición.
 - **Verificación:** Pruebas unitarias de porcentajes, conservación de distribuciones e historial por período; integración SQL transaccional con rollback para permisos, auditoría, duplicidad de administradores y protección de períodos anteriores. Se aplicó únicamente `20260907000000`; tres migraciones antiguas pendientes en remoto quedaron intactas.
+
+### APP-078 - Telemetría técnica para delimitar operaciones Ninja
+
+- **Estado:** Aprobada para prueba el 2026-09-07.
+- **Decisión:** El conector registra ejecuciones, cambios de posición y muestras
+  acotadas de saldo en una cola local cifrada e idempotente. La igualdad entre
+  `CashValue` y `NetLiquidation` no demuestra por sí sola el cierre.
+- **Criterio de prueba:** La operación queda abierta mientras exista al menos una
+  posición no `Flat`. Tras volver todas a `Flat`, se exige una muestra de saldo
+  posterior y diez segundos sin eventos para mostrar `Flat estable`.
+- **Límite:** Esta telemetría no crea compras, Control Diario, registros ni
+  movimientos económicos. La automatización contable queda pendiente de una
+  prueba real y conciliación aprobada.

@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.3
+// NODAL Ninja Connector v0.4
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -23,11 +23,15 @@ namespace NinjaTrader.NinjaScript.AddOns
 {
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.3";
+		private const string ConnectorVersion = "0.4";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
+		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
 		private readonly HashSet<Account> subscribedAccounts = new HashSet<Account>();
 		private readonly SemaphoreSlim authorizationLock = new SemaphoreSlim(1, 1);
+		private readonly SemaphoreSlim telemetryFlushLock = new SemaphoreSlim(1, 1);
+		private readonly Dictionary<string, DateTime> lastBalanceSampleUtc = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+		private readonly object telemetryFileLock = new object();
 		private readonly object sendLock = new object();
 		private string lastSentFingerprint = string.Empty;
 		private bool sendInProgress;
@@ -39,6 +43,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 		private int retryScheduled;
 		private bool heartbeatWasHealthy;
 		private bool terminated;
+		private string telemetryQueuePath;
 
 		protected override void OnStateChange()
 		{
@@ -51,6 +56,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			{
 				terminated = false;
 				settings = ConnectorSettings.Load();
+				telemetryQueuePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "NinjaTrader 8", "NODAL", TelemetryQueueFileName);
 				if (!settings.HasBaseUrl)
 				{
 					Write("CONFIGURACION_PENDIENTE|Ejecutá la configuración de NODAL con el código temporal mostrado en la app.");
@@ -69,7 +75,11 @@ namespace NinjaTrader.NinjaScript.AddOns
 				heartbeatTimer = null;
 				Account.AccountStatusUpdate -= OnAccountStatusUpdate;
 				foreach (Account account in subscribedAccounts.ToList())
+				{
 					account.AccountItemUpdate -= OnAccountItemUpdate;
+					account.ExecutionUpdate -= OnExecutionUpdate;
+					account.PositionUpdate -= OnPositionUpdate;
+				}
 				subscribedAccounts.Clear();
 				Write("FIN|NODAL Ninja Connector detenido");
 			}
@@ -86,6 +96,47 @@ namespace NinjaTrader.NinjaScript.AddOns
 				return;
 
 			QueueInventorySend(false);
+			QueueBalanceSample(e.Account, false);
+		}
+
+		private void OnExecutionUpdate(object sender, ExecutionEventArgs e)
+		{
+			Account account = sender as Account;
+			Execution execution = e.Execution;
+			if (account == null || execution == null || execution.Instrument == null)
+				return;
+
+			string orderAction = execution.Order == null ? "Unknown" : execution.Order.OrderAction.ToString();
+			string json = "{"
+				+ "\"kind\":\"execution\","
+				+ CommonTelemetryJson(account, execution.Time)
+				+ "\"instrument\":\"" + Escape(execution.Instrument.FullName) + "\","
+				+ "\"executionId\":\"" + Escape(string.IsNullOrWhiteSpace(execution.ExecutionId) ? Guid.NewGuid().ToString("N") : execution.ExecutionId) + "\","
+				+ "\"orderId\":\"" + Escape(string.IsNullOrWhiteSpace(execution.OrderId) ? "Unknown" : execution.OrderId) + "\","
+				+ "\"orderAction\":\"" + Escape(orderAction) + "\","
+				+ "\"marketPosition\":\"" + Escape(execution.MarketPosition.ToString()) + "\","
+				+ "\"price\":" + Number(execution.Price) + ","
+				+ "\"quantity\":" + execution.Quantity.ToString(CultureInfo.InvariantCulture)
+				+ "}";
+			QueueTelemetry(json);
+		}
+
+		private void OnPositionUpdate(object sender, PositionEventArgs e)
+		{
+			Account account = sender as Account;
+			if (account == null || e.Position == null || e.Position.Instrument == null)
+				return;
+
+			string json = "{"
+				+ "\"kind\":\"position\","
+				+ CommonTelemetryJson(account, DateTime.UtcNow)
+				+ "\"instrument\":\"" + Escape(e.Position.Instrument.FullName) + "\","
+				+ "\"marketPosition\":\"" + Escape(e.MarketPosition.ToString()) + "\","
+				+ "\"averagePrice\":" + Number(e.AveragePrice) + ","
+				+ "\"quantity\":" + e.Quantity.ToString(CultureInfo.InvariantCulture)
+				+ "}";
+			QueueTelemetry(json);
+			QueueBalanceSample(account, true);
 		}
 
 		private void RefreshInventory(bool force = true)
@@ -103,10 +154,145 @@ namespace NinjaTrader.NinjaScript.AddOns
 					continue;
 
 				account.AccountItemUpdate += OnAccountItemUpdate;
+				account.ExecutionUpdate += OnExecutionUpdate;
+				account.PositionUpdate += OnPositionUpdate;
 				subscribedAccounts.Add(account);
+				QueueBalanceSample(account, true);
+				QueueCurrentPositions(account);
+			}
+
+			foreach (Account account in subscribedAccounts.Where(account => !accounts.Contains(account)).ToList())
+			{
+				account.AccountItemUpdate -= OnAccountItemUpdate;
+				account.ExecutionUpdate -= OnExecutionUpdate;
+				account.PositionUpdate -= OnPositionUpdate;
+				subscribedAccounts.Remove(account);
 			}
 
 			QueueInventorySend(force);
+			QueueTelemetryFlush();
+		}
+
+		private string CommonTelemetryJson(Account account, DateTime occurredAt)
+		{
+			return "\"eventId\":\"" + Guid.NewGuid().ToString("N") + "\","
+				+ "\"occurredAt\":\"" + occurredAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) + "\","
+				+ "\"accountName\":\"" + Escape(account.Name) + "\","
+				+ "\"connectionName\":\"" + Escape(ConnectionName(account)) + "\","
+				+ "\"providerName\":\"" + Escape(ProviderName(account)) + "\",";
+		}
+
+		private void QueueCurrentPositions(Account account)
+		{
+			List<Position> positions;
+			lock (account.Positions)
+				positions = account.Positions.ToList();
+
+			foreach (Position position in positions)
+			{
+				if (position == null || position.Instrument == null) continue;
+				string json = "{"
+					+ "\"kind\":\"position\","
+					+ CommonTelemetryJson(account, DateTime.UtcNow)
+					+ "\"instrument\":\"" + Escape(position.Instrument.FullName) + "\","
+					+ "\"marketPosition\":\"" + Escape(position.MarketPosition.ToString()) + "\","
+					+ "\"averagePrice\":" + Number(position.AveragePrice) + ","
+					+ "\"quantity\":" + position.Quantity.ToString(CultureInfo.InvariantCulture)
+					+ "}";
+				QueueTelemetry(json);
+			}
+		}
+
+		private void QueueBalanceSample(Account account, bool force)
+		{
+			if (account == null) return;
+			string key = ConnectionName(account) + "|" + account.Name;
+			lock (telemetryFileLock)
+			{
+				DateTime last;
+				if (!force && lastBalanceSampleUtc.TryGetValue(key, out last) && DateTime.UtcNow - last < TimeSpan.FromSeconds(1))
+					return;
+				lastBalanceSampleUtc[key] = DateTime.UtcNow;
+			}
+
+			string json = "{"
+				+ "\"kind\":\"balance\","
+				+ CommonTelemetryJson(account, DateTime.UtcNow)
+				+ "\"cashValue\":" + Number(Read(account, AccountItem.CashValue)) + ","
+				+ "\"netLiquidation\":" + Number(Read(account, AccountItem.NetLiquidation)) + ","
+				+ "\"totalCashBalance\":" + Number(Read(account, AccountItem.TotalCashBalance)) + ","
+				+ "\"realizedProfitLoss\":" + Number(Read(account, AccountItem.RealizedProfitLoss)) + ","
+				+ "\"unrealizedProfitLoss\":" + Number(Read(account, AccountItem.UnrealizedProfitLoss))
+				+ "}";
+			QueueTelemetry(json);
+		}
+
+		private void QueueTelemetry(string eventJson)
+		{
+			try
+			{
+				lock (telemetryFileLock)
+				{
+					Directory.CreateDirectory(Path.GetDirectoryName(telemetryQueuePath));
+					File.AppendAllText(telemetryQueuePath, ConnectorSettings.ProtectTelemetry(eventJson) + Environment.NewLine, Encoding.UTF8);
+					FileInfo queue = new FileInfo(telemetryQueuePath);
+					if (queue.Length > 8 * 1024 * 1024)
+					{
+						string[] lines = File.ReadAllLines(telemetryQueuePath);
+						File.WriteAllLines(telemetryQueuePath, lines.Skip(Math.Max(0, lines.Length - 5000)), Encoding.UTF8);
+					}
+				}
+				QueueTelemetryFlush();
+			}
+			catch (Exception exception) { Write("TELEMETRIA_COLA_ERROR|" + exception.GetType().Name); }
+		}
+
+		private void QueueTelemetryFlush()
+		{
+			if (terminated) return;
+			Task.Run(FlushTelemetryAsync);
+		}
+
+		private async Task FlushTelemetryAsync()
+		{
+			if (!await telemetryFlushLock.WaitAsync(0)) return;
+			try
+			{
+				List<string> protectedLines;
+				List<string> events;
+				lock (telemetryFileLock)
+				{
+					protectedLines = File.Exists(telemetryQueuePath)
+						? File.ReadAllLines(telemetryQueuePath).Where(line => !string.IsNullOrWhiteSpace(line)).Take(50).ToList()
+						: new List<string>();
+					events = protectedLines.Select(ConnectorSettings.UnprotectTelemetry).Where(value => !string.IsNullOrWhiteSpace(value)).ToList();
+				}
+				if (events.Count == 0) return;
+
+				string payload = "{\"kind\":\"trade_telemetry_batch\",\"batchId\":\""
+					+ Guid.NewGuid().ToString("N") + "\",\"observedAt\":\""
+					+ DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture) + "\",\"events\":["
+					+ string.Join(",", events) + "]}";
+				using (HttpResponseMessage response = await SendAuthorizedAsync("/api/integrations/ninjatrader/telemetry", payload))
+				{
+					if (response == null || !response.IsSuccessStatusCode) return;
+				}
+
+				lock (telemetryFileLock)
+				{
+					List<string> remaining = File.Exists(telemetryQueuePath) ? File.ReadAllLines(telemetryQueuePath).ToList() : new List<string>();
+					foreach (string sent in protectedLines)
+					{
+						int index = remaining.IndexOf(sent);
+						if (index >= 0) remaining.RemoveAt(index);
+					}
+					File.WriteAllLines(telemetryQueuePath, remaining, Encoding.UTF8);
+				}
+				Write("TELEMETRIA_OK|eventos=" + events.Count.ToString(CultureInfo.InvariantCulture));
+				QueueTelemetryFlush();
+			}
+			catch (Exception exception) { Write("TELEMETRIA_ERROR|" + exception.GetType().Name); }
+			finally { telemetryFlushLock.Release(); }
 		}
 
 		private void QueueInventorySend(bool force)
@@ -538,6 +724,9 @@ namespace NinjaTrader.NinjaScript.AddOns
 					ReleaseOutputBlob(ref output);
 				}
 			}
+
+			public static string ProtectTelemetry(string value) { return Protect(value); }
+			public static string UnprotectTelemetry(string value) { return Unprotect(value); }
 
 			private static DataBlob CreateBlob(byte[] bytes)
 			{

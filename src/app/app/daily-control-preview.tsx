@@ -16,6 +16,7 @@ import {
   type DailyBalanceEntry,
 } from "@/modules/control-diario/domain/balance-rules";
 import type { ControlOriginDestination } from "@/modules/control-diario/domain/control-catalogs";
+import { TradeTelemetryProbe } from "./trade-telemetry-probe";
 import {
   assertCanReceiveBrokerBalance,
   correctBrokerBalanceReview,
@@ -691,6 +692,7 @@ export function DailyControlPreview({
       id="control-diario"
       aria-labelledby="daily-preview-title"
     >
+      <TradeTelemetryProbe />
       <div className="daily-preview-heading">
         <div>
           <p className="status">CONTROL DIARIO · DESARROLLO</p>
