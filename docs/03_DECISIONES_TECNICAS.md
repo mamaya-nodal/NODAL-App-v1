@@ -220,3 +220,9 @@ vigente sin aprobacion y evidencia suficiente.
   muestras de saldo sin cambios saturaban la lectura: el conector deja de
   reenviarlas, el servidor colapsa duplicados consecutivos como defensa y la
   consulta reserva visibilidad para ejecuciones y posiciones.
+- **Excepción experimental:** Se habilita únicamente la combinación exacta del
+  conector de Mauricio, conexión `Ninja Mauri` y cuenta `Sim101`. El servidor
+  persiste ciclos técnicos con saldo inicial/final, resultado, ejecuciones e
+  instrumentos. El latido del conector completa el cierre tras diez segundos
+  estables aunque el usuario no tenga abierta su sesión web. Sigue prohibido
+  generar movimientos económicos a partir de esta prueba.

@@ -1,5 +1,6 @@
 import { authenticateNinjaConnector, bearerToken, rememberNinjaConnectorVersion } from "@/modules/ninja/server/connector-auth";
 import { bootstrapNinjaBrokerBalance } from "@/modules/ninja/server/broker-balance-processing";
+import { refreshNinjaTechnicalOperations } from "@/modules/ninja/server/technical-operation-processing";
 import { bootstrapNinjaTransitions } from "@/modules/ninja/server/transition-processing";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export async function POST(request: Request) {
     await Promise.all([
       bootstrapNinjaTransitions(connector.connectorId),
       bootstrapNinjaBrokerBalance(connector.connectorId),
+      refreshNinjaTechnicalOperations(connector.connectorId),
       rememberNinjaConnectorVersion(connector.connectorId, body.connectorVersion),
     ]);
   }

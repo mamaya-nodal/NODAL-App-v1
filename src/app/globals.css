@@ -5788,6 +5788,14 @@ html[data-theme="day"] .home-performance-grid > article {
 .telemetry-probe dl div { min-width: 0; }
 .telemetry-probe dt { color: var(--app-subtle); font-size: .64rem; }
 .telemetry-probe dd { margin: 3px 0 0; overflow: hidden; color: var(--app-title); font-size: .75rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.telemetry-operation-record { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--app-border); }
+.telemetry-operation-record > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.telemetry-operation-record span { color: var(--app-subtle); font-size: .68rem; font-weight: 700; }
+.telemetry-operation-record strong { font-size: .9rem; }
+.telemetry-operation-record strong.positive { color: var(--app-accent); }
+.telemetry-operation-record strong.negative { color: #ff7d72; }
+.telemetry-operation-record p { margin: 7px 0 3px; color: var(--app-title); font-size: .72rem; font-weight: 800; }
+.telemetry-operation-record small { color: var(--app-subtle); font-size: .64rem; }
 
 @media (max-width: 520px) {
   .telemetry-probe { padding: 15px; }

@@ -1,6 +1,7 @@
 import { isNinjaTradeTelemetryBatch } from "@/modules/ninja/domain/trade-telemetry";
 import { authenticateNinjaConnector, bearerToken, rememberNinjaConnectorVersion } from "@/modules/ninja/server/connector-auth";
 import { persistNinjaTradeTelemetry } from "@/modules/ninja/server/telemetry-persistence";
+import { refreshNinjaTechnicalOperations } from "@/modules/ninja/server/technical-operation-processing";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -16,10 +17,13 @@ export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return response({ error: "La sesión no está autorizada." }, 401);
-  const { data, error } = await supabase.rpc("get_current_user_ninja_trade_telemetry", { target_limit: 200 });
-  return error
+  const [eventsResult, operationsResult] = await Promise.all([
+    supabase.rpc("get_current_user_ninja_trade_telemetry", { target_limit: 200 }),
+    supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 20 }),
+  ]);
+  return eventsResult.error || operationsResult.error
     ? response({ error: "No se pudo consultar la prueba." }, 503)
-    : response({ events: data ?? [] }, 200);
+    : response({ events: eventsResult.data ?? [], operations: operationsResult.data ?? [] }, 200);
 }
 
 export async function POST(request: Request) {
@@ -53,6 +57,9 @@ export async function POST(request: Request) {
     // corrige instalaciones actualizadas antes de que el latido informara versión.
     rememberNinjaConnectorVersion(connector.connectorId, "0.4"),
   ]);
+  if (persistence.persisted && persistence.acceptedEvents > 0) {
+    await refreshNinjaTechnicalOperations(connector.connectorId);
+  }
   return response({
     accepted: persistence.persisted,
     acceptedEvents: persistence.acceptedEvents,
