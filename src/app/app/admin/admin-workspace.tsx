@@ -16,7 +16,7 @@ const navigation: ReadonlyArray<Readonly<{
   label: string;
 }>> = [
   { href: "/app/admin", icon: "summary", label: "Vista general" },
-  { href: "/app/admin/users", icon: "register", label: "Alumnos" },
+  { href: "/app/admin/users", icon: "register", label: "Usuarios" },
   { href: "/app/admin/ninja", icon: "activity", label: "Conectores Ninja" },
 ];
 
@@ -30,12 +30,12 @@ export function AdminWorkspace({ children, userLabel }: Props) {
     ? pathname === href || (!pathname.startsWith("/app/admin/users") && !pathname.startsWith("/app/admin/ninja") && /^\/app\/admin\/[^/]+$/.test(pathname))
     : pathname.startsWith(href);
   const activeLabel = pathname.startsWith("/app/admin/users")
-    ? "Alumnos"
+    ? "Usuarios"
     : pathname.startsWith("/app/admin/ninja")
       ? "Conectores Ninja"
       : pathname === "/app/admin"
         ? "Vista general"
-        : "Ficha del alumno";
+        : "Ficha del usuario";
 
   return (
     <main className="nodal-workspace admin-workspace">

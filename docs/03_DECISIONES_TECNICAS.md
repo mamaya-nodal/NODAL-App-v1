@@ -186,3 +186,18 @@ vigente sin aprobacion y evidencia suficiente.
   guardados y recibe un aviso visible de desconexión.
 - **Actualización:** El panel continúa consultando el estado del conector y se
   refresca automáticamente cuando la señal reaparece o se pierde.
+
+### APP-077 - Administración Master de mesas y acuerdos individuales
+
+- **Estado:** Implementada en código y migración aplicada a la base de desarrollo el 2026-09-07. Publicación web pendiente de verificar.
+- **Decisión de producto:** Confirmada por Mauricio en este hilo. El administrador de mesa siempre conserva su condición de operador y su mesa de pertenencia hasta un traslado explícito. Administrar una mesa no concede el rol global `admin`.
+- **Relaciones separadas:** Pertenencia operativa versionada por usuario, administración versionada de mesa y origen permanente de la mesa. Trasladar a una persona no mueve su workspace, cuentas ni registros históricos.
+- **Comisiones:** Acuerdo individual y acuerdo de mesa independientes, establecidos por Master. El acuerdo individual reemplaza los tramos/topes históricos solamente desde su vigencia; los períodos anteriores y usuarios sin acuerdo explícito conservan el cálculo anterior. Se comparte el cálculo entre admin, ficha y resumen operativo. Esta decisión sustituye las propuestas anteriores incompatibles sobre exención del administrador o comisión uniforme; no modifica las fuentes ni planillas de producción.
+- **Bonus:** Solo mesas directas activas. 1–2: 15%; 3–4: 30%; 5–9: 40%; 10 o más: 50%. Sustituye el porcentaje anterior, no se acumula, y se descuenta de la participación NODAL de cada mesa hija. La ganancia bruta global no suma distribuciones internas nuevamente.
+- **Ingreso total:** Participación de operativa propia + participación de mesa + bonus. Es ingreso calculado, no certificación de cobro. Se presenta en la tarjeta de la persona que administra la mesa.
+- **Gestión:** Guardar aplica al período calendario actual en Buenos Aires; no hay edición de períodos anteriores ni programación futura desde esta interfaz. La pantalla de períodos históricos es de consulta. No se inventa una política de cierre contable.
+- **Historial:** Registros automáticos con actor, fecha, vigencia y valores anteriores/nuevos para condiciones personales, reemplazo de administrador y cambios de escala de bonus. La interfaz carga los 500 eventos globales más recientes; la tabla conserva todos.
+- **Interfaz:** Totales y mesa principal arriba, mesas derivadas en grilla debajo y gráfico por período. Tocar la tarjeta abre su mesa; `Ver` despliega la rama sin navegar. Árbol de altura acotada con scroll vertical e indentación adaptable. Colores heredados del tema día/noche; diálogos nativos con foco y Escape.
+- **Sin datos ficticios:** Solo se crea la mesa principal vacía. No se asignan porcentajes a usuarios existentes ni se crean Carlos/Pepito como datos reales.
+- **Pendiente real:** La app no identifica períodos formalmente cerrados. Por eso no se activa la marca de sugerencia de ascenso, aunque existe la regla determinista; nivel manual disponible. El panel reducido y permisos específicos del administrador de mesa siguen pendientes de definición.
+- **Verificación:** Pruebas unitarias de porcentajes, conservación de distribuciones e historial por período; integración SQL transaccional con rollback para permisos, auditoría, duplicidad de administradores y protección de períodos anteriores. Se aplicó únicamente `20260907000000`; tres migraciones antiguas pendientes en remoto quedaron intactas.

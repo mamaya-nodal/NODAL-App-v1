@@ -1,3 +1,5 @@
+import { applyIndividualCommission } from '@/modules/summary/domain/individual-commission';
+import { loadIndividualCommission } from '@/modules/summary/server/individual-commission';
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -570,6 +572,7 @@ export default async function PrivateAppPage({
       })),
       entries: operationEntries, fundingWithdrawals, phaseWithdrawals, walletMovements,
     });
+    operationalSummary = applyIndividualCommission(operationalSummary, await loadIndividualCommission(user.id, selection.period.periodMonth));
     homePerformance = buildHomePerformance((dailyControlRows ?? []).map((control) => ({
       operatedOn: control.operated_on,
       resultInCents: control.operating_result_cents === null

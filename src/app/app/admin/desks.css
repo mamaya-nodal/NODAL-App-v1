@@ -1,0 +1,383 @@
+.desk-admin {
+  color: var(--ink);
+  min-width: 0;
+}
+dialog.desk-dialog {
+  margin: auto;
+}
+dialog.desk-dialog::backdrop {
+  background: rgb(0 0 0 / 55%);
+  backdrop-filter: blur(8px);
+}
+.desk-heading,
+.desk-heading > div,
+.desk-period {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.desk-heading {
+  margin-bottom: 18px;
+}
+.desk-heading h1 {
+  font-size: 1.65rem;
+  margin: 0;
+  letter-spacing: -0.04em;
+}
+.desk-period {
+  justify-content: flex-start;
+  margin-bottom: 22px;
+}
+.desk-admin select,
+.desk-admin input {
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-height: 42px;
+  padding: 8px 12px;
+  font: inherit;
+  max-width: 100%;
+}
+.desk-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.desk-total,
+.desk-card,
+.desk-surface,
+.desk-kpis {
+  background: var(--app-panel, var(--surface));
+  border: 1px solid var(--app-border, var(--line));
+  border-radius: 20px;
+}
+.desk-total {
+  padding: 24px;
+  background: #93ff3b;
+  color: #10200f;
+  display: flex;
+  align-items: center;
+}
+.desk-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 12px;
+  width: 100%;
+}
+.desk-metrics span,
+.desk-kpis span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.desk-total span {
+  color: #35552a;
+}
+.desk-metrics strong,
+.desk-kpis strong {
+  display: block;
+  font-size: 1.08rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.desk-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+.desk-admin .desk-open {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 19px 19px 62px;
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  border-radius: 20px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+  white-space: normal;
+}
+.desk-card:has(.desk-open:focus-visible),
+.desk-card:hover {
+  border-color: var(--brand);
+}
+.desk-open h3 {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+.desk-manager {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.desk-admin .desk-expand {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 13px;
+}
+.desk-income {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+.desk-income strong {
+  color: var(--ink);
+}
+.desk-tree-scroll {
+  max-height: 540px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--muted) transparent;
+  background: color-mix(in srgb, var(--brand-soft) 40%, var(--surface));
+  border-radius: 20px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.desk-tree-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.desk-branch {
+  min-width: 0;
+}
+.desk-children {
+  margin: 12px 0 0 12px;
+  padding-left: 16px;
+  border-left: 1px solid var(--brand);
+  display: grid;
+  gap: 12px;
+}
+.desk-children-deep {
+  margin-left: 3px;
+  padding-left: 7px;
+}
+.desk-children > .desk-branch {
+  position: relative;
+}
+.desk-children > .desk-branch:before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  left: -17px;
+  top: 25px;
+  border-top: 1px solid var(--brand);
+}
+.desk-children-deep > .desk-branch:before {
+  width: 7px;
+  left: -8px;
+}
+.desk-surface {
+  padding: 22px;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+.desk-surface h2 {
+  margin: 0 0 18px;
+  font-size: 1.05rem;
+}
+.desk-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.desk-surface .desk-kpis {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+}
+.desk-table-scroll {
+  overflow-x: auto;
+}
+.desk-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--ink);
+}
+.desk-table th {
+  font-size: 0.73rem;
+  text-align: left;
+  color: var(--muted);
+  padding: 10px;
+}
+.desk-table td {
+  color: var(--ink);
+  font-size: 0.81rem;
+  padding: 15px 10px;
+  border-top: 1px solid var(--line);
+  white-space: nowrap;
+}
+.desk-admin .desk-person {
+  background: none;
+  color: var(--ink);
+  border: 0;
+  padding: 0;
+  height: auto;
+  min-height: 32px;
+  box-shadow: none;
+  text-align: left;
+  cursor: pointer;
+}
+.desk-person:hover {
+  text-decoration: underline;
+}
+.desk-empty {
+  color: var(--muted);
+  padding: 15px 0;
+}
+.desk-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.desk-chart line {
+  stroke: var(--line);
+}
+.desk-chart text {
+  fill: var(--muted);
+  font-size: 12px;
+}
+.desk-chart polyline {
+  fill: none;
+  stroke-width: 2.5;
+}
+.desk-chart-legend {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  margin-bottom: 12px;
+}
+.desk-chart-legend i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.desk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgb(0 0 0 / 55%);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.desk-dialog {
+  color: var(--ink);
+  width: min(680px, 100%);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 26px;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 15px 70px rgb(0 0 0 / 30%);
+}
+.desk-dialog header {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+}
+.desk-dialog h2 {
+  font-size: 1.2rem;
+}
+.desk-dialog p {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.desk-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 22px 0;
+}
+.desk-form-grid label {
+  display: grid;
+  gap: 7px;
+  font-size: 0.8rem;
+}
+.desk-check {
+  display: flex !important;
+  align-items: center;
+}
+.desk-check input {
+  min-height: 20px;
+}
+.desk-history {
+  margin-top: 24px;
+}
+.desk-history article {
+  font-size: 0.8rem;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.desk-history span,
+.desk-history small {
+  display: block;
+  color: var(--muted);
+  margin: 5px 0;
+}
+@media (max-width: 850px) {
+  .desk-tree-grid,
+  .desk-top {
+    grid-template-columns: 1fr;
+  }
+  .desk-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+  .desk-tree-scroll {
+    max-height: 510px;
+  }
+  .desk-metrics strong {
+    font-size: 1rem;
+  }
+}
+@media (max-width: 480px) {
+  .desk-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .desk-dialog {
+    padding: 16px;
+  }
+  .desk-overlay {
+    padding: 10px;
+  }
+  .desk-children {
+    margin-left: 4px;
+    padding-left: 10px;
+  }
+  .desk-children > .desk-branch:before {
+    width: 10px;
+    left: -11px;
+  }
+  .desk-open {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}

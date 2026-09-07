@@ -4,6 +4,9 @@ import type {
   WalletMovement,
 } from "@/modules/summary/domain/operational-summary";
 import { buildOperationalSummary } from "@/modules/summary/domain/operational-summary";
+import { applyIndividualCommission } from '@/modules/summary/domain/individual-commission';
+import { readAll } from './read-all';
+import { loadIndividualCommission } from '@/modules/summary/server/individual-commission';
 import type { AccountPhaseWithdrawal } from "@/modules/operations/domain/account-phase-results";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 
@@ -21,16 +24,23 @@ export async function loadPeriodSummaries(
   periodIds: readonly string[],
 ): Promise<Map<string, LoadedPeriodSummary>> {
   const result = new Map<string, LoadedPeriodSummary>();
+  if(periodIds.length>100){
+    for(let i=0;i<periodIds.length;i+=100){
+      const batch=await loadPeriodSummaries(supabase,periodIds.slice(i,i+100));
+      for(const [id,summary] of batch)result.set(id,summary);
+    }
+    return result;
+  }
   if (periodIds.length === 0) return result;
 
   const [accountsResult, purchasesResult, controlsResult, entriesResult, withdrawalsResult, walletResult, fundingResult] = await Promise.all([
-    supabase.from("accounts").select("id, period_id, state, state_origin").in("period_id", periodIds),
-    supabase.from("purchases").select("account_id, period_id, price_cents, funds_origin").in("period_id", periodIds),
-    supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents").in("period_id", periodIds),
-    supabase.from("operation_entries").select("id, period_id, account_id, operated_on, phase, participant_role, destination, magnitude_cents").in("period_id", periodIds),
-    supabase.from("account_phase_withdrawals").select("period_id, account_id, phase, total_withdrawal_cents").in("period_id", periodIds),
-    supabase.from("wallet_movements").select("id, period_id, occurred_on, kind, amount_cents, observation").in("period_id", periodIds),
-    supabase.from("funding_withdrawals").select("id, period_id, account_id, approved_on, amount_cents, collected_on").eq("is_active", true).in("period_id", periodIds),
+    readAll(supabase.from("accounts").select("id, period_id, state, state_origin").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("purchases").select("account_id, period_id, price_cents, funds_origin").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("operation_entries").select("id, period_id, account_id, operated_on, phase, participant_role, destination, magnitude_cents").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("account_phase_withdrawals").select("period_id, account_id, phase, total_withdrawal_cents").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("wallet_movements").select("id, period_id, occurred_on, kind, amount_cents, observation").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("funding_withdrawals").select("id, period_id, account_id, approved_on, amount_cents, collected_on").eq("is_active", true).in("period_id", periodIds).order("id")),
   ]);
 
   const accounts = accountsResult.data ?? [];
@@ -40,6 +50,14 @@ export async function loadPeriodSummaries(
   const phaseWithdrawals = withdrawalsResult.data ?? [];
   const walletMovements = walletResult.data ?? [];
   const fundingWithdrawals = fundingResult.data ?? [];
+  const failed=[accountsResult,purchasesResult,controlsResult,entriesResult,withdrawalsResult,walletResult,fundingResult].find(r=>r.error);
+  if(failed)throw new Error('No se pudieron verificar los importes del período.');
+  const {data:periodOwners,error:ownersError}=await supabase.from('periods').select('id,period_month,workspaces(owner_user_id)').in('id',periodIds);
+  if(ownersError)throw new Error('No se pudieron verificar los períodos.');
+  const agreements=new Map(await Promise.all((periodOwners??[]).map(async p=>{
+    const workspace=Array.isArray(p.workspaces)?p.workspaces[0]:p.workspaces;
+    return [p.id,workspace?await loadIndividualCommission(workspace.owner_user_id,p.period_month):null] as const;
+  })));
 
   for (const periodId of periodIds) {
     const accountsForPeriod = accounts.filter((account) => account.period_id === periodId);
@@ -95,7 +113,7 @@ export async function loadPeriodSummaries(
       .sort();
     result.set(periodId, {
       lastOperatedOn: operatingDates.at(-1) ?? null,
-      summary: buildOperationalSummary({
+      summary: applyIndividualCommission(buildOperationalSummary({
         accounts: accountsForPeriod.map((account) => {
           const purchase = purchasesByAccount.get(account.id);
           return {
@@ -118,7 +136,7 @@ export async function loadPeriodSummaries(
         fundingWithdrawals: fundingForPeriod,
         phaseWithdrawals: phaseWithdrawalsForPeriod,
         walletMovements: walletForPeriod,
-      }),
+      }),agreements.get(periodId)??null),
     });
   }
   return result;
