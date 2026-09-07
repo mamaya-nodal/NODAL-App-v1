@@ -15,15 +15,14 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linke
   const detectedPropAccounts = accounts.filter((account) => account.type === "prop");
   const propAccounts = detectedPropAccounts.filter((account) => !linkedAccountNames.has(account.accountName));
   const registeredPropAccounts = detectedPropAccounts.filter((account) => linkedAccountNames.has(account.accountName));
-  const brokerAccounts = accounts.filter((account) => account.type === "broker");
   return (
     <section className="ninja-detections" aria-labelledby="ninja-detections-title">
       <div className="ninja-detections-heading">
-        <div><p className="status">DETECCIÓN AUTOMÁTICA</p><h3 id="ninja-detections-title">Cuentas encontradas en Ninja</h3></div>
-        <span className="ninja-live-badge">Conector activo</span>
+        <h3 id="ninja-detections-title">NinjaTrader</h3>
+        <span className="ninja-live-badge">Conectado</span>
       </div>
-      {propAccounts.length === 0 && registeredPropAccounts.length === 0 ? <p className="notice">No se detectaron cuentas de fondeo nuevas.</p> : null}
-      {registeredPropAccounts.length > 0 ? <div className="ninja-registered-notice"><span>Cuenta detectada y registrada</span><strong>{registeredPropAccounts.map((account) => account.accountName).join(" · ")}</strong></div> : null}
+      {propAccounts.length === 0 && registeredPropAccounts.length === 0 ? <p className="ninja-empty">Sin cuentas nuevas</p> : null}
+      {registeredPropAccounts.length > 0 ? <div className="ninja-registered-notice"><span>Registradas</span><strong>{registeredPropAccounts.map((account) => account.accountName).join(" · ")}</strong></div> : null}
       {propAccounts.length > 0 ? (
         <div className="ninja-detected-grid">{propAccounts.map((account) => (
           <form action={createDetectedPurchase} className="ninja-detected-card" key={`${account.connectionName}-${account.accountName}`}>
@@ -41,20 +40,9 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linke
               <label>Precio de compra (USD)<input inputMode="decimal" min="0" name="price" placeholder="Completar" required step="0.01" type="number" /></label>
               <label>Origen de fondos<select defaultValue="Aporte trader" name="funds_origin"><option value="Aporte trader">Aporte trader</option><option value="Saldo generado">Saldo generado</option></select></label>
             </div>
-            <div className="ninja-detected-footer"><p className="ninja-detected-note">La fecha es la primera detección de NODAL y podés corregirla.</p><button className="primary-action" disabled={!companyIds[account.companyCode?.toLowerCase() ?? ""]} type="submit">Confirmar y registrar compra</button></div>
+            <div className="ninja-detected-footer"><p className="ninja-detected-note">Primera detección: {account.suggestedPurchaseDate}</p><button className="primary-action" disabled={!companyIds[account.companyCode?.toLowerCase() ?? ""]} type="submit">Registrar cuenta</button></div>
           </form>
         ))}</div>
-      ) : null}
-      {brokerAccounts.length > 0 ? (
-        <div className="ninja-broker-detections" aria-label="Cuentas broker detectadas">
-          <p className="status">CUENTAS BROKER DETECTADAS</p>
-          {brokerAccounts.map((account) => (
-            <article className="ninja-broker-card" key={`${account.connectionName}-${account.accountName}`}>
-              <div><strong>{account.connectionName}</strong><span>{account.accountName}</span></div>
-              <span className="ninja-broker-badge">Broker</span>
-            </article>
-          ))}
-        </div>
       ) : null}
     </section>
   );

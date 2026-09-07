@@ -201,18 +201,8 @@ export function OperationRegister({
       id="registro"
     >
       <div className="register-heading">
-        <div>
-          <p className="status">REGISTRO DE OPERACIONES</p>
-          <h2 id="operation-register-title">Revisar por cuenta</h2>
-        </div>
-        <span className="read-only-badge">Cálculo automático</span>
+        <h2 id="operation-register-title">Registro</h2>
       </div>
-
-      <p className="context-note">
-        Acá aparecen las entradas creadas al confirmar Control Diario. También podés
-        informar el TOTAL RETIRO real de cada vuelta y, excepcionalmente, forzar
-        el estado de una cuenta.
-      </p>
 
       {orderedAccounts.length === 0 ? (
         <p className="empty-state">
@@ -253,7 +243,6 @@ export function OperationRegister({
 
           <div className="register-account-title">
             <div>
-              <span>Cuenta seleccionada</span>
               <strong>
                 {selectedAccount?.companyName} · {selectedAccount?.externalName ?? `Cuenta ${selectedAccount?.referenceNumber}`}
               </strong>
@@ -306,39 +295,39 @@ export function OperationRegister({
                 </div>
               </div>
 
-              <div className="account-state-control">
-                <div>
-                  <strong>Estado de la cuenta</strong>
-                  <p>
-                    En Automático, la app usa los TOTAL GANANCIA. Forzar conserva
-                    la excepción hasta que vuelvas a Automático.
-                  </p>
-                </div>
-                <label className="form-field" htmlFor="account_state_mode">
-                  <span>Modo</span>
-                  <select
-                    id="account_state_mode"
-                    onChange={(event) => setStateMode(event.target.value as AccountStateMode)}
-                    value={stateMode}
+              <details className="accounting-exception account-state-exception">
+                <summary>Ajustes de cuenta</summary>
+                <div className="account-state-control">
+                  <label className="form-field" htmlFor="account_state_mode">
+                    <span>Estado</span>
+                    <select
+                      id="account_state_mode"
+                      onChange={(event) => setStateMode(event.target.value as AccountStateMode)}
+                      value={stateMode}
+                    >
+                      {(Object.keys(stateModeLabels) as AccountStateMode[]).map((mode) => (
+                        <option key={mode} value={mode}>{stateModeLabels[mode]}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="secondary-action inline-action"
+                    disabled={isSaving}
+                    onClick={applyStateMode}
+                    type="button"
                   >
-                    {(Object.keys(stateModeLabels) as AccountStateMode[]).map((mode) => (
-                      <option key={mode} value={mode}>{stateModeLabels[mode]}</option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  className="secondary-action inline-action"
-                  disabled={isSaving}
-                  onClick={applyStateMode}
-                  type="button"
-                >
-                  Aplicar estado
-                </button>
-              </div>
+                    Aplicar
+                  </button>
+                </div>
+              </details>
             </>
           )}
 
           <div className="register-summary" aria-label="Resumen de la cuenta">
+            <div className="register-net">
+              <span>Resultado</span>
+              <strong>{formatMoney(latestTotal)}</strong>
+            </div>
             <div>
               <span>NETO BROKER +</span>
               <strong>{formatMoney(summary.positiveInCents)}</strong>
@@ -347,16 +336,7 @@ export function OperationRegister({
               <span>NETO BROKER −</span>
               <strong>{formatMoney(summary.negativeInCents)}</strong>
             </div>
-            <div className="register-net">
-              <span>Último TOTAL GANANCIA</span>
-              <strong>{formatMoney(latestTotal)}</strong>
-            </div>
           </div>
-          <p className="register-scope-note">
-            El resultado broker es {formatMoney(summary.netInCents)}. El precio de
-            compra se incorpora como el primer NETO BROKER − de Evaluación. El TOTAL
-            GANANCIA de cada fase incorpora el TOTAL RETIRO manual cuando existe.
-          </p>
 
           <div className="phase-overview phase-total-overview" aria-label="Totales por fase">
             {calculated.phaseResults.map((phaseResult) => (
@@ -373,7 +353,7 @@ export function OperationRegister({
                 {phaseResult.carryInCents > 0 && (
                   <small>Arrastre forzado: {formatMoney(phaseResult.carryInCents)}</small>
                 )}
-                {phaseResult.phase !== "Evaluacion" && (
+                {phaseResult.phase !== "Evaluacion" && (phaseResult.broker.entryCount > 0 || phaseResult.totalWithdrawalInCents > 0) && (
                   <label className="phase-withdrawal-field">
                     <span>TOTAL RETIRO</span>
                     <input

@@ -45,6 +45,11 @@ export function TradeTelemetryProbe() {
   const [operations, setOperations] = useState<TechnicalOperationRow[]>([]);
   const [available, setAvailable] = useState(true);
   const probes = useMemo(() => buildNinjaOperationProbe(events, new Date()), [events]);
+  const visibleProbes = probes.filter((probe) =>
+    probe.status !== "waiting" || operations.some((operation) =>
+      operation.connection_name === probe.connectionName && operation.account_name === probe.accountName,
+    ),
+  );
 
   useEffect(() => {
     let active = true;
@@ -64,12 +69,12 @@ export function TradeTelemetryProbe() {
   return (
     <section className="telemetry-probe" aria-labelledby="telemetry-probe-title">
       <div className="telemetry-probe-heading">
-        <div><h2 id="telemetry-probe-title">Detección de operación</h2><p>Prueba técnica · no genera registros</p></div>
-        <span className={available ? "online" : "offline"}>{available ? "Canal listo" : "Sin conexión"}</span>
+        <h2 id="telemetry-probe-title">Operación</h2>
+        <span className={available ? "online" : "offline"}>{available ? "En línea" : "Sin conexión"}</span>
       </div>
-      {probes.length === 0 ? <p className="telemetry-empty">Esperando la primera ejecución o posición del conector 0.4.</p> : (
+      {visibleProbes.length === 0 ? <p className="telemetry-empty">Sin operaciones detectadas.</p> : (
         <div className="telemetry-probe-grid">
-          {probes.map((probe) => {
+          {visibleProbes.map((probe) => {
             const operation = operations.find((candidate) =>
               candidate.connection_name === probe.connectionName && candidate.account_name === probe.accountName,
             );
@@ -84,7 +89,7 @@ export function TradeTelemetryProbe() {
               </dl>
               {operation ? <div className="telemetry-operation-record">
                 <div>
-                  <span>Operación de prueba</span>
+                  <span>Última operación</span>
                   <strong className={(moneyNumber(operation.result) ?? 0) >= 0 ? "positive" : "negative"}>
                     {formatMoney(moneyNumber(operation.result))}
                   </strong>

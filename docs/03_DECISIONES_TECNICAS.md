@@ -226,3 +226,21 @@ vigente sin aprobacion y evidencia suficiente.
   instrumentos. El latido del conector completa el cierre tras diez segundos
   estables aunque el usuario no tenga abierta su sesión web. Sigue prohibido
   generar movimientos económicos a partir de esta prueba.
+
+### APP-079 - Recorrido contable centrado en automatización
+
+- **Estado:** Implementada el 2026-09-07.
+- **Decisión:** Compras prioriza las cuentas detectadas por NinjaTrader y las
+  cuentas ya registradas; la carga manual queda como contingencia plegada.
+  Control Diario prioriza la operación detectada, su configuración y el último
+  saldo confirmado; los movimientos manuales quedan en un control secundario.
+  Registro prioriza el resultado, los netos broker y los totales por fase; el
+  cambio manual de estado queda como ajuste excepcional plegado.
+- **Presentación:** Los tres paneles usan la jerarquía visual del Inicio vigente:
+  fondos de la aplicación, tarjetas compactas, un único título y datos antes que
+  explicaciones. Se eliminan eyecatches, subtítulos descriptivos y distintivos
+  de implementación que no ayudan a decidir ni operar.
+- **Límite económico:** Este cambio reorganiza la interfaz y no altera las
+  reglas contables. La telemetría experimental de APP-078 continúa sin crear
+  movimientos económicos ni registros automáticos hasta completar la
+  conciliación correspondiente.

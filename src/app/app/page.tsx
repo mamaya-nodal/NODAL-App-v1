@@ -769,10 +769,7 @@ export default async function PrivateAppPage({
       {allowed && selection?.period && (
         <section className="purchase-panel" id="compras" aria-labelledby="purchase-title">
           <div className="purchase-heading">
-            <div>
-              <p className="status">COMPRAS DEL PERÍODO</p>
-              <h2 id="purchase-title">Nueva compra de cuenta</h2>
-            </div>
+            <h2 id="purchase-title">Cuentas</h2>
             <p className="purchase-count">
               {purchases.length} {purchases.length === 1 ? "cuenta" : "cuentas"}
             </p>
@@ -817,13 +814,44 @@ export default async function PrivateAppPage({
             return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} key={inventory.connector_id} linkedAccountNames={linkedNinjaAccountNames} mode={selection.workspace.modality} period={selection.period!.periodMonth} periodId={selection.period!.id} />;
           })}
 
-          <div className="manual-purchase-heading">
-            <p className="status">CONTINGENCIA MANUAL</p>
-            <h3>Registrar una compra manualmente</h3>
+          <div className="purchase-list-heading">
+            <h3>Registradas</h3>
+            <strong>{formatMoney(purchases.reduce((total, purchase) => total + purchase.priceCents, 0))}</strong>
           </div>
 
-          {selection.period.periodMonth === currentMonthInBuenosAires() ? (
-            <form action={createPurchase} className="purchase-form">
+          <div className="purchase-list" aria-label="Compras registradas">
+            {purchases.length === 0 ? (
+              <p className="empty-state">Todavía no hay cuentas registradas.</p>
+            ) : (
+              purchases.map((purchase) => (
+                <article className="purchase-row" key={purchase.id}>
+                  <div>
+                    <p className="purchase-reference">
+                      {purchase.companyCode} · {purchase.externalName ?? `Cuenta ${purchase.referenceNumber}`}
+                    </p>
+                    <p className="purchase-meta">
+                      #{purchase.purchaseNumber} · {purchase.purchasedOn} · {purchase.fundsOrigin}
+                    </p>
+                  </div>
+                  <div className="purchase-values">
+                    <strong>{formatMoney(purchase.priceCents)}</strong>
+                    <span className={`purchase-state purchase-state-${purchase.state}`}>
+                      {purchase.state === "virgin"
+                        ? "Cuenta virgen"
+                        : purchase.state === "live"
+                          ? "Cuenta viva"
+                          : "Cuenta cerrada"}
+                    </span>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+
+          <details className="accounting-exception">
+            <summary>Registrar manualmente</summary>
+            {selection.period.periodMonth === currentMonthInBuenosAires() ? (
+              <form action={createPurchase} className="purchase-form">
               <input name="mode" type="hidden" value={selection.workspace.modality} />
               <input name="period" type="hidden" value={selection.period.periodMonth} />
               <input name="period_id" type="hidden" value={selection.period.id} />
@@ -864,53 +892,14 @@ export default async function PrivateAppPage({
                 </select>
               </div>
 
-              <div className="automatic-fields">
-                <p>
-                  <strong>Automático al confirmar:</strong> fecha de hoy, número
-                  general, referencia propia de la empresa y estado Cuenta virgen.
-                </p>
-              </div>
-
               <button className="primary-action" type="submit">
-                Confirmar compra
+                Registrar cuenta
               </button>
-            </form>
-          ) : (
-            <p className="notice">
-              Este período es de consulta. La carga de una compra anterior se
-              habilitará cuando Contabilidad defina su tratamiento exacto.
-            </p>
-          )}
-
-          <div className="purchase-list" aria-label="Compras registradas">
-            {purchases.length === 0 ? (
-              <p className="empty-state">Todavía no hay compras en este período.</p>
+              </form>
             ) : (
-              purchases.map((purchase) => (
-                <article className="purchase-row" key={purchase.id}>
-                  <div>
-                    <p className="purchase-reference">
-                      {purchase.companyCode} · {purchase.externalName ?? `Cuenta ${purchase.referenceNumber}`}
-                    </p>
-                    <p className="purchase-meta">
-                      Compra {purchase.purchaseNumber} · {purchase.purchasedOn} ·{" "}
-                      {purchase.fundsOrigin}
-                    </p>
-                  </div>
-                  <div className="purchase-values">
-                    <strong>{formatMoney(purchase.priceCents)}</strong>
-                    <span className={`purchase-state purchase-state-${purchase.state}`}>
-                      {purchase.state === "virgin"
-                        ? "Cuenta virgen"
-                        : purchase.state === "live"
-                          ? "Cuenta viva"
-                          : "Cuenta cerrada"}
-                    </span>
-                  </div>
-                </article>
-              ))
+              <p className="accounting-exception-note">Este período es de consulta.</p>
             )}
-          </div>
+          </details>
 
           {process.env.NODE_ENV === "development" ? (
             <DevelopmentPeriodReset

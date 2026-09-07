@@ -692,28 +692,17 @@ export function DailyControlPreview({
       id="control-diario"
       aria-labelledby="daily-preview-title"
     >
-      <TradeTelemetryProbe />
       <div className="daily-preview-heading">
-        <div>
-          <p className="status">CONTROL DIARIO · DESARROLLO</p>
-          <h2 id="daily-preview-title">Preparar y revisar la operatoria</h2>
-        </div>
-        <span className="preview-badge">Guardado habilitado</span>
+        <h2 id="daily-preview-title">Control diario</h2>
       </div>
 
-      <p className="context-note">
-        El ingreso del saldo simula temporalmente el flujo futuro de NinjaTrader.
-        Los movimientos confirmados ya se guardan en la base de desarrollo.
-      </p>
+      <TradeTelemetryProbe />
 
       <div className={`operation-context-preview${pendingBalance ? " pending" : ""}`}>
         <div className="operation-context-heading">
-          <div>
-            <p className="status">CONFIGURACIÓN ACTIVA PARA LA PRÓXIMA OPERACIÓN</p>
-            <h3>Empresa, líder, réplicas y fase</h3>
-          </div>
+          <h3>Próxima operación</h3>
           {companyId && leaderId && (
-            <span className="active-context-badge">Configuración preparada</span>
+            <span className="active-context-badge">Preparada</span>
           )}
         </div>
 
@@ -841,10 +830,12 @@ export function DailyControlPreview({
         </strong>
       </div>
 
-      <form
-        className={`daily-preview-form${entryKind === "balance_update" ? "" : " with-origin"}`}
-        onSubmit={addPreviewEntry}
-      >
+      <details className="accounting-exception daily-movement-exception" open={balanceInCents === null ? true : undefined}>
+        <summary>{balanceInCents === null ? "Establecer saldo inicial" : "Registrar movimiento de saldo"}</summary>
+        <form
+          className={`daily-preview-form${entryKind === "balance_update" ? "" : " with-origin"}`}
+          onSubmit={addPreviewEntry}
+        >
         <div className="form-field">
           <label htmlFor="preview_entry_kind">Acción</label>
           <select
@@ -859,9 +850,11 @@ export function DailyControlPreview({
             <option disabled={balanceInCents === null} value="withdrawal">
               Retiro
             </option>
-            <option disabled={balanceInCents === null} value="balance_update">
-              Simular saldo de NinjaTrader
-            </option>
+            {process.env.NODE_ENV === "development" && (
+              <option disabled={balanceInCents === null} value="balance_update">
+                Simular saldo de NinjaTrader
+              </option>
+            )}
           </select>
         </div>
 
@@ -918,7 +911,8 @@ export function DailyControlPreview({
               ? "Revisar saldo recibido"
               : "Guardar movimiento"}
         </button>
-      </form>
+        </form>
+      </details>
 
       {error && (
         <p className="purchase-message error" role="alert">
