@@ -126,7 +126,7 @@ export function DeskPanel({ data }: { data: DeskPanelData }) {
     );
   }
   return (
-    <div className="desk-admin">
+    <div className="admin-page admin-shell desk-admin">
       <header className="desk-heading">
         <h1>{desk?.name ?? "Vista general"}</h1>
         <div>
