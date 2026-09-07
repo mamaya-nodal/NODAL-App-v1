@@ -1,5 +1,5 @@
 import { isNinjaTradeTelemetryBatch } from "@/modules/ninja/domain/trade-telemetry";
-import { authenticateNinjaConnector, bearerToken } from "@/modules/ninja/server/connector-auth";
+import { authenticateNinjaConnector, bearerToken, rememberNinjaConnectorVersion } from "@/modules/ninja/server/connector-auth";
 import { persistNinjaTradeTelemetry } from "@/modules/ninja/server/telemetry-persistence";
 import { createClient } from "@/lib/supabase/server";
 
@@ -47,7 +47,12 @@ export async function POST(request: Request) {
     return response({ error: "La telemetría no cumple el formato esperado." }, 422);
   }
 
-  const persistence = await persistNinjaTradeTelemetry(connector.connectorId, payload);
+  const [persistence] = await Promise.all([
+    persistNinjaTradeTelemetry(connector.connectorId, payload),
+    // La telemetría de operaciones nació con la versión 0.4. Esto también
+    // corrige instalaciones actualizadas antes de que el latido informara versión.
+    rememberNinjaConnectorVersion(connector.connectorId, "0.4"),
+  ]);
   return response({
     accepted: persistence.persisted,
     acceptedEvents: persistence.acceptedEvents,
