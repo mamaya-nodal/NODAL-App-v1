@@ -16,8 +16,6 @@ const navigation: ReadonlyArray<Readonly<{
   label: string;
 }>> = [
   { href: "/app/admin", icon: "summary", label: "Vista general" },
-  { href: "/app/admin/users", icon: "register", label: "Usuarios" },
-  { href: "/app/admin/ninja", icon: "activity", label: "Conectores Ninja" },
 ];
 
 function initials(label: string) {
@@ -26,9 +24,7 @@ function initials(label: string) {
 
 export function AdminWorkspace({ children, userLabel }: Props) {
   const pathname = usePathname();
-  const isActive = (href: string) => href === "/app/admin"
-    ? pathname === href || (!pathname.startsWith("/app/admin/users") && !pathname.startsWith("/app/admin/ninja") && /^\/app\/admin\/[^/]+$/.test(pathname))
-    : pathname.startsWith(href);
+  const isActive = (href: string) => pathname === href;
   const activeLabel = pathname.startsWith("/app/admin/users")
     ? "Usuarios"
     : pathname.startsWith("/app/admin/ninja")
