@@ -385,16 +385,16 @@ export const demoHomeDashboard: PersonalDashboardData = {
     managedDesk: { capitalNetInCents: managedDeskCapital, capacity: 10, users: augustDeskEconomy.managedUsers },
     referredDesks: { bonusBps: bonusBps(augustDeskEconomy.referredDesks), capacity: 10, desks: augustDeskEconomy.referredDesks },
   },
-  capitalNetInCents: augustDemo.summary.capitalNetInCents,
+  capitalNetInCents: augustDemo.summary.realizedGainInCents,
   earnings: augustDeskEconomy.earnings,
   history: [
     {
-      capitalNetInCents: julyDemo.summary.capitalNetInCents,
+      capitalNetInCents: julyDemo.summary.realizedGainInCents,
       earningsInCents: julyDeskEconomy.earnings.totalInCents,
       periodMonth: julyDemo.month,
     },
     {
-      capitalNetInCents: augustDemo.summary.capitalNetInCents,
+      capitalNetInCents: augustDemo.summary.realizedGainInCents,
       earningsInCents: augustDeskEconomy.earnings.totalInCents,
       periodMonth: augustDemo.month,
     },

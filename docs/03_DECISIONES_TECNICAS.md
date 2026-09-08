@@ -358,11 +358,11 @@ vigente sin aprobacion y evidencia suficiente.
   participación por administrar una mesa y su bonus por mesas directas
   referidas. Los dos últimos componentes sólo se muestran cuando están
   habilitados para esa persona. El nivel vigente aparece en la misma tarjeta.
-- **Capital neto total:** La simulación reutiliza `capitalNetInCents` del resumen
-  operativo. Se elimina el cálculo anterior que sumaba precios de compra de
-  cuentas cerradas: ese importe no era capital neto y producía una cifra falsa.
-  Una futura segmentación del capital por estado de cuenta requerirá una regla
-  contable explícita de asignación por cuenta; no se inventa en la interfaz.
+- **Capital neto total:** En el dashboard personal representa la sumatoria del
+  capital neto de las cuentas cerradas y coincide con la facturación realizada
+  del período. La simulación lo obtiene de `realizedGainInCents`: USD 10.500 en
+  julio y USD 12.000 en agosto. No debe confundirse con el capital aportado del
+  resumen contable ni con el precio de compra de las cuentas.
 - **Payouts:** Presenta cantidad registrada, importe total y cantidad pendiente
   como tres datos diferenciados.
 - **Capacidades:** Mesa administrada, mesas referidas e identidades son tarjetas

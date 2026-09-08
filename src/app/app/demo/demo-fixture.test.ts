@@ -74,10 +74,10 @@ describe("accounting demo fixture", () => {
       referredDesksInCents: 5_250,
       totalInCents: 710_250,
     });
-    expect(demoHomeDashboard.capitalNetInCents).toBe(1_000_000);
+    expect(demoHomeDashboard.capitalNetInCents).toBe(1_200_000);
     expect(demoHomeDashboard.history).toEqual([
-      { capitalNetInCents: 800_000, earningsInCents: 613_200, periodMonth: "2026-07-01" },
-      { capitalNetInCents: 1_000_000, earningsInCents: 710_250, periodMonth: "2026-08-01" },
+      { capitalNetInCents: 1_050_000, earningsInCents: 613_200, periodMonth: "2026-07-01" },
+      { capitalNetInCents: 1_200_000, earningsInCents: 710_250, periodMonth: "2026-08-01" },
     ]);
     expect(demoHomeDashboard.capabilities?.referredDesks).toMatchObject({ bonusBps: 1_500, desks: 2 });
     expect(demoHomeDashboard.capabilities?.managedDesk?.capitalNetInCents).toBe(600_000);
