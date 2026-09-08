@@ -1,15 +1,28 @@
+"use client";
+
+import { useState } from "react";
+
 import type {
   CapitalHistoryPoint,
   HomePerformance,
 } from "@/modules/summary/domain/home-dashboard";
+import {
+  buildPeriodEarnings,
+  payoutDashboardSummary,
+  type PersonalDashboardData,
+} from "@/modules/summary/domain/personal-dashboard";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
 
 type HomeOverviewProps = Readonly<{
   capitalHistory: CapitalHistoryPoint[];
+  dashboard?: PersonalDashboardData;
   performance: HomePerformance;
   periodLabel: string;
   summary: OperationalSummary;
 }>;
+
+type ChartMetric = "capital" | "earnings";
+type ChartPoint = Readonly<{ periodMonth: string; valueInCents: number }>;
 
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -33,14 +46,14 @@ function formatMonth(periodMonth: string) {
     .replace(".", "");
 }
 
-function chartGeometry(history: CapitalHistoryPoint[]) {
+function chartGeometry(history: ChartPoint[]) {
   const width = 720;
   const height = 250;
   const left = 18;
   const right = 18;
   const top = 20;
   const bottom = 34;
-  const values = history.map((point) => point.capitalInCents);
+  const values = history.map((point) => point.valueInCents);
   const minimum = values.length ? Math.min(...values, 0) : 0;
   const maximum = values.length ? Math.max(...values, 0) : 1;
   const span = Math.max(maximum - minimum, 1);
@@ -48,7 +61,7 @@ function chartGeometry(history: CapitalHistoryPoint[]) {
     ? width / 2
     : left + (index / (history.length - 1)) * (width - left - right);
   const y = (value: number) => top + ((maximum - value) / span) * (height - top - bottom);
-  const points = history.map((point, index) => ({ ...point, x: x(index), y: y(point.capitalInCents) }));
+  const points = history.map((point, index) => ({ ...point, x: x(index), y: y(point.valueInCents) }));
   const line = points
     .map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
     .join(" ");
@@ -60,42 +73,116 @@ function chartGeometry(history: CapitalHistoryPoint[]) {
   return { area, baseline, line, points };
 }
 
-export function HomeOverview({ capitalHistory, performance, periodLabel, summary }: HomeOverviewProps) {
-  const chart = chartGeometry(capitalHistory);
-  const payoutCount = summary.fundingWithdrawals.length;
+function EarningsItem({ label, valueInCents }: Readonly<{ label: string; valueInCents: number }>) {
+  return <div><span>{label}</span><strong>{formatMoney(valueInCents)}</strong></div>;
+}
+
+export function HomeOverview({ capitalHistory, dashboard, performance, periodLabel, summary }: HomeOverviewProps) {
+  const [chartMetric, setChartMetric] = useState<ChartMetric>(dashboard ? "earnings" : "capital");
+  const earnings = dashboard?.earnings ?? buildPeriodEarnings({ ownOperationsInCents: summary.traderGainInCents });
+  const closedCapitalInCents = dashboard?.closedCapitalInCents ?? summary.capitalNetInCents;
+  const payout = payoutDashboardSummary(summary.fundingWithdrawals);
+  const history = dashboard?.history ?? [];
+  const chartHistory = dashboard
+    ? history.map((point) => ({
+        periodMonth: point.periodMonth,
+        valueInCents: chartMetric === "earnings" ? point.earningsInCents : point.closedCapitalInCents,
+      }))
+    : capitalHistory.map((point) => ({ periodMonth: point.periodMonth, valueInCents: point.capitalInCents }));
+  const chart = chartGeometry(chartHistory);
+  const chartTitle = dashboard
+    ? chartMetric === "earnings" ? "Ganancias por período" : "Capital neto por período"
+    : "Capital histórico acumulado";
+  const capabilities = dashboard?.capabilities;
+  const hasCapabilities = Boolean(capabilities?.managedDesk || capabilities?.referredDesks || capabilities?.identities);
 
   return (
     <section aria-label="Inicio" className="home-overview-panel" id="inicio">
       <div className="home-financial-grid">
-        <article className="home-net-result">
-          <span>Resultado neto</span>
-          <strong className={summary.realizedGainInCents < 0 ? "negative" : undefined}>
-            {formatMoney(summary.realizedGainInCents)}
-          </strong>
-          <small>{periodLabel}</small>
+        <article className={`home-net-result${dashboard ? "" : " legacy"}`}>
+          {dashboard ? <>
+            <div className="home-earnings-topline">
+              <small>{periodLabel}</small>
+              {earnings.level !== null && <b>Nivel {earnings.level}</b>}
+            </div>
+            <span>Ganancias del período</span>
+            <strong className={earnings.totalInCents < 0 ? "negative" : undefined}>
+              {formatMoney(earnings.totalInCents)}
+            </strong>
+            <div className="home-earnings-breakdown">
+              <EarningsItem label="Operaciones propias" valueInCents={earnings.ownOperationsInCents} />
+              {earnings.deskAdministrationInCents !== null && (
+                <EarningsItem label="Administración de mesa" valueInCents={earnings.deskAdministrationInCents} />
+              )}
+              {earnings.referredDesksInCents !== null && (
+                <EarningsItem label="Mesas referidas" valueInCents={earnings.referredDesksInCents} />
+              )}
+            </div>
+          </> : <>
+            <span>Resultado neto</span>
+            <strong className={summary.realizedGainInCents < 0 ? "negative" : undefined}>{formatMoney(summary.realizedGainInCents)}</strong>
+            <small>{periodLabel}</small>
+          </>}
         </article>
 
         <article className="home-financial-metric">
           <span>Capital neto total</span>
-          <strong>{formatMoney(summary.capitalNetInCents)}</strong>
-          <small>{periodLabel}</small>
+          <strong>{formatMoney(dashboard ? closedCapitalInCents : summary.capitalNetInCents)}</strong>
+          <small>{dashboard ? "Cuentas cerradas" : periodLabel}</small>
         </article>
 
-        <article className="home-financial-metric">
+        <article className="home-financial-metric home-payout-metric">
           <span>Payouts</span>
-          <strong>{payoutCount}</strong>
-          <small>{summary.fundingPendingInCents > 0 ? "Con cobros pendientes" : periodLabel}</small>
+          <strong>{payout.count} {dashboard && <b>({formatMoney(payout.totalInCents)})</b>}</strong>
+          <small>{payout.pendingCount > 0
+            ? `${payout.pendingCount} ${payout.pendingCount === 1 ? "payout pendiente" : "payouts pendientes"}`
+            : dashboard ? "Sin payouts pendientes" : periodLabel}</small>
         </article>
       </div>
 
+      {hasCapabilities && (
+        <div className="home-capability-grid">
+          {capabilities?.managedDesk && (
+            <article>
+              <span>Mesa administrada</span>
+              <strong>{capabilities.managedDesk.users} / {capabilities.managedDesk.capacity}</strong>
+              <small>Capital neto total</small>
+              <b>{formatMoney(capabilities.managedDesk.capitalNetInCents)}</b>
+            </article>
+          )}
+          {capabilities?.referredDesks && (
+            <article>
+              <span>Mesas referidas</span>
+              <strong>{capabilities.referredDesks.desks} / {capabilities.referredDesks.capacity}</strong>
+              <small>Bonus vigente</small>
+              <b>{capabilities.referredDesks.bonusBps / 100}%</b>
+            </article>
+          )}
+          {capabilities?.identities && (
+            <article>
+              <span>Identidades activas</span>
+              <strong>{capabilities.identities.active} / {capabilities.identities.capacity}</strong>
+              <small>Payouts total identidades</small>
+              <b>{formatMoney(capabilities.identities.payoutTotalInCents)}</b>
+            </article>
+          )}
+        </div>
+      )}
+
       <article className="home-capital-chart">
         <div className="home-chart-heading">
-          <h2>Capital histórico acumulado</h2>
-          {capitalHistory.length > 0 && <strong>{formatMoney(capitalHistory.at(-1)!.capitalInCents)}</strong>}
+          <h2>{chartTitle}</h2>
+          <div className="home-chart-actions">
+            {dashboard && <div aria-label="Métrica del gráfico" className="home-chart-switch">
+              <button aria-pressed={chartMetric === "earnings"} onClick={() => setChartMetric("earnings")} type="button">Ganancias</button>
+              <button aria-pressed={chartMetric === "capital"} onClick={() => setChartMetric("capital")} type="button">Capital</button>
+            </div>}
+            {chartHistory.length > 0 && <strong>{formatMoney(chartHistory.at(-1)!.valueInCents)}</strong>}
+          </div>
         </div>
 
-        {capitalHistory.length > 0 ? (
-          <svg viewBox="0 0 720 250" role="img" aria-label="Capital neto acumulado mes a mes">
+        {chartHistory.length > 0 ? (
+          <svg viewBox="0 0 720 250" role="img" aria-label={`${chartTitle} mes a mes`}>
             <defs>
               <linearGradient id="home-capital-fill" x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
@@ -107,7 +194,9 @@ export function HomeOverview({ capitalHistory, performance, periodLabel, summary
             <path className="home-chart-line" d={chart.line} />
             {chart.points.map((point, index) => (
               <g key={point.periodMonth}>
-                <circle cx={point.x} cy={point.y} r={index === chart.points.length - 1 ? 5 : 3.5} />
+                <circle cx={point.x} cy={point.y} r={index === chart.points.length - 1 ? 5 : 3.5} tabIndex={0}>
+                  <title>{`${formatMonth(point.periodMonth)}: ${formatMoney(point.valueInCents)}`}</title>
+                </circle>
                 <text x={point.x} y="241" textAnchor="middle">{formatMonth(point.periodMonth)}</text>
               </g>
             ))}

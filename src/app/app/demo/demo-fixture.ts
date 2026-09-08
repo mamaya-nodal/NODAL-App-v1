@@ -3,6 +3,20 @@ import type { OperationRegisterEntry } from "@/modules/operations/domain/operati
 import { buildCapitalHistory, buildHomePerformance, type CapitalHistoryPoint, type HomePerformance } from "@/modules/summary/domain/home-dashboard";
 import { applyIndividualCommission } from "@/modules/summary/domain/individual-commission";
 import {
+  bonusBps,
+  calculateDeskOverview,
+  ROOT_DESK,
+  type Desk,
+  type DeskTerms,
+  type Person,
+  type UserTerms,
+} from "@/modules/admin/domain/desks";
+import {
+  buildPeriodEarnings,
+  closedAccountCapital,
+  type PersonalDashboardData,
+} from "@/modules/summary/domain/personal-dashboard";
+import {
   buildOperationalSummary,
   type FundingWithdrawal,
   type OperationalSummary,
@@ -298,6 +312,93 @@ export const augustDemo = buildPeriod({
 
 export const demoPeriods = [julyDemo, augustDemo] as const;
 export const demoAccounts = [...julyDemo.accounts, ...augustDemo.accounts];
+
+const demoUserId = "demo-user";
+const managedDeskId = "demo-managed-desk";
+const firstChildDeskId = "demo-child-desk-1";
+const secondChildDeskId = "demo-child-desk-2";
+const demoDesks: Desk[] = [
+  { created_at: "2026-01-01", id: ROOT_DESK, name: "Mesa principal NODAL", parent_id: null },
+  { created_at: "2026-01-02", id: managedDeskId, name: "Mesa Demo", parent_id: ROOT_DESK },
+  { created_at: "2026-01-03", id: firstChildDeskId, name: "Mesa referida 1", parent_id: managedDeskId },
+  { created_at: "2026-01-04", id: secondChildDeskId, name: "Mesa referida 2", parent_id: managedDeskId },
+];
+
+function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childGrossInCents: number) {
+  const people: Person[] = [
+    { access: "active", email: "demo@nodal.test", gross: period.summary.realizedGainInCents, id: demoUserId, legacyCommission: period.summary.commissionInCents, master: false, name: "Usuario Demo" },
+    ...Array.from({ length: 3 }, (_, index) => ({
+      access: "active",
+      email: `member-${index + 1}@nodal.test`,
+      gross: memberGrossInCents,
+      id: `managed-member-${index + 1}`,
+      legacyCommission: Math.round(memberGrossInCents / 2),
+      master: false,
+      name: `Integrante ${index + 1}`,
+    })),
+    { access: "active", email: "child-one@nodal.test", gross: childGrossInCents, id: "child-member-1", legacyCommission: Math.round(childGrossInCents / 2), master: false, name: "Integrante referida 1" },
+    { access: "active", email: "child-two@nodal.test", gross: childGrossInCents, id: "child-member-2", legacyCommission: Math.round(childGrossInCents / 2), master: false, name: "Integrante referida 2" },
+  ];
+  const effectiveMonth = "2026-01-01";
+  const userTerms: UserTerms[] = people.map((person) => ({
+    bonus_enabled: person.id === demoUserId,
+    commission_bps: 5_000,
+    desk_id: person.id === demoUserId
+      ? ROOT_DESK
+      : person.id === "child-member-1"
+        ? firstChildDeskId
+        : person.id === "child-member-2"
+          ? secondChildDeskId
+          : managedDeskId,
+    effective_month: effectiveMonth,
+    level: person.id === demoUserId ? 2 : 1,
+    state: "active",
+    user_id: person.id,
+  }));
+  const deskTerms: DeskTerms[] = [
+    { active: true, desk_id: ROOT_DESK, effective_month: effectiveMonth, manager_id: null, nodal_bps: 10_000 },
+    { active: true, desk_id: managedDeskId, effective_month: effectiveMonth, manager_id: demoUserId, nodal_bps: 3_000 },
+    { active: true, desk_id: firstChildDeskId, effective_month: effectiveMonth, manager_id: null, nodal_bps: 3_500 },
+    { active: true, desk_id: secondChildDeskId, effective_month: effectiveMonth, manager_id: null, nodal_bps: 3_500 },
+  ];
+  const overview = calculateDeskOverview(demoDesks, deskTerms, people, userTerms, period.month);
+  const user = overview.people.find((person) => person.id === demoUserId)!;
+  return {
+    earnings: buildPeriodEarnings({
+      deskAdministrationInCents: user.mesaIncome,
+      level: user.terms?.level ?? null,
+      ownOperationsInCents: user.ownIncome,
+      referredDesksInCents: user.bonus,
+    }),
+    managedUsers: overview.desks.find((desk) => desk.id === managedDeskId)?.members.length ?? 0,
+    referredDesks: overview.desks.find((desk) => desk.id === managedDeskId)?.children.length ?? 0,
+  };
+}
+
+const julyDeskEconomy = demoDeskEconomy(julyDemo, 100_000, 500_000);
+const augustDeskEconomy = demoDeskEconomy(augustDemo, 200_000, 1_000_000);
+
+export const demoHomeDashboard: PersonalDashboardData = {
+  capabilities: {
+    identities: { active: 6, capacity: 20, payoutTotalInCents: 2_500_000 },
+    managedDesk: { capitalNetInCents: 250_000, capacity: 10, users: augustDeskEconomy.managedUsers },
+    referredDesks: { bonusBps: bonusBps(augustDeskEconomy.referredDesks), capacity: 10, desks: augustDeskEconomy.referredDesks },
+  },
+  closedCapitalInCents: closedAccountCapital(augustDemo.accounts),
+  earnings: augustDeskEconomy.earnings,
+  history: [
+    {
+      closedCapitalInCents: closedAccountCapital(julyDemo.accounts),
+      earningsInCents: julyDeskEconomy.earnings.totalInCents,
+      periodMonth: julyDemo.month,
+    },
+    {
+      closedCapitalInCents: closedAccountCapital(augustDemo.accounts),
+      earningsInCents: augustDeskEconomy.earnings.totalInCents,
+      periodMonth: augustDemo.month,
+    },
+  ],
+};
 
 export const currentDemoOperation = {
   accountId: augustAccounts.find((account) => account.state === "live")?.id ?? augustAccounts[0].id,

@@ -349,3 +349,28 @@ vigente sin aprobacion y evidencia suficiente.
 - **Límite:** La simulación muestra una sola billetera porque varias billeteras
   todavía no forman parte del modelo real. Agregar una división ficticia habría
   ocultado ese pendiente en vez de ayudar a detectarlo.
+
+### APP-084 - Dashboard personal de ingresos y capacidades
+
+- **Estado:** Implementado el 2026-09-08 en la simulación para validación visual.
+- **Ganancias del período:** Reemplaza `Resultado neto`. Es la suma de la
+  participación del usuario en su operativa propia después de comisión, su
+  participación por administrar una mesa y su bonus por mesas directas
+  referidas. Los dos últimos componentes sólo se muestran cuando están
+  habilitados para esa persona. El nivel vigente aparece en la misma tarjeta.
+- **Capital neto total:** En el dashboard se limita al capital propio asociado a
+  cuentas cerradas. Excluye cuentas vivas, cuentas vírgenes y compras pagadas
+  con saldo generado. Este indicador no reemplaza el capital usado por las
+  conciliaciones contables.
+- **Payouts:** Presenta cantidad registrada, importe total y cantidad pendiente
+  como tres datos diferenciados.
+- **Capacidades:** Mesa administrada, mesas referidas e identidades son tarjetas
+  opcionales e independientes. La simulación habilita las tres para revisar su
+  convivencia; la aplicación real deberá recibir permisos y agregados desde el
+  servidor y no inferirlos desde el rol visible.
+- **Histórico:** El gráfico permite alternar, sin cambiar de página, entre
+  ganancias totales por período y capital neto de cuentas cerradas por período.
+  Cada punto expone mes e importe al enfocarlo o apoyar el cursor.
+- **Alcance:** Sustituye para Inicio la presentación aprobada en APP-075. Las
+  métricas contables originales siguen disponibles en Contabilidad y conservan
+  sus reglas de conciliación.

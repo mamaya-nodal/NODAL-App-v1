@@ -5,6 +5,7 @@ import {
   calculatedAccountResult,
   demoAccounts,
   demoCapitalHistory,
+  demoHomeDashboard,
   julyDemo,
 } from "./demo-fixture";
 
@@ -63,5 +64,21 @@ describe("accounting demo fixture", () => {
       { capitalInCents: 426_200, periodMonth: "2026-07-01" },
       { capitalInCents: 924_200, periodMonth: "2026-08-01" },
     ]);
+  });
+
+  it("builds the dashboard income from own operations, desk administration and direct referrals", () => {
+    expect(demoHomeDashboard.earnings).toEqual({
+      deskAdministrationInCents: 210_000,
+      level: 2,
+      ownOperationsInCents: 427_450,
+      referredDesksInCents: 52_500,
+      totalInCents: 689_950,
+    });
+    expect(demoHomeDashboard.closedCapitalInCents).toBe(168_320);
+    expect(demoHomeDashboard.history).toEqual([
+      { closedCapitalInCents: 189_360, earningsInCents: 294_450, periodMonth: "2026-07-01" },
+      { closedCapitalInCents: 168_320, earningsInCents: 689_950, periodMonth: "2026-08-01" },
+    ]);
+    expect(demoHomeDashboard.capabilities?.referredDesks).toMatchObject({ bonusBps: 1_500, desks: 2 });
   });
 });

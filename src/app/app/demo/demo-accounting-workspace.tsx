@@ -10,6 +10,7 @@ import {
   currentDemoOperation,
   demoAccounts,
   demoCapitalHistory,
+  demoHomeDashboard,
   demoPeriods,
   julyDemo,
   type DemoAccount,
@@ -357,6 +358,7 @@ export function DemoAccountingWorkspace() {
     <>
       <HomeOverview
         capitalHistory={demoCapitalHistory}
+        dashboard={demoHomeDashboard}
         performance={augustDemo.performance}
         periodLabel={augustDemo.label}
         summary={augustDemo.summary}
