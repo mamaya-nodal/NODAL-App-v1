@@ -68,19 +68,19 @@ describe("accounting demo fixture", () => {
 
   it("builds the dashboard income from own operations, desk administration and direct referrals", () => {
     expect(demoHomeDashboard.earnings).toEqual({
-      deskAdministrationInCents: 105_000,
+      deskAdministrationInCents: 1_050_000,
       level: 2,
       ownOperationsInCents: 600_000,
-      referredDesksInCents: 5_250,
-      totalInCents: 710_250,
+      referredDesksInCents: 157_500,
+      totalInCents: 1_807_500,
     });
     expect(demoHomeDashboard.capitalNetInCents).toBe(1_200_000);
     expect(demoHomeDashboard.history).toEqual([
-      { capitalNetInCents: 1_050_000, earningsInCents: 613_200, periodMonth: "2026-07-01" },
-      { capitalNetInCents: 1_200_000, earningsInCents: 710_250, periodMonth: "2026-08-01" },
+      { capitalNetInCents: 1_050_000, earningsInCents: 1_491_000, periodMonth: "2026-07-01" },
+      { capitalNetInCents: 1_200_000, earningsInCents: 1_807_500, periodMonth: "2026-08-01" },
     ]);
     expect(demoHomeDashboard.capabilities?.referredDesks).toMatchObject({ bonusBps: 1_500, desks: 2 });
-    expect(demoHomeDashboard.capabilities?.managedDesk?.capitalNetInCents).toBe(600_000);
-    expect(demoHomeDashboard.capabilities?.identities?.payoutTotalInCents).toBe(600_000);
+    expect(demoHomeDashboard.capabilities?.managedDesk?.capitalNetInCents).toBe(3_000_000);
+    expect(demoHomeDashboard.capabilities?.identities?.payoutTotalInCents).toBe(2_500_000);
   });
 });

@@ -372,6 +372,15 @@ vigente sin aprobacion y evidencia suficiente.
 - **Histórico:** El gráfico permite alternar, sin cambiar de página, entre
   ganancias totales por período y capital neto de cuentas cerradas por período.
   Cada punto expone mes e importe al enfocarlo o apoyar el cursor.
+- **Escenario económico de validación:** En agosto el usuario factura USD
+  12.000 y conserva USD 6.000 tras su comisión individual del 50%. Su mesa
+  directa tiene tres usuarios que facturan USD 10.000 cada uno: generan USD
+  15.000 de comisión y el administrador recibe el 70%, USD 10.500. Existen dos
+  mesas hijas directas con tres usuarios de USD 10.000 cada una. Cada mesa hija
+  genera USD 15.000 de comisión; el 35% son USD 5.250 y el bonus del 15% paga
+  USD 787,50 por mesa, USD 1.575 en total. La ganancia total del período es USD
+  18.075. Los administradores de las mesas hijas permanecen como usuarios de la
+  mesa de origen.
 - **Alcance:** Sustituye para Inicio la presentación aprobada en APP-075. Las
   métricas contables originales siguen disponibles en Contabilidad y conservan
   sus reglas de conciliación.

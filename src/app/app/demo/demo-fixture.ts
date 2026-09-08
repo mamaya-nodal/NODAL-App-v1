@@ -323,20 +323,31 @@ const demoDesks: Desk[] = [
   { created_at: "2026-01-04", id: secondChildDeskId, name: "Mesa referida 2", parent_id: managedDeskId },
 ];
 
-function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childGrossInCents: number) {
+function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childMemberGrossInCents: number) {
+  const managedMembers: Person[] = Array.from({ length: 3 }, (_, index) => ({
+    access: "active",
+    email: `member-${index + 1}@nodal.test`,
+    gross: memberGrossInCents,
+    id: `managed-member-${index + 1}`,
+    legacyCommission: Math.round(memberGrossInCents / 2),
+    master: false,
+    name: `Integrante ${index + 1}`,
+  }));
+  const childMembers: Person[] = [firstChildDeskId, secondChildDeskId].flatMap((deskId, deskIndex) =>
+    Array.from({ length: 3 }, (_, memberIndex) => ({
+      access: "active",
+      email: `child-${deskIndex + 1}-member-${memberIndex + 1}@nodal.test`,
+      gross: childMemberGrossInCents,
+      id: `${deskId}-member-${memberIndex + 1}`,
+      legacyCommission: Math.round(childMemberGrossInCents / 2),
+      master: false,
+      name: `Integrante referida ${deskIndex + 1}.${memberIndex + 1}`,
+    })),
+  );
   const people: Person[] = [
     { access: "active", email: "demo@nodal.test", gross: period.summary.realizedGainInCents, id: demoUserId, legacyCommission: period.summary.commissionInCents, master: false, name: "Usuario Demo" },
-    ...Array.from({ length: 3 }, (_, index) => ({
-      access: "active",
-      email: `member-${index + 1}@nodal.test`,
-      gross: memberGrossInCents,
-      id: `managed-member-${index + 1}`,
-      legacyCommission: Math.round(memberGrossInCents / 2),
-      master: false,
-      name: `Integrante ${index + 1}`,
-    })),
-    { access: "active", email: "child-one@nodal.test", gross: childGrossInCents, id: "child-member-1", legacyCommission: Math.round(childGrossInCents / 2), master: false, name: "Integrante referida 1" },
-    { access: "active", email: "child-two@nodal.test", gross: childGrossInCents, id: "child-member-2", legacyCommission: Math.round(childGrossInCents / 2), master: false, name: "Integrante referida 2" },
+    ...managedMembers,
+    ...childMembers,
   ];
   const effectiveMonth = "2026-01-01";
   const userTerms: UserTerms[] = people.map((person) => ({
@@ -344,9 +355,9 @@ function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childGr
     commission_bps: 5_000,
     desk_id: person.id === demoUserId
       ? ROOT_DESK
-      : person.id === "child-member-1"
+      : person.id.startsWith(`${firstChildDeskId}-member-`)
         ? firstChildDeskId
-        : person.id === "child-member-2"
+        : person.id.startsWith(`${secondChildDeskId}-member-`)
           ? secondChildDeskId
           : managedDeskId,
     effective_month: effectiveMonth,
@@ -357,11 +368,12 @@ function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childGr
   const deskTerms: DeskTerms[] = [
     { active: true, desk_id: ROOT_DESK, effective_month: effectiveMonth, manager_id: null, nodal_bps: 10_000 },
     { active: true, desk_id: managedDeskId, effective_month: effectiveMonth, manager_id: demoUserId, nodal_bps: 3_000 },
-    { active: true, desk_id: firstChildDeskId, effective_month: effectiveMonth, manager_id: null, nodal_bps: 3_500 },
-    { active: true, desk_id: secondChildDeskId, effective_month: effectiveMonth, manager_id: null, nodal_bps: 3_500 },
+    { active: true, desk_id: firstChildDeskId, effective_month: effectiveMonth, manager_id: "managed-member-1", nodal_bps: 3_500 },
+    { active: true, desk_id: secondChildDeskId, effective_month: effectiveMonth, manager_id: "managed-member-2", nodal_bps: 3_500 },
   ];
   const overview = calculateDeskOverview(demoDesks, deskTerms, people, userTerms, period.month);
   const user = overview.people.find((person) => person.id === demoUserId)!;
+  const managedDesk = overview.desks.find((desk) => desk.id === managedDeskId);
   return {
     earnings: buildPeriodEarnings({
       deskAdministrationInCents: user.mesaIncome,
@@ -369,20 +381,20 @@ function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childGr
       ownOperationsInCents: user.ownIncome,
       referredDesksInCents: user.bonus,
     }),
-    managedUsers: overview.desks.find((desk) => desk.id === managedDeskId)?.members.length ?? 0,
-    referredDesks: overview.desks.find((desk) => desk.id === managedDeskId)?.children.length ?? 0,
+    managedCapitalInCents: managedDesk?.gross ?? 0,
+    managedUsers: managedDesk?.members.length ?? 0,
+    referredDesks: managedDesk?.children.length ?? 0,
   };
 }
 
-const julyDeskEconomy = demoDeskEconomy(julyDemo, 80_000, 80_000);
-const augustDeskEconomy = demoDeskEconomy(augustDemo, 100_000, 100_000);
-const managedDeskCapital = [200_000, 180_000, 220_000].reduce((total, amount) => total + amount, 0);
-const identityPayouts = [80_000, 120_000, 90_000, 110_000, 70_000, 130_000];
+const julyDeskEconomy = demoDeskEconomy(julyDemo, 800_000, 800_000);
+const augustDeskEconomy = demoDeskEconomy(augustDemo, 1_000_000, 1_000_000);
+const identityPayouts = [350_000, 420_000, 380_000, 460_000, 390_000, 500_000];
 
 export const demoHomeDashboard: PersonalDashboardData = {
   capabilities: {
     identities: { active: identityPayouts.length, capacity: 20, payoutTotalInCents: identityPayouts.reduce((total, amount) => total + amount, 0) },
-    managedDesk: { capitalNetInCents: managedDeskCapital, capacity: 10, users: augustDeskEconomy.managedUsers },
+    managedDesk: { capitalNetInCents: augustDeskEconomy.managedCapitalInCents, capacity: 10, users: augustDeskEconomy.managedUsers },
     referredDesks: { bonusBps: bonusBps(augustDeskEconomy.referredDesks), capacity: 10, desks: augustDeskEconomy.referredDesks },
   },
   capitalNetInCents: augustDemo.summary.realizedGainInCents,
