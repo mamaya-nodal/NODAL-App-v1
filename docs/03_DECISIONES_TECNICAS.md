@@ -326,3 +326,26 @@ vigente sin aprobacion y evidencia suficiente.
 - **Límite:** Esta simulación sirve para evaluar experiencia y densidad. No
   reemplaza todavía las vistas reales de Cuentas u Operaciones ni modifica reglas
   contables; ese reemplazo requiere aprobación visual del escenario.
+
+### APP-083 - Simulación contable calculada con el dominio real
+
+- **Estado:** Implementada el 2026-09-08.
+- **Corrección:** Se eliminan los totales económicos independientes escritos a
+  mano en `/app/demo`. Cuentas, controles, entradas del registro, retiros,
+  saldos, capital, conciliaciones, facturación y comisiones nacen de un único
+  escenario ficticio y se procesan con los servicios de dominio vigentes.
+- **Comisión:** El usuario simulado tiene un acuerdo individual explícito del
+  50%. Por lo tanto, una facturación de USD 8.549 produce USD 4.274,50 de
+  comisión y USD 4.274,50 de ganancia para el usuario. No se aplican escalas ni
+  topes heredados porque el acuerdo individual los reemplaza.
+- **Nombres:** `Facturación` identifica la ganancia realizada de cuentas
+  cerradas y la base de comisión. `Resultado del período` conserva el resultado
+  económico del período. Se muestran por separado porque compras, retiros,
+  cuentas abiertas y cuentas vírgenes pueden hacer que difieran.
+- **Verificación:** La prueba del escenario exige conciliación sin diferencias,
+  comisión y ganancia correctas, resultados de cada cuenta derivados del
+  registro, 43 cuentas, 79 operaciones y continuidad del capital entre los dos
+  períodos.
+- **Límite:** La simulación muestra una sola billetera porque varias billeteras
+  todavía no forman parte del modelo real. Agregar una división ficticia habría
+  ocultado ese pendiente en vez de ayudar a detectarlo.

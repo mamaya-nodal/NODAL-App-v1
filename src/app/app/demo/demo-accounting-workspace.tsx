@@ -3,79 +3,62 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
-
 import { HomeOverview } from "../home-overview";
+import {
+  augustDemo,
+  calculatedAccountResult,
+  currentDemoOperation,
+  demoAccounts,
+  demoCapitalHistory,
+  demoPeriods,
+  julyDemo,
+  type DemoAccount,
+  type DemoAccountStage,
+  type DemoControl,
+  type DemoPeriod,
+} from "./demo-fixture";
 
-type AccountStage = "Evaluation" | "Funded" | "Live";
-type AccountState = "active" | "closed" | "virgin";
-type AccountFilter = "all" | AccountState | Lowercase<AccountStage>;
+type AccountFilter = "active" | "all" | "closed" | "evaluation" | "funded" | "live-stage" | "virgin";
 
-type DemoAccount = Readonly<{
-  company: "Lucid" | "Tradeify";
-  externalId: string;
-  openedOn: string;
-  period: "Agosto 2026" | "Julio 2026";
-  resultInCents: number;
-  stage: AccountStage;
-  state: AccountState;
-  trades: number;
-}>;
+const money = (cents: number | null) => cents === null
+  ? "—"
+  : new Intl.NumberFormat("es-AR", {
+      currency: "USD",
+      maximumFractionDigits: 0,
+      style: "currency",
+    }).format(cents / 100);
 
-const stageSequence: AccountStage[] = [
-  "Evaluation", "Evaluation", "Funded", "Evaluation", "Live", "Funded",
-];
+const signedMoney = (cents: number) => `${cents > 0 ? "+" : ""}${money(cents)}`;
 
-const accounts: DemoAccount[] = Array.from({ length: 43 }, (_, index) => {
-  const number = index + 1;
-  const state: AccountState = number <= 34 ? "closed" : number === 43 ? "virgin" : "active";
-  const company = number <= 28 ? "Lucid" : "Tradeify";
-  const prefix = company === "Lucid" ? "LFE" : "TFY";
-  const previousPeriod = number <= 18;
-  return {
-    company,
-    externalId: `${prefix}${String(5088201070000 + number).padStart(13, "0")}`,
-    openedOn: previousPeriod
-      ? `${String(3 + (number % 21)).padStart(2, "0")}/07/2026`
-      : `${String(2 + (number % 24)).padStart(2, "0")}/08/2026`,
-    period: previousPeriod ? "Julio 2026" : "Agosto 2026",
-    resultInCents: state === "virgin" ? 0 : ((number * 731) % 154000) - 51000,
-    stage: state === "virgin" ? "Evaluation" : stageSequence[index % stageSequence.length],
-    state,
-    trades: state === "virgin" ? 0 : 1 + (number % 6),
-  };
-});
+function operationControls(period: DemoPeriod) {
+  return period.controls.filter((control): control is DemoControl & { operatingResultInCents: number } => (
+    control.operatingResultInCents !== null
+  ));
+}
 
-const demoSummary: OperationalSummary = {
-  accountStates: { closed: 34, live: 8, virgin: 1 },
-  brokerBalanceInCents: 445072,
-  capitalNetInCents: 498000,
-  commissionInCents: 224063,
-  commissionRateLabel: "50%",
-  floatingInCents: 184879,
-  fundingCollectedInCents: 180000,
-  fundingPendingInCents: 0,
-  fundingWithdrawals: [
-    { accountId: "demo-1", amountInCents: 180000, approvedOn: "2026-08-22", collectedOn: "2026-08-25", id: "demo-withdrawal" },
-  ],
-  manualAccountStateCount: 0,
-  periodResultInCents: 854916,
-  positionDifferenceInCents: 3582,
-  positionExpectedInCents: 509952,
-  positionObservableInCents: 513534,
-  realizedGainInCents: 448126,
-  realizedReconciliationDifferenceInCents: 0,
-  traderGainInCents: 224063,
-  virginPriceInCents: 10520,
-  walletBalanceInCents: 180000,
-  walletMovements: [],
-};
+function operatingTotal(period: DemoPeriod) {
+  return operationControls(period).reduce((total, control) => total + control.operatingResultInCents, 0);
+}
 
-const money = (cents: number) => new Intl.NumberFormat("es-AR", {
-  currency: "USD",
-  maximumFractionDigits: 0,
-  style: "currency",
-}).format(cents / 100);
+function dayLabel(date: string) {
+  return new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", timeZone: "UTC" })
+    .format(new Date(`${date}T12:00:00Z`))
+    .replace(".", "");
+}
+
+function groupedDays(period: DemoPeriod) {
+  const days = new Map<string, Array<DemoControl & { operatingResultInCents: number }>>();
+  for (const control of operationControls(period)) {
+    days.set(control.operatedOn, [...(days.get(control.operatedOn) ?? []), control]);
+  }
+  return [...days.entries()]
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([date, controls]) => ({
+      controls,
+      date,
+      resultInCents: controls.reduce((total, control) => total + control.operatingResultInCents, 0),
+    }));
+}
 
 function DemoHeading({ title }: Readonly<{ title: string }>) {
   return (
@@ -89,11 +72,14 @@ function DemoHeading({ title }: Readonly<{ title: string }>) {
   );
 }
 
-function StageBadge({ stage }: Readonly<{ stage: AccountStage }>) {
+function StageBadge({ stage }: Readonly<{ stage: DemoAccountStage }>) {
   return <span className={`demo-stage ${stage.toLowerCase()}`}>{stage}</span>;
 }
 
 function AccountCard({ account, initiallyOpen = false }: Readonly<{ account: DemoAccount; initiallyOpen?: boolean }>) {
+  const period = account.periodLabel === augustDemo.label ? augustDemo : julyDemo;
+  const resultInCents = account.state === "virgin" ? 0 : calculatedAccountResult(account, period);
+
   return (
     <details className="demo-account-card" open={initiallyOpen}>
       <summary>
@@ -102,17 +88,17 @@ function AccountCard({ account, initiallyOpen = false }: Readonly<{ account: Dem
           <small>{account.externalId}</small>
         </span>
         <StageBadge stage={account.stage} />
-        <span className={`demo-account-result ${account.resultInCents < 0 ? "negative" : ""}`}>
-          {account.state === "virgin" ? "Sin operar" : money(account.resultInCents)}
+        <span className={`demo-account-result ${resultInCents < 0 ? "negative" : ""}`}>
+          {account.state === "virgin" ? "Sin operar" : money(resultInCents)}
         </span>
         <i aria-hidden="true" />
       </summary>
       <div className="demo-account-detail">
         <div><span>Estado</span><strong>{account.state === "closed" ? "Cerrada" : account.state === "virgin" ? "Virgen" : "Activa"}</strong></div>
-        <div><span>Período</span><strong>{account.period}</strong></div>
+        <div><span>Período</span><strong>{account.periodLabel}</strong></div>
         <div><span>Inicio</span><strong>{account.openedOn}</strong></div>
         <div><span>Trades</span><strong>{account.trades}</strong></div>
-        <div><span>Resultado</span><strong>{account.state === "virgin" ? "—" : money(account.resultInCents)}</strong></div>
+        <div><span>Resultado</span><strong>{account.state === "virgin" ? "—" : money(resultInCents)}</strong></div>
       </div>
     </details>
   );
@@ -122,39 +108,41 @@ function AccountsDemo() {
   const [filter, setFilter] = useState<AccountFilter>("all");
   const [closedLimit, setClosedLimit] = useState(8);
   const filterCounts: Readonly<Record<AccountFilter, number>> = {
-    active: accounts.filter((account) => account.state === "active").length,
-    all: accounts.length,
-    closed: accounts.filter((account) => account.state === "closed").length,
-    evaluation: accounts.filter((account) => account.stage === "Evaluation").length,
-    funded: accounts.filter((account) => account.stage === "Funded").length,
-    live: accounts.filter((account) => account.stage === "Live").length,
-    virgin: accounts.filter((account) => account.state === "virgin").length,
+    active: demoAccounts.filter((account) => account.state === "live").length,
+    all: demoAccounts.length,
+    closed: demoAccounts.filter((account) => account.state === "closed").length,
+    evaluation: demoAccounts.filter((account) => account.stage === "Evaluation").length,
+    funded: demoAccounts.filter((account) => account.stage === "Funded").length,
+    "live-stage": demoAccounts.filter((account) => account.stage === "Live").length,
+    virgin: demoAccounts.filter((account) => account.state === "virgin").length,
   };
-  const visible = useMemo(() => accounts.filter((account) => {
+  const visible = useMemo(() => demoAccounts.filter((account) => {
     if (filter === "all") return true;
-    if (["active", "closed", "virgin"].includes(filter)) return account.state === filter;
+    if (filter === "active") return account.state === "live";
+    if (filter === "closed" || filter === "virgin") return account.state === filter;
+    if (filter === "live-stage") return account.stage === "Live";
     return account.stage.toLowerCase() === filter;
   }), [filter]);
-  const activeAccounts = visible.filter((account) => account.state === "active");
+  const activeAccounts = visible.filter((account) => account.state === "live");
   const virginAccounts = visible.filter((account) => account.state === "virgin");
   const closedAccounts = visible.filter((account) => account.state === "closed");
-  const invested = accounts.reduce((total) => total + 10520, 0);
+  const invested = demoAccounts.reduce((total, account) => total + account.priceInCents, 0);
 
   return (
     <section className="demo-view" id="cuentas" aria-label="Simulación de cuentas">
       <DemoHeading title="Cuentas" />
 
       <div className="demo-account-kpis">
-        <article><span>Total</span><strong>43</strong></article>
-        <article><span>Activas</span><strong>8</strong></article>
-        <article><span>Virgen</span><strong>1</strong></article>
+        <article><span>Total</span><strong>{demoAccounts.length}</strong></article>
+        <article><span>Activas</span><strong>{filterCounts.active}</strong></article>
+        <article><span>Virgen</span><strong>{filterCounts.virgin}</strong></article>
         <article><span>Invertido</span><strong>{money(invested)}</strong></article>
       </div>
 
       <div className="demo-filter-row" aria-label="Filtrar cuentas">
         {([
           ["all", "Todas"], ["active", "Activas"], ["evaluation", "Evaluation"],
-          ["funded", "Funded"], ["live", "Live"], ["closed", "Cerradas"],
+          ["funded", "Funded"], ["live-stage", "Live"], ["closed", "Cerradas"],
         ] as const).map(([value, label]) => (
           <button aria-pressed={filter === value} key={value} onClick={() => { setFilter(value); setClosedLimit(8); }} type="button">
             {label}<span>{filterCounts[value]}</span>
@@ -182,7 +170,7 @@ function AccountsDemo() {
 
       {closedAccounts.length > 0 && (
         <details className="demo-closed-group" open={filter === "closed"}>
-          <summary><span>Cuentas cerradas</span><strong>{closedAccounts.length} · 2 períodos</strong><i aria-hidden="true" /></summary>
+          <summary><span>Cuentas cerradas</span><strong>{closedAccounts.length} · {demoPeriods.length} períodos</strong><i aria-hidden="true" /></summary>
           <div className="demo-account-list">
             {closedAccounts.slice(0, closedLimit).map((account) => <AccountCard account={account} key={account.externalId} />)}
           </div>
@@ -197,13 +185,75 @@ function AccountsDemo() {
   );
 }
 
-const historyDays = [
-  { date: "28 ago", result: 38210, operations: ["Lucid · Flex", "Tradeify · Flex", "Lucid · Flex"] },
-  { date: "27 ago", result: -12640, operations: ["Tradeify · Flex", "Tradeify · Flex"] },
-  { date: "26 ago", result: 61480, operations: ["Lucid · Flex", "Lucid · Flex", "Tradeify · Flex", "Lucid · Flex"] },
-];
+function PeriodHistory({ period, initiallyOpen = false }: Readonly<{ period: DemoPeriod; initiallyOpen?: boolean }>) {
+  const days = groupedDays(period);
+  const visibleDays = period.id === "august" ? days.slice(0, 3) : [];
+  const remainingDays = days.slice(visibleDays.length);
+  const remainingControls = remainingDays.flatMap((day) => day.controls);
+  const remainingResult = remainingControls.reduce((total, control) => total + control.operatingResultInCents, 0);
+
+  return (
+    <details className="demo-period-history" open={initiallyOpen}>
+      <summary>
+        <span>{period.label}</span>
+        <small>{operationControls(period).length} operaciones</small>
+        <strong>{money(period.summary.periodResultInCents)}</strong>
+        <i aria-hidden="true" />
+      </summary>
+      {period.id === "august" ? (
+        <div>
+          {visibleDays.map((day, dayIndex) => (
+            <details className="demo-history-day" key={day.date} open={dayIndex === 0}>
+              <summary>
+                <span>{dayLabel(day.date)}</span>
+                <small>{day.controls.length} operaciones</small>
+                <strong className={day.resultInCents < 0 ? "negative" : ""}>{signedMoney(day.resultInCents)}</strong>
+                <i aria-hidden="true" />
+              </summary>
+              <div>
+                {day.controls.map((control) => {
+                  const account = period.accounts[(control.controlNumber - 1) % period.accounts.length];
+                  return (
+                    <p key={control.id}>
+                      <span>{account.company} · Flex</span>
+                      <small>{account.externalId}</small>
+                      <strong className={control.operatingResultInCents < 0 ? "negative" : ""}>{signedMoney(control.operatingResultInCents)}</strong>
+                    </p>
+                  );
+                })}
+              </div>
+            </details>
+          ))}
+          {remainingControls.length > 0 && (
+            <details className="demo-history-day">
+              <summary>
+                <span>Resto de agosto</span>
+                <small>{remainingControls.length} operaciones</small>
+                <strong className={remainingResult < 0 ? "negative" : ""}>{signedMoney(remainingResult)}</strong>
+                <i aria-hidden="true" />
+              </summary>
+              <p className="demo-history-note">Se cargan por bloques al abrir.</p>
+            </details>
+          )}
+        </div>
+      ) : (
+        <div className="demo-prior-period-summary">
+          <p><span>Mejor día</span><strong>{money(period.performance.bestInCents)}</strong></p>
+          <p><span>Peor día</span><strong className="negative">{money(period.performance.worstInCents)}</strong></p>
+          <p><span>Resultado broker</span><strong>{money(operatingTotal(period))}</strong></p>
+        </div>
+      )}
+    </details>
+  );
+}
 
 function OperationsDemo() {
+  const augustDays = groupedDays(augustDemo);
+  const latestDay = augustDays[0];
+  const currentAccount = augustDemo.accounts.find((account) => account.id === currentDemoOperation.accountId) ?? augustDemo.accounts[0];
+  const activeAccounts = augustDemo.accounts.filter((account) => account.state === "live").length;
+  const operationCount = demoPeriods.reduce((total, period) => total + operationControls(period).length, 0);
+
   return (
     <section className="demo-view" id="operaciones" aria-label="Simulación de operaciones">
       <DemoHeading title="Operaciones" />
@@ -211,16 +261,16 @@ function OperationsDemo() {
       <div className="demo-operation-grid">
         <article className="demo-live-operation">
           <div><span className="demo-live-dot" />En curso</div>
-          <h3>Lucid · Flex</h3>
-          <p>LFE0508820107042</p>
+          <h3>{currentAccount.company} · Flex</h3>
+          <p>{currentAccount.externalId}</p>
           <dl>
-            <div><dt>Net liquidation</dt><dd>USD 4.476</dd></div>
-            <div><dt>Cash value</dt><dd>USD 4.451</dd></div>
-            <div><dt>Duración</dt><dd>08:42</dd></div>
+            <div><dt>Net liquidation</dt><dd>{money(currentDemoOperation.netLiquidationInCents)}</dd></div>
+            <div><dt>Cash value</dt><dd>{money(currentDemoOperation.cashValueInCents)}</dd></div>
+            <div><dt>Duración</dt><dd>{currentDemoOperation.duration}</dd></div>
           </dl>
         </article>
-        <article className="demo-broker-balance"><span>Saldo broker</span><strong>USD 4.451</strong><small>Actualizado ahora</small></article>
-        <article className="demo-today-result"><span>Resultado de hoy</span><strong>+USD 382</strong><small>3 operaciones cerradas</small></article>
+        <article className="demo-broker-balance"><span>Saldo broker</span><strong>{money(augustDemo.summary.brokerBalanceInCents)}</strong><small>Actualizado ahora</small></article>
+        <article className="demo-today-result"><span>Resultado de hoy</span><strong>{signedMoney(latestDay.resultInCents)}</strong><small>{latestDay.controls.length} operaciones cerradas</small></article>
       </div>
 
       <details className="demo-operation-disclosure">
@@ -232,74 +282,72 @@ function OperationsDemo() {
       </details>
 
       <details className="demo-operation-disclosure">
-        <summary><span>Asignación de cuentas</span><strong>9 cuentas</strong><i aria-hidden="true" /></summary>
+        <summary><span>Asignación de cuentas</span><strong>{activeAccounts + 1} cuentas</strong><i aria-hidden="true" /></summary>
         <div className="demo-assignment-map">
-          <span>Broker principal</span><b>→</b><span>1 líder + 8 réplicas</span>
+          <span>Broker principal</span><b>→</b><span>1 líder + {activeAccounts} réplicas</span>
         </div>
       </details>
 
       <div className="demo-history">
-        <div className="demo-group-title"><h3>Historial</h3><span>79</span></div>
-        <details className="demo-period-history" open>
-          <summary><span>Agosto 2026</span><small>48 operaciones</small><strong>USD 8.549</strong><i aria-hidden="true" /></summary>
-          <div>
-            {historyDays.map((day, dayIndex) => (
-              <details className="demo-history-day" key={day.date} open={dayIndex === 0}>
-                <summary>
-                  <span>{day.date}</span>
-                  <small>{day.operations.length} operaciones</small>
-                  <strong className={day.result < 0 ? "negative" : ""}>{money(day.result)}</strong>
-                  <i aria-hidden="true" />
-                </summary>
-                <div>
-                  {day.operations.map((account, index) => (
-                    <p key={`${day.date}-${index}`}><span>{account}</span><small>{`Operación ${48 - dayIndex * 5 - index}`}</small><strong>{money(Math.round(day.result / day.operations.length))}</strong></p>
-                  ))}
-                </div>
-              </details>
-            ))}
-            <details className="demo-history-day">
-              <summary><span>Resto de agosto</span><small>39 operaciones</small><strong>USD 7.869</strong><i aria-hidden="true" /></summary>
-              <p className="demo-history-note">Se cargan por bloques al abrir.</p>
-            </details>
-          </div>
-        </details>
-        <details className="demo-period-history">
-          <summary><span>Julio 2026</span><small>31 operaciones</small><strong>USD 3.264</strong><i aria-hidden="true" /></summary>
-          <div className="demo-prior-period-summary">
-            <p><span>Mejor día</span><strong>USD 1.180</strong></p>
-            <p><span>Peor día</span><strong className="negative">-USD 861</strong></p>
-            <p><span>Resultado neto</span><strong>USD 3.264</strong></p>
-          </div>
-        </details>
+        <div className="demo-group-title"><h3>Historial</h3><span>{operationCount}</span></div>
+        <PeriodHistory initiallyOpen period={augustDemo} />
+        <PeriodHistory period={julyDemo} />
       </div>
     </section>
   );
 }
 
+function PeriodCard({ current, period }: Readonly<{ current?: boolean; period: DemoPeriod }>) {
+  return (
+    <article className={current ? "current" : undefined}>
+      <div><strong>{period.label}</strong><span>{current ? "Actual" : "Cerrado"}</span></div>
+      <dl>
+        <div><dt>Facturación</dt><dd>{money(period.summary.realizedGainInCents)}</dd></div>
+        <div><dt>Comisión</dt><dd>{money(period.summary.commissionInCents)}</dd></div>
+        <div><dt>Ganancia usuario</dt><dd>{money(period.summary.traderGainInCents)}</dd></div>
+        <div><dt>Resultado período</dt><dd>{money(period.summary.periodResultInCents)}</dd></div>
+      </dl>
+    </article>
+  );
+}
+
 function AccountingDemo() {
+  const summary = augustDemo.summary;
   return (
     <section className="demo-view" id="contabilidad" aria-label="Simulación de contabilidad">
       <DemoHeading title="Contabilidad" />
       <div className="demo-accounting-grid">
-        <article className="demo-accounting-primary"><span>Resultado neto</span><strong>USD 8.549</strong><small>Agosto 2026</small></article>
-        <article><span>Saldo broker</span><strong>USD 4.451</strong></article>
-        <article><span>Saldo billeteras</span><strong>USD 1.800</strong></article>
-        <article><span>Comisión de usuario</span><strong>USD 2.241</strong></article>
+        <article className="demo-accounting-primary"><span>Facturación</span><strong>{money(summary.realizedGainInCents)}</strong><small>{augustDemo.label}</small></article>
+        <article><span>Resultado del período</span><strong>{money(summary.periodResultInCents)}</strong></article>
+        <article><span>Saldo broker</span><strong>{money(summary.brokerBalanceInCents)}</strong></article>
+        <article><span>Comisión de usuario</span><strong>{money(summary.commissionInCents)}</strong><small>{summary.commissionRateLabel}</small></article>
+        <article><span>Ganancia del usuario</span><strong>{money(summary.traderGainInCents)}</strong></article>
       </div>
-      <div className="demo-periods-heading"><h3>Períodos</h3><span>2</span></div>
+      <div className="demo-periods-heading"><h3>Períodos</h3><span>{demoPeriods.length}</span></div>
       <div className="demo-period-cards">
-        <article className="current">
-          <div><strong>Agosto 2026</strong><span>Actual</span></div>
-          <dl><div><dt>Resultado</dt><dd>USD 8.549</dd></div><div><dt>Comisión</dt><dd>USD 2.241</dd></div><div><dt>Capital</dt><dd>USD 4.980</dd></div></dl>
-        </article>
-        <article>
-          <div><strong>Julio 2026</strong><span>Cerrado</span></div>
-          <dl><div><dt>Resultado</dt><dd>USD 3.264</dd></div><div><dt>Comisión</dt><dd>USD 1.632</dd></div><div><dt>Capital</dt><dd>USD 4.262</dd></div></dl>
-        </article>
+        <PeriodCard current period={augustDemo} />
+        <PeriodCard period={julyDemo} />
       </div>
-      <details className="demo-operation-disclosure"><summary><span>Billeteras</span><strong>2</strong><i aria-hidden="true" /></summary><div className="demo-wallets"><p><span>Principal</span><strong>USD 1.250</strong></p><p><span>Secundaria</span><strong>USD 550</strong></p></div></details>
-      <details className="demo-operation-disclosure"><summary><span>Conciliación</span><strong>Sin diferencias</strong><i aria-hidden="true" /></summary><div className="demo-wallets"><p><span>Posición esperada</span><strong>USD 5.100</strong></p><p><span>Posición observable</span><strong>USD 5.100</strong></p></div></details>
+      <details className="demo-operation-disclosure">
+        <summary><span>Retiros</span><strong>{summary.fundingWithdrawals.length}</strong><i aria-hidden="true" /></summary>
+        <div className="demo-wallets">
+          {summary.fundingWithdrawals.map((withdrawal) => (
+            <p key={withdrawal.id}>
+              <span>{withdrawal.collectedOn ? "Cobrado" : "Pendiente"}</span>
+              <strong>{money(withdrawal.amountInCents)}</strong>
+            </p>
+          ))}
+          <p><span>Saldo billetera</span><strong>{money(summary.walletBalanceInCents)}</strong></p>
+        </div>
+      </details>
+      <details className="demo-operation-disclosure">
+        <summary><span>Conciliación</span><strong>{summary.positionDifferenceInCents === 0 ? "Sin diferencias" : money(summary.positionDifferenceInCents)}</strong><i aria-hidden="true" /></summary>
+        <div className="demo-wallets">
+          <p><span>Posición esperada</span><strong>{money(summary.positionExpectedInCents)}</strong></p>
+          <p><span>Posición observable</span><strong>{money(summary.positionObservableInCents)}</strong></p>
+          <p><span>Facturación conciliada</span><strong>{summary.realizedReconciliationDifferenceInCents === 0 ? "Sin diferencias" : money(summary.realizedReconciliationDifferenceInCents)}</strong></p>
+        </div>
+      </details>
     </section>
   );
 }
@@ -308,13 +356,10 @@ export function DemoAccountingWorkspace() {
   return (
     <>
       <HomeOverview
-        capitalHistory={[
-          { capitalInCents: 426200, periodMonth: "2026-07-01" },
-          { capitalInCents: 498000, periodMonth: "2026-08-01" },
-        ]}
-        performance={{ averageInCents: 13740, bestInCents: 117968, worstInCents: -136148 }}
-        periodLabel="Agosto 2026"
-        summary={demoSummary}
+        capitalHistory={demoCapitalHistory}
+        performance={augustDemo.performance}
+        periodLabel={augustDemo.label}
+        summary={augustDemo.summary}
       />
       <AccountsDemo />
       <OperationsDemo />
