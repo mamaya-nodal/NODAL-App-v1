@@ -285,6 +285,8 @@ vigente sin aprobacion y evidencia suficiente.
   la transición hacia rutas guardadas. Los datos técnicos de NinjaTrader y los
   ajustes manuales se muestran bajo demanda. Se elimina el indicador técnico
   `En línea`, que podía contradecir el estado real del conector.
+- **Navegación:** Una actualización del estado del conector conserva la sección
+  activa; no devuelve al usuario a Inicio ni pierde el fragmento de navegación.
 - **Contabilidad:** Muestra saldos, resultado y comisión de usuario. Las
   conciliaciones se pliegan cuando no existen diferencias y los formularios de
   billetera y retiros aparecen como acciones bajo demanda. El antiguo historial
