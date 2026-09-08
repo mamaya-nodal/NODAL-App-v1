@@ -6646,7 +6646,7 @@ html[data-theme="day"] .accounting-history {
 
 .demo-account-detail {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
   padding: 0 15px 15px;
 }
@@ -6726,6 +6726,32 @@ html[data-theme="day"] .accounting-history {
 .demo-assignment-map b { color: var(--app-positive); }
 
 .demo-history { margin-top: 22px; }
+.demo-period-history {
+  margin-top: 8px;
+  border: 1px solid var(--app-border);
+  border-radius: 15px;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+.demo-period-history > summary {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 15px;
+  list-style: none;
+  cursor: pointer;
+}
+.demo-period-history > summary::-webkit-details-marker { display: none; }
+.demo-period-history > summary > span { min-width: 110px; color: var(--app-title); font-size: 13px; font-weight: 850; }
+.demo-period-history > summary > small { flex: 1; color: var(--app-subtle); font-size: 10px; }
+.demo-period-history > summary > strong { min-width: 88px; color: var(--app-positive); font-size: 12px; text-align: right; }
+.demo-period-history > summary > i { width: 20px; color: var(--app-subtle); font-style: normal; text-align: center; }
+.demo-period-history > summary > i::before { content: "+"; }
+.demo-period-history[open] > summary > i::before { content: "−"; }
+.demo-period-history > div { padding: 0 10px 10px; }
+.demo-period-history .demo-history-day { background: var(--app-input); }
+.demo-period-history .demo-history-day > div p { background: color-mix(in srgb, var(--app-panel) 80%, var(--app-input)); }
 .demo-history-day { margin-top: 7px; }
 .demo-history-day > summary { min-height: 58px; }
 .demo-history-day > summary > span { min-width: 66px; color: var(--app-title); font-size: 12px; font-weight: 800; }
@@ -6738,6 +6764,11 @@ html[data-theme="day"] .accounting-history {
 .demo-history-day p small { color: var(--app-subtle); font-size: 9px; }
 .demo-history-day p strong { color: var(--app-copy); font-size: 10px; text-align: right; }
 .demo-history-note { margin: 0 15px 15px !important; padding: 12px !important; color: var(--app-subtle); background: var(--app-input); font-size: 10px; }
+.demo-prior-period-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.demo-prior-period-summary p { min-height: 64px; display: flex; flex-direction: column; justify-content: center; margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--app-input); }
+.demo-prior-period-summary span { color: var(--app-subtle); font-size: 9px; }
+.demo-prior-period-summary strong { margin-top: 8px; color: var(--app-positive); font-size: 12px; }
+.demo-prior-period-summary strong.negative { color: #ff7d72; }
 
 .demo-accounting-grid { grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)); }
 .demo-accounting-grid .demo-accounting-primary {
@@ -6749,8 +6780,22 @@ html[data-theme="day"] .accounting-history {
 .demo-accounting-primary > :is(span, strong, small) { color: #0b160c !important; }
 .demo-accounting-primary strong { margin-top: 37px !important; font-size: clamp(38px, 5vw, 56px) !important; letter-spacing: -3px !important; }
 .demo-accounting-grid article:nth-child(4) { grid-column: 2 / 4; }
+.demo-periods-heading { min-height: 40px; display: flex; align-items: center; gap: 8px; margin-top: 15px; }
+.demo-periods-heading h3 { margin: 0; color: var(--app-title); font-size: 14px; }
+.demo-periods-heading span { min-width: 24px; padding: 4px 7px; border-radius: 999px; color: var(--app-copy); background: var(--app-panel); font-size: 9px; font-weight: 800; text-align: center; }
+.demo-period-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.demo-period-cards > article { padding: 16px; border: 1px solid var(--app-border); border-radius: 15px; background: var(--app-panel); }
+.demo-period-cards > article.current { border-color: color-mix(in srgb, var(--app-accent) 34%, var(--app-border)); background: color-mix(in srgb, var(--app-accent) 6%, var(--app-panel)); }
+.demo-period-cards > article > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.demo-period-cards > article > div strong { color: var(--app-title); font-size: 13px; }
+.demo-period-cards > article > div span { padding: 5px 7px; border-radius: 7px; color: var(--app-subtle); background: var(--app-input); font-size: 9px; font-weight: 800; }
+.demo-period-cards > article.current > div span { color: var(--app-positive); }
+.demo-period-cards dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 14px 0 0; }
+.demo-period-cards dl > div { min-width: 0; padding: 9px; border-radius: 9px; background: var(--app-input); }
+.demo-period-cards dt { color: var(--app-subtle); font-size: 8px; }
+.demo-period-cards dd { margin: 6px 0 0; overflow: hidden; color: var(--app-title); font-size: 11px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 
-html[data-theme="day"] :is(.demo-account-kpis article, .demo-broker-balance, .demo-today-result, .demo-accounting-grid article, .demo-account-card, .demo-closed-group, .demo-operation-disclosure, .demo-history-day) {
+html[data-theme="day"] :is(.demo-account-kpis article, .demo-broker-balance, .demo-today-result, .demo-accounting-grid article, .demo-account-card, .demo-closed-group, .demo-operation-disclosure, .demo-history-day, .demo-period-history, .demo-period-cards > article) {
   background-color: #ffffff;
   box-shadow: 0 7px 20px rgb(23 34 28 / 4%), inset 0 1px 0 #ffffff;
 }
@@ -6790,4 +6835,7 @@ html[data-theme="day"] .demo-stage.live {
   .demo-accounting-grid { grid-template-columns: 1fr; }
   .demo-accounting-grid .demo-accounting-primary,
   .demo-accounting-grid article:nth-child(4) { grid-column: auto; }
+  .demo-period-cards { grid-template-columns: 1fr; }
+  .demo-period-history > summary > small { display: none; }
+  .demo-prior-period-summary { grid-template-columns: 1fr; }
 }

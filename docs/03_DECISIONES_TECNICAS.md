@@ -308,6 +308,11 @@ vigente sin aprobacion y evidencia suficiente.
   formularios ni acciones de servidor. No escribe en Supabase, Google Sheets ni
   en las planillas de producción. En producción requiere una sesión NODAL
   autorizada; en desarrollo local sólo muestra el escenario ficticio.
+- **Temporalidad simulada:** El escenario distribuye actividad entre julio de
+  2026, cerrado, y agosto de 2026, actual. Inicio representa ambos en el gráfico;
+  las fichas de cuenta conservan su período de origen; Operaciones agrupa el
+  historial por período y Contabilidad permite comparar ambos cierres sin
+  recuperar un selector global.
 - **Cuentas:** La propuesta separa indicadores, filtros, cuentas en curso, cuentas
   sin operar y cerradas. Las cerradas nacen plegadas, se cargan visualmente en
   bloques de ocho y cada cuenta revela su ficha sin navegar a otra pantalla.
