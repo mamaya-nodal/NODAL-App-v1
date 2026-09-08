@@ -295,3 +295,29 @@ vigente sin aprobacion y evidencia suficiente.
 - **Límite:** No se modifican cálculos, tablas, telemetría ni automatizaciones.
   Varias billeteras y rutas operativas persistentes siguen siendo evoluciones
   pendientes del modelo de datos.
+
+### APP-082 - Simulación de escala antes de reemplazar las vistas contables
+
+- **Estado:** Implementada el 2026-09-08 para validación de producto.
+- **Fuente de escala:** Se revisaron en modo lectura las planillas reales vigentes
+  de dos usuarios. El escenario adopta el caso más exigente observado: 43
+  cuentas, de las cuales 34 están cerradas, 8 vivas y 1 virgen, y 79 operaciones.
+  La aplicación no copia nombres, correos, identificadores de cuenta ni registros
+  literales de esas planillas.
+- **Aislamiento:** `/app/demo` usa datos ficticios en memoria y no expone
+  formularios ni acciones de servidor. No escribe en Supabase, Google Sheets ni
+  en las planillas de producción. En producción requiere una sesión NODAL
+  autorizada; en desarrollo local sólo muestra el escenario ficticio.
+- **Cuentas:** La propuesta separa indicadores, filtros, cuentas en curso, cuentas
+  sin operar y cerradas. Las cerradas nacen plegadas, se cargan visualmente en
+  bloques de ocho y cada cuenta revela su ficha sin navegar a otra pantalla.
+- **Operaciones:** La propuesta mantiene visible sólo la operación actual y el
+  saldo necesario para decidir. Revisiones, asignación e historial quedan
+  agrupados y desplegables; el histórico se organiza por día y deja los bloques
+  anteriores cerrados.
+- **Inicio:** Se restaura la composición aprobada anterior a APP-081: Resultado
+  neto, Capital neto total, Payouts, gráfico histórico y las tres métricas de
+  rendimiento permanecen visibles aunque todavía no tengan datos.
+- **Límite:** Esta simulación sirve para evaluar experiencia y densidad. No
+  reemplaza todavía las vistas reales de Cuentas u Operaciones ni modifica reglas
+  contables; ese reemplazo requiere aprobación visual del escenario.

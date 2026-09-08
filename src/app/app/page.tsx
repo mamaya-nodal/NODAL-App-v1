@@ -25,6 +25,7 @@ import {
   type HomePerformance,
 } from "@/modules/summary/domain/home-dashboard";
 import {
+  formatPeriodLabel,
   resolveWorkspaceSelection,
   type WorkspaceOption,
 } from "@/modules/workspace/domain/selection";
@@ -626,6 +627,7 @@ export default async function PrivateAppPage({
         <HomeOverview
           capitalHistory={capitalHistory}
           performance={homePerformance}
+          periodLabel={formatPeriodLabel(selection.period.periodMonth)}
           summary={operationalSummary}
         />
       )}
