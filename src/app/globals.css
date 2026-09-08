@@ -5609,6 +5609,15 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 }
 
 /* Inicio financiero: jerarquía validada en el mockup de contenido. */
+.home-overview-panel {
+  --home-label-size: 12px;
+  --home-meta-size: 11px;
+  --home-secondary-value-size: 16px;
+  --home-value-size: 24px;
+  --home-primary-value-size: clamp(44px, 5vw, 56px);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
 .home-financial-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(220px, .75fr);
@@ -5653,7 +5662,7 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 .home-financial-metric span,
 .home-performance-grid span {
   display: block;
-  font-size: 12px;
+  font-size: var(--home-label-size);
   font-weight: 700;
 }
 
@@ -5662,14 +5671,14 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   display: block;
   margin: 14px 0 30px;
   color: #0b160c;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: clamp(42px, 6vw, 68px);
+  font: inherit;
+  font-size: var(--home-primary-value-size);
   font-weight: 700;
-  letter-spacing: -4px;
-  line-height: .9;
+  letter-spacing: -2.6px;
+  line-height: .95;
 }
 .home-net-result > strong.negative { color: #6e1f19; }
-.home-net-result small { color: #285523; font-size: 12px; font-weight: 800; }
+.home-net-result small { color: #285523; font-size: var(--home-label-size); font-weight: 700; }
 
 .home-earnings-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .home-earnings-topline small { padding: 7px 10px; border-radius: 8px; background: rgb(255 255 255 / 22%); }
@@ -5679,8 +5688,8 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   border-radius: 999px;
   color: #f4ffe9;
   background: #2fc66c;
-  font-size: 11px;
-  font-weight: 850;
+  font-size: var(--home-label-size);
+  font-weight: 700;
   text-align: center;
 }
 .home-earnings-breakdown {
@@ -5689,14 +5698,15 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   gap: 14px;
 }
 .home-earnings-breakdown > div { min-width: 0; }
-.home-earnings-breakdown span { display: block; color: #23401f; font-size: 10px; font-weight: 750; }
+.home-earnings-breakdown span { display: block; color: #23401f; font-size: var(--home-label-size); font-weight: 700; }
 .home-earnings-breakdown strong {
   display: block;
   margin-top: 8px;
   overflow: hidden;
   color: #0b160c;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: clamp(18px, 2.4vw, 26px);
+  font: inherit;
+  font-size: var(--home-value-size);
+  font-weight: 700;
   letter-spacing: -1px;
   line-height: 1;
   text-overflow: ellipsis;
@@ -5717,14 +5727,15 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 .home-financial-metric strong {
   margin: 9px 0 6px;
   color: var(--app-title);
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: clamp(25px, 3vw, 34px);
-  letter-spacing: -1.5px;
+  font: inherit;
+  font-size: var(--home-value-size);
+  font-weight: 700;
+  letter-spacing: -1px;
   line-height: 1;
 }
-.home-financial-metric small { color: var(--app-subtle); font-size: 11px; }
+.home-financial-metric small { color: var(--app-subtle); font-size: var(--home-meta-size); }
 .home-payout-metric > strong { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; }
-.home-payout-metric > strong b { font-size: .72em; letter-spacing: -.8px; }
+.home-payout-metric > strong b { font: inherit; font-weight: 700; letter-spacing: -1px; }
 
 .home-capability-grid {
   display: grid;
@@ -5733,10 +5744,10 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   margin-top: 14px;
 }
 .home-capability-grid > article { min-height: 126px; padding: 20px 22px; }
-.home-capability-grid span { display: block; color: var(--app-copy); font-size: 12px; font-weight: 750; }
-.home-capability-grid strong { display: block; margin-top: 9px; color: var(--app-title); font-size: 23px; letter-spacing: -1px; }
-.home-capability-grid small { display: block; margin-top: 6px; color: var(--app-subtle); font-size: 10px; }
-.home-capability-grid b { display: block; margin-top: 4px; color: var(--app-title); font-size: 17px; }
+.home-capability-grid span { display: block; color: var(--app-copy); font-size: var(--home-label-size); font-weight: 700; }
+.home-capability-grid strong { display: block; margin-top: 9px; color: var(--app-title); font-size: var(--home-value-size); font-weight: 700; letter-spacing: -1px; }
+.home-capability-grid small { display: block; margin-top: 6px; color: var(--app-subtle); font-size: var(--home-meta-size); }
+.home-capability-grid b { display: block; margin-top: 4px; color: var(--app-title); font-size: var(--home-secondary-value-size); font-weight: 700; }
 
 .home-capital-chart {
   margin-top: 14px;
@@ -5747,11 +5758,12 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 .home-chart-heading h2 {
   margin: 0;
   color: var(--app-title);
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 18px;
+  font: inherit;
+  font-size: var(--home-secondary-value-size);
+  font-weight: 700;
   letter-spacing: -.5px;
 }
-.home-chart-heading strong { color: var(--app-title); font-size: 15px; }
+.home-chart-heading strong { color: var(--app-title); font-size: var(--home-secondary-value-size); font-weight: 700; }
 .home-chart-actions { display: flex; align-items: center; gap: 12px; }
 .home-chart-switch { display: flex; padding: 3px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-input); }
 .home-chart-switch button {
@@ -5762,8 +5774,8 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   color: var(--app-subtle);
   background: transparent;
   font: inherit;
-  font-size: 10px;
-  font-weight: 800;
+  font-size: var(--home-meta-size);
+  font-weight: 700;
   cursor: pointer;
 }
 .home-chart-switch button[aria-pressed="true"] { color: var(--app-title); background: var(--app-panel); box-shadow: 0 2px 8px rgb(0 0 0 / 8%); }
@@ -5775,13 +5787,13 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 .home-capital-chart circle { fill: var(--app-panel); stroke: currentColor; stroke-width: 3; cursor: help; transition: r 120ms ease; }
 .home-capital-chart circle:hover,
 .home-capital-chart circle:focus { r: 7px; outline: none; }
-.home-capital-chart text { fill: var(--app-subtle); font-size: 11px; font-weight: 700; }
+.home-capital-chart text { fill: var(--app-subtle); font-family: Arial, Helvetica, sans-serif; font-size: var(--home-meta-size); font-weight: 700; }
 .home-chart-empty { display: grid; min-height: 210px; place-items: center; color: var(--app-subtle); font-size: 13px; }
 
 .home-performance-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
 .home-performance-grid > article { position: relative; min-height: 120px; padding: 20px; }
 .home-performance-grid span { color: var(--app-copy); }
-.home-performance-grid strong { display: block; margin-top: 18px; color: var(--app-title); font-size: 23px; letter-spacing: -1px; }
+.home-performance-grid strong { display: block; margin-top: 18px; color: var(--app-title); font-size: var(--home-value-size); font-weight: 700; letter-spacing: -1px; }
 .home-performance-grid i {
   position: absolute;
   top: 18px;
