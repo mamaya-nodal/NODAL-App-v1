@@ -69,10 +69,10 @@ export function TradeTelemetryProbe() {
   return (
     <section className="telemetry-probe" aria-labelledby="telemetry-probe-title">
       <div className="telemetry-probe-heading">
-        <h2 id="telemetry-probe-title">Operación</h2>
-        <span className={available ? "online" : "offline"}>{available ? "En línea" : "Sin conexión"}</span>
+        <h2 id="telemetry-probe-title">Operación actual</h2>
       </div>
-      {visibleProbes.length === 0 ? <p className="telemetry-empty">Sin operaciones detectadas.</p> : (
+      {!available ? <p className="telemetry-empty">No se pudo actualizar la operación.</p> : null}
+      {visibleProbes.length === 0 ? <p className="telemetry-empty">Sin operaciones activas.</p> : (
         <div className="telemetry-probe-grid">
           {visibleProbes.map((probe) => {
             const operation = operations.find((candidate) =>
@@ -81,12 +81,6 @@ export function TradeTelemetryProbe() {
             return <article key={`${probe.connectionName}-${probe.accountName}`}>
               <div><strong>{probe.accountName}</strong><small>{probe.connectionName}</small></div>
               <span className={`telemetry-state ${probe.status}`}>{labels[probe.status]}</span>
-              <dl>
-                <div><dt>Posiciones</dt><dd>{probe.openPositions}</dd></div>
-                <div><dt>Ejecuciones</dt><dd>{probe.executionCount}</dd></div>
-                <div><dt>Cash Value</dt><dd>{formatMoney(probe.cashValue)}</dd></div>
-                <div><dt>Net Liq.</dt><dd>{formatMoney(probe.netLiquidation)}</dd></div>
-              </dl>
               {operation ? <div className="telemetry-operation-record">
                 <div>
                   <span>Última operación</span>
@@ -99,6 +93,15 @@ export function TradeTelemetryProbe() {
                   {formatTime(operation.opened_at)} · {operation.execution_count} ejec. · {operation.status === "closed" ? "Cerrada" : operation.status === "open" ? "Abierta" : "Estabilizando"}
                 </small>
               </div> : null}
+              <details className="telemetry-technical-details">
+                <summary>Datos de NinjaTrader</summary>
+                <dl>
+                  <div><dt>Posiciones</dt><dd>{probe.openPositions}</dd></div>
+                  <div><dt>Ejecuciones</dt><dd>{probe.executionCount}</dd></div>
+                  <div><dt>Cash Value</dt><dd>{formatMoney(probe.cashValue)}</dd></div>
+                  <div><dt>Net Liq.</dt><dd>{formatMoney(probe.netLiquidation)}</dd></div>
+                </dl>
+              </details>
             </article>;
           })}
         </div>

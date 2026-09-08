@@ -6214,6 +6214,139 @@ html[data-theme="day"] .nodal-workspace .accounting-exception {
   line-height: 1;
 }
 
+/* APP-081: interfaz personal sin controles heredados ni duplicaciones. */
+.workspace-top-actions { margin-left: auto; }
+
+.home-financial-grid:has(> .home-financial-metric:nth-child(2):last-child) {
+  grid-template-rows: minmax(180px, auto);
+}
+
+.home-financial-grid:has(> .home-financial-metric:nth-child(2):last-child) .home-net-result {
+  grid-row: auto;
+}
+
+.nodal-workspace .ninja-live-badge.offline { color: #e5a63f; }
+.nodal-workspace .ninja-live-badge.offline::before {
+  background: #e5a63f;
+  box-shadow: 0 0 0 3px rgb(229 166 63 / 12%);
+}
+
+.nodal-workspace .telemetry-technical-details {
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid var(--app-border);
+}
+
+.nodal-workspace .telemetry-technical-details > summary {
+  color: var(--app-subtle);
+  font-size: 11px;
+  font-weight: 750;
+  list-style: none;
+  cursor: pointer;
+}
+
+.nodal-workspace .telemetry-technical-details > summary::-webkit-details-marker { display: none; }
+.nodal-workspace .telemetry-technical-details > summary::after { float: right; content: "+"; }
+.nodal-workspace .telemetry-technical-details[open] > summary::after { content: "−"; }
+
+.nodal-workspace details.operation-context-preview {
+  padding: 0;
+  overflow: hidden;
+}
+
+.nodal-workspace .operation-context-heading {
+  min-height: 50px;
+  padding: 0 17px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.nodal-workspace .operation-context-heading::-webkit-details-marker { display: none; }
+.nodal-workspace .operation-context-heading > strong {
+  color: var(--app-title);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+}
+
+.nodal-workspace .operation-context-heading::after {
+  margin-left: auto;
+  color: var(--app-subtle);
+  content: "+";
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.nodal-workspace details.operation-context-preview[open] .operation-context-heading::after { content: "−"; }
+.nodal-workspace details.operation-context-preview > :not(summary) { margin-inline: 17px; }
+.nodal-workspace details.operation-context-preview > .ninja-source-notice { margin-bottom: 17px; }
+
+.purchase-panel > .operation-register-panel {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--app-border);
+}
+
+.purchase-panel .register-filters {
+  grid-template-columns: minmax(240px, 440px);
+}
+
+.accounting-view .accounting-disclosure,
+.accounting-view .accounting-action-card {
+  border: 1px solid var(--app-border);
+  border-radius: 15px;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.accounting-view .accounting-disclosure { margin-top: 16px; }
+.accounting-view .accounting-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.accounting-view :is(.accounting-disclosure, .accounting-action-card) > summary {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  color: var(--app-title);
+  font-size: 13px;
+  font-weight: 800;
+  list-style: none;
+  cursor: pointer;
+}
+
+.accounting-view :is(.accounting-disclosure, .accounting-action-card) > summary::-webkit-details-marker { display: none; }
+.accounting-view :is(.accounting-disclosure, .accounting-action-card) > summary strong {
+  margin-left: auto;
+  color: var(--app-subtle);
+  font-size: 11px;
+}
+.accounting-view :is(.accounting-disclosure, .accounting-action-card) > summary::after {
+  color: var(--app-subtle);
+  content: "+";
+  font-size: 18px;
+  font-weight: 400;
+}
+.accounting-view :is(.accounting-disclosure, .accounting-action-card)[open] > summary::after { content: "−"; }
+.accounting-view .accounting-disclosure > .conciliation-grid { padding: 0 16px 16px; }
+.accounting-view .accounting-action-card > :not(summary) { margin-inline: 16px; }
+.accounting-view .accounting-action-card > .summary-form { margin-top: 0; }
+.accounting-view .accounting-action-card > .summary-list { margin-bottom: 16px; }
+
+html[data-theme="day"] .accounting-view :is(.accounting-disclosure, .accounting-action-card) {
+  border-color: #d1ddd3;
+  background: #ffffff;
+  box-shadow: 0 7px 20px rgb(23 34 28 / 4%), inset 0 1px 0 #ffffff;
+}
+
+@media (max-width: 800px) {
+  .accounting-view .accounting-actions { grid-template-columns: 1fr; }
+}
+
 .operations-view,
 .accounting-view {
   min-width: 0;

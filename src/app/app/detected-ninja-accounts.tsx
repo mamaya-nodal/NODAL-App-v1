@@ -7,22 +7,23 @@ type Props = {
   connectorId: string;
   linkedAccountNames: ReadonlySet<string>;
   mode: string;
+  online: boolean;
   period: string;
   periodId: string;
 };
 
-export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linkedAccountNames, mode, period, periodId }: Props) {
+export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linkedAccountNames, mode, online, period, periodId }: Props) {
   const detectedPropAccounts = accounts.filter((account) => account.type === "prop");
   const propAccounts = detectedPropAccounts.filter((account) => !linkedAccountNames.has(account.accountName));
-  const registeredPropAccounts = detectedPropAccounts.filter((account) => linkedAccountNames.has(account.accountName));
   return (
     <section className="ninja-detections" aria-labelledby="ninja-detections-title">
       <div className="ninja-detections-heading">
         <h3 id="ninja-detections-title">NinjaTrader</h3>
-        <span className="ninja-live-badge">Conectado</span>
+        <span className={`ninja-live-badge${online ? "" : " offline"}`}>
+          {online ? "Conectado" : "Sin señal"}
+        </span>
       </div>
-      {propAccounts.length === 0 && registeredPropAccounts.length === 0 ? <p className="ninja-empty">Sin cuentas nuevas</p> : null}
-      {registeredPropAccounts.length > 0 ? <div className="ninja-registered-notice"><span>Registradas</span><strong>{registeredPropAccounts.map((account) => account.accountName).join(" · ")}</strong></div> : null}
+      {propAccounts.length === 0 ? <p className="ninja-empty">Sin cuentas nuevas</p> : null}
       {propAccounts.length > 0 ? (
         <div className="ninja-detected-grid">{propAccounts.map((account) => (
           <form action={createDetectedPurchase} className="ninja-detected-card" key={`${account.connectionName}-${account.accountName}`}>

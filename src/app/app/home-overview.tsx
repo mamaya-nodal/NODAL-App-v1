@@ -7,7 +7,6 @@ import type { OperationalSummary } from "@/modules/summary/domain/operational-su
 type HomeOverviewProps = Readonly<{
   capitalHistory: CapitalHistoryPoint[];
   performance: HomePerformance;
-  periodLabel: string;
   summary: OperationalSummary;
 }>;
 
@@ -60,9 +59,14 @@ function chartGeometry(history: CapitalHistoryPoint[]) {
   return { area, baseline, line, points };
 }
 
-export function HomeOverview({ capitalHistory, performance, periodLabel, summary }: HomeOverviewProps) {
+export function HomeOverview({ capitalHistory, performance, summary }: HomeOverviewProps) {
   const chart = chartGeometry(capitalHistory);
   const payoutCount = summary.fundingWithdrawals.length;
+  const hasPerformance = [
+    performance.bestInCents,
+    performance.worstInCents,
+    performance.averageInCents,
+  ].some((value) => value !== null);
 
   return (
     <section aria-label="Inicio" className="home-overview-panel" id="inicio">
@@ -72,20 +76,20 @@ export function HomeOverview({ capitalHistory, performance, periodLabel, summary
           <strong className={summary.realizedGainInCents < 0 ? "negative" : undefined}>
             {formatMoney(summary.realizedGainInCents)}
           </strong>
-          <small>{periodLabel}</small>
         </article>
 
         <article className="home-financial-metric">
           <span>Capital neto total</span>
           <strong>{formatMoney(summary.capitalNetInCents)}</strong>
-          <small>{periodLabel}</small>
         </article>
 
-        <article className="home-financial-metric">
-          <span>Payouts</span>
-          <strong>{payoutCount}</strong>
-          <small>{summary.fundingPendingInCents > 0 ? "Con cobros pendientes" : periodLabel}</small>
-        </article>
+        {(payoutCount > 0 || summary.fundingPendingInCents > 0) && (
+          <article className="home-financial-metric">
+            <span>Payouts</span>
+            <strong>{payoutCount}</strong>
+            {summary.fundingPendingInCents > 0 && <small>Con cobros pendientes</small>}
+          </article>
+        )}
       </div>
 
       <article className="home-capital-chart">
@@ -117,23 +121,25 @@ export function HomeOverview({ capitalHistory, performance, periodLabel, summary
         )}
       </article>
 
-      <div className="home-performance-grid">
-        <article>
-          <span>Mejor día</span>
-          <strong>{formatMetric(performance.bestInCents)}</strong>
-          <i className="positive" aria-hidden="true">↗</i>
-        </article>
-        <article>
-          <span>Peor día</span>
-          <strong>{formatMetric(performance.worstInCents)}</strong>
-          <i className="negative" aria-hidden="true">↘</i>
-        </article>
-        <article>
-          <span>Promedio diario</span>
-          <strong>{formatMetric(performance.averageInCents)}</strong>
-          <i aria-hidden="true">∿</i>
-        </article>
-      </div>
+      {hasPerformance && (
+        <div className="home-performance-grid">
+          <article>
+            <span>Mejor día</span>
+            <strong>{formatMetric(performance.bestInCents)}</strong>
+            <i className="positive" aria-hidden="true">↗</i>
+          </article>
+          <article>
+            <span>Peor día</span>
+            <strong>{formatMetric(performance.worstInCents)}</strong>
+            <i className="negative" aria-hidden="true">↘</i>
+          </article>
+          <article>
+            <span>Promedio diario</span>
+            <strong>{formatMetric(performance.averageInCents)}</strong>
+            <i aria-hidden="true">∿</i>
+          </article>
+        </div>
+      )}
     </section>
   );
 }

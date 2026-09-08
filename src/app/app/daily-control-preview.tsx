@@ -703,13 +703,16 @@ export function DailyControlPreview({
 
       <TradeTelemetryProbe />
 
-      <div className={`operation-context-preview${pendingBalance ? " pending" : ""}`}>
-        <div className="operation-context-heading">
-          <h3>Próxima operación</h3>
+      <details
+        className={`operation-context-preview${pendingBalance ? " pending" : ""}`}
+        open={pendingBalance ? true : undefined}
+      >
+        <summary className="operation-context-heading">
+          <strong>Asignación de cuentas</strong>
           {companyId && leaderId && (
             <span className="active-context-badge">Preparada</span>
           )}
-        </div>
+        </summary>
 
         <div className="operation-context-fields">
           <div className="form-field">
@@ -826,17 +829,17 @@ export function DailyControlPreview({
             </div>
           </div>
         )}
-      </div>
+      </details>
 
       <div className="balance-summary" aria-live="polite">
-        <span>Último saldo confirmado</span>
+        <span>Saldo broker</span>
         <strong>
-          {balanceInCents === null ? "Todavía no establecido" : formatMoney(balanceInCents)}
+          {balanceInCents === null ? "Sin saldo registrado" : formatMoney(balanceInCents)}
         </strong>
       </div>
 
-      <details className="accounting-exception daily-movement-exception" open={balanceInCents === null ? true : undefined}>
-        <summary>{balanceInCents === null ? "Establecer saldo inicial" : "Registrar movimiento de saldo"}</summary>
+      <details className="accounting-exception daily-movement-exception">
+        <summary>Ajuste manual de saldo</summary>
         <form
           className={`daily-preview-form${entryKind === "balance_update" ? "" : " with-origin"}`}
           onSubmit={addPreviewEntry}
@@ -931,24 +934,24 @@ export function DailyControlPreview({
         </p>
       )}
 
-      <div className="preview-history" aria-label="Historial de Control Diario">
+      <div className="preview-history" aria-label="Historial de operaciones">
         {rows.length === 0 ? (
           <p className="empty-state">
-            Comenzá con un depósito inicial para establecer el saldo de referencia.
+            Las operaciones aparecerán aquí cuando NinjaTrader confirme su cierre.
           </p>
         ) : (
           rows.map((row) => (
             <article className="preview-row" key={row.id}>
               <div>
                 <p className="purchase-reference">
-                  {row.id}. {entryLabels[row.kind]} · {formatMoney(row.valueInCents)}
+                  {entryLabels[row.kind]} · {formatMoney(row.valueInCents)}
                 </p>
                 <p className="purchase-meta">
                   Saldo posterior: {formatMoney(row.balanceInCents)}
                 </p>
               </div>
               <div className="preview-result">
-                <span>Resultado operativo</span>
+                <span>Resultado</span>
                 <strong>
                   {row.operatingResultInCents === null
                     ? "No corresponde"
@@ -978,9 +981,9 @@ export function DailyControlPreview({
             className="sync-dialog historical-correction-dialog"
             role="dialog"
           >
-            <p className="status">CORRECCIÓN DE CONTROL DIARIO</p>
+            <p className="status">CORRECCIÓN DE SALDO</p>
             <h3 id="historical-correction-title">
-              Corregir saldo del control {correctionRow.id}
+              Corregir saldo registrado
             </h3>
             <p className="context-note">
               El saldo anterior se reemplazará en la vista. NODAL recalculará
@@ -1035,7 +1038,7 @@ export function DailyControlPreview({
                       <section className="historical-redistribution" key={row.controlId}>
                         <div className="custom-allocation-total">
                           <div>
-                            <strong>Control {row.id} · reparto excepcional</strong>
+                            <strong>Registro {row.id} · reparto excepcional</strong>
                             <span>{row.allocationReason}</span>
                           </div>
                           <div>

@@ -265,3 +265,31 @@ vigente sin aprobacion y evidencia suficiente.
 - **Compatibilidad:** Los hashes antiguos siguen resolviendo a la sección nueva
   correspondiente para no romper enlaces guardados. Todos los enlaces internos
   nuevos usan exclusivamente la navegación vigente.
+
+### APP-081 - Período automático y reducción de controles heredados
+
+- **Estado:** Implementada el 2026-09-08.
+- **Contexto operativo:** La interfaz personal deja de ofrecer el selector
+  `Real / Práctica` y el cambio global de período. La aplicación trabaja sobre
+  el workspace real y su período más reciente. La modalidad de práctica y los
+  períodos continúan existiendo internamente para pruebas, trazabilidad e
+  históricos; no se eliminan registros ni reglas contables.
+- **Inicio:** El período queda representado por el eje temporal del gráfico.
+  Payouts y métricas de rendimiento sin datos no ocupan espacio.
+- **Cuentas:** NinjaTrader muestra solamente nuevas detecciones o su estado de
+  señal. Las cuentas registradas no se repiten. El importe agregado se presenta
+  como capital invertido y la ficha, estado, fases y resultados por cuenta viven
+  en esta sección. La carga manual continúa plegada como contingencia.
+- **Operaciones:** Conserva la operación detectada, el saldo broker y su
+  historial. La asignación de cuentas queda plegada mientras sea necesaria para
+  la transición hacia rutas guardadas. Los datos técnicos de NinjaTrader y los
+  ajustes manuales se muestran bajo demanda. Se elimina el indicador técnico
+  `En línea`, que podía contradecir el estado real del conector.
+- **Contabilidad:** Muestra saldos, resultado y comisión de usuario. Las
+  conciliaciones se pliegan cuando no existen diferencias y los formularios de
+  billetera y retiros aparecen como acciones bajo demanda. El antiguo historial
+  combinado se retira porque mezclaba compras y controles en una sección que
+  debía contener solamente hechos económicos.
+- **Límite:** No se modifican cálculos, tablas, telemetría ni automatizaciones.
+  Varias billeteras y rutas operativas persistentes siguen siendo evoluciones
+  pendientes del modelo de datos.

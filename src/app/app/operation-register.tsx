@@ -102,7 +102,6 @@ export function OperationRegister({
     [accounts],
   );
   const firstAccount = orderedAccounts[0];
-  const [companyId, setCompanyId] = useState(firstAccount?.companyId ?? "");
   const [accountId, setAccountId] = useState(firstAccount?.id ?? "");
   const [stateMode, setStateMode] = useState<AccountStateMode>(
     firstAccount?.stateOrigin ?? "automatic",
@@ -113,17 +112,6 @@ export function OperationRegister({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const companies = Array.from(
-    new Map(
-      orderedAccounts.map((account) => [
-        account.companyId,
-        { id: account.companyId, name: account.companyName },
-      ]),
-    ).values(),
-  );
-  const companyAccounts = orderedAccounts.filter(
-    (account) => account.companyId === companyId,
-  );
   const selectedAccount = orderedAccounts.find((account) => account.id === accountId);
   const visibleEntries = entriesForAccount(entries, accountId);
   const visibleWithdrawals = withdrawals.filter(
@@ -150,14 +138,6 @@ export function OperationRegister({
     .find((phase) => phase.totalGainInCents !== 0)?.totalGainInCents ?? 0;
   const hasVisibleRegisterRows =
     visibleEntries.length > 0 || (selectedAccount?.priceInCents ?? 0) > 0;
-
-  function changeCompany(nextCompanyId: string) {
-    const nextAccount = orderedAccounts.find(
-      (account) => account.companyId === nextCompanyId,
-    );
-    setCompanyId(nextCompanyId);
-    selectAccount(nextAccount?.id ?? "");
-  }
 
   function selectAccount(nextAccountId: string) {
     const nextAccount = orderedAccounts.find((account) => account.id === nextAccountId);
@@ -204,7 +184,7 @@ export function OperationRegister({
       id="registro"
     >
       {embedded ? (
-        <div className="embedded-section-heading"><h3>Por cuenta</h3></div>
+        <div className="embedded-section-heading"><h3>Detalle de cuenta</h3></div>
       ) : (
         <div className="register-heading">
           <h2 id="operation-register-title">Registro</h2>
@@ -219,29 +199,15 @@ export function OperationRegister({
         <>
           <div className="register-filters">
             <div className="form-field">
-              <label htmlFor="register_company">Empresa</label>
-              <select
-                id="register_company"
-                onChange={(event) => changeCompany(event.target.value)}
-                value={companyId}
-              >
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-field">
               <label htmlFor="register_account">Cuenta</label>
               <select
                 id="register_account"
                 onChange={(event) => selectAccount(event.target.value)}
                 value={accountId}
               >
-                {companyAccounts.map((account) => (
+                {orderedAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
-                    {account.externalName ?? `Cuenta ${account.referenceNumber}`}
+                    {account.companyName} · {account.externalName ?? `Cuenta ${account.referenceNumber}`}
                   </option>
                 ))}
               </select>
@@ -336,17 +302,23 @@ export function OperationRegister({
               <strong>{formatMoney(latestTotal)}</strong>
             </div>
             <div>
-              <span>NETO BROKER +</span>
+              <span>Resultado positivo</span>
               <strong>{formatMoney(summary.positiveInCents)}</strong>
             </div>
             <div>
-              <span>NETO BROKER −</span>
+              <span>Resultado negativo</span>
               <strong>{formatMoney(summary.negativeInCents)}</strong>
             </div>
           </div>
 
           <div className="phase-overview phase-total-overview" aria-label="Totales por fase">
-            {calculated.phaseResults.map((phaseResult) => (
+            {calculated.phaseResults
+              .filter((phaseResult) =>
+                phaseResult.broker.entryCount > 0 ||
+                phaseResult.totalWithdrawalInCents > 0 ||
+                (phaseResult.phase === "Evaluacion" && (selectedAccount?.priceInCents ?? 0) > 0),
+              )
+              .map((phaseResult) => (
               <div
                 className={
                   phaseResult.broker.entryCount > 0 || phaseResult.totalWithdrawalInCents > 0
@@ -394,13 +366,13 @@ export function OperationRegister({
                 )}
                 <strong>TOTAL GANANCIA {formatMoney(phaseResult.totalGainInCents)}</strong>
               </div>
-            ))}
+              ))}
           </div>
           {feedback && <p className="register-feedback">{feedback}</p>}
 
           {!hasVisibleRegisterRows ? (
             <p className="empty-state register-empty">
-              Esta cuenta todavía no tiene operaciones confirmadas desde Control Diario.
+              Esta cuenta todavía no tiene operaciones registradas.
             </p>
           ) : (
             <div className="phase-register-list">
@@ -431,10 +403,10 @@ export function OperationRegister({
                               ? formatDate(selectedAccount.purchasedOn)
                               : "Compra"}
                           </strong>
-                          <span>Compra de cuenta · Costo inicial automático</span>
+                          <span>Costo inicial de la cuenta</span>
                         </div>
                         <div className="register-entry-value">
-                          <span>NETO BROKER -</span>
+                          <span>Costo</span>
                           <strong className="negative">{formatMoney(purchasePriceInCents)}</strong>
                         </div>
                       </article>
@@ -445,14 +417,16 @@ export function OperationRegister({
                           <strong>{formatDate(entry.operatedOn)}</strong>
                           <span>
                             {entry.participantRole === "leader" ? "Líder" : "Réplica"}
-                            {" · "}Generado desde Control Diario
+                            {" · "}Registrado automáticamente
                           </span>
                         </div>
                         <div className="register-entry-value">
                           <span>
                             {entry.destination === "NONE"
                               ? "Sin resultado broker"
-                              : entry.destination}
+                              : entry.destination === "NETO BROKER +"
+                                ? "Resultado positivo"
+                                : "Resultado negativo"}
                           </span>
                           <strong className={entry.destination === "NETO BROKER -" ? "negative" : ""}>
                             {formatMoney(entry.magnitudeInCents)}

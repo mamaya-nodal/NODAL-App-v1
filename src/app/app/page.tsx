@@ -8,11 +8,6 @@ import { createClient } from "@/lib/supabase/server";
 import { decideAccess } from "@/modules/access/domain/access-decision";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
-import {
-  buildPeriodActivity,
-  type PeriodActivityItem,
-  type PeriodActivityRow,
-} from "@/modules/activity/domain/period-activity";
 import type {
   AccountPhaseWithdrawal,
 } from "@/modules/operations/domain/account-phase-results";
@@ -30,7 +25,6 @@ import {
   type HomePerformance,
 } from "@/modules/summary/domain/home-dashboard";
 import {
-  formatPeriodLabel,
   resolveWorkspaceSelection,
   type WorkspaceOption,
 } from "@/modules/workspace/domain/selection";
@@ -42,7 +36,6 @@ import { NinjaConnectorGate } from "./ninja-connector-gate";
 import { NinjaConnectorMonitor } from "./ninja-connector-monitor";
 import { NinjaTransitionAlerts, type NinjaTransitionAlert } from "./ninja-transition-alerts";
 import type { NinjaConnectorStatus } from "./ninja-connector-panel";
-import { ActivityHistory } from "./activity-history";
 import {
   DailyControlPreview,
   type NinjaBrokerBalanceEvent,
@@ -125,23 +118,6 @@ type PurchaseView = {
 
 type AccountView = RegisterAccount;
 
-type ActivityRpcRow = {
-  account_reference: number | null;
-  action: PeriodActivityRow["action"];
-  audit_event_id: number;
-  balance_after_cents: number | string | null;
-  company_name: string | null;
-  control_kind: PeriodActivityRow["controlKind"];
-  control_number: number | null;
-  funds_origin: string | null;
-  occurred_at: string;
-  operated_on: string | null;
-  phase: string | null;
-  primary_amount_cents: number | string | null;
-  purchase_number: number | null;
-  reason: string | null;
-};
-
 type NinjaInventoryRpcRow = {
   accounts: Array<NinjaAccountSnapshot & { firstSeenAt?: string }>;
   connector_id: string;
@@ -201,7 +177,7 @@ export default async function PrivateAppPage({
       : null,
   );
   const allowed = decision === "allowed";
-  const { mode, period, purchase_result: purchaseResult, reset_result: resetResult, connector_result: connectorResult, transition_result: transitionResult } = await searchParams;
+  const { purchase_result: purchaseResult, reset_result: resetResult, connector_result: connectorResult, transition_result: transitionResult } = await searchParams;
   let workspaceOptions: WorkspaceOption[] = [];
   let companies: Array<{ code: string; displayName: string; id: string }> = [];
   let linkedNinjaAccountNames = new Set<string>();
@@ -255,8 +231,8 @@ export default async function PrivateAppPage({
 
   const selection = resolveWorkspaceSelection(
     workspaceOptions,
-    singleValue(mode),
-    singleValue(period),
+    "real",
+    undefined,
   );
   let purchases: PurchaseView[] = [];
   let accountOptions: AccountView[] = [];
@@ -265,7 +241,6 @@ export default async function PrivateAppPage({
   let phaseWithdrawals: AccountPhaseWithdrawal[] = [];
   let walletMovements: WalletMovement[] = [];
   let fundingWithdrawals: FundingWithdrawal[] = [];
-  let periodActivity: PeriodActivityItem[] = [];
   let operationalSummary: OperationalSummary = buildOperationalSummary({
     accounts: [], controls: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [], walletMovements: [],
   });
@@ -283,7 +258,6 @@ export default async function PrivateAppPage({
       { data: phaseWithdrawalRows },
       { data: walletMovementRows },
       { data: fundingWithdrawalRows },
-      { data: activityRows },
       { data: ninjaLinkRows },
       { data: ninjaInventoryRows },
       { data: ninjaTransitionRows },
@@ -343,9 +317,6 @@ export default async function PrivateAppPage({
           .eq("period_id", selection.period.id)
           .eq("is_active", true)
           .order("approved_on", { ascending: false }),
-        supabase.rpc("list_nodal_period_activity", {
-          target_period_id: selection.period.id,
-        }),
         supabase
           .from("ninja_account_links")
           .select("account_id, external_account_name")
@@ -534,30 +505,6 @@ export default async function PrivateAppPage({
       accountId: withdrawal.account_id, amountInCents: Number(withdrawal.amount_cents),
       approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, id: withdrawal.id,
     }));
-    periodActivity = buildPeriodActivity(
-      ((activityRows ?? []) as ActivityRpcRow[]).map((row) => ({
-        accountReference: row.account_reference,
-        action: row.action,
-        auditEventId: row.audit_event_id,
-        balanceAfterInCents:
-          row.balance_after_cents === null
-            ? null
-            : Number(row.balance_after_cents),
-        companyName: row.company_name,
-        controlKind: row.control_kind,
-        controlNumber: row.control_number,
-        fundsOrigin: row.funds_origin,
-        occurredAt: row.occurred_at,
-        operatedOn: row.operated_on,
-        phase: row.phase,
-        primaryAmountInCents:
-          row.primary_amount_cents === null
-            ? null
-            : Number(row.primary_amount_cents),
-        purchaseNumber: row.purchase_number,
-        reason: row.reason,
-      })),
-    );
     operationalSummary = buildOperationalSummary({
       accounts: accountOptions.map((account) => ({
         fundsOrigin: account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
@@ -675,89 +622,10 @@ export default async function PrivateAppPage({
         )}
       </header>
 
-      {allowed && selection && (
-        <section className="context-panel" aria-labelledby="context-title">
-          <div className="context-heading">
-            <div>
-              <p className="status">CONTEXTO DE TRABAJO</p>
-              <h2 id="context-title">Modalidad y período</h2>
-            </div>
-            <p className="context-current" aria-live="polite">
-              {selection.workspace.modality === "real" ? "Real" : "Práctica"}
-              {selection.period
-                ? ` · ${formatPeriodLabel(selection.period.periodMonth)}`
-                : " · Sin período disponible"}
-            </p>
-          </div>
-
-          <nav className="mode-tabs" aria-label="Seleccionar modalidad">
-            {workspaceOptions.map((workspace) => {
-              const latestPeriod = [...workspace.periods].sort((left, right) =>
-                right.periodMonth.localeCompare(left.periodMonth),
-              )[0];
-              const selected = workspace.id === selection.workspace.id;
-              const params = new URLSearchParams({ mode: workspace.modality });
-              if (latestPeriod) params.set("period", latestPeriod.periodMonth);
-
-              return (
-                <a
-                  aria-current={selected ? "page" : undefined}
-                  className={`mode-tab${selected ? " selected" : ""}`}
-                  href={`/app?${params.toString()}`}
-                  key={workspace.id}
-                >
-                  {workspace.modality === "real" ? "Real" : "Práctica"}
-                </a>
-              );
-            })}
-          </nav>
-
-          {selection.workspace.periods.length > 0 ? (
-            <form className="period-form" action="/app" method="get">
-              <input
-                name="mode"
-                type="hidden"
-                value={selection.workspace.modality}
-              />
-              <label htmlFor="period">Período mensual</label>
-              <div className="period-controls">
-                <select
-                  defaultValue={selection.period?.periodMonth}
-                  id="period"
-                  name="period"
-                >
-                  {selection.workspace.periods.map((workspacePeriod) => (
-                    <option
-                      key={workspacePeriod.id}
-                      value={workspacePeriod.periodMonth}
-                    >
-                      {formatPeriodLabel(workspacePeriod.periodMonth)}
-                    </option>
-                  ))}
-                </select>
-                <button className="secondary-action inline-action" type="submit">
-                  Cambiar período
-                </button>
-              </div>
-            </form>
-          ) : (
-            <p className="notice">
-              Este espacio todavía no tiene un período de desarrollo disponible.
-            </p>
-          )}
-
-          <p className="context-note">
-            Todos los registros futuros quedarán asociados a esta modalidad y a
-            este período. Real y Práctica nunca se mezclarán.
-          </p>
-        </section>
-      )}
-
       {allowed && selection?.period && (
         <HomeOverview
           capitalHistory={capitalHistory}
           performance={homePerformance}
-          periodLabel={formatPeriodLabel(selection.period.periodMonth)}
           summary={operationalSummary}
         />
       )}
@@ -809,12 +677,12 @@ export default async function PrivateAppPage({
               account.firstSeenAt ?? inventory.observed_at,
             ));
             const companyIds = Object.fromEntries(companies.flatMap((company) => [[company.code.toLowerCase(), company.id], [company.displayName.toLowerCase(), company.id]]));
-            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} key={inventory.connector_id} linkedAccountNames={linkedNinjaAccountNames} mode={selection.workspace.modality} period={selection.period!.periodMonth} periodId={selection.period!.id} />;
+            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} key={inventory.connector_id} linkedAccountNames={linkedNinjaAccountNames} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} />;
           })}
 
           <div className="purchase-list-heading">
             <h3>Registradas</h3>
-            <strong>{formatMoney(purchases.reduce((total, purchase) => total + purchase.priceCents, 0))}</strong>
+            <strong>Invertido · {formatMoney(purchases.reduce((total, purchase) => total + purchase.priceCents, 0))}</strong>
           </div>
 
           <div className="purchase-list" aria-label="Cuentas registradas">
@@ -845,6 +713,14 @@ export default async function PrivateAppPage({
               ))
             )}
           </div>
+
+          <OperationRegister
+            accounts={accountOptions}
+            embedded
+            entries={operationEntries}
+            periodId={selection.period.id}
+            withdrawals={phaseWithdrawals}
+          />
 
           <details className="accounting-exception">
             <summary>Registrar manualmente</summary>
@@ -927,13 +803,6 @@ export default async function PrivateAppPage({
             ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}
             periodId={selection.period.id}
           />
-          <OperationRegister
-            accounts={accountOptions}
-            embedded
-            entries={operationEntries}
-            periodId={selection.period.id}
-            withdrawals={phaseWithdrawals}
-          />
         </section>
       )}
 
@@ -948,20 +817,12 @@ export default async function PrivateAppPage({
             periodId={selection.period.id}
             summary={operationalSummary}
           />
-          <details className="accounting-history">
-            <summary>
-              <span>Historial</span>
-              <strong>{periodActivity.length}</strong>
-            </summary>
-            <ActivityHistory embedded items={periodActivity} />
-          </details>
         </section>
       )}
 
       {allowed && !selection && (
         <p className="notice">
-          Tu acceso está habilitado, pero los espacios Real y Práctica todavía
-          no fueron preparados.
+          Tu acceso está habilitado, pero todavía no existe un período operativo.
         </p>
       )}
 

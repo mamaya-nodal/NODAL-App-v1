@@ -76,8 +76,6 @@ export function AppWorkspace({
     return <main className="shell narrow-shell app-page-shell">{children}</main>;
   }
 
-  const activeLabel = views.find((view) => view.value === activeView)?.label ?? "Inicio";
-
   function navigateWithinWorkspace(event: MouseEvent<HTMLElement>) {
     const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
     if (!link) return;
@@ -126,9 +124,6 @@ export function AppWorkspace({
 
       <div className="workspace-stage">
         <header className="workspace-topbar">
-          <div>
-            <strong>{activeLabel}</strong>
-          </div>
           <div className="workspace-top-actions">
             <ThemeToggle />
             <div className="workspace-user" title={userLabel}>
