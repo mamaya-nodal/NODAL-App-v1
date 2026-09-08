@@ -605,7 +605,7 @@ export default async function PrivateAppPage({
     <AppWorkspace
       authorized={allowed}
       avatarUrl={typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null}
-      initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "purchases" : "home"}
+      initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "accounts" : "home"}
       isAdmin={nodalUser?.access_role === "admin"}
       userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
       username={typeof user.user_metadata?.username === "string" ? user.user_metadata.username : undefined}
@@ -648,11 +648,9 @@ export default async function PrivateAppPage({
         {allowed && (
           <nav className="app-navigation" aria-label="Secciones de NODAL App">
             <a href="#inicio">Inicio</a>
-            <a href="#compras">Compras</a>
-            <a href="#control-diario">Control Diario</a>
-            <a href="#registro">Registro</a>
-            <a href="#resumen">Resumen</a>
-            <a href="#actividad">Actividad</a>
+            <a href="#cuentas">Cuentas</a>
+            <a href="#operaciones">Operaciones</a>
+            <a href="#contabilidad">Contabilidad</a>
             {nodalUser?.access_role === "admin" && (
               <Link href="/app/admin">Administración</Link>
             )}
@@ -767,7 +765,7 @@ export default async function PrivateAppPage({
       {allowed && selection?.period && <NinjaTransitionAlerts alerts={ninjaTransitionAlerts} mode={selection.workspace.modality} period={selection.period.periodMonth} periodId={selection.period.id} result={singleValue(transitionResult)} />}
 
       {allowed && selection?.period && (
-        <section className="purchase-panel" id="compras" aria-labelledby="purchase-title">
+        <section className="purchase-panel" id="cuentas" aria-labelledby="purchase-title">
           <div className="purchase-heading">
             <h2 id="purchase-title">Cuentas</h2>
             <p className="purchase-count">
@@ -912,39 +910,52 @@ export default async function PrivateAppPage({
       )}
 
       {allowed && selection?.period && (
-        <DailyControlPreview
-          key={incomingNinjaBalance?.id ?? "no-ninja-balance"}
-          accounts={accountOptions}
-          companies={companies.map((company) => ({
-            id: company.id,
-            name: company.displayName,
-          }))}
-          initialControls={dailyControls}
-          incomingNinjaBalance={incomingNinjaBalance}
-          ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}
-          periodId={selection.period.id}
-        />
+        <section className="operations-view" id="operaciones" aria-labelledby="operations-title">
+          <div className="workspace-section-heading">
+            <h2 id="operations-title">Operaciones</h2>
+          </div>
+          <DailyControlPreview
+            key={incomingNinjaBalance?.id ?? "no-ninja-balance"}
+            accounts={accountOptions}
+            companies={companies.map((company) => ({
+              id: company.id,
+              name: company.displayName,
+            }))}
+            embedded
+            initialControls={dailyControls}
+            incomingNinjaBalance={incomingNinjaBalance}
+            ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}
+            periodId={selection.period.id}
+          />
+          <OperationRegister
+            accounts={accountOptions}
+            embedded
+            entries={operationEntries}
+            periodId={selection.period.id}
+            withdrawals={phaseWithdrawals}
+          />
+        </section>
       )}
 
       {allowed && selection?.period && (
-        <OperationRegister
-          accounts={accountOptions}
-          entries={operationEntries}
-          periodId={selection.period.id}
-          withdrawals={phaseWithdrawals}
-        />
-      )}
-
-      {allowed && selection?.period && (
-        <ProgressSummary
-          accounts={accountOptions.map((account) => ({ id: account.id, label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}` }))}
-          periodId={selection.period.id}
-          summary={operationalSummary}
-        />
-      )}
-
-      {allowed && selection?.period && (
-        <ActivityHistory items={periodActivity} />
+        <section className="accounting-view" id="contabilidad" aria-labelledby="accounting-title">
+          <div className="workspace-section-heading">
+            <h2 id="accounting-title">Contabilidad</h2>
+          </div>
+          <ProgressSummary
+            accounts={accountOptions.map((account) => ({ id: account.id, label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}` }))}
+            embedded
+            periodId={selection.period.id}
+            summary={operationalSummary}
+          />
+          <details className="accounting-history">
+            <summary>
+              <span>Historial</span>
+              <strong>{periodActivity.length}</strong>
+            </summary>
+            <ActivityHistory embedded items={periodActivity} />
+          </details>
+        </section>
       )}
 
       {allowed && !selection && (

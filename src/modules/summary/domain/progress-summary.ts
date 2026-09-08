@@ -23,7 +23,7 @@ export type ProgressSummary = Readonly<{
 
 export type HomeNextStep = Readonly<{
   description: string;
-  href: "#compras" | "#control-diario";
+  href: "#cuentas" | "#operaciones";
   label: string;
   title: string;
 }>;
@@ -76,9 +76,9 @@ export function chooseHomeNextStep(summary: ProgressSummary): HomeNextStep {
     return {
       description:
         "La primera cuenta habilita la selección de empresa, líder y réplicas.",
-      href: "#compras",
-      label: "Registrar una compra",
-      title: "Comenzá registrando una cuenta",
+      href: "#cuentas",
+      label: "Ver cuentas",
+      title: "Esperando la primera cuenta",
     };
   }
 
@@ -86,7 +86,7 @@ export function chooseHomeNextStep(summary: ProgressSummary): HomeNextStep {
     return {
       description:
         "El depósito inicial establece el saldo de referencia para calcular las operatorias.",
-      href: "#control-diario",
+      href: "#operaciones",
       label: "Informar depósito inicial",
       title: "Establecé el saldo broker inicial",
     };
@@ -95,7 +95,7 @@ export function chooseHomeNextStep(summary: ProgressSummary): HomeNextStep {
   return {
     description:
       "Elegí empresa, cuenta líder, réplicas y fase antes del siguiente saldo broker.",
-    href: "#control-diario",
+    href: "#operaciones",
     label: "Preparar próxima operación",
     title: "El espacio está listo para operar",
   };

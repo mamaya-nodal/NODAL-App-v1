@@ -244,3 +244,24 @@ vigente sin aprobacion y evidencia suficiente.
   reglas contables. La telemetría experimental de APP-078 continúa sin crear
   movimientos económicos ni registros automáticos hasta completar la
   conciliación correspondiente.
+
+### APP-080 - Navegación personal por función y no por planilla
+
+- **Estado:** Implementada el 2026-09-07. Corrige el alcance incompleto de
+  APP-079, que había modificado la jerarquía visual sin reemplazar las secciones
+  heredadas de Excel.
+- **Navegación:** El espacio personal queda reducido a `Inicio`, `Cuentas`,
+  `Operaciones` y `Contabilidad`. `Compras`, `Control Diario`, `Registro`,
+  `Resumen Operativo` y `Actividad` dejan de ser destinos independientes.
+- **Cuentas:** Reemplaza Compras. La detección de NinjaTrader es el ingreso
+  principal y la carga manual permanece como contingencia.
+- **Operaciones:** Unifica la operación detectada, su configuración, saldo,
+  controles internos, distribución y resultados por cuenta. Control Diario y
+  Registro siguen existiendo como estructuras internas auditables, no como dos
+  tareas consecutivas del usuario.
+- **Contabilidad:** Reúne capital, billetera, retiros, resultados,
+  conciliaciones e historial económico. El historial queda contextual y no
+  ocupa una sección principal.
+- **Compatibilidad:** Los hashes antiguos siguen resolviendo a la sección nueva
+  correspondiente para no romper enlaces guardados. Todos los enlaces internos
+  nuevos usan exclusivamente la navegación vigente.

@@ -16,7 +16,7 @@ function safeResetUrl(mode: string, period: string, result: string): string {
     reset_result: result,
   });
   if (/^\d{4}-\d{2}-01$/.test(period)) params.set("period", period);
-  return `/app?${params.toString()}#compras`;
+  return `/app?${params.toString()}#cuentas`;
 }
 
 /** Borra solo datos transitorios del período propio mientras se prueba localmente. */

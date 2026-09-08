@@ -3852,11 +3852,9 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 }
 
 .nodal-workspace[data-active-view="home"] .workspace-content > #inicio,
-.nodal-workspace[data-active-view="purchases"] .workspace-content > #compras,
-.nodal-workspace[data-active-view="daily"] .workspace-content > #control-diario,
-.nodal-workspace[data-active-view="register"] .workspace-content > #registro,
-.nodal-workspace[data-active-view="summary"] .workspace-content > #resumen,
-.nodal-workspace[data-active-view="activity"] .workspace-content > #actividad {
+.nodal-workspace[data-active-view="accounts"] .workspace-content > #cuentas,
+.nodal-workspace[data-active-view="operations"] .workspace-content > #operaciones,
+.nodal-workspace[data-active-view="accounting"] .workspace-content > #contabilidad {
   display: block;
   animation: workspace-view-in .22s ease both;
 }
@@ -6196,4 +6194,117 @@ html[data-theme="day"] .nodal-workspace .accounting-exception {
   .nodal-workspace .register-summary { grid-template-columns: 1fr; }
   .nodal-workspace .register-summary .register-net { grid-column: auto; }
   .nodal-workspace .account-state-control { grid-template-columns: 1fr; }
+}
+
+/* APP-080: navegación personal por Cuentas, Operaciones y Contabilidad. */
+.workspace-section-heading {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  margin: 0 0 18px;
+}
+
+.workspace-section-heading h2 {
+  margin: 0;
+  color: var(--app-title);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(28px, 3vw, 34px);
+  font-weight: 700;
+  letter-spacing: -1.8px;
+  line-height: 1;
+}
+
+.operations-view,
+.accounting-view {
+  min-width: 0;
+  color: var(--app-title);
+}
+
+.operations-view .daily-preview-panel,
+.operations-view .operation-register-panel,
+.accounting-view .progress-summary-panel,
+.accounting-view .activity-history-panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.operations-view .operation-register-panel {
+  margin-top: 18px;
+  padding-top: 20px;
+  border-top: 1px solid var(--app-border);
+}
+
+.embedded-section-heading {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  margin: 0 0 10px;
+}
+
+.embedded-section-heading h3 {
+  margin: 0;
+  color: var(--app-title);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  letter-spacing: -.45px;
+}
+
+.accounting-history {
+  margin-top: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 15px;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.accounting-history > summary {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  color: var(--app-title);
+  font-size: 13px;
+  font-weight: 800;
+  list-style: none;
+  cursor: pointer;
+}
+
+.accounting-history > summary::-webkit-details-marker { display: none; }
+.accounting-history > summary strong {
+  min-width: 27px;
+  display: grid;
+  min-height: 27px;
+  margin-left: auto;
+  padding: 0 8px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--app-input);
+  color: var(--app-copy);
+  font-size: 11px;
+}
+.accounting-history > summary::after {
+  color: var(--app-subtle);
+  content: "+";
+  font-size: 18px;
+  font-weight: 400;
+}
+.accounting-history[open] > summary::after { content: "−"; }
+.accounting-history .activity-history-panel { padding: 0 16px 16px; }
+.accounting-history .activity-history-panel::before { display: none; }
+
+html[data-theme="day"] .accounting-history {
+  border-color: #d1ddd3;
+  background: #ffffff;
+  box-shadow: 0 7px 20px rgb(23 34 28 / 4%), inset 0 1px 0 #ffffff;
+}
+
+@media (max-width: 800px) {
+  .workspace-section-heading { min-height: 0; }
+  .workspace-section-heading h2 { font-size: 29px; letter-spacing: -1.45px; }
+  .workspace-mobile-navigation { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }

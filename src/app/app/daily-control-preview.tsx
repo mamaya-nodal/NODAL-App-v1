@@ -90,6 +90,7 @@ const syncIssueReasons = [
 type DailyControlPreviewProps = {
   accounts: DailyControlAccount[];
   companies: Array<{ id: string; name: string }>;
+  embedded?: boolean;
   initialControls: PersistedDailyControl[];
   incomingNinjaBalance: NinjaBrokerBalanceEvent | null;
   ninjaBrokerSourceNotice: string | null;
@@ -107,6 +108,7 @@ function formatMoney(cents: number): string {
 export function DailyControlPreview({
   accounts,
   companies,
+  embedded = false,
   initialControls,
   incomingNinjaBalance,
   ninjaBrokerSourceNotice,
@@ -690,11 +692,14 @@ export function DailyControlPreview({
     <section
       className="daily-preview-panel"
       id="control-diario"
-      aria-labelledby="daily-preview-title"
+      aria-label={embedded ? "Control de operaciones" : undefined}
+      aria-labelledby={embedded ? undefined : "daily-preview-title"}
     >
-      <div className="daily-preview-heading">
-        <h2 id="daily-preview-title">Control diario</h2>
-      </div>
+      {!embedded && (
+        <div className="daily-preview-heading">
+          <h2 id="daily-preview-title">Control diario</h2>
+        </div>
+      )}
 
       <TradeTelemetryProbe />
 

@@ -1,7 +1,7 @@
 import type { OperationalSummary } from "./operational-summary";
 
 export type ConciliationLine = Readonly<{
-  href: "#control-diario" | "#registro" | "#resumen";
+  href: "#operaciones" | "#contabilidad";
   label: string;
   valueInCents: number | null;
 }>;
@@ -24,22 +24,22 @@ export function buildConciliationBreakdown(summary: OperationalSummary): Concili
     capital: {
       differenceInCents: summary.positionDifferenceInCents,
       observable: [
-        { href: "#control-diario", label: "Saldo broker", valueInCents: summary.brokerBalanceInCents },
-        { href: "#resumen", label: "Saldo billetera", valueInCents: summary.walletBalanceInCents },
-        { href: "#resumen", label: "Retiros pendientes", valueInCents: summary.fundingPendingInCents },
+        { href: "#operaciones", label: "Saldo broker", valueInCents: summary.brokerBalanceInCents },
+        { href: "#contabilidad", label: "Saldo billetera", valueInCents: summary.walletBalanceInCents },
+        { href: "#contabilidad", label: "Retiros pendientes", valueInCents: summary.fundingPendingInCents },
       ],
       expected: [
-        { href: "#resumen", label: "Capital neto aportado", valueInCents: summary.capitalNetInCents },
-        { href: "#control-diario", label: "Resultado del período", valueInCents: summary.periodResultInCents },
+        { href: "#contabilidad", label: "Capital neto aportado", valueInCents: summary.capitalNetInCents },
+        { href: "#operaciones", label: "Resultado del período", valueInCents: summary.periodResultInCents },
       ],
     },
     gains: {
       closedInCents: summary.realizedGainInCents,
       differenceInCents: summary.realizedReconciliationDifferenceInCents,
       reconstructed: [
-        { href: "#control-diario", label: "Resultado del período", valueInCents: summary.periodResultInCents },
-        { href: "#registro", label: "Flotante de cuentas vivas", valueInCents: summary.floatingInCents },
-        { href: "#registro", label: "Precio de cuentas vírgenes", valueInCents: summary.virginPriceInCents },
+        { href: "#operaciones", label: "Resultado del período", valueInCents: summary.periodResultInCents },
+        { href: "#operaciones", label: "Flotante de cuentas vivas", valueInCents: summary.floatingInCents },
+        { href: "#operaciones", label: "Precio de cuentas vírgenes", valueInCents: summary.virginPriceInCents },
       ],
     },
   };

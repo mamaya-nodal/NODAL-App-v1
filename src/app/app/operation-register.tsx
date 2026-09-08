@@ -38,6 +38,7 @@ export type RegisterAccount = Readonly<{
 
 type OperationRegisterProps = Readonly<{
   accounts: RegisterAccount[];
+  embedded?: boolean;
   entries: OperationRegisterEntry[];
   periodId: string;
   withdrawals: AccountPhaseWithdrawal[];
@@ -85,6 +86,7 @@ function withdrawalDraftsForAccount(
 
 export function OperationRegister({
   accounts,
+  embedded = false,
   entries,
   periodId,
   withdrawals,
@@ -196,13 +198,18 @@ export function OperationRegister({
 
   return (
     <section
-      aria-labelledby="operation-register-title"
+      aria-label={embedded ? "Resultados por cuenta" : undefined}
+      aria-labelledby={embedded ? undefined : "operation-register-title"}
       className="operation-register-panel"
       id="registro"
     >
-      <div className="register-heading">
-        <h2 id="operation-register-title">Registro</h2>
-      </div>
+      {embedded ? (
+        <div className="embedded-section-heading"><h3>Por cuenta</h3></div>
+      ) : (
+        <div className="register-heading">
+          <h2 id="operation-register-title">Registro</h2>
+        </div>
+      )}
 
       {orderedAccounts.length === 0 ? (
         <p className="empty-state">

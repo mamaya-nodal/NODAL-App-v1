@@ -50,7 +50,7 @@ export function NinjaTransitionAlerts({ alerts, mode, period, periodId, result }
         <label>Origen<select defaultValue="Aporte trader" name="funds_origin"><option>Aporte trader</option><option>Saldo generado</option></select></label>
         <button className="primary-action">Registrar reset</button>
       </form> : null}
-      {alert.resolutionStatus === "pending" && alert.eventType === "new_account" ? <a className="primary-action ninja-alert-link" href="#compras">Completar compra</a> : null}
+      {alert.resolutionStatus === "pending" && alert.eventType === "new_account" ? <a className="primary-action ninja-alert-link" href="#cuentas">Completar cuenta</a> : null}
     </article>)}</div>
   </section>;
 }

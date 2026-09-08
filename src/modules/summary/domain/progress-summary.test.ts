@@ -47,7 +47,7 @@ describe("resumen inicial de progreso", () => {
       accountStates: ["virgin"], controls: [], operationEntryCount: 0, purchaseCostsInCents: [8_900],
     });
 
-    expect(chooseHomeNextStep(empty).href).toBe("#compras");
+    expect(chooseHomeNextStep(empty).href).toBe("#cuentas");
     expect(chooseHomeNextStep(accountWithoutBalance).label).toBe(
       "Informar depósito inicial",
     );

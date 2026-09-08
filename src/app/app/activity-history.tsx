@@ -1,6 +1,6 @@
 import type { PeriodActivityItem } from "@/modules/activity/domain/period-activity";
 
-type ActivityHistoryProps = Readonly<{ items: PeriodActivityItem[] }>;
+type ActivityHistoryProps = Readonly<{ embedded?: boolean; items: PeriodActivityItem[] }>;
 
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -24,28 +24,33 @@ function formatOperationalDate(value: string): string {
   );
 }
 
-export function ActivityHistory({ items }: ActivityHistoryProps) {
+export function ActivityHistory({ embedded = false, items }: ActivityHistoryProps) {
   return (
     <section
-      aria-labelledby="activity-history-title"
+      aria-label={embedded ? "Historial contable" : undefined}
+      aria-labelledby={embedded ? undefined : "activity-history-title"}
       className="activity-history-panel"
       id="actividad"
     >
-      <div className="activity-history-heading">
-        <div>
-          <p className="status">TRAZABILIDAD DEL PERÍODO</p>
-          <h2 id="activity-history-title">Actividad registrada</h2>
-        </div>
-        <span className="activity-count">
-          {items.length} {items.length === 1 ? "evento" : "eventos"}
-        </span>
-      </div>
+      {!embedded && (
+        <>
+          <div className="activity-history-heading">
+            <div>
+              <p className="status">TRAZABILIDAD DEL PERÍODO</p>
+              <h2 id="activity-history-title">Actividad registrada</h2>
+            </div>
+            <span className="activity-count">
+              {items.length} {items.length === 1 ? "evento" : "eventos"}
+            </span>
+          </div>
 
-      <p className="context-note">
-        Acá podés reconstruir qué se confirmó y qué se corrigió. Las correcciones
-        no duplican saldos ni resultados: los cálculos usan solamente el valor
-        vigente.
-      </p>
+          <p className="context-note">
+            Acá podés reconstruir qué se confirmó y qué se corrigió. Las correcciones
+            no duplican saldos ni resultados: los cálculos usan solamente el valor
+            vigente.
+          </p>
+        </>
+      )}
 
       {items.length === 0 ? (
         <p className="empty-state activity-empty">
@@ -97,4 +102,3 @@ export function ActivityHistory({ items }: ActivityHistoryProps) {
     </section>
   );
 }
-
