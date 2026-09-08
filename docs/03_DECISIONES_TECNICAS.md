@@ -335,9 +335,9 @@ vigente sin aprobacion y evidencia suficiente.
   saldos, capital, conciliaciones, facturación y comisiones nacen de un único
   escenario ficticio y se procesan con los servicios de dominio vigentes.
 - **Comisión:** El usuario simulado tiene un acuerdo individual explícito del
-  50%. Por lo tanto, una facturación de USD 8.549 produce USD 4.274,50 de
-  comisión y USD 4.274,50 de ganancia para el usuario. No se aplican escalas ni
-  topes heredados porque el acuerdo individual los reemplaza.
+  50%. En agosto, una facturación de USD 12.000 produce USD 6.000 de comisión y
+  USD 6.000 de ganancia propia para el usuario. No se aplican escalas ni topes
+  heredados porque el acuerdo individual los reemplaza.
 - **Nombres:** `Facturación` identifica la ganancia realizada de cuentas
   cerradas y la base de comisión. `Resultado del período` conserva el resultado
   económico del período. Se muestran por separado porque compras, retiros,
@@ -358,10 +358,11 @@ vigente sin aprobacion y evidencia suficiente.
   participación por administrar una mesa y su bonus por mesas directas
   referidas. Los dos últimos componentes sólo se muestran cuando están
   habilitados para esa persona. El nivel vigente aparece en la misma tarjeta.
-- **Capital neto total:** En el dashboard se limita al capital propio asociado a
-  cuentas cerradas. Excluye cuentas vivas, cuentas vírgenes y compras pagadas
-  con saldo generado. Este indicador no reemplaza el capital usado por las
-  conciliaciones contables.
+- **Capital neto total:** La simulación reutiliza `capitalNetInCents` del resumen
+  operativo. Se elimina el cálculo anterior que sumaba precios de compra de
+  cuentas cerradas: ese importe no era capital neto y producía una cifra falsa.
+  Una futura segmentación del capital por estado de cuenta requerirá una regla
+  contable explícita de asignación por cuenta; no se inventa en la interfaz.
 - **Payouts:** Presenta cantidad registrada, importe total y cantidad pendiente
   como tres datos diferenciados.
 - **Capacidades:** Mesa administrada, mesas referidas e identidades son tarjetas

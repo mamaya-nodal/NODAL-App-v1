@@ -13,7 +13,6 @@ import {
 } from "@/modules/admin/domain/desks";
 import {
   buildPeriodEarnings,
-  closedAccountCapital,
   type PersonalDashboardData,
 } from "@/modules/summary/domain/personal-dashboard";
 import {
@@ -263,7 +262,7 @@ function buildPeriod(input: Readonly<{
 
 const julyAccounts = buildAccounts({
   closedCount: 18,
-  closedGainInCents: 326_400,
+  closedGainInCents: 1_050_000,
   liveCount: 0,
   liveLossInCents: 0,
   periodId: "july",
@@ -274,7 +273,7 @@ const julyAccounts = buildAccounts({
 
 const augustAccounts = buildAccounts({
   closedCount: 16,
-  closedGainInCents: 854_900,
+  closedGainInCents: 1_200_000,
   liveCount: 8,
   liveLossInCents: 184_879,
   periodId: "august",
@@ -285,7 +284,7 @@ const augustAccounts = buildAccounts({
 
 export const julyDemo = buildPeriod({
   accounts: julyAccounts,
-  capitalDepositInCents: 236_840,
+  capitalDepositInCents: 610_640,
   fundingWithdrawals: [
     { accountId: julyAccounts[0].id, amountInCents: 180_000, approvedOn: "2026-07-25", collectedOn: "2026-07-27", id: "july-payout-1" },
   ],
@@ -293,12 +292,12 @@ export const julyDemo = buildPeriod({
   label: "Julio 2026",
   month: "2026-07-01",
   operationCount: 31,
-  periodResultInCents: 326_400,
+  periodResultInCents: 1_050_000,
 });
 
 export const augustDemo = buildPeriod({
   accounts: augustAccounts,
-  capitalDepositInCents: 235_000,
+  capitalDepositInCents: 737_000,
   fundingWithdrawals: [
     { accountId: augustAccounts[0].id, amountInCents: 180_000, approvedOn: "2026-08-22", collectedOn: "2026-08-25", id: "august-payout-1" },
     { accountId: augustAccounts[1].id, amountInCents: 180_000, approvedOn: "2026-08-28", collectedOn: null, id: "august-payout-2" },
@@ -307,7 +306,7 @@ export const augustDemo = buildPeriod({
   label: "Agosto 2026",
   month: "2026-08-01",
   operationCount: 48,
-  periodResultInCents: 659_501,
+  periodResultInCents: 1_004_601,
 });
 
 export const demoPeriods = [julyDemo, augustDemo] as const;
@@ -375,25 +374,27 @@ function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childGr
   };
 }
 
-const julyDeskEconomy = demoDeskEconomy(julyDemo, 100_000, 500_000);
-const augustDeskEconomy = demoDeskEconomy(augustDemo, 200_000, 1_000_000);
+const julyDeskEconomy = demoDeskEconomy(julyDemo, 80_000, 80_000);
+const augustDeskEconomy = demoDeskEconomy(augustDemo, 100_000, 100_000);
+const managedDeskCapital = [200_000, 180_000, 220_000].reduce((total, amount) => total + amount, 0);
+const identityPayouts = [80_000, 120_000, 90_000, 110_000, 70_000, 130_000];
 
 export const demoHomeDashboard: PersonalDashboardData = {
   capabilities: {
-    identities: { active: 6, capacity: 20, payoutTotalInCents: 2_500_000 },
-    managedDesk: { capitalNetInCents: 250_000, capacity: 10, users: augustDeskEconomy.managedUsers },
+    identities: { active: identityPayouts.length, capacity: 20, payoutTotalInCents: identityPayouts.reduce((total, amount) => total + amount, 0) },
+    managedDesk: { capitalNetInCents: managedDeskCapital, capacity: 10, users: augustDeskEconomy.managedUsers },
     referredDesks: { bonusBps: bonusBps(augustDeskEconomy.referredDesks), capacity: 10, desks: augustDeskEconomy.referredDesks },
   },
-  closedCapitalInCents: closedAccountCapital(augustDemo.accounts),
+  capitalNetInCents: augustDemo.summary.capitalNetInCents,
   earnings: augustDeskEconomy.earnings,
   history: [
     {
-      closedCapitalInCents: closedAccountCapital(julyDemo.accounts),
+      capitalNetInCents: julyDemo.summary.capitalNetInCents,
       earningsInCents: julyDeskEconomy.earnings.totalInCents,
       periodMonth: julyDemo.month,
     },
     {
-      closedCapitalInCents: closedAccountCapital(augustDemo.accounts),
+      capitalNetInCents: augustDemo.summary.capitalNetInCents,
       earningsInCents: augustDeskEconomy.earnings.totalInCents,
       periodMonth: augustDemo.month,
     },

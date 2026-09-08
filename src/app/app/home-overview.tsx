@@ -80,13 +80,13 @@ function EarningsItem({ label, valueInCents }: Readonly<{ label: string; valueIn
 export function HomeOverview({ capitalHistory, dashboard, performance, periodLabel, summary }: HomeOverviewProps) {
   const [chartMetric, setChartMetric] = useState<ChartMetric>(dashboard ? "earnings" : "capital");
   const earnings = dashboard?.earnings ?? buildPeriodEarnings({ ownOperationsInCents: summary.traderGainInCents });
-  const closedCapitalInCents = dashboard?.closedCapitalInCents ?? summary.capitalNetInCents;
+  const capitalNetInCents = dashboard?.capitalNetInCents ?? summary.capitalNetInCents;
   const payout = payoutDashboardSummary(summary.fundingWithdrawals);
   const history = dashboard?.history ?? [];
   const chartHistory = dashboard
     ? history.map((point) => ({
         periodMonth: point.periodMonth,
-        valueInCents: chartMetric === "earnings" ? point.earningsInCents : point.closedCapitalInCents,
+        valueInCents: chartMetric === "earnings" ? point.earningsInCents : point.capitalNetInCents,
       }))
     : capitalHistory.map((point) => ({ periodMonth: point.periodMonth, valueInCents: point.capitalInCents }));
   const chart = chartGeometry(chartHistory);
@@ -127,8 +127,8 @@ export function HomeOverview({ capitalHistory, dashboard, performance, periodLab
 
         <article className="home-financial-metric">
           <span>Capital neto total</span>
-          <strong>{formatMoney(dashboard ? closedCapitalInCents : summary.capitalNetInCents)}</strong>
-          <small>{dashboard ? "Cuentas cerradas" : periodLabel}</small>
+          <strong>{formatMoney(capitalNetInCents)}</strong>
+          <small>{periodLabel}</small>
         </article>
 
         <article className="home-financial-metric home-payout-metric">

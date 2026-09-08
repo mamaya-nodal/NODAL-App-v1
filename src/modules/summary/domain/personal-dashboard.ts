@@ -1,4 +1,4 @@
-import type { FundingWithdrawal, SummaryAccount } from "./operational-summary";
+import type { FundingWithdrawal } from "./operational-summary";
 
 export type PeriodEarnings = Readonly<{
   deskAdministrationInCents: number | null;
@@ -9,7 +9,7 @@ export type PeriodEarnings = Readonly<{
 }>;
 
 export type PersonalDashboardHistoryPoint = Readonly<{
-  closedCapitalInCents: number;
+  capitalNetInCents: number;
   earningsInCents: number;
   periodMonth: string;
 }>;
@@ -34,7 +34,7 @@ export type PersonalDashboardCapabilities = Readonly<{
 
 export type PersonalDashboardData = Readonly<{
   capabilities?: PersonalDashboardCapabilities;
-  closedCapitalInCents: number;
+  capitalNetInCents: number;
   earnings: PeriodEarnings;
   history: PersonalDashboardHistoryPoint[];
 }>;
@@ -64,12 +64,6 @@ export function buildPeriodEarnings(input: Readonly<{
       (deskAdministrationInCents ?? 0) +
       (referredDesksInCents ?? 0),
   };
-}
-
-export function closedAccountCapital(accounts: readonly SummaryAccount[]): number {
-  return accounts
-    .filter((account) => account.state === "closed" && account.fundsOrigin === "Aporte trader")
-    .reduce((total, account) => total + account.priceInCents, 0);
 }
 
 export function payoutDashboardSummary(withdrawals: readonly FundingWithdrawal[]) {
