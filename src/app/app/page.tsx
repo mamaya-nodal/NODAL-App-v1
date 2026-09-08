@@ -817,7 +817,7 @@ export default async function PrivateAppPage({
             <strong>{formatMoney(purchases.reduce((total, purchase) => total + purchase.priceCents, 0))}</strong>
           </div>
 
-          <div className="purchase-list" aria-label="Compras registradas">
+          <div className="purchase-list" aria-label="Cuentas registradas">
             {purchases.length === 0 ? (
               <p className="empty-state">Todavía no hay cuentas registradas.</p>
             ) : (

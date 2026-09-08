@@ -6232,6 +6232,28 @@ html[data-theme="day"] .nodal-workspace .accounting-exception {
   box-shadow: none;
 }
 
+.accounting-view .summary-section,
+html[data-theme="day"] .accounting-view .summary-section {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+}
+
+.accounting-view .summary-section > h3 {
+  margin: 0 0 9px;
+  color: var(--app-title);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  letter-spacing: -.3px;
+}
+
+.accounting-view .summary-section > .context-note { display: none; }
+.accounting-view .progress-primary-grid,
+.accounting-view .conciliation-grid,
+.accounting-view .progress-detail-grid,
+.accounting-view .summary-forms { gap: 10px; }
+
 .operations-view .operation-register-panel {
   margin-top: 18px;
   padding-top: 20px;
