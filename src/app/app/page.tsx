@@ -41,6 +41,7 @@ import {
 } from "@/modules/workspace/domain/selection";
 
 import { createPurchase } from "./purchase-actions";
+import { AccessPendingGate } from "./access-pending-gate";
 import { DevelopmentPeriodReset } from "./development-period-reset";
 import { DetectedNinjaAccounts } from "./detected-ninja-accounts";
 import { NinjaConnectorGate } from "./ninja-connector-gate";
@@ -183,6 +184,11 @@ export default async function PrivateAppPage({
       : null,
   );
   const allowed = decision === "allowed";
+
+  if (!allowed) {
+    return <AccessPendingGate email={nodalUser?.email || user.email || "Cuenta de Google"} />;
+  }
+
   const administrationScope = allowed
     ? await loadMyAdministrationScope()
     : { kind: "none" as const };

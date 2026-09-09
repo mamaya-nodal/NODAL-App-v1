@@ -763,6 +763,50 @@ html[data-theme="day"] .connector-gate-modal {
   text-align: center;
 }
 .connector-gate-modal .purchase-message { margin: 18px 0 0; text-align: center; }
+.access-pending-gate .connector-gate-modal > .summary strong { color: var(--app-title); font-weight: 800; }
+.access-pending-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  margin-top: 24px;
+  border: 1px solid var(--app-border);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--app-input) 78%, transparent);
+  color: var(--app-copy);
+  font-size: .82rem;
+  font-weight: 800;
+}
+.access-pending-status span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f0b84c;
+  box-shadow: 0 0 0 5px rgb(240 184 76 / 12%);
+}
+.connector-install-step {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+  text-align: center;
+}
+.connector-install-step a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 49px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--app-input) 78%, transparent);
+  color: var(--app-title);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.connector-install-step a:hover { border-color: color-mix(in srgb, var(--app-accent) 48%, var(--app-border)); }
+.connector-install-step span { color: var(--app-subtle); font-size: .72rem; line-height: 1.45; }
 .connector-gate-modal .ninja-pairing-panel.is-compact { margin: 25px 0 0; padding: 0; background: transparent; box-shadow: none; }
 .ninja-pairing-panel.is-compact .ninja-detections-heading.visually-compact { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ninja-pairing-panel.is-compact form { margin: 0; }

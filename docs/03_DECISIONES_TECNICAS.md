@@ -592,3 +592,18 @@ vigente sin aprobacion y evidencia suficiente.
   un lote conciliado no lo transforma en un asiento contable.
 - **Estado:** Implementada el 2026-09-09 como preparación para la prueba integral
   de Ivo.
+
+### APP-095 - Alta y distribución del conector para pruebas remotas
+
+- **Acceso pendiente:** Un usuario autenticado pero todavía no autorizado ve una
+  pantalla independiente y centrada. El dashboard y el estado del conector no se
+  renderizan hasta que NODAL habilita el acceso.
+- **Distribución:** La pantalla de conexión ofrece un ZIP descargable desde la
+  propia aplicación. Incluye el conector, el instalador y las instrucciones; no
+  contiene credenciales ni códigos de vinculación.
+- **Vinculación:** El código temporal continúa generándose dentro de la sesión
+  del usuario y se ingresa localmente en la PC donde corre NinjaTrader.
+- **Seguridad:** El complemento sigue siendo de solo lectura y la autorización
+  del usuario permanece separada de la autenticación de Google.
+- **Estado:** Implementada el 2026-09-09 para iniciar la prueba integral desde la
+  PC de Ivo.

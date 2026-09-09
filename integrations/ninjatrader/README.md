@@ -8,10 +8,11 @@ una operatoria. No puede crear, modificar ni cerrar operaciones.
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.
-2. Ejecuta `NODAL-Ninja-Connector-setup.ps1` y pega ese código.
-3. El instalador copia el complemento automáticamente; el alumno solo debe
+2. Descarga y descomprime `NODAL-Ninja-Connector.zip` en la PC donde corre NinjaTrader.
+3. Hace doble clic en `INSTALAR-NODAL.cmd` y pega ese código.
+4. El instalador copia el complemento automáticamente; el alumno solo debe
    compilar `NodalNinjaConnector` en NinjaScript Editor.
-4. El conector canjea el código una sola vez y guarda en Windows una credencial
+5. El conector canjea el código una sola vez y guarda en Windows una credencial
    cifrada para ese usuario.
 
 Después de vincularse, el conector continúa enviando aunque el alumno cierre la
