@@ -488,3 +488,20 @@ vigente sin aprobacion y evidencia suficiente.
 - **Aislamiento:** La lectura privilegiada ocurre sólo en el servidor después de
   resolver la mesa desde la sesión autenticada. La ruta no acepta un id de mesa
   elegido por el navegador y vuelve a verificar que la asignación siga activa.
+
+### APP-090 - El dashboard personal usa la economía real de mesas
+
+- **Decisión:** `Ganancias del período` se calcula con la estructura vigente del
+  período: ganancia propia luego de comisión, ingreso por administración de la
+  mesa y bonus por mesas directas referidas. Los dos últimos conceptos sólo se
+  muestran cuando corresponden al usuario.
+- **Capacidades:** La tarjeta de mesa administrada muestra usuarios y facturación
+  real de esa mesa. La tarjeta de mesas referidas muestra únicamente las mesas
+  hijas directas y el tramo de bonus vigente.
+- **Historial:** El gráfico reconstruye facturación y ganancia total para cada
+  período real disponible del usuario, aplicando los términos históricos de ese
+  mes.
+- **Seguridad:** La reconstrucción global se ejecuta sólo en servidor con una
+  identidad privilegiada, después de autenticar al usuario, y entrega al cliente
+  únicamente sus agregados personales.
+- **Estado:** Implementado el 2026-09-09.

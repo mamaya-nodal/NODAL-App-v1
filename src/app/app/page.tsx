@@ -31,6 +31,7 @@ import {
   buildPeriodEarnings,
   type PersonalDashboardData,
 } from "@/modules/summary/domain/personal-dashboard";
+import { loadPersonalDeskDashboard } from "@/modules/summary/server/personal-desk-dashboard";
 import {
   formatPeriodLabel,
   resolveWorkspaceSelection,
@@ -581,7 +582,7 @@ export default async function PrivateAppPage({
       entries: operationEntries, fundingWithdrawals, opening: periodOpening, phaseWithdrawals, walletMovements,
     });
     operationalSummary = applyIndividualCommission(operationalSummary, await loadIndividualCommission(user.id, selection.period.periodMonth));
-    personalDashboard = {
+    personalDashboard = await loadPersonalDeskDashboard(selection.period.periodMonth) ?? {
       billingInCents: operationalSummary.realizedGainInCents,
       earnings: buildPeriodEarnings({
         ownOperationsInCents: operationalSummary.traderGainInCents,
