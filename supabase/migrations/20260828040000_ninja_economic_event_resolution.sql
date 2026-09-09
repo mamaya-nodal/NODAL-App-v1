@@ -7,7 +7,7 @@ alter table public.ninja_account_links
 create unique index if not exists ninja_account_links_one_active_per_account
 on public.ninja_account_links(account_id) where closed_at is null;
 
-create function public.normalize_ninja_change_resolution_status()
+create or replace function public.normalize_ninja_change_resolution_status()
 returns trigger language plpgsql set search_path = '' as $$
 begin
   if new.event_type in ('reset', 'reset_after_burn') then new.resolution_status = 'pending'; end if;
@@ -15,6 +15,7 @@ begin
 end;
 $$;
 
+drop trigger if exists ninja_account_change_events_normalize_resolution on public.ninja_account_change_events;
 create trigger ninja_account_change_events_normalize_resolution
 before insert on public.ninja_account_change_events
 for each row execute function public.normalize_ninja_change_resolution_status();
@@ -71,7 +72,7 @@ create trigger ninja_account_change_events_apply_automatic
 after insert on public.ninja_account_change_events
 for each row execute function public.apply_automatic_ninja_account_change();
 
-create function public.resolve_ninja_account_change_event(
+create or replace function public.resolve_ninja_account_change_event(
   target_event_id uuid,
   target_resolution text,
   management_reason text
@@ -127,7 +128,7 @@ begin
 end;
 $$;
 
-create function public.register_ninja_reset_purchase(
+create or replace function public.register_ninja_reset_purchase(
   target_event_id uuid,
   target_period_id uuid,
   target_price_cents bigint,

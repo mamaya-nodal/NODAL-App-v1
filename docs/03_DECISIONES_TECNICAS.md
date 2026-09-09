@@ -524,3 +524,34 @@ vigente sin aprobacion y evidencia suficiente.
   Todas las cifras provienen de registros reales y de los servicios contables
   ya conciliados.
 - **Estado:** Implementado el 2026-09-09.
+
+### APP-092 - Automatización Ninja general con conciliación previa
+
+- **Captura:** Las operaciones técnicas dejan de depender de una allowlist para
+  cuentas reales. Entran las cuentas prop vinculadas y los brokers clasificados
+  inequívocamente dentro de conexiones aprobadas. `Sim101` conserva la
+  allowlist únicamente como excepción de prueba.
+- **Alcance de riesgo:** Empresa, producto, fase y tamaño forman parte de la
+  identidad del programa. Las reglas automáticas de piso y transición se
+  aplican exclusivamente al alcance confirmado de USD 50.000; un tamaño futuro
+  sin regla aprobada no se mezcla ni se automatiza.
+- **Lotes:** Cada cuenta conserva su operación técnica individual. El backend
+  correlaciona prop y cobertura por apertura, instrumento, dirección opuesta y
+  cantidad, sin pedir líder ni grupo al usuario. Los vínculos históricos se
+  resuelven según la fecha de la operación, incluso si después cerraron.
+- **Proyección contable:** Un lote sólo queda `shadow_ready` si sus cuentas
+  comparten período, empresa y fase; existen saldos broker inicial y final; el
+  saldo inicial coincide con el último saldo contable; y resultado y reparto
+  concilian. De lo contrario queda bloqueado con una causa concreta.
+- **Períodos y fases:** Evaluación se deriva automáticamente. Una vuelta funded
+  sólo se reutiliza cuando ya existe evidencia contable de esa vuelta; la app no
+  inventa el avance entre vueltas.
+- **Activación:** La escritura económica permanece en modo paralelo (`shadow`).
+  Punto 6 deberá comparar períodos completos contra Sheets antes de habilitar
+  la creación automática de Control Diario y Registro.
+- **Trazabilidad visible:** Contabilidad reúne depósitos broker, retiros broker,
+  billetera y estados de payout en una cronología plegada, conservando origen,
+  fecha y estado. Los movimientos sin fuente externa fiable siguen siendo
+  manuales y auditados.
+- **Estado:** Implementado el 2026-09-09 en modo paralelo; activación económica
+  pendiente de conciliación.

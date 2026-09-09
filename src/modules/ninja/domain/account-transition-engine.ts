@@ -1,6 +1,7 @@
 export type NinjaPhase = "Evaluation" | "Funded" | "Live";
 
 export type TrackedNinjaAccount = Readonly<{
+  accountSizeInCents: number;
   balanceInCents: number;
   burnFloorInCents: number;
   companyCode: string;
@@ -13,6 +14,7 @@ export type TrackedNinjaAccount = Readonly<{
 }>;
 
 export type NewNinjaAccount = Readonly<{
+  accountSizeInCents: number;
   balanceInCents: number;
   companyCode: string;
   externalAccountName: string;
@@ -40,8 +42,10 @@ const INITIAL_BURN_FLOOR_IN_CENTS = 4_800_000;
 const EVALUATION_TARGET_IN_CENTS = 5_300_100;
 const FUNDED_FLOOR_IN_CENTS = 5_010_000;
 
-function sameProgram(left: Pick<TrackedNinjaAccount, "companyCode" | "product">, right: Pick<NewNinjaAccount, "companyCode" | "product">) {
-  return left.companyCode === right.companyCode && left.product === right.product;
+function sameProgram(left: Pick<TrackedNinjaAccount, "accountSizeInCents" | "companyCode" | "product">, right: Pick<NewNinjaAccount, "accountSizeInCents" | "companyCode" | "product">) {
+  return left.companyCode === right.companyCode
+    && left.product === right.product
+    && left.accountSizeInCents === right.accountSizeInCents;
 }
 function byExternalName<T extends { externalAccountName: string }>(left: T, right: T) {
   return left.externalAccountName.localeCompare(right.externalAccountName);
@@ -52,6 +56,9 @@ function fundedTriggerInCents(companyCode: string) {
 }
 
 export function startTrackingNinjaAccount(account: NewNinjaAccount, businessDate: string): TrackedNinjaAccount {
+  if (account.accountSizeInCents !== INITIAL_BALANCE_IN_CENTS) {
+    throw new Error("NODAL todavía no tiene una regla de riesgo aprobada para ese tamaño de cuenta.");
+  }
   return {
     ...account,
     burnFloorInCents: INITIAL_BURN_FLOOR_IN_CENTS,

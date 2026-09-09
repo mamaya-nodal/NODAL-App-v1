@@ -17,13 +17,14 @@ export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return response({ error: "La sesión no está autorizada." }, 401);
-  const [eventsResult, operationsResult] = await Promise.all([
+  const [eventsResult, operationsResult, batchesResult] = await Promise.all([
     supabase.rpc("get_current_user_ninja_trade_telemetry", { target_limit: 200 }),
     supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 20 }),
+    supabase.rpc("get_current_user_ninja_operation_batches", { target_limit: 30 }),
   ]);
-  return eventsResult.error || operationsResult.error
+  return eventsResult.error || operationsResult.error || batchesResult.error
     ? response({ error: "No se pudo consultar la prueba." }, 503)
-    : response({ events: eventsResult.data ?? [], operations: operationsResult.data ?? [] }, 200);
+    : response({ batches: batchesResult.data ?? [], events: eventsResult.data ?? [], operations: operationsResult.data ?? [] }, 200);
 }
 
 export async function POST(request: Request) {

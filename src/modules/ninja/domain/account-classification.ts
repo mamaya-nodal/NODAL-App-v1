@@ -1,6 +1,7 @@
 import type { NinjaAccountSnapshot } from "./ingestion-payload";
 
 export type DetectedNinjaAccount = Readonly<{
+  accountSizeInCents: number | null;
   accountName: string;
   company: string | null;
   companyCode: string | null;
@@ -13,6 +14,7 @@ export type DetectedNinjaAccount = Readonly<{
 }>;
 
 type PropAccountRule = Readonly<{
+  accountSizeInCents: number;
   company: string;
   companyCode: string;
   pattern: RegExp;
@@ -23,23 +25,23 @@ type PropAccountRule = Readonly<{
 // Los prefijos más específicos deben evaluarse primero. Solo se incluyen
 // nomenclaturas confirmadas en la matriz vigente.
 const PROP_ACCOUNT_RULES: readonly PropAccountRule[] = [
-  { company: "Lucid", companyCode: "LUCID", pattern: /^LMXF\d+$/, phase: "Funded", product: "MAXX" },
-  { company: "Lucid", companyCode: "LUCID", pattern: /^LMXL\d+$/, phase: "Live", product: "MAXX" },
-  { company: "Lucid", companyCode: "LUCID", pattern: /^LMX\d+$/, phase: "Evaluation", product: "MAXX" },
-  { company: "Lucid", companyCode: "LUCID", pattern: /^LFE\d+$/, phase: "Evaluation", product: "Flex" },
-  { company: "Lucid", companyCode: "LUCID", pattern: /^LFF\d+$/, phase: "Funded", product: "Flex" },
-  { company: "Lucid", companyCode: "LUCID", pattern: /^LFL\d+$/, phase: "Live", product: "Flex" },
-  { company: "My Funded Futures", companyCode: "MFF", pattern: /^MFFUEVRPD[A-Z0-9]+$/, phase: "Evaluation", product: "Rapid EOD" },
-  { company: "My Funded Futures", companyCode: "MFF", pattern: /^MFFUSFREOD[A-Z0-9]+$/, phase: "Funded", product: "Rapid EOD" },
-  { company: "Topstep", companyCode: "TOPSTEP", pattern: /^50KTC-V2-[A-Z0-9-]+$/, phase: "Evaluation", product: "Trading Combine" },
-  { company: "Topstep", companyCode: "TOPSTEP", pattern: /^EXPRESS-V2-CT-[A-Z0-9-]+$/, phase: "Funded", product: "Express" },
-  { company: "Topstep", companyCode: "TOPSTEP", pattern: /^TOPX[A-Z0-9-]+$/, phase: "Live", product: null },
-  { company: "Funded Futures Family", companyCode: "FFF", pattern: /^FFFUNDED\d{6}$/, phase: "Funded", product: "Prime 50K" },
-  { company: "Funded Futures Family", companyCode: "FFF", pattern: /^FFF\d{6}$/, phase: "Evaluation", product: "Prime 50K" },
-  { company: "Tradeify", companyCode: "TRADEFY", pattern: /^FTDFYSLX50[A-Z0-9-]*$/, phase: "Funded", product: "Select Flex" },
-  { company: "Tradeify", companyCode: "TRADEFY", pattern: /^TDFYSL50[A-Z0-9-]*$/, phase: "Evaluation", product: "Select" },
-  { company: "Take Profit Trader", companyCode: "TPT", pattern: /^TAKEPROFITPRO[A-Z0-9-]*$/, phase: "Funded", product: "PRO" },
-  { company: "Take Profit Trader", companyCode: "TPT", pattern: /^TAKEPROFIT[A-Z0-9-]*$/, phase: "Evaluation", product: null },
+  { accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID", pattern: /^LMXF\d+$/, phase: "Funded", product: "MAXX" },
+  { accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID", pattern: /^LMXL\d+$/, phase: "Live", product: "MAXX" },
+  { accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID", pattern: /^LMX\d+$/, phase: "Evaluation", product: "MAXX" },
+  { accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID", pattern: /^LFE\d+$/, phase: "Evaluation", product: "Flex" },
+  { accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID", pattern: /^LFF\d+$/, phase: "Funded", product: "Flex" },
+  { accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID", pattern: /^LFL\d+$/, phase: "Live", product: "Flex" },
+  { accountSizeInCents: 5_000_000, company: "My Funded Futures", companyCode: "MFF", pattern: /^MFFUEVRPD[A-Z0-9]+$/, phase: "Evaluation", product: "Rapid EOD" },
+  { accountSizeInCents: 5_000_000, company: "My Funded Futures", companyCode: "MFF", pattern: /^MFFUSFREOD[A-Z0-9]+$/, phase: "Funded", product: "Rapid EOD" },
+  { accountSizeInCents: 5_000_000, company: "Topstep", companyCode: "TOPSTEP", pattern: /^50KTC-V2-[A-Z0-9-]+$/, phase: "Evaluation", product: "Trading Combine" },
+  { accountSizeInCents: 5_000_000, company: "Topstep", companyCode: "TOPSTEP", pattern: /^EXPRESS-V2-CT-[A-Z0-9-]+$/, phase: "Funded", product: "Express" },
+  { accountSizeInCents: 5_000_000, company: "Topstep", companyCode: "TOPSTEP", pattern: /^TOPX[A-Z0-9-]+$/, phase: "Live", product: null },
+  { accountSizeInCents: 5_000_000, company: "Funded Futures Family", companyCode: "FFF", pattern: /^FFFUNDED\d{6}$/, phase: "Funded", product: "Prime 50K" },
+  { accountSizeInCents: 5_000_000, company: "Funded Futures Family", companyCode: "FFF", pattern: /^FFF\d{6}$/, phase: "Evaluation", product: "Prime 50K" },
+  { accountSizeInCents: 5_000_000, company: "Tradeify", companyCode: "TRADEFY", pattern: /^FTDFYSLX50[A-Z0-9-]*$/, phase: "Funded", product: "Select Flex" },
+  { accountSizeInCents: 5_000_000, company: "Tradeify", companyCode: "TRADEFY", pattern: /^TDFYSL50[A-Z0-9-]*$/, phase: "Evaluation", product: "Select" },
+  { accountSizeInCents: 5_000_000, company: "Take Profit Trader", companyCode: "TPT", pattern: /^TAKEPROFITPRO[A-Z0-9-]*$/, phase: "Funded", product: "PRO" },
+  { accountSizeInCents: 5_000_000, company: "Take Profit Trader", companyCode: "TPT", pattern: /^TAKEPROFIT[A-Z0-9-]*$/, phase: "Evaluation", product: null },
 ];
 
 function dateInBuenosAires(isoDate: string) {
@@ -55,13 +57,13 @@ export function classifyNinjaAccount(account: NinjaAccountSnapshot, firstSeenAt:
   const common = { accountName: account.accountName, connectionName: account.connectionName, firstSeenAt, suggestedPurchaseDate: dateInBuenosAires(firstSeenAt) };
 
   if (name === "SIM101" || account.connectionName.toLowerCase().includes("simulated"))
-    return { ...common, company: null, companyCode: null, phase: null, product: null, type: "simulator" };
+    return { ...common, accountSizeInCents: null, company: null, companyCode: null, phase: null, product: null, type: "simulator" };
 
   const rule = PROP_ACCOUNT_RULES.find((candidate) => candidate.pattern.test(name));
-  if (rule) return { ...common, company: rule.company, companyCode: rule.companyCode, phase: rule.phase, product: rule.product, type: "prop" };
+  if (rule) return { ...common, accountSizeInCents: rule.accountSizeInCents, company: rule.company, companyCode: rule.companyCode, phase: rule.phase, product: rule.product, type: "prop" };
 
   // Tradeify Live también usa números cortos. Sin evidencia adicional es
   // indistinguible de una cuenta broker y no debe generar una compra automática.
-  if (/^\d+$/.test(name)) return { ...common, company: null, companyCode: null, phase: null, product: null, type: "broker" };
-  return { ...common, company: null, companyCode: null, phase: null, product: null, type: "unknown" };
+  if (/^\d+$/.test(name)) return { ...common, accountSizeInCents: null, company: null, companyCode: null, phase: null, product: null, type: "broker" };
+  return { ...common, accountSizeInCents: null, company: null, companyCode: null, phase: null, product: null, type: "unknown" };
 }

@@ -15,10 +15,20 @@ import {
 type Props = Readonly<{
   accounts: Array<{ id: string; label: string }>;
   embedded?: boolean;
+  economicTrace?: EconomicTraceItem[];
   periodLabel?: string;
   periods?: AccountingPeriodView[];
   periodId: string;
   summary: OperationalSummary;
+}>;
+
+export type EconomicTraceItem = Readonly<{
+  amountInCents: number;
+  date: string;
+  id: string;
+  label: string;
+  source: "Automático" | "Manual";
+  status?: string | null;
 }>;
 
 export type AccountingPeriodView = Readonly<{
@@ -56,7 +66,7 @@ const labels = {
   prior_pending_collection: "Cobro pendiente anterior",
 } as const;
 
-export function ProgressSummary({ accounts, embedded = false, periodId, periodLabel, periods = [], summary }: Props) {
+export function ProgressSummary({ accounts, economicTrace = [], embedded = false, periodId, periodLabel, periods = [], summary }: Props) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -205,6 +215,20 @@ export function ProgressSummary({ accounts, embedded = false, periodId, periodLa
           <p><span>Flotante</span><strong>{money(summary.floatingInCents)}</strong></p>
         </div>
       </details>
+
+      {economicTrace.length > 0 && (
+        <details className="demo-operation-disclosure accounting-economic-trace">
+          <summary><span>Movimientos económicos</span><strong>{economicTrace.length}</strong><i aria-hidden="true" /></summary>
+          <div className="economic-trace-list">
+            {economicTrace.map((item) => (
+              <article key={item.id}>
+                <div><strong>{item.label}</strong><span>{date(item.date)} · {item.source}{item.status ? ` · ${item.status}` : ""}</span></div>
+                <strong>{money(item.amountInCents)}</strong>
+              </article>
+            ))}
+          </div>
+        </details>
+      )}
 
       <details className="accounting-disclosure demo-operation-disclosure" open={hasConciliationDifference ? true : undefined}>
         <summary>

@@ -14,7 +14,7 @@ function account(accountName: string, connectionName = "Ninja"): NinjaAccountSna
 describe("classifyNinjaAccount", () => {
   it("reconoce una cuenta Lucid Flex de evaluación y sugiere la fecha argentina", () => {
     expect(classifyNinjaAccount(account("LFE05088021070001", "Lucid"), "2026-08-27T01:30:00Z")).toEqual({
-      accountName: "LFE05088021070001", company: "Lucid", companyCode: "LUCID", connectionName: "Lucid",
+      accountName: "LFE05088021070001", accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID", connectionName: "Lucid",
       firstSeenAt: "2026-08-27T01:30:00Z", phase: "Evaluation", product: "Flex", suggestedPurchaseDate: "2026-08-26", type: "prop",
     });
   });
@@ -37,7 +37,7 @@ describe("classifyNinjaAccount", () => {
     ["TAKEPROFIT123456", "Take Profit Trader", "TPT", "Evaluation", null],
     ["TAKEPROFITPRO123456", "Take Profit Trader", "TPT", "Funded", "PRO"],
   ] as const)("clasifica %s sin confundir prefijos solapados", (name, company, companyCode, phase, product) => {
-    expect(classifyNinjaAccount(account(name), "2026-08-26T12:00:00Z")).toMatchObject({ company, companyCode, phase, product, type: "prop" });
+    expect(classifyNinjaAccount(account(name), "2026-08-26T12:00:00Z")).toMatchObject({ accountSizeInCents: 5_000_000, company, companyCode, phase, product, type: "prop" });
   });
 
   it("no inventa clasificación para nomenclaturas ambiguas o no confirmadas", () => {

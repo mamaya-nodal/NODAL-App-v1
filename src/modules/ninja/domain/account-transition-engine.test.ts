@@ -8,7 +8,7 @@ import {
 } from "./account-transition-engine";
 
 function account(externalAccountName: string, phase: NewNinjaAccount["phase"], balance = 50_000, companyCode = "LUCID"): NewNinjaAccount {
-  return { balanceInCents: balance * 100, companyCode, externalAccountName, phase, product: "Flex" };
+  return { accountSizeInCents: 5_000_000, balanceInCents: balance * 100, companyCode, externalAccountName, phase, product: "Flex" };
 }
 
 describe("pisos y objetivos del seguimiento Ninja", () => {
@@ -41,6 +41,15 @@ describe("pisos y objetivos del seguimiento Ninja", () => {
     let topstep = startTrackingNinjaAccount(account("EXPRESS-1", "Funded", 50_000, "TOPSTEP"), "2026-08-24");
     topstep = observeTrackedNinjaAccount(topstep, 5_200_000, "2026-08-24");
     expect(topstep.burnFloorInCents).toBe(5_010_000);
+  });
+
+  it("no mezcla vidas de programas con distinto tamaño", () => {
+    const evaluation = startTrackingNinjaAccount(account("LFE1", "Evaluation", 53_001), "2026-08-24");
+    const funded = { ...account("LFF1", "Funded"), accountSizeInCents: 10_000_000 };
+    expect(detectNinjaAccountChanges([evaluation], [funded]).map((change) => change.kind)).toEqual([
+      "review_disappearance",
+      "new_account",
+    ]);
   });
 });
 describe("cambios de inventario Ninja", () => {

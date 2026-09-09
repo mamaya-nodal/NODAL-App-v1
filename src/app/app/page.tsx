@@ -60,7 +60,7 @@ import { ProgressSummary } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
 import { AccountsOverview, type AccountOverviewAccount } from "./accounts-overview";
-import type { AccountingPeriodView } from "./progress-summary";
+import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -261,6 +261,7 @@ export default async function PrivateAppPage({
   let homePerformance: HomePerformance = buildHomePerformance([]);
   let personalDashboard: PersonalDashboardData | undefined;
   let accountingPeriods: AccountingPeriodView[] = [];
+  let economicTrace: EconomicTraceItem[] = [];
   let periodOpening: OperationalOpeningSnapshot = {
     accumulatedResultInCents: 0,
     brokerBalanceInCents: null,
@@ -312,7 +313,7 @@ export default async function PrivateAppPage({
         supabase
           .from("daily_controls")
           .select(
-            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, allocation_reason",
+            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, allocation_reason, source, created_at",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
@@ -334,12 +335,12 @@ export default async function PrivateAppPage({
           .eq("period_id", selection.period.id),
         supabase
           .from("wallet_movements")
-          .select("id, occurred_on, kind, amount_cents, observation")
+          .select("id, occurred_on, kind, amount_cents, observation, created_at")
           .eq("period_id", selection.period.id)
           .order("occurred_on", { ascending: false }),
         supabase
           .from("funding_withdrawals")
-          .select("id, account_id, approved_on, amount_cents, collected_on, phase")
+          .select("id, account_id, approved_on, amount_cents, collected_on, phase, created_at")
           .eq("period_id", selection.period.id)
           .eq("is_active", true)
           .order("approved_on", { ascending: false }),
@@ -616,6 +617,44 @@ export default async function PrivateAppPage({
       approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, id: withdrawal.id,
       phase: withdrawal.phase,
     }));
+    economicTrace = [
+      ...(dailyControlRows ?? []).flatMap((control): EconomicTraceItem[] =>
+        control.kind === "balance_update" || control.movement_cents === null ? [] : [{
+          amountInCents: Number(control.movement_cents),
+          date: control.operated_on,
+          id: `broker-${control.id}`,
+          label: control.kind === "deposit" ? "Depósito broker" : "Retiro broker",
+          source: control.source === "ninjatrader" ? "Automático" : "Manual",
+          status: control.origin_destination,
+        }],
+      ),
+      ...(walletMovementRows ?? []).map((movement): EconomicTraceItem => ({
+        amountInCents: Number(movement.amount_cents),
+        date: movement.occurred_on,
+        id: `wallet-${movement.id}`,
+        label: movement.kind === "external_contribution"
+          ? "Aporte a billetera"
+          : movement.kind === "personal_withdrawal"
+            ? "Retiro de billetera"
+            : "Cobro pendiente anterior",
+        source: "Manual",
+      })),
+      ...(fundingWithdrawalRows ?? []).flatMap((withdrawal): EconomicTraceItem[] => [{
+        amountInCents: Number(withdrawal.amount_cents),
+        date: withdrawal.approved_on,
+        id: `payout-approved-${withdrawal.id}`,
+        label: "Payout aprobado",
+        source: "Manual",
+        status: withdrawal.collected_on ? "Cobrado" : "Pendiente",
+      }, ...(withdrawal.collected_on ? [{
+        amountInCents: Number(withdrawal.amount_cents),
+        date: withdrawal.collected_on,
+        id: `payout-collected-${withdrawal.id}`,
+        label: "Payout cobrado",
+        source: "Manual" as const,
+        status: null,
+      }] : [])]),
+    ].sort((left, right) => right.date.localeCompare(left.date) || right.id.localeCompare(left.id));
     periodOpening = buildPeriodOpening({
       controls: (historicalControlRows ?? []).map((control) => ({
         balanceAfterInCents: Number(control.balance_after_cents),
@@ -969,6 +1008,7 @@ export default async function PrivateAppPage({
           </div>
           <ProgressSummary
             accounts={accountOptions.map((account) => ({ id: account.id, label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}` }))}
+            economicTrace={economicTrace}
             embedded
             periodId={selection.period.id}
             periodLabel={formatPeriodLabel(selection.period.periodMonth)}

@@ -4,7 +4,7 @@ import { evolveNinjaTransitionState, type NinjaTransitionObservation } from "./t
 let sequence = 0;
 const id = () => `life-${++sequence}`;
 function observation(name: string, phase: NinjaTransitionObservation["phase"], balance = 50_000): NinjaTransitionObservation {
-  return { balanceInCents: balance * 100, balanceStatus: "verified", companyCode: "LUCID", connectionName: "Lucid", externalAccountName: name, phase, product: "Flex" };
+  return { accountSizeInCents: 5_000_000, balanceInCents: balance * 100, balanceStatus: "verified", companyCode: "LUCID", connectionName: "Lucid", externalAccountName: name, phase, product: "Flex" };
 }
 
 describe("evolveNinjaTransitionState", () => {

@@ -7025,6 +7025,25 @@ html[data-theme="day"] .demo-stage.live {
 .telemetry-closed-diagnostics { margin: 14px 0; }
 .telemetry-closed-diagnostics > .telemetry-probe-grid { padding-bottom: 2px; }
 
+.automatic-batch-status { margin: 12px 0 18px; }
+.automatic-batch-list { display: grid; gap: 8px; padding: 0 10px 10px; }
+.automatic-batch-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-panel) 88%, var(--app-bg));
+}
+.automatic-batch-list article > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.automatic-batch-list article > div:last-child { align-items: flex-end; text-align: right; }
+.automatic-batch-list strong { color: var(--app-title); font-size: .76rem; }
+.automatic-batch-list span { color: var(--app-subtle); font-size: .64rem; }
+.automatic-batch-list span.ready { color: var(--app-accent); font-weight: 800; }
+.automatic-batch-list span.blocked { max-width: 270px; color: #ffb35c; font-weight: 800; }
+
 .real-account-results {
   margin-top: 18px;
   border: 1px solid var(--app-border);
@@ -7056,11 +7075,29 @@ html[data-theme="day"] .demo-stage.live {
 .accounting-view .demo-accounting-grid { margin-bottom: 0; }
 .accounting-view .demo-periods-heading { margin-top: 18px; }
 .accounting-view .accounting-period-archive,
-.accounting-view .accounting-balances { margin-top: 10px; }
+.accounting-view .accounting-balances,
+.accounting-view .accounting-economic-trace { margin-top: 10px; }
 .accounting-view .accounting-period-archive > .demo-period-cards { padding: 0 10px 10px; }
+
+.economic-trace-list { display: grid; gap: 1px; padding: 0 10px 10px; }
+.economic-trace-list article { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 11px 3px; border-bottom: 1px solid var(--app-border); }
+.economic-trace-list article:last-child { border-bottom: 0; }
+.economic-trace-list article > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.economic-trace-list strong { color: var(--app-title); font-size: .75rem; }
+.economic-trace-list span { color: var(--app-subtle); font-size: .64rem; }
 
 html[data-theme="day"] .real-account-results {
   border-color: #d1ddd3;
   background: #ffffff;
   box-shadow: 0 7px 20px rgb(23 34 28 / 4%), inset 0 1px 0 #ffffff;
+}
+
+html[data-theme="day"] .automatic-batch-list article {
+  border-color: #d8e2da;
+  background: #f8faf8;
+}
+
+@media (max-width: 620px) {
+  .automatic-batch-list article { align-items: flex-start; }
+  .automatic-batch-list article > div:last-child { align-items: flex-end; }
 }

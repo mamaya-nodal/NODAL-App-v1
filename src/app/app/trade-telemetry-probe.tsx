@@ -20,6 +20,26 @@ type TechnicalOperationRow = Readonly<{
   status: "closed" | "open" | "settling";
 }>;
 
+type AutomaticBatchRow = Readonly<{
+  accounting_mode: "active" | "shadow";
+  accounting_status: "blocked" | "committed" | "shadow_ready";
+  blocking_reason: string | null;
+  broker_result_cents: number | string;
+  company_name: string | null;
+  correlation_status: "conflict" | "ready" | "unmatched";
+  id: string;
+  opened_at: string;
+  operated_on: string | null;
+  phase: string | null;
+  prop_accounts: Array<{
+    accountId: string;
+    accountName: string;
+    allocatedBrokerResultInCents: number;
+  }>;
+  rounding_difference_cents: number | string;
+  settled_at: string | null;
+}>;
+
 type Props = Readonly<{
   brokerAccountNames?: readonly string[];
   propAccountNames?: readonly string[];
@@ -83,6 +103,7 @@ export function TradeTelemetryProbe({
 }: Props) {
   const [events, setEvents] = useState<NinjaTelemetryRow[]>([]);
   const [operations, setOperations] = useState<TechnicalOperationRow[]>([]);
+  const [batches, setBatches] = useState<AutomaticBatchRow[]>([]);
   const [available, setAvailable] = useState(true);
   const probes = useMemo(() => buildNinjaOperationProbe(events, new Date()), [events]);
   const visibleProbes = probes.filter((probe) =>
@@ -114,8 +135,8 @@ export function TradeTelemetryProbe({
     async function refresh() {
       try {
         const result = await fetch("/api/integrations/ninjatrader/telemetry", { cache: "no-store" });
-        const body = await result.json() as { events?: NinjaTelemetryRow[]; operations?: TechnicalOperationRow[] };
-        if (active && result.ok) { setEvents(body.events ?? []); setOperations(body.operations ?? []); setAvailable(true); }
+        const body = await result.json() as { batches?: AutomaticBatchRow[]; events?: NinjaTelemetryRow[]; operations?: TechnicalOperationRow[] };
+        if (active && result.ok) { setBatches(body.batches ?? []); setEvents(body.events ?? []); setOperations(body.operations ?? []); setAvailable(true); }
         else if (active) setAvailable(false);
       } catch { if (active) setAvailable(false); }
     }
@@ -139,6 +160,31 @@ export function TradeTelemetryProbe({
           <i aria-hidden="true">↔</i>
           <p><span>Cobertura</span><b>{activeBroker.map((probe) => probe.accountName).join(", ")}</b></p>
         </article>
+      )}
+      {batches.length > 0 && (
+        <details className="demo-operation-disclosure automatic-batch-status" open={batches.some((batch) => batch.accounting_status === "blocked") || undefined}>
+          <summary>
+            <span>Automatización</span>
+            <strong>{batches.filter((batch) => batch.accounting_status === "shadow_ready").length} conciliadas</strong>
+            <i aria-hidden="true" />
+          </summary>
+          <div className="automatic-batch-list">
+            {batches.slice(0, 8).map((batch) => (
+              <article key={batch.id}>
+                <div>
+                  <strong>{batch.company_name ?? "Cobertura sin asignar"}</strong>
+                  <span>{batch.prop_accounts.length} {batch.prop_accounts.length === 1 ? "cuenta" : "cuentas"}{batch.phase ? ` · ${batch.phase}` : ""}</span>
+                </div>
+                <div>
+                  <strong>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
+                  <span className={batch.accounting_status === "blocked" ? "blocked" : "ready"}>
+                    {batch.accounting_status === "blocked" ? batch.blocking_reason ?? "Revisar" : "Conciliada"}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </details>
       )}
       {activeProbes.length === 0 ? <p className="telemetry-empty">Sin operaciones activas.</p> : (
         <>

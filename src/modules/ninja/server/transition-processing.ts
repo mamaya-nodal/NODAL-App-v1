@@ -19,7 +19,18 @@ function businessDate(isoDate: string) {
 
 function validState(value: unknown): NinjaTransitionState {
   if (!value || typeof value !== "object" || !Array.isArray((value as { lives?: unknown }).lives)) return { lives: [] };
-  return value as NinjaTransitionState;
+  const state = value as NinjaTransitionState;
+  return {
+    lives: state.lives.map((life) => ({
+      ...life,
+      tracked: {
+        ...life.tracked,
+        // Los estados anteriores a APP-092 pertenecen al único alcance que
+        // estaba aprobado entonces: programas de USD 50.000.
+        accountSizeInCents: life.tracked.accountSizeInCents ?? 5_000_000,
+      },
+    })),
+  };
 }
 
 export async function processNinjaTransitions(connectorId: string, snapshot: NinjaInventorySnapshot): Promise<TransitionProcessingResult> {
@@ -41,11 +52,12 @@ export async function processNinjaTransitions(connectorId: string, snapshot: Nin
   const observations: NinjaTransitionObservation[] = snapshot.accounts.flatMap((account) => {
     if (!connectedNames.includes(account.connectionName)) return [];
     const classified = classifyNinjaAccount(account, snapshot.observedAt);
-    if (classified.type !== "prop" || !classified.companyCode || !classified.phase) return [];
+    if (classified.type !== "prop" || !classified.companyCode || !classified.phase || classified.accountSizeInCents === null) return [];
     const balance = resolveNinjaReferenceBalance(account);
     return [{
       balanceInCents: balance.balanceInCents ?? 0,
       balanceStatus: balance.status,
+      accountSizeInCents: classified.accountSizeInCents,
       companyCode: classified.companyCode,
       connectionName: account.connectionName,
       externalAccountName: account.accountName,
