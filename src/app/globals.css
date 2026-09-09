@@ -5049,6 +5049,176 @@ html[data-theme="day"] .nodal-workspace {
 .admin-workspace .admin-detail-card { padding: 20px; }
 .admin-workspace .admin-detail-card p { border-color: var(--app-border); }
 
+.admin-ninja-supervision {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-panel);
+  color: var(--app-title);
+}
+
+.admin-ninja-supervision-heading,
+.admin-ninja-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-ninja-supervision-heading h2,
+.admin-ninja-section-heading h3 { margin: 0; }
+.admin-ninja-supervision-heading h2 { font-size: 21px; }
+.admin-ninja-section-heading h3 { font-size: 16px; }
+
+.admin-ninja-supervision-heading span,
+.admin-ninja-section-heading span,
+.admin-ninja-account-list article span,
+.admin-ninja-event-list article span {
+  color: var(--app-copy);
+  font-size: 11px;
+}
+
+.admin-ninja-supervision-heading > div > span { display: block; margin-top: 4px; }
+
+.admin-ninja-supervision-heading > strong {
+  min-height: 30px;
+  padding: 7px 11px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.admin-ninja-supervision-heading > strong.ready {
+  border-color: rgb(147 255 59 / 45%);
+  background: rgb(147 255 59 / 13%);
+  color: var(--app-positive);
+}
+
+.admin-ninja-supervision-heading > strong.pending {
+  border-color: rgb(243 174 67 / 38%);
+  background: rgb(243 174 67 / 10%);
+  color: #f3ae43;
+}
+
+.admin-ninja-checks {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.admin-ninja-checks article {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-height: 78px;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--app-input) 88%, transparent);
+}
+
+.admin-ninja-checks i {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: #f3ae43;
+  box-shadow: 0 0 12px rgb(243 174 67 / 44%);
+}
+
+.admin-ninja-checks article.ok i {
+  background: var(--app-positive);
+  box-shadow: 0 0 12px rgb(147 255 59 / 44%);
+}
+
+.admin-ninja-checks strong,
+.admin-ninja-checks span { display: block; }
+.admin-ninja-checks strong { color: var(--app-title); font-size: 12px; }
+.admin-ninja-checks span { margin-top: 4px; color: var(--app-copy); font-size: 11px; line-height: 1.35; }
+
+.admin-ninja-section-heading {
+  margin-top: 22px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.admin-ninja-account-list,
+.admin-ninja-event-list { display: grid; gap: 7px; margin-top: 8px; }
+
+.admin-ninja-account-list article {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) minmax(150px, 1.3fr) repeat(3, minmax(105px, 1fr));
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 11px 13px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-input) 88%, transparent);
+}
+
+.admin-ninja-account-list article > div > span,
+.admin-ninja-account-list article > div > strong,
+.admin-ninja-event-list article span,
+.admin-ninja-event-list article strong { display: block; }
+
+.admin-ninja-account-list article > div > strong { margin-top: 3px; color: var(--app-title); font-size: 12px; }
+.admin-ninja-account-name > strong { margin-top: 0 !important; font-size: 13px !important; }
+
+.admin-ninja-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-ninja-event-list article {
+  display: grid;
+  grid-template-columns: minmax(105px, .9fr) minmax(150px, 1.35fr) minmax(105px, .8fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-input) 88%, transparent);
+}
+
+.admin-ninja-event-list article > div:last-child { text-align: right; }
+.admin-ninja-event-list article strong { color: var(--app-title); font-size: 12px; }
+.admin-ninja-event-list article.blocked > div:nth-child(2) strong { color: #f3ae43; }
+.admin-ninja-event-list article.reconciled > div:nth-child(2) strong { color: var(--app-positive); }
+
+.admin-ninja-empty {
+  margin: 8px 0 0;
+  padding: 14px;
+  border: 1px dashed var(--app-border-strong);
+  border-radius: 12px;
+  color: var(--app-copy);
+  font-size: 12px;
+}
+
+@media (max-width: 1080px) {
+  .admin-ninja-checks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-ninja-account-list article { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1200px) {
+  .admin-ninja-monitor-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .admin-ninja-supervision { padding: 16px; }
+  .admin-ninja-supervision-heading { align-items: flex-start; flex-direction: column; }
+  .admin-ninja-checks,
+  .admin-ninja-monitor-grid,
+  .admin-ninja-account-list article { grid-template-columns: 1fr; }
+  .admin-ninja-event-list article { grid-template-columns: 1fr; }
+  .admin-ninja-event-list article > div:last-child { text-align: left; }
+}
+
 .nodal-workspace .ninja-registered-notice {
   display: flex;
   align-items: center;

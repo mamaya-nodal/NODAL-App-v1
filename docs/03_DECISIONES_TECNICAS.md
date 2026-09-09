@@ -573,3 +573,22 @@ vigente sin aprobacion y evidencia suficiente.
   tipográfica, jerarquías y alineaciones. Las tarjetas de período no truncan
   importes y ocupan el ancho disponible cuando sólo existe un período.
 - **Estado:** Implementada el 2026-09-09.
+
+### APP-094 - Supervisión remota de pruebas Ninja por usuario
+
+- **Identidad:** Cada prueba pertenece al usuario que vinculó el conector desde
+  su sesión. El inventario, la telemetría y los lotes de Ivo no se combinan con
+  el espacio ni con las cuentas de Mauricio.
+- **Precondiciones:** Admin Master ve en la ficha del usuario si existe el
+  período actual, el conector está en línea, las conexiones fueron autorizadas,
+  hay exactamente un broker con cuentas prop y las prop ya fueron incorporadas.
+- **Observación:** La ficha muestra el último inventario, operaciones técnicas y
+  conciliaciones automáticas con su causa de bloqueo. Se actualiza cada cinco
+  segundos para permitir que el operador trabaje desde otra computadora.
+- **Seguridad:** La consulta es de solo lectura, exige rol Admin Master en el
+  servidor y recibe un único usuario objetivo. No permite corregir ni crear
+  movimientos económicos.
+- **Activación:** La supervisión conserva `accounting_mode = shadow`; observar
+  un lote conciliado no lo transforma en un asiento contable.
+- **Estado:** Implementada el 2026-09-09 como preparación para la prueba integral
+  de Ivo.
