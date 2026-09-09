@@ -10,6 +10,7 @@ import { loadMyAdministrationScope } from "@/modules/admin/server/administration
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
+import { buildNinjaLiveBrokerBalance, type NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import type {
   AccountPhaseWithdrawal,
 } from "@/modules/operations/domain/account-phase-results";
@@ -196,6 +197,7 @@ export default async function PrivateAppPage({
   let ninjaConnector: NinjaConnectorStatus | null = null;
   let ninjaTransitionAlerts: NinjaTransitionAlert[] = [];
   let incomingNinjaBalance: NinjaBrokerBalanceEvent | null = null;
+  let liveNinjaBrokerBalance: NinjaLiveBrokerBalance | null = null;
   let ninjaBrokerSourceNotice: string | null = null;
 
   if (allowed) {
@@ -411,6 +413,7 @@ export default async function PrivateAppPage({
     );
     connectedNinjaBrokerAccountNames = connectedBrokerAccounts.map((account) => account.accountName);
     connectedNinjaPropAccountNames = connectedPropAccounts.map((account) => account.accountName);
+    liveNinjaBrokerBalance = buildNinjaLiveBrokerBalance(ninjaInventories);
     if (connectedNinjaAccounts.length > 0 && connectedBrokerAccounts.length === 0) {
       ninjaBrokerSourceNotice =
         "NinjaTrader está conectado, pero no informa ninguna cuenta broker. Los saldos automáticos se reanudarán cuando una cuenta broker vuelva a aparecer en Accounts.";
@@ -979,7 +982,9 @@ export default async function PrivateAppPage({
             embedded
             initialControls={dailyControls}
             incomingNinjaBalance={incomingNinjaBalance}
+            initialLiveNinjaBalance={liveNinjaBrokerBalance}
             ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}
+            ninjaOnline={connectorOnline}
             openingBalanceInCents={periodOpening.brokerBalanceInCents}
             periodId={selection.period.id}
             propAccountNames={connectedNinjaPropAccountNames}
@@ -1010,6 +1015,8 @@ export default async function PrivateAppPage({
             accounts={accountOptions.map((account) => ({ id: account.id, label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}` }))}
             economicTrace={economicTrace}
             embedded
+            liveBrokerBalance={liveNinjaBrokerBalance}
+            ninjaOnline={connectorOnline}
             periodId={selection.period.id}
             periodLabel={formatPeriodLabel(selection.period.periodMonth)}
             periods={accountingPeriods}

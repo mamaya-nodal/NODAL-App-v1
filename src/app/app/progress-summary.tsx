@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
 import { buildSummaryAlerts } from "@/modules/summary/domain/summary-alerts";
 import { buildConciliationBreakdown } from "@/modules/summary/domain/conciliation-breakdown";
@@ -11,11 +12,14 @@ import {
   createFundingWithdrawal,
   createWalletMovement,
 } from "./summary-actions";
+import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 
 type Props = Readonly<{
   accounts: Array<{ id: string; label: string }>;
   embedded?: boolean;
   economicTrace?: EconomicTraceItem[];
+  liveBrokerBalance?: NinjaLiveBrokerBalance | null;
+  ninjaOnline?: boolean;
   periodLabel?: string;
   periods?: AccountingPeriodView[];
   periodId: string;
@@ -66,10 +70,12 @@ const labels = {
   prior_pending_collection: "Cobro pendiente anterior",
 } as const;
 
-export function ProgressSummary({ accounts, economicTrace = [], embedded = false, periodId, periodLabel, periods = [], summary }: Props) {
+export function ProgressSummary({ accounts, economicTrace = [], embedded = false, liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periods = [], summary }: Props) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
+  const [liveOnline, setLiveOnline] = useState(ninjaOnline);
   const alerts = buildSummaryAlerts(summary);
   const conciliation = buildConciliationBreakdown(summary);
   const hasConciliationDifference =
@@ -77,6 +83,16 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     conciliation.gains.differenceInCents !== 0;
   const recentPeriods = periods.slice(0, 2);
   const archivedPeriods = periods.slice(2);
+
+  useEffect(() => {
+    const receiveStatus = (event: Event) => {
+      const detail = (event as CustomEvent<NinjaStatusEventDetail>).detail;
+      setLiveOnline(detail.online);
+      setLiveBalance(detail.liveBrokerBalance);
+    };
+    window.addEventListener(NINJA_STATUS_EVENT, receiveStatus);
+    return () => window.removeEventListener(NINJA_STATUS_EVENT, receiveStatus);
+  }, []);
 
   async function wallet(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -147,7 +163,11 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           {periodLabel && <small>{periodLabel}</small>}
         </article>
         <article><span>Resultado del período</span><strong>{money(summary.periodResultInCents)}</strong></article>
-        <article><span>Saldo broker</span><strong>{summary.brokerBalanceInCents === null ? "—" : money(summary.brokerBalanceInCents)}</strong></article>
+        <article>
+          <span>Saldo broker</span>
+          <strong>{liveBalance ? money(liveBalance.balanceInCents) : summary.brokerBalanceInCents === null ? "—" : money(summary.brokerBalanceInCents)}</strong>
+          <small>{liveBalance ? liveOnline ? "En vivo" : "Último dato" : "Sin datos de Ninja"}</small>
+        </article>
         <article><span>Comisión de usuario</span><strong>{money(summary.commissionInCents)}</strong><small>{summary.commissionRateLabel}</small></article>
         <article><span>Ganancia del usuario</span><strong>{money(summary.traderGainInCents)}</strong></article>
       </div>
@@ -196,8 +216,8 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             {alerts.map((alert) => (
               <article className={`summary-alert summary-alert-${alert.severity}`} key={alert.code}>
                 <div className="summary-alert-copy">
-                  <strong>{alert.title}</strong>
-                  <p>{alert.detail}</p>
+                  <strong>{liveBalance && alert.code === "missing_broker_balance" ? "Registrar saldo inicial" : alert.title}</strong>
+                  <p>{liveBalance && alert.code === "missing_broker_balance" ? `Ninja informa ${money(liveBalance.balanceInCents)}; falta incorporarlo al período.` : alert.detail}</p>
                 </div>
                 <a href={alert.href}>Revisar</a>
               </article>

@@ -555,3 +555,21 @@ vigente sin aprobacion y evidencia suficiente.
   manuales y auditados.
 - **Estado:** Implementado el 2026-09-09 en modo paralelo; activación económica
   pendiente de conciliación.
+
+### APP-093 - Saldo broker vivo separado del saldo contabilizado
+
+- **Dato vivo:** `Cash Value` de las cuentas broker conectadas y aprobadas se
+  muestra como saldo broker en vivo. No se exige que coincida con Net
+  Liquidation, porque esa igualdad no demuestra el cierre de una operación.
+- **Dato contable:** El último saldo confirmado de Control Diario permanece
+  separado y se identifica como contabilizado. Mostrar el saldo vivo nunca
+  crea por sí mismo un depósito, retiro ni resultado operativo.
+- **Actualización:** La vista consulta cada quince segundos el último inventario
+  del conector y conserva el último dato ante una interrupción transitoria.
+- **Cierre:** La propuesta de registro económico continúa dependiendo del lote
+  técnicamente cerrado y conciliado de APP-092. Su activación automática queda
+  condicionada a la comparación integral del punto 6.
+- **Interfaz:** Operaciones y Contabilidad comparten una sola familia
+  tipográfica, jerarquías y alineaciones. Las tarjetas de período no truncan
+  importes y ocupan el ancho disponible cuando sólo existe un período.
+- **Estado:** Implementada el 2026-09-09.

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -16,6 +16,7 @@ import {
   type DailyBalanceEntry,
 } from "@/modules/control-diario/domain/balance-rules";
 import type { ControlOriginDestination } from "@/modules/control-diario/domain/control-catalogs";
+import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import { TradeTelemetryProbe } from "./trade-telemetry-probe";
 import {
   assertCanReceiveBrokerBalance,
@@ -41,6 +42,7 @@ import {
   confirmDailyControl,
   correctDailyControlBalance,
 } from "./daily-control-actions";
+import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 
 type EntryKind = DailyBalanceEntry["kind"];
 
@@ -103,8 +105,10 @@ type DailyControlPreviewProps = {
   companies: Array<{ id: string; name: string }>;
   embedded?: boolean;
   initialControls: PersistedDailyControl[];
+  initialLiveNinjaBalance: NinjaLiveBrokerBalance | null;
   incomingNinjaBalance: NinjaBrokerBalanceEvent | null;
   ninjaBrokerSourceNotice: string | null;
+  ninjaOnline: boolean;
   openingBalanceInCents?: number | null;
   periodId: string;
   propAccountNames?: readonly string[];
@@ -124,8 +128,10 @@ export function DailyControlPreview({
   companies,
   embedded = false,
   initialControls,
+  initialLiveNinjaBalance,
   incomingNinjaBalance,
   ninjaBrokerSourceNotice,
+  ninjaOnline,
   openingBalanceInCents = null,
   periodId,
   propAccountNames = [],
@@ -133,6 +139,8 @@ export function DailyControlPreview({
   const router = useRouter();
   const initialBalance = initialControls.at(-1)?.balanceInCents ?? openingBalanceInCents;
   const [balanceInCents, setBalanceInCents] = useState<number | null>(initialBalance);
+  const [liveNinjaBalance, setLiveNinjaBalance] = useState(initialLiveNinjaBalance);
+  const [liveNinjaOnline, setLiveNinjaOnline] = useState(ninjaOnline);
   const [entryKind, setEntryKind] = useState<EntryKind>(
     initialBalance === null ? "deposit" : "balance_update",
   );
@@ -178,6 +186,16 @@ export function DailyControlPreview({
     Record<string, string>
   >({});
   const [customAllocationReason, setCustomAllocationReason] = useState("");
+
+  useEffect(() => {
+    const receiveStatus = (event: Event) => {
+      const detail = (event as CustomEvent<NinjaStatusEventDetail>).detail;
+      setLiveNinjaOnline(detail.online);
+      setLiveNinjaBalance(detail.liveBrokerBalance);
+    };
+    window.addEventListener(NINJA_STATUS_EVENT, receiveStatus);
+    return () => window.removeEventListener(NINJA_STATUS_EVENT, receiveStatus);
+  }, []);
 
   const companyAccounts = accountsForCompany(accounts, companyId);
   const companyName =
@@ -855,11 +873,26 @@ export function DailyControlPreview({
         )}
       </details>
 
-      <div className="balance-summary" aria-live="polite">
-        <span>Saldo broker</span>
+      <div className="balance-summary broker-live-summary" aria-live="polite">
+        <div className="broker-live-heading">
+          <span>Saldo broker</span>
+          <em className={liveNinjaOnline ? "online" : "offline"}>
+            {liveNinjaOnline ? "En vivo" : "Último dato"}
+          </em>
+        </div>
         <strong>
-          {balanceInCents === null ? "Sin saldo registrado" : formatMoney(balanceInCents)}
+          {liveNinjaBalance ? formatMoney(liveNinjaBalance.balanceInCents) : "Sin datos de Ninja"}
         </strong>
+        <div className="broker-live-meta">
+          <span>Contabilizado <b>{balanceInCents === null ? "—" : formatMoney(balanceInCents)}</b></span>
+          {liveNinjaBalance && (
+            <span>
+              {liveNinjaBalance.sourceAccounts.map((account) => account.accountName).join(" + ")}
+              {" · "}
+              {new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit" }).format(new Date(liveNinjaBalance.observedAt))}
+            </span>
+          )}
+        </div>
       </div>
 
       <details className="accounting-exception daily-movement-exception">

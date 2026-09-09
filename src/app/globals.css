@@ -7101,3 +7101,148 @@ html[data-theme="day"] .automatic-batch-list article {
   .automatic-batch-list article { align-items: flex-start; }
   .automatic-batch-list article > div:last-child { align-items: flex-end; }
 }
+
+/* APP-093: saldo Ninja vivo y jerarquía tipográfica consistente. */
+.nodal-workspace,
+.nodal-workspace :is(button, input, select, textarea) {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.nodal-workspace .broker-live-summary {
+  min-height: 118px;
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 20px;
+}
+
+.nodal-workspace .broker-live-heading,
+.nodal-workspace .broker-live-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.nodal-workspace .broker-live-heading > span {
+  color: var(--app-copy);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.nodal-workspace .broker-live-heading > em {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: var(--app-subtle);
+  background: var(--app-input);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.nodal-workspace .broker-live-heading > em.online { color: var(--app-positive); }
+.nodal-workspace .broker-live-heading > em.online::before {
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.nodal-workspace .broker-live-summary > strong {
+  color: var(--app-title);
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 800;
+  letter-spacing: -1.6px;
+  line-height: 1.05;
+}
+
+.nodal-workspace .broker-live-meta {
+  padding-top: 3px;
+  color: var(--app-subtle);
+}
+
+.nodal-workspace .broker-live-meta > span {
+  color: var(--app-subtle);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.nodal-workspace .broker-live-meta b {
+  color: var(--app-copy);
+  font-weight: 700;
+}
+
+.accounting-view .demo-period-cards {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.accounting-view .demo-period-cards > article {
+  padding: 18px;
+}
+
+.accounting-view .demo-period-cards > article > div strong {
+  font-size: 14px;
+}
+
+.accounting-view .demo-period-cards > article > div span {
+  font-size: 10px;
+}
+
+.accounting-view .demo-period-cards dl {
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.accounting-view .demo-period-cards dl > div {
+  padding: 11px;
+}
+
+.accounting-view .demo-period-cards dt {
+  min-height: 25px;
+  color: var(--app-copy);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.accounting-view .demo-period-cards dd {
+  margin-top: 7px;
+  overflow: visible;
+  font-size: 13px;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.accounting-view .summary-section.summary-alerts {
+  margin: 18px 0 16px;
+}
+
+.accounting-view .summary-section.summary-alerts > h3 {
+  margin-bottom: 10px;
+  font-size: 15px;
+}
+
+.accounting-view .summary-alert {
+  min-height: 76px;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.accounting-view .summary-alert strong { font-size: 14px; }
+.accounting-view .summary-alert p { margin-top: 5px; font-size: 12px; line-height: 1.4; }
+.accounting-view .summary-alert > a { font-size: 12px; }
+
+.accounting-view :is(.accounting-disclosure, .accounting-action-card) > summary,
+.real-account-results > summary {
+  font-size: 14px;
+}
+
+@media (max-width: 680px) {
+  .nodal-workspace .broker-live-meta { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .accounting-view .demo-period-cards dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

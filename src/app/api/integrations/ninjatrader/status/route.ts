@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buildNinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +10,18 @@ export async function GET() {
     return Response.json({ online: false }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 
-  const { data, error } = await supabase.rpc("get_current_user_ninja_connector_status");
+  const [statusResult, inventoryResult] = await Promise.all([
+    supabase.rpc("get_current_user_ninja_connector_status"),
+    supabase.rpc("get_current_user_ninja_inventory"),
+  ]);
+  const error = statusResult.error ?? inventoryResult.error;
   return Response.json(
-    { online: !error && Boolean(data?.[0]?.is_online) },
+    {
+      liveBrokerBalance: error
+        ? null
+        : buildNinjaLiveBrokerBalance(inventoryResult.data ?? []),
+      online: !error && Boolean(statusResult.data?.[0]?.is_online),
+    },
     { headers: { "Cache-Control": "no-store, max-age=0" }, status: error ? 503 : 200 },
   );
 }
