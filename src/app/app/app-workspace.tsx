@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { MouseEvent, ReactNode } from "react";
 import { useRef, useSyncExternalStore } from "react";
 
+import type { AdministrationScope } from "@/modules/admin/domain/administration-scope";
+
 import { ThemeToggle } from "./theme-toggle";
 import { WorkspaceIcon, type WorkspaceIconName } from "./workspace-icon";
 
@@ -26,11 +28,11 @@ const legacyViews: Readonly<Record<string, View>> = {
 };
 
 type Props = Readonly<{
+  administrationScope: AdministrationScope;
   authorized: boolean;
   avatarUrl?: string | null;
   children: ReactNode;
   initialView?: View;
-  isAdmin: boolean;
   userLabel: string;
   username?: string;
 }>;
@@ -55,11 +57,11 @@ function initials(label: string) {
 }
 
 export function AppWorkspace({
+  administrationScope,
   authorized,
   avatarUrl,
   children,
   initialView = "home",
-  isAdmin,
   userLabel,
   username,
 }: Props) {
@@ -89,6 +91,12 @@ export function AppWorkspace({
     window.scrollTo({ behavior: "smooth", top: 0 });
   }
 
+  const administration = administrationScope.kind === "master"
+    ? { href: "/app/admin", label: "Administración" }
+    : administrationScope.kind === "desk"
+      ? { href: "/app/mi-mesa", label: "Mi mesa" }
+      : null;
+
   return (
     <main className="nodal-workspace" data-active-view={activeView} onClick={navigateWithinWorkspace}>
       <aside className="workspace-sidebar">
@@ -107,10 +115,10 @@ export function AppWorkspace({
               {view.label}
             </a>
           ))}
-          {isAdmin && (
-            <Link href="/app/admin">
+          {administration && (
+            <Link href={administration.href}>
               <WorkspaceIcon name="admin" />
-              Administración
+              {administration.label}
             </Link>
           )}
         </nav>
@@ -148,8 +156,8 @@ export function AppWorkspace({
               {view.label}
             </a>
           ))}
-          {isAdmin && (
-            <Link href="/app/admin"><WorkspaceIcon name="admin" />Admin</Link>
+          {administration && (
+            <Link href={administration.href}><WorkspaceIcon name="admin" />{administrationScope.kind === "desk" ? "Mi mesa" : "Admin"}</Link>
           )}
         </nav>
       </div>

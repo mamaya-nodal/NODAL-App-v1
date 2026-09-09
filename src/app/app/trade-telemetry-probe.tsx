@@ -69,7 +69,7 @@ export function TradeTelemetryProbe() {
   return (
     <section className="telemetry-probe" aria-labelledby="telemetry-probe-title">
       <div className="telemetry-probe-heading">
-        <h2 id="telemetry-probe-title">Operación actual</h2>
+        <h2 id="telemetry-probe-title">Operaciones en curso</h2>
       </div>
       {!available ? <p className="telemetry-empty">No se pudo actualizar la operación.</p> : null}
       {visibleProbes.length === 0 ? <p className="telemetry-empty">Sin operaciones activas.</p> : (

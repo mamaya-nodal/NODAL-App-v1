@@ -3,6 +3,7 @@ import type { OperationalSummary } from "./operational-summary";
 import { buildSummaryAlerts } from "./summary-alerts";
 
 const baseSummary: OperationalSummary = {
+  accumulatedResultInCents: 0,
   accountStates: { virgin: 0, live: 0, closed: 0 }, brokerBalanceInCents: 10_000,
   capitalNetInCents: 0, commissionInCents: 0, commissionRateLabel: "Sin comisión", floatingInCents: 0,
   fundingCollectedInCents: 0, fundingPendingInCents: 0, fundingWithdrawals: [], manualAccountStateCount: 0,

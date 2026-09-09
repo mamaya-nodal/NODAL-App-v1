@@ -1,17 +1,24 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import type { AdministrationScope } from "@/modules/admin/domain/administration-scope";
+
 import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
 import { ThemeToggle } from "./theme-toggle";
 import { WorkspaceIcon } from "./workspace-icon";
 
 type Props = Readonly<{
+  administrationScope: AdministrationScope;
   connector: NinjaConnectorStatus | null;
-  isAdmin: boolean;
   message?: string;
 }>;
 
-export function NinjaConnectorGate({ connector, isAdmin, message }: Props) {
+export function NinjaConnectorGate({ administrationScope, connector, message }: Props) {
+  const administration = administrationScope.kind === "master"
+    ? { href: "/app/admin", label: "Administración" }
+    : administrationScope.kind === "desk"
+      ? { href: "/app/mi-mesa", label: "Mi mesa" }
+      : null;
   return (
     <main className="connector-gate-shell">
       <div className="connector-gate-preview" aria-hidden="true">
@@ -52,7 +59,7 @@ export function NinjaConnectorGate({ connector, isAdmin, message }: Props) {
 
         <footer>
           <span>Conexión segura y de solo lectura</span>
-          {isAdmin ? <Link href="/app/admin">Administración</Link> : null}
+          {administration ? <Link href={administration.href}>{administration.label}</Link> : null}
         </footer>
       </section>
     </main>

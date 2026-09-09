@@ -26,11 +26,13 @@ describe("corrección histórica de saldo", () => {
     expect(result[3].balanceAfterInCents).toBe(540_000);
   });
 
-  it("bloquea toda la corrección si un reparto posterior deja de cerrar", () => {
-    expect(() => recalculateAfterBalanceCorrection([
+  it("permite una corrección cuyo reparto requiere redondeo", () => {
+    const result = recalculateAfterBalanceCorrection([
       { balanceAfterInCents: 500_000, id: "deposit", kind: "deposit", movementInCents: 500_000, participantCount: 0 },
       { balanceAfterInCents: 560_000, id: "balance-1", kind: "balance_update", movementInCents: null, participantCount: 3 },
-    ], "balance-1", 550_002)).toThrow("centavos exactos");
+    ], "balance-1", 550_002);
+
+    expect(result[1].operatingResultInCents).toBe(50_002);
   });
 
   it("permite preparar un reparto excepcional aunque el total no sea divisible", () => {

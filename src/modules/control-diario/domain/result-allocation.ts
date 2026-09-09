@@ -16,6 +16,13 @@ export type EqualAllocation = {
 
 export type CustomAllocation = EqualAllocation;
 
+export function roundLikeSheets(value: number): number {
+  if (!Number.isFinite(value)) {
+    throw new Error("El importe a redondear debe ser un número válido.");
+  }
+  return Math.sign(value) * Math.round(Math.abs(value));
+}
+
 function assertIntegerCents(value: number, fieldName: string): void {
   if (!Number.isSafeInteger(value)) {
     throw new Error(`${fieldName} debe expresarse en centavos enteros.`);
@@ -95,13 +102,8 @@ export function allocateResultEqually(
     throw new Error("Una cuenta no puede participar más de una vez.");
   }
 
-  if (totalInCents % participantIds.length !== 0) {
-    throw new Error(
-      "El resultado no se divide en centavos exactos entre las cuentas elegidas.",
-    );
-  }
-
-  const amountInCents = totalInCents / participantIds.length;
+  // La planilla divide el total y redondea cada cuenta a dos decimales.
+  const amountInCents = roundLikeSheets(totalInCents / participantIds.length);
 
   return participantIds.map((accountId, index) => ({
     accountId,

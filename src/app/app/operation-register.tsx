@@ -329,8 +329,10 @@ export function OperationRegister({
               >
                 <span>{phaseResult.phase}</span>
                 <small>Broker: {formatMoney(phaseResult.broker.netInCents)}</small>
-                {phaseResult.carryInCents > 0 && (
-                  <small>Arrastre forzado: {formatMoney(phaseResult.carryInCents)}</small>
+                {phaseResult.carryInCents !== 0 && (
+                  <small>
+                    {phaseResult.carryInCents < 0 ? "Anterior" : "Arrastre forzado"}: {formatMoney(phaseResult.carryInCents)}
+                  </small>
                 )}
                 {phaseResult.phase !== "Evaluacion" && (phaseResult.broker.entryCount > 0 || phaseResult.totalWithdrawalInCents > 0) && (
                   <label className="phase-withdrawal-field">

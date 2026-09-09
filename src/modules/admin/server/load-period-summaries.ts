@@ -22,11 +22,14 @@ export type LoadedPeriodSummary = Readonly<{
 export async function loadPeriodSummaries(
   supabase: Supabase,
   periodIds: readonly string[],
+  options?: Readonly<{
+    loadCommission?: (userId: string, month: string) => Promise<number | null>;
+  }>,
 ): Promise<Map<string, LoadedPeriodSummary>> {
   const result = new Map<string, LoadedPeriodSummary>();
   if(periodIds.length>100){
     for(let i=0;i<periodIds.length;i+=100){
-      const batch=await loadPeriodSummaries(supabase,periodIds.slice(i,i+100));
+      const batch=await loadPeriodSummaries(supabase,periodIds.slice(i,i+100),options);
       for(const [id,summary] of batch)result.set(id,summary);
     }
     return result;
@@ -54,9 +57,10 @@ export async function loadPeriodSummaries(
   if(failed)throw new Error('No se pudieron verificar los importes del período.');
   const {data:periodOwners,error:ownersError}=await supabase.from('periods').select('id,period_month,workspaces(owner_user_id)').in('id',periodIds);
   if(ownersError)throw new Error('No se pudieron verificar los períodos.');
+  const commissionLoader = options?.loadCommission ?? loadIndividualCommission;
   const agreements=new Map(await Promise.all((periodOwners??[]).map(async p=>{
     const workspace=Array.isArray(p.workspaces)?p.workspaces[0]:p.workspaces;
-    return [p.id,workspace?await loadIndividualCommission(workspace.owner_user_id,p.period_month):null] as const;
+    return [p.id,workspace?await commissionLoader(workspace.owner_user_id,p.period_month):null] as const;
   })));
 
   for (const periodId of periodIds) {

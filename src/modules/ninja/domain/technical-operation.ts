@@ -4,6 +4,7 @@ export type NinjaTechnicalOperation = Readonly<{
   accountName: string;
   closingBalance: number | null;
   connectionName: string;
+  direction: "Long" | "Short" | null;
   executionCount: number;
   flatAt: string | null;
   instruments: readonly string[];
@@ -11,6 +12,7 @@ export type NinjaTechnicalOperation = Readonly<{
   openedAt: string;
   openingBalance: number | null;
   openingEventId: number;
+  quantity: number;
   result: number | null;
   settledAt: string | null;
   status: "closed" | "open" | "settling";
@@ -33,6 +35,7 @@ type WorkingOperation = {
   accountName: string;
   closingBalance: number | null;
   connectionName: string;
+  direction: "Long" | "Short" | null;
   executionCount: number;
   flatAt: string | null;
   instruments: Set<string>;
@@ -40,6 +43,7 @@ type WorkingOperation = {
   openedAt: string;
   openingBalance: number | null;
   openingEventId: number;
+  quantity: number;
   positions: Map<string, boolean>;
   sawOpenPosition: boolean;
 };
@@ -53,6 +57,7 @@ function finish(operation: WorkingOperation, settledAt: string | null): NinjaTec
     accountName: operation.accountName,
     closingBalance: operation.closingBalance,
     connectionName: operation.connectionName,
+    direction: operation.direction,
     executionCount: operation.executionCount,
     flatAt: operation.flatAt,
     instruments: [...operation.instruments],
@@ -60,6 +65,7 @@ function finish(operation: WorkingOperation, settledAt: string | null): NinjaTec
     openedAt: operation.openedAt,
     openingBalance: operation.openingBalance,
     openingEventId: operation.openingEventId,
+    quantity: operation.quantity,
     result,
     settledAt,
     status,
@@ -98,6 +104,7 @@ export function buildNinjaTechnicalOperations(
         accountName: row.account_name,
         closingBalance: null,
         connectionName: row.connection_name,
+        direction: null,
         executionCount: 0,
         flatAt: null,
         instruments: new Set<string>(),
@@ -105,6 +112,7 @@ export function buildNinjaTechnicalOperations(
         openedAt: row.occurred_at,
         openingBalance: previousBalance,
         openingEventId: row.id,
+        quantity: 0,
         positions: new Map<string, boolean>(),
         sawOpenPosition: false,
       };
@@ -118,6 +126,11 @@ export function buildNinjaTechnicalOperations(
       const open = isOpenPosition(row);
       current.positions.set(row.instrument, open);
       if (open) {
+        const direction = row.payload.marketPosition;
+        if (direction === "Long" || direction === "Short") {
+          current.direction ??= direction;
+        }
+        current.quantity = Math.max(current.quantity, Number(row.payload.quantity));
         current.sawOpenPosition = true;
         current.flatAt = null;
         current.closingBalance = null;

@@ -54,14 +54,8 @@ export function recalculateAfterBalanceCorrection(
         ? correctedBalanceInCents
         : control.balanceAfterInCents;
       operatingResultInCents = balanceAfterInCents - previousBalance;
-      if (
-        control.participantCount < 1 ||
-        (!control.hasCustomAllocation &&
-          operatingResultInCents % control.participantCount !== 0)
-      ) {
-        throw new Error(
-          "La corrección produciría una distribución que no cierra en centavos exactos.",
-        );
+      if (control.participantCount < 1) {
+        throw new Error("La operación debe conservar al menos una cuenta participante.");
       }
     }
 

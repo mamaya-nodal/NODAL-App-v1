@@ -94,6 +94,7 @@ type DailyControlPreviewProps = {
   initialControls: PersistedDailyControl[];
   incomingNinjaBalance: NinjaBrokerBalanceEvent | null;
   ninjaBrokerSourceNotice: string | null;
+  openingBalanceInCents?: number | null;
   periodId: string;
 };
 
@@ -112,10 +113,11 @@ export function DailyControlPreview({
   initialControls,
   incomingNinjaBalance,
   ninjaBrokerSourceNotice,
+  openingBalanceInCents = null,
   periodId,
 }: DailyControlPreviewProps) {
   const router = useRouter();
-  const initialBalance = initialControls.at(-1)?.balanceInCents ?? null;
+  const initialBalance = initialControls.at(-1)?.balanceInCents ?? openingBalanceInCents;
   const [balanceInCents, setBalanceInCents] = useState<number | null>(initialBalance);
   const [entryKind, setEntryKind] = useState<EntryKind>(
     initialBalance === null ? "deposit" : "balance_update",

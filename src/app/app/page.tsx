@@ -6,6 +6,7 @@ import Image from "next/image";
 
 import { createClient } from "@/lib/supabase/server";
 import { decideAccess } from "@/modules/access/domain/access-decision";
+import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
 import type {
@@ -24,6 +25,12 @@ import {
   type CapitalHistoryPoint,
   type HomePerformance,
 } from "@/modules/summary/domain/home-dashboard";
+import { buildPeriodOpening } from "@/modules/summary/domain/period-opening";
+import type { OperationalOpeningSnapshot } from "@/modules/summary/domain/operational-summary";
+import {
+  buildPeriodEarnings,
+  type PersonalDashboardData,
+} from "@/modules/summary/domain/personal-dashboard";
 import {
   formatPeriodLabel,
   resolveWorkspaceSelection,
@@ -178,6 +185,9 @@ export default async function PrivateAppPage({
       : null,
   );
   const allowed = decision === "allowed";
+  const administrationScope = allowed
+    ? await loadMyAdministrationScope()
+    : { kind: "none" as const };
   const { purchase_result: purchaseResult, reset_result: resetResult, connector_result: connectorResult, transition_result: transitionResult } = await searchParams;
   let workspaceOptions: WorkspaceOption[] = [];
   let companies: Array<{ code: string; displayName: string; id: string }> = [];
@@ -223,8 +233,8 @@ export default async function PrivateAppPage({
   if (allowed && (!ninjaConnector || ninjaConnector.status !== "active")) {
     return (
       <NinjaConnectorGate
+        administrationScope={administrationScope}
         connector={ninjaConnector}
-        isAdmin={nodalUser?.access_role === "admin"}
         message={singleValue(connectorResult) === "revoked" ? connectorMessages.revoked : undefined}
       />
     );
@@ -247,6 +257,14 @@ export default async function PrivateAppPage({
   });
   let capitalHistory: CapitalHistoryPoint[] = [];
   let homePerformance: HomePerformance = buildHomePerformance([]);
+  let personalDashboard: PersonalDashboardData | undefined;
+  let periodOpening: OperationalOpeningSnapshot = {
+    accumulatedResultInCents: 0,
+    brokerBalanceInCents: null,
+    capitalNetInCents: 0,
+    fundingPendingInCents: 0,
+    walletBalanceInCents: 0,
+  };
 
   if (allowed && selection?.period) {
     const [
@@ -266,6 +284,7 @@ export default async function PrivateAppPage({
       { data: historicalPurchaseRows },
       { data: historicalControlRows },
       { data: historicalWalletMovementRows },
+      { data: historicalFundingWithdrawalRows },
     ] =
       await Promise.all([
         supabase
@@ -314,7 +333,7 @@ export default async function PrivateAppPage({
           .order("occurred_on", { ascending: false }),
         supabase
           .from("funding_withdrawals")
-          .select("id, account_id, approved_on, amount_cents, collected_on")
+          .select("id, account_id, approved_on, amount_cents, collected_on, phase")
           .eq("period_id", selection.period.id)
           .eq("is_active", true)
           .order("approved_on", { ascending: false }),
@@ -331,11 +350,18 @@ export default async function PrivateAppPage({
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("daily_controls")
-          .select("period_id, kind, movement_cents, origin_destination")
+          .select("period_id, control_number, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents")
+          .order("period_id")
+          .order("control_number")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("wallet_movements")
-          .select("period_id, kind, amount_cents")
+          .select("id, period_id, occurred_on, kind, amount_cents, observation")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
+        supabase
+          .from("funding_withdrawals")
+          .select("period_id, amount_cents, collected_on")
+          .eq("is_active", true)
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
       ]);
 
@@ -505,7 +531,41 @@ export default async function PrivateAppPage({
     fundingWithdrawals = (fundingWithdrawalRows ?? []).map((withdrawal) => ({
       accountId: withdrawal.account_id, amountInCents: Number(withdrawal.amount_cents),
       approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, id: withdrawal.id,
+      phase: withdrawal.phase,
     }));
+    periodOpening = buildPeriodOpening({
+      controls: (historicalControlRows ?? []).map((control) => ({
+        balanceAfterInCents: Number(control.balance_after_cents),
+        controlNumber: control.control_number,
+        kind: control.kind,
+        movementInCents: control.movement_cents === null ? null : Number(control.movement_cents),
+        operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),
+        originDestination: control.origin_destination,
+        periodId: control.period_id,
+      })),
+      currentPeriodId: selection.period.id,
+      fundingWithdrawals: (historicalFundingWithdrawalRows ?? []).map((withdrawal) => ({
+        amountInCents: Number(withdrawal.amount_cents),
+        collectedOn: withdrawal.collected_on,
+        periodId: withdrawal.period_id,
+      })),
+      periodIdsInOrder: [...selection.workspace.periods]
+        .sort((left, right) => left.periodMonth.localeCompare(right.periodMonth))
+        .map((period) => period.id),
+      purchases: (historicalPurchaseRows ?? []).map((purchase) => ({
+        fundsOrigin: purchase.funds_origin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
+        periodId: purchase.period_id,
+        priceInCents: Number(purchase.price_cents),
+      })),
+      walletMovements: (historicalWalletMovementRows ?? []).map((movement) => ({
+        amountInCents: Number(movement.amount_cents),
+        id: movement.id,
+        kind: movement.kind,
+        observation: movement.observation,
+        occurredOn: movement.occurred_on,
+        periodId: movement.period_id,
+      })),
+    });
     operationalSummary = buildOperationalSummary({
       accounts: accountOptions.map((account) => ({
         fundsOrigin: account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
@@ -518,9 +578,20 @@ export default async function PrivateAppPage({
         operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),
         originDestination: control.origin_destination,
       })),
-      entries: operationEntries, fundingWithdrawals, phaseWithdrawals, walletMovements,
+      entries: operationEntries, fundingWithdrawals, opening: periodOpening, phaseWithdrawals, walletMovements,
     });
     operationalSummary = applyIndividualCommission(operationalSummary, await loadIndividualCommission(user.id, selection.period.periodMonth));
+    personalDashboard = {
+      billingInCents: operationalSummary.realizedGainInCents,
+      earnings: buildPeriodEarnings({
+        ownOperationsInCents: operationalSummary.traderGainInCents,
+      }),
+      history: [{
+        billingInCents: operationalSummary.realizedGainInCents,
+        earningsInCents: operationalSummary.traderGainInCents,
+        periodMonth: selection.period.periodMonth,
+      }],
+    };
     homePerformance = buildHomePerformance((dailyControlRows ?? []).map((control) => ({
       operatedOn: control.operated_on,
       resultInCents: control.operating_result_cents === null
@@ -551,10 +622,10 @@ export default async function PrivateAppPage({
 
   return (
     <AppWorkspace
+      administrationScope={administrationScope}
       authorized={allowed}
       avatarUrl={typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null}
       initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "accounts" : "home"}
-      isAdmin={nodalUser?.access_role === "admin"}
       userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
       username={typeof user.user_metadata?.username === "string" ? user.user_metadata.username : undefined}
     >
@@ -626,6 +697,7 @@ export default async function PrivateAppPage({
       {allowed && selection?.period && (
         <HomeOverview
           capitalHistory={capitalHistory}
+          dashboard={personalDashboard}
           performance={homePerformance}
           periodLabel={formatPeriodLabel(selection.period.periodMonth)}
           summary={operationalSummary}
@@ -803,6 +875,7 @@ export default async function PrivateAppPage({
             initialControls={dailyControls}
             incomingNinjaBalance={incomingNinjaBalance}
             ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}
+            openingBalanceInCents={periodOpening.brokerBalanceInCents}
             periodId={selection.period.id}
           />
         </section>

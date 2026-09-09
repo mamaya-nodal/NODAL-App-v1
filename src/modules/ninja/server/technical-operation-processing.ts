@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import type { NinjaTelemetryRow } from "../domain/operation-probe";
 import { buildNinjaTechnicalOperations } from "../domain/technical-operation";
+import { persistAutomaticOperationBatches } from "./automatic-operation-processing";
 
 export async function refreshNinjaTechnicalOperations(connectorId: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -50,6 +51,7 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
         closing_balance: operation.closingBalance,
         connection_name: operation.connectionName,
         connector_id: connectorId,
+        direction: operation.direction,
         execution_count: operation.executionCount,
         flat_at: operation.flatAt,
         instruments: operation.instruments,
@@ -57,6 +59,7 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
         opened_at: operation.openedAt,
         opening_balance: operation.openingBalance,
         opening_event_id: operation.openingEventId,
+        quantity: operation.quantity,
         result: operation.result,
         settled_at: operation.settledAt,
         status: operation.status,
@@ -65,5 +68,6 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
     if (!upsertError) persistedOperations += operations.length;
   }
 
-  return { processedAccounts: allowlisted.length, persistedOperations };
+  const batches = await persistAutomaticOperationBatches(connectorId);
+  return { processedAccounts: allowlisted.length, persistedOperations, ...batches };
 }

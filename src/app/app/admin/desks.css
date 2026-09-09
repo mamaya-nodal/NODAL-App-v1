@@ -245,6 +245,34 @@ dialog.desk-dialog::backdrop {
 .desk-person:hover {
   text-decoration: underline;
 }
+.desk-level-ready {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  margin-left: 7px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #10200f;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.my-desk-income-grid > div:first-child strong {
+  color: var(--brand);
+}
+.my-desk-branch-card .desk-open {
+  cursor: default;
+}
+.my-desk-user-detail > td {
+  padding: 0 10px 15px;
+}
+.my-desk-user-detail .desk-kpis {
+  margin: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--brand-soft) 45%, var(--surface));
+}
 .desk-empty {
   color: var(--muted);
   padding: 15px 0;

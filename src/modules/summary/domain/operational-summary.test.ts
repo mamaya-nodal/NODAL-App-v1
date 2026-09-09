@@ -30,4 +30,58 @@ describe("operational summary", () => {
     expect(calculateDeskCommission(1_000_000).amountInCents).toBe(400_000);
     expect(calculateDeskCommission(3_500_000).amountInCents).toBe(875_000);
   });
+
+  it("arrastra el cierre anterior sin convertirlo en depósito ni ganancia nueva", () => {
+    const summary = buildOperationalSummary({
+      accounts: [],
+      controls: [],
+      entries: [],
+      fundingWithdrawals: [],
+      opening: {
+        accumulatedResultInCents: 250_000,
+        brokerBalanceInCents: 600_000,
+        capitalNetInCents: 400_000,
+        fundingPendingInCents: 50_000,
+        walletBalanceInCents: 0,
+      },
+      phaseWithdrawals: [],
+      walletMovements: [],
+    });
+
+    expect(summary.brokerBalanceInCents).toBe(600_000);
+    expect(summary.capitalNetInCents).toBe(400_000);
+    expect(summary.periodResultInCents).toBe(0);
+    expect(summary.accumulatedResultInCents).toBe(250_000);
+    expect(summary.positionObservableInCents).toBe(650_000);
+    expect(summary.positionExpectedInCents).toBe(650_000);
+  });
+
+  it("cobra un pendiente anterior sin computarlo como capital nuevo", () => {
+    const summary = buildOperationalSummary({
+      accounts: [],
+      controls: [],
+      entries: [],
+      fundingWithdrawals: [],
+      opening: {
+        accumulatedResultInCents: 250_000,
+        brokerBalanceInCents: 600_000,
+        capitalNetInCents: 400_000,
+        fundingPendingInCents: 50_000,
+        walletBalanceInCents: 0,
+      },
+      phaseWithdrawals: [],
+      walletMovements: [{
+        amountInCents: 50_000,
+        id: "previous-payout",
+        kind: "prior_pending_collection",
+        occurredOn: "2026-09-01",
+        observation: null,
+      }],
+    });
+
+    expect(summary.walletBalanceInCents).toBe(50_000);
+    expect(summary.fundingPendingInCents).toBe(0);
+    expect(summary.capitalNetInCents).toBe(400_000);
+    expect(summary.positionDifferenceInCents).toBe(0);
+  });
 });

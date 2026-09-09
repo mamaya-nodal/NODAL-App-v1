@@ -65,10 +65,16 @@ export function calculateAccountResult(
       netInCents: persistedBroker.netInCents - initialPurchasePriceInCents,
       positiveInCents: persistedBroker.positiveInCents,
     };
-    const carryInCents =
-      stateOrigin === "manual_live" && phaseIndex > 0 && previousTotalGainInCents > 0
+    // Sheets lleva el resultado final negativo a la vuelta siguiente como
+    // ANTERIOR / NETO BROKER -. Cuando una cuenta fue forzada viva también
+    // conserva un total positivo para que el cierre manual no pierda valor.
+    const carryInCents = phaseIndex === 0
+      ? 0
+      : previousTotalGainInCents < 0
         ? previousTotalGainInCents
-        : 0;
+        : stateOrigin === "manual_live" && previousTotalGainInCents > 0
+          ? previousTotalGainInCents
+          : 0;
     const totalWithdrawalInCents =
       phase === "Evaluacion" ? 0 : withdrawalsByPhase.get(phase) ?? 0;
     const totalGainInCents =

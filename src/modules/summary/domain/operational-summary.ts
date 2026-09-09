@@ -36,10 +36,20 @@ export type FundingWithdrawal = Readonly<{
   approvedOn: string;
   collectedOn: string | null;
   id: string;
+  phase?: AccountPhaseWithdrawal["phase"] | null;
+}>;
+
+export type OperationalOpeningSnapshot = Readonly<{
+  accumulatedResultInCents: number;
+  brokerBalanceInCents: number | null;
+  capitalNetInCents: number;
+  fundingPendingInCents: number;
+  walletBalanceInCents: number;
 }>;
 
 export type OperationalSummary = Readonly<{
   accountStates: Readonly<{ virgin: number; live: number; closed: number }>;
+  accumulatedResultInCents: number;
   brokerBalanceInCents: number | null;
   capitalNetInCents: number;
   commissionInCents: number;
@@ -88,8 +98,16 @@ export function buildOperationalSummary(input: Readonly<{
   entries: OperationRegisterEntry[];
   fundingWithdrawals: FundingWithdrawal[];
   phaseWithdrawals: AccountPhaseWithdrawal[];
+  opening?: OperationalOpeningSnapshot;
   walletMovements: WalletMovement[];
 }>): OperationalSummary {
+  const opening: OperationalOpeningSnapshot = input.opening ?? {
+    accumulatedResultInCents: 0,
+    brokerBalanceInCents: null,
+    capitalNetInCents: 0,
+    fundingPendingInCents: 0,
+    walletBalanceInCents: 0,
+  };
   const accountTotals = input.accounts.map((account) => ({
     account,
     total: [...calculateAccountResult(
@@ -109,7 +127,7 @@ export function buildOperationalSummary(input: Readonly<{
   const floatingInCents = Math.abs(sum(accountTotals.filter(({ account }) => account.state === "live").map(({ total }) => total)));
   const virginPriceInCents = sum(input.accounts.filter((account) => account.state === "virgin").map((account) => account.priceInCents));
   const orderedControls = [...input.controls].sort((left, right) => left.controlNumber - right.controlNumber);
-  const brokerBalanceInCents = orderedControls.at(-1)?.balanceAfterInCents ?? null;
+  const brokerBalanceInCents = orderedControls.at(-1)?.balanceAfterInCents ?? opening.brokerBalanceInCents;
   const brokerOperatingResult = sum(orderedControls.map((control) => control.operatingResultInCents ?? 0));
   const totalPurchases = sum(input.accounts.map((account) => account.priceInCents));
   const approved = sum(input.fundingWithdrawals.map((withdrawal) => withdrawal.amountInCents));
@@ -119,23 +137,27 @@ export function buildOperationalSummary(input: Readonly<{
   const brokerPersonalWithdrawal = sum(orderedControls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Retiro personal").map((control) => control.movementInCents ?? 0));
   const walletToBroker = sum(orderedControls.filter((control) => control.kind === "deposit" && control.originDestination === "Saldo billetera").map((control) => control.movementInCents ?? 0));
   const brokerToWallet = sum(orderedControls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Saldo billetera").map((control) => control.movementInCents ?? 0));
-  const externalWallet = sum(input.walletMovements.filter((movement) => movement.kind === "external_contribution" || movement.kind === "prior_pending_collection").map((movement) => movement.amountInCents));
+  const externalWallet = sum(input.walletMovements.filter((movement) => movement.kind === "external_contribution").map((movement) => movement.amountInCents));
+  const priorPendingCollection = sum(input.walletMovements.filter((movement) => movement.kind === "prior_pending_collection").map((movement) => movement.amountInCents));
   const personalWalletWithdrawal = sum(input.walletMovements.filter((movement) => movement.kind === "personal_withdrawal").map((movement) => movement.amountInCents));
-  const capitalNetInCents = sum(input.accounts.filter((account) => account.fundsOrigin === "Aporte trader").map((account) => account.priceInCents)) + brokerContribution + externalWallet - brokerPersonalWithdrawal - personalWalletWithdrawal;
-  const walletBalanceInCents = collected - generatedPurchases - walletToBroker + brokerToWallet + externalWallet - personalWalletWithdrawal;
+  const capitalNetInCents = opening.capitalNetInCents + sum(input.accounts.filter((account) => account.fundsOrigin === "Aporte trader").map((account) => account.priceInCents)) + brokerContribution + externalWallet - brokerPersonalWithdrawal - personalWalletWithdrawal;
+  const walletBalanceInCents = opening.walletBalanceInCents + collected + priorPendingCollection - generatedPurchases - walletToBroker + brokerToWallet + externalWallet - personalWalletWithdrawal;
   const periodResultInCents = brokerOperatingResult - totalPurchases + approved;
-  const positionObservableInCents = (brokerBalanceInCents ?? 0) + walletBalanceInCents + Math.max(0, approved - collected);
-  const positionExpectedInCents = capitalNetInCents + periodResultInCents;
+  const accumulatedResultInCents = opening.accumulatedResultInCents + periodResultInCents;
+  const fundingPendingInCents = Math.max(0, opening.fundingPendingInCents + approved - collected - priorPendingCollection);
+  const positionObservableInCents = (brokerBalanceInCents ?? 0) + walletBalanceInCents + fundingPendingInCents;
+  const positionExpectedInCents = capitalNetInCents + accumulatedResultInCents;
   const commission = calculateDeskCommission(realizedGainInCents);
   return {
     accountStates: states,
+    accumulatedResultInCents,
     brokerBalanceInCents,
     capitalNetInCents,
     commissionInCents: commission.amountInCents,
     commissionRateLabel: commission.rateLabel,
     floatingInCents,
     fundingCollectedInCents: collected,
-    fundingPendingInCents: Math.max(0, approved - collected),
+    fundingPendingInCents,
     fundingWithdrawals: input.fundingWithdrawals,
     manualAccountStateCount,
     periodResultInCents,

@@ -18,6 +18,7 @@ import {
 import {
   buildOperationalSummary,
   type FundingWithdrawal,
+  type OperationalOpeningSnapshot,
   type OperationalSummary,
   type SummaryAccount,
   type SummaryControl,
@@ -51,6 +52,7 @@ export type DemoPeriod = Readonly<{
   id: "august" | "july";
   label: "Agosto 2026" | "Julio 2026";
   month: "2026-08-01" | "2026-07-01";
+  opening: OperationalOpeningSnapshot;
   performance: HomePerformance;
   phaseWithdrawals: AccountPhaseWithdrawal[];
   summary: OperationalSummary;
@@ -58,7 +60,7 @@ export type DemoPeriod = Readonly<{
 }>;
 
 const accountPriceInCents = 10_520;
-const individualCommissionBps = 5_000;
+export const demoIndividualCommissionBps = 5_000;
 const stages: DemoAccountStage[] = ["Evaluation", "Funded", "Evaluation", "Live", "Funded"];
 
 function distribute(total: number, count: number): number[] {
@@ -175,6 +177,7 @@ function buildEntries(accounts: DemoAccount[]): OperationRegisterEntry[] {
 
 function buildControls(input: Readonly<{
   capitalDepositInCents: number;
+  openingBalanceInCents: number;
   operationCount: number;
   operatingResultInCents: number;
   periodId: DemoPeriod["id"];
@@ -182,23 +185,23 @@ function buildControls(input: Readonly<{
   const month = input.periodId === "july" ? "07" : "08";
   const days = input.periodId === "july" ? ["04", "11", "18", "25", "29"] : ["03", "10", "17", "24", "28"];
   const results = distributeOperatingResult(input.operatingResultInCents, input.operationCount);
-  let balanceInCents = input.capitalDepositInCents;
-  const deposit: DemoControl = {
+  let balanceInCents = input.openingBalanceInCents + input.capitalDepositInCents;
+  const deposit: DemoControl[] = input.capitalDepositInCents > 0 ? [{
     balanceAfterInCents: balanceInCents,
-    controlNumber: 0,
+    controlNumber: 1,
     id: `${input.periodId}-deposit`,
     kind: "deposit",
     movementInCents: input.capitalDepositInCents,
     operatedOn: `2026-${month}-01`,
     operatingResultInCents: null,
     originDestination: "Aporte trader",
-  };
+  }] : [];
   const operations = results.map((resultInCents, index): DemoControl => {
     balanceInCents += resultInCents;
     const dayIndex = Math.min(days.length - 1, Math.floor(index / Math.ceil(results.length / days.length)));
     return {
       balanceAfterInCents: balanceInCents,
-      controlNumber: index + 1,
+      controlNumber: index + deposit.length + 1,
       id: `${input.periodId}-operation-${index + 1}`,
       kind: "balance_update",
       movementInCents: null,
@@ -207,7 +210,7 @@ function buildControls(input: Readonly<{
       originDestination: null,
     };
   });
-  return [deposit, ...operations];
+  return [...deposit, ...operations];
 }
 
 function buildPeriod(input: Readonly<{
@@ -218,8 +221,16 @@ function buildPeriod(input: Readonly<{
   label: DemoPeriod["label"];
   month: DemoPeriod["month"];
   operationCount: number;
+  opening?: OperationalOpeningSnapshot;
   periodResultInCents: number;
 }>): DemoPeriod {
+  const opening = input.opening ?? {
+    accumulatedResultInCents: 0,
+    brokerBalanceInCents: null,
+    capitalNetInCents: 0,
+    fundingPendingInCents: 0,
+    walletBalanceInCents: 0,
+  };
   const entries = buildEntries(input.accounts);
   const phaseWithdrawals: AccountPhaseWithdrawal[] = [];
   const walletMovements: WalletMovement[] = [];
@@ -228,6 +239,7 @@ function buildPeriod(input: Readonly<{
   const operatingResultInCents = input.periodResultInCents + totalPurchases - approvedFunding;
   const controls = buildControls({
     capitalDepositInCents: input.capitalDepositInCents,
+    openingBalanceInCents: opening.brokerBalanceInCents ?? 0,
     operationCount: input.operationCount,
     operatingResultInCents,
     periodId: input.id,
@@ -237,9 +249,10 @@ function buildPeriod(input: Readonly<{
     controls,
     entries,
     fundingWithdrawals: input.fundingWithdrawals,
+    opening,
     phaseWithdrawals,
     walletMovements,
-  }), individualCommissionBps);
+  }), demoIndividualCommissionBps);
   const performance = buildHomePerformance(controls.map((control) => ({
     operatedOn: control.operatedOn,
     resultInCents: control.operatingResultInCents,
@@ -253,6 +266,7 @@ function buildPeriod(input: Readonly<{
     id: input.id,
     label: input.label,
     month: input.month,
+    opening,
     performance,
     phaseWithdrawals,
     summary,
@@ -297,7 +311,7 @@ export const julyDemo = buildPeriod({
 
 export const augustDemo = buildPeriod({
   accounts: augustAccounts,
-  capitalDepositInCents: 737_000,
+  capitalDepositInCents: 0,
   fundingWithdrawals: [
     { accountId: augustAccounts[0].id, amountInCents: 180_000, approvedOn: "2026-08-22", collectedOn: "2026-08-25", id: "august-payout-1" },
     { accountId: augustAccounts[1].id, amountInCents: 180_000, approvedOn: "2026-08-28", collectedOn: null, id: "august-payout-2" },
@@ -306,6 +320,13 @@ export const augustDemo = buildPeriod({
   label: "Agosto 2026",
   month: "2026-08-01",
   operationCount: 48,
+  opening: {
+    accumulatedResultInCents: julyDemo.summary.accumulatedResultInCents,
+    brokerBalanceInCents: julyDemo.summary.brokerBalanceInCents,
+    capitalNetInCents: julyDemo.summary.capitalNetInCents,
+    fundingPendingInCents: julyDemo.summary.fundingPendingInCents,
+    walletBalanceInCents: julyDemo.summary.walletBalanceInCents,
+  },
   periodResultInCents: 1_004_601,
 });
 
@@ -381,7 +402,7 @@ function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childMe
       ownOperationsInCents: user.ownIncome,
       referredDesksInCents: user.bonus,
     }),
-    managedCapitalInCents: managedDesk?.gross ?? 0,
+    managedBillingInCents: managedDesk?.gross ?? 0,
     managedUsers: managedDesk?.members.length ?? 0,
     referredDesks: managedDesk?.children.length ?? 0,
   };
@@ -394,30 +415,50 @@ const identityPayouts = [350_000, 420_000, 380_000, 460_000, 390_000, 500_000];
 export const demoHomeDashboard: PersonalDashboardData = {
   capabilities: {
     identities: { active: identityPayouts.length, capacity: 20, payoutTotalInCents: identityPayouts.reduce((total, amount) => total + amount, 0) },
-    managedDesk: { capitalNetInCents: augustDeskEconomy.managedCapitalInCents, capacity: 10, users: augustDeskEconomy.managedUsers },
+    managedDesk: { billingInCents: augustDeskEconomy.managedBillingInCents, capacity: 10, users: augustDeskEconomy.managedUsers },
     referredDesks: { bonusBps: bonusBps(augustDeskEconomy.referredDesks), capacity: 10, desks: augustDeskEconomy.referredDesks },
   },
-  capitalNetInCents: augustDemo.summary.realizedGainInCents,
+  billingInCents: augustDemo.summary.realizedGainInCents,
   earnings: augustDeskEconomy.earnings,
   history: [
     {
-      capitalNetInCents: julyDemo.summary.realizedGainInCents,
+      billingInCents: julyDemo.summary.realizedGainInCents,
       earningsInCents: julyDeskEconomy.earnings.totalInCents,
       periodMonth: julyDemo.month,
     },
     {
-      capitalNetInCents: augustDemo.summary.realizedGainInCents,
+      billingInCents: augustDemo.summary.realizedGainInCents,
       earningsInCents: augustDeskEconomy.earnings.totalInCents,
       periodMonth: augustDemo.month,
     },
   ],
 };
 
-export const currentDemoOperation = {
-  accountId: augustAccounts.find((account) => account.state === "live")?.id ?? augustAccounts[0].id,
-  cashValueInCents: augustDemo.summary.brokerBalanceInCents ?? 0,
+const operationDurations = ["08:42", "08:41", "08:40", "08:39", "08:37"] as const;
+const operationCashValues = [5_046_500, 5_021_000, 5_034_250, 5_018_900, 5_029_700] as const;
+const operationFloatingLosses = [8_100, 7_850, 8_250, 7_900, 7_900] as const;
+
+export const currentDemoOperations = augustAccounts
+  .filter((account) => account.state === "live")
+  .slice(0, 5)
+  .map((account, index) => ({
+    accountId: account.id,
+    cashValueInCents: operationCashValues[index],
+    direction: "Long" as const,
+    duration: operationDurations[index],
+    instrument: "MNQ",
+    netLiquidationInCents: operationCashValues[index] - operationFloatingLosses[index],
+    quantity: 1,
+  }));
+
+export const currentDemoBrokerCoverage = {
+  accountName: "Broker principal",
+  cashValueInCents: 1_644_601,
+  direction: "Short" as const,
   duration: "08:42",
-  netLiquidationInCents: (augustDemo.summary.brokerBalanceInCents ?? 0) + 2_500,
+  instrument: "MNQ",
+  netLiquidationInCents: 1_684_601,
+  quantity: 5,
 } as const;
 
 export const demoCapitalHistory: CapitalHistoryPoint[] = buildCapitalHistory({

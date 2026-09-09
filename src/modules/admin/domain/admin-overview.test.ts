@@ -4,6 +4,7 @@ import { buildAdminStudentOverview, summarizeAdminOverview } from "./admin-overv
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
 
 const summary = (gain: number, commission = 0): OperationalSummary => ({
+  accumulatedResultInCents: 0,
   accountStates: { closed: 0, live: 0, virgin: 0 }, brokerBalanceInCents: 0,
   capitalNetInCents: 20_000, commissionInCents: commission, commissionRateLabel: "50% (tope US$ 4.400)",
   floatingInCents: 0, fundingCollectedInCents: 0, fundingPendingInCents: 0, fundingWithdrawals: [],

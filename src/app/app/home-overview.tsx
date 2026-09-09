@@ -21,7 +21,7 @@ type HomeOverviewProps = Readonly<{
   summary: OperationalSummary;
 }>;
 
-type ChartMetric = "capital" | "earnings";
+type ChartMetric = "billing" | "earnings";
 type ChartPoint = Readonly<{ periodMonth: string; valueInCents: number }>;
 
 function formatMoney(cents: number): string {
@@ -78,20 +78,20 @@ function EarningsItem({ label, valueInCents }: Readonly<{ label: string; valueIn
 }
 
 export function HomeOverview({ capitalHistory, dashboard, performance, periodLabel, summary }: HomeOverviewProps) {
-  const [chartMetric, setChartMetric] = useState<ChartMetric>(dashboard ? "earnings" : "capital");
+  const [chartMetric, setChartMetric] = useState<ChartMetric>(dashboard ? "earnings" : "billing");
   const earnings = dashboard?.earnings ?? buildPeriodEarnings({ ownOperationsInCents: summary.traderGainInCents });
-  const capitalNetInCents = dashboard?.capitalNetInCents ?? summary.capitalNetInCents;
+  const billingInCents = dashboard?.billingInCents ?? summary.realizedGainInCents;
   const payout = payoutDashboardSummary(summary.fundingWithdrawals);
   const history = dashboard?.history ?? [];
   const chartHistory = dashboard
     ? history.map((point) => ({
         periodMonth: point.periodMonth,
-        valueInCents: chartMetric === "earnings" ? point.earningsInCents : point.capitalNetInCents,
+        valueInCents: chartMetric === "earnings" ? point.earningsInCents : point.billingInCents,
       }))
     : capitalHistory.map((point) => ({ periodMonth: point.periodMonth, valueInCents: point.capitalInCents }));
   const chart = chartGeometry(chartHistory);
   const chartTitle = dashboard
-    ? chartMetric === "earnings" ? "Ganancias por período" : "Capital neto por período"
+    ? chartMetric === "earnings" ? "Ganancias por período" : "Facturación por período"
     : "Capital histórico acumulado";
   const capabilities = dashboard?.capabilities;
   const hasCapabilities = Boolean(capabilities?.managedDesk || capabilities?.referredDesks || capabilities?.identities);
@@ -126,8 +126,8 @@ export function HomeOverview({ capitalHistory, dashboard, performance, periodLab
         </article>
 
         <article className="home-financial-metric">
-          <span>Capital neto total</span>
-          <strong>{formatMoney(capitalNetInCents)}</strong>
+          <span>Facturación del período</span>
+          <strong>{formatMoney(billingInCents)}</strong>
           <small>{periodLabel}</small>
         </article>
 
@@ -146,8 +146,8 @@ export function HomeOverview({ capitalHistory, dashboard, performance, periodLab
             <article>
               <span>Mesa administrada</span>
               <strong>{capabilities.managedDesk.users} / {capabilities.managedDesk.capacity}</strong>
-              <small>Capital neto total</small>
-              <b>{formatMoney(capabilities.managedDesk.capitalNetInCents)}</b>
+              <small>Facturación de la mesa</small>
+              <b>{formatMoney(capabilities.managedDesk.billingInCents)}</b>
             </article>
           )}
           {capabilities?.referredDesks && (
@@ -175,7 +175,7 @@ export function HomeOverview({ capitalHistory, dashboard, performance, periodLab
           <div className="home-chart-actions">
             {dashboard && <div aria-label="Métrica del gráfico" className="home-chart-switch">
               <button aria-pressed={chartMetric === "earnings"} onClick={() => setChartMetric("earnings")} type="button">Ganancias</button>
-              <button aria-pressed={chartMetric === "capital"} onClick={() => setChartMetric("capital")} type="button">Capital</button>
+              <button aria-pressed={chartMetric === "billing"} onClick={() => setChartMetric("billing")} type="button">Facturación</button>
             </div>}
             {chartHistory.length > 0 && <strong>{formatMoney(chartHistory.at(-1)!.valueInCents)}</strong>}
           </div>

@@ -104,12 +104,12 @@ describe("reparto automático exacto", () => {
     ]);
   });
 
-  it("bloquea un reparto con centavos no divisibles en partes iguales", () => {
-    expect(() =>
-      allocateResultEqually(10_000, "FFF_1", ["FFF_4", "FFF_7"]),
-    ).toThrow(
-      "El resultado no se divide en centavos exactos entre las cuentas elegidas.",
-    );
+  it("redondea cada cuenta a dos decimales como la planilla", () => {
+    expect(allocateResultEqually(-32_228, "FFF_1", ["FFF_4", "FFF_7"])).toEqual([
+      { accountId: "FFF_1", amountInCents: -10_743, role: "leader" },
+      { accountId: "FFF_4", amountInCents: -10_743, role: "replica" },
+      { accountId: "FFF_7", amountInCents: -10_743, role: "replica" },
+    ]);
   });
 
   it("impide repetir la líder dentro de las réplicas", () => {

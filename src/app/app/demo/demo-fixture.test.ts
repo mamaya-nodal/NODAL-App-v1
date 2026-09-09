@@ -3,18 +3,21 @@ import { describe, expect, it } from "vitest";
 import {
   augustDemo,
   calculatedAccountResult,
+  currentDemoBrokerCoverage,
   demoAccounts,
   demoCapitalHistory,
   demoHomeDashboard,
   julyDemo,
+  currentDemoOperations,
 } from "./demo-fixture";
 
 describe("accounting demo fixture", () => {
   it("uses the real commission and reconciliation rules for August", () => {
     expect(augustDemo.summary).toMatchObject({
       accountStates: { closed: 16, live: 8, virgin: 1 },
-      brokerBalanceInCents: 1_644_601,
-      capitalNetInCents: 1_000_000,
+      accumulatedResultInCents: 2_054_601,
+      brokerBalanceInCents: 2_577_601,
+      capitalNetInCents: 1_063_000,
       commissionInCents: 600_000,
       commissionRateLabel: "50% · acuerdo individual",
       floatingInCents: 184_879,
@@ -26,7 +29,7 @@ describe("accounting demo fixture", () => {
       realizedReconciliationDifferenceInCents: 0,
       traderGainInCents: 600_000,
       virginPriceInCents: 10_520,
-      walletBalanceInCents: 180_000,
+      walletBalanceInCents: 360_000,
     });
   });
 
@@ -62,8 +65,19 @@ describe("accounting demo fixture", () => {
     expect(augustDemo.controls.filter((control) => control.operatingResultInCents !== null)).toHaveLength(48);
     expect(demoCapitalHistory).toEqual([
       { capitalInCents: 800_000, periodMonth: "2026-07-01" },
-      { capitalInCents: 1_800_000, periodMonth: "2026-08-01" },
+      { capitalInCents: 1_063_000, periodMonth: "2026-08-01" },
     ]);
+  });
+
+  it("represents simultaneous activity as five independent account operations", () => {
+    expect(currentDemoOperations).toHaveLength(5);
+    expect(new Set(currentDemoOperations.map((operation) => operation.accountId)).size).toBe(5);
+    expect(currentDemoOperations.every((operation) => operation.netLiquidationInCents !== operation.cashValueInCents)).toBe(true);
+    expect(currentDemoOperations.every((operation) => operation.direction === "Long" && operation.quantity === 1)).toBe(true);
+    expect(currentDemoBrokerCoverage).toMatchObject({ direction: "Short", quantity: 5 });
+    expect(currentDemoOperations.reduce((total, operation) => total + operation.cashValueInCents - operation.netLiquidationInCents, 0)).toBe(
+      currentDemoBrokerCoverage.netLiquidationInCents - currentDemoBrokerCoverage.cashValueInCents,
+    );
   });
 
   it("builds the dashboard income from own operations, desk administration and direct referrals", () => {
@@ -74,13 +88,13 @@ describe("accounting demo fixture", () => {
       referredDesksInCents: 157_500,
       totalInCents: 1_807_500,
     });
-    expect(demoHomeDashboard.capitalNetInCents).toBe(1_200_000);
+    expect(demoHomeDashboard.billingInCents).toBe(1_200_000);
     expect(demoHomeDashboard.history).toEqual([
-      { capitalNetInCents: 1_050_000, earningsInCents: 1_491_000, periodMonth: "2026-07-01" },
-      { capitalNetInCents: 1_200_000, earningsInCents: 1_807_500, periodMonth: "2026-08-01" },
+      { billingInCents: 1_050_000, earningsInCents: 1_491_000, periodMonth: "2026-07-01" },
+      { billingInCents: 1_200_000, earningsInCents: 1_807_500, periodMonth: "2026-08-01" },
     ]);
     expect(demoHomeDashboard.capabilities?.referredDesks).toMatchObject({ bonusBps: 1_500, desks: 2 });
-    expect(demoHomeDashboard.capabilities?.managedDesk?.capitalNetInCents).toBe(3_000_000);
+    expect(demoHomeDashboard.capabilities?.managedDesk?.billingInCents).toBe(3_000_000);
     expect(demoHomeDashboard.capabilities?.identities?.payoutTotalInCents).toBe(2_500_000);
   });
 });

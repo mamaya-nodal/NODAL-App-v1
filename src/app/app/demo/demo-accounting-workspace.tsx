@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 import { HomeOverview } from "../home-overview";
 import {
+  applyDemoAccountingInputs,
+  type DemoAccountingInput,
+  type DemoAccountingInputKind,
+} from "./demo-accounting-audit";
+import {
   augustDemo,
   calculatedAccountResult,
-  currentDemoOperation,
+  currentDemoBrokerCoverage,
+  currentDemoOperations,
   demoAccounts,
   demoCapitalHistory,
   demoHomeDashboard,
@@ -251,43 +257,62 @@ function PeriodHistory({ period, initiallyOpen = false }: Readonly<{ period: Dem
 function OperationsDemo() {
   const augustDays = groupedDays(augustDemo);
   const latestDay = augustDays[0];
-  const currentAccount = augustDemo.accounts.find((account) => account.id === currentDemoOperation.accountId) ?? augustDemo.accounts[0];
-  const activeAccounts = augustDemo.accounts.filter((account) => account.state === "live").length;
   const operationCount = demoPeriods.reduce((total, period) => total + operationControls(period).length, 0);
+  const currentOperations = currentDemoOperations.flatMap((operation) => {
+    const account = augustDemo.accounts.find((candidate) => candidate.id === operation.accountId);
+    return account ? [{ account, operation }] : [];
+  });
+  const brokerFloatingInCents = currentDemoBrokerCoverage.netLiquidationInCents - currentDemoBrokerCoverage.cashValueInCents;
 
   return (
     <section className="demo-view" id="operaciones" aria-label="Simulación de operaciones">
       <DemoHeading title="Operaciones" />
 
       <div className="demo-operation-grid">
-        <article className="demo-live-operation">
-          <div><span className="demo-live-dot" />En curso</div>
-          <h3>{currentAccount.company} · Flex</h3>
-          <p>{currentAccount.externalId}</p>
-          <dl>
-            <div><dt>Net liquidation</dt><dd>{money(currentDemoOperation.netLiquidationInCents)}</dd></div>
-            <div><dt>Cash value</dt><dd>{money(currentDemoOperation.cashValueInCents)}</dd></div>
-            <div><dt>Duración</dt><dd>{currentDemoOperation.duration}</dd></div>
-          </dl>
-        </article>
-        <article className="demo-broker-balance"><span>Saldo broker</span><strong>{money(augustDemo.summary.brokerBalanceInCents)}</strong><small>Actualizado ahora</small></article>
+        <article className="demo-broker-balance"><span>Cuentas prop en curso</span><strong>{currentOperations.length}</strong><small>Long · {currentDemoBrokerCoverage.instrument}</small></article>
+        <article className="demo-broker-balance"><span>Cobertura broker</span><strong className="positive">{signedMoney(brokerFloatingInCents)}</strong><small>Short · {currentDemoBrokerCoverage.quantity} {currentDemoBrokerCoverage.instrument}</small></article>
         <article className="demo-today-result"><span>Resultado de hoy</span><strong>{signedMoney(latestDay.resultInCents)}</strong><small>{latestDay.controls.length} operaciones cerradas</small></article>
       </div>
 
-      <details className="demo-operation-disclosure">
-        <summary><span>Revisar</span><strong>2</strong><i aria-hidden="true" /></summary>
-        <div className="demo-review-list">
-          <p><strong>Cuenta sin asignación</strong><span>Detectada hace 6 min</span></p>
-          <p><strong>Cierre por confirmar</strong><span>Tradeify · Flex</span></p>
+      <article className="demo-coverage-operation">
+        <div>
+          <span className="demo-live-dot" />
+          <strong>Operación sincronizada</strong>
         </div>
-      </details>
+        <p><span>{currentOperations.length} cuentas prop</span><b>Long · 1 {currentDemoBrokerCoverage.instrument} cada una</b></p>
+        <i aria-hidden="true">↔</i>
+        <p><span>{currentDemoBrokerCoverage.accountName}</span><b>Short · {currentDemoBrokerCoverage.quantity} {currentDemoBrokerCoverage.instrument}</b></p>
+      </article>
 
-      <details className="demo-operation-disclosure">
-        <summary><span>Asignación de cuentas</span><strong>{activeAccounts + 1} cuentas</strong><i aria-hidden="true" /></summary>
-        <div className="demo-assignment-map">
-          <span>Broker principal</span><b>→</b><span>1 líder + {activeAccounts} réplicas</span>
-        </div>
-      </details>
+      <div className="demo-group-title demo-live-title"><h3>Cuentas prop</h3><span>{currentOperations.length}</span></div>
+      <div className="demo-live-operations">
+        {currentOperations.map(({ account, operation }) => (
+          <article className="demo-live-operation" key={account.id}>
+            <div><span className="demo-live-dot" />En curso</div>
+            <h3>{account.company} · Flex</h3>
+            <p>{account.externalId}</p>
+            <dl>
+              <div><dt>Posición</dt><dd>{operation.direction} · {operation.quantity} {operation.instrument}</dd></div>
+              <div><dt>Net liquidation</dt><dd>{money(operation.netLiquidationInCents)}</dd></div>
+              <div><dt>Cash value</dt><dd>{money(operation.cashValueInCents)}</dd></div>
+              <div><dt>Duración</dt><dd>{operation.duration}</dd></div>
+            </dl>
+          </article>
+        ))}
+      </div>
+
+      <div className="demo-group-title demo-live-title"><h3>Cobertura</h3><span>1</span></div>
+      <article className="demo-live-operation demo-broker-operation">
+        <div><span className="demo-live-dot" />En curso</div>
+        <h3>{currentDemoBrokerCoverage.accountName}</h3>
+        <p>Resultado flotante {signedMoney(brokerFloatingInCents)}</p>
+        <dl>
+          <div><dt>Posición</dt><dd>{currentDemoBrokerCoverage.direction} · {currentDemoBrokerCoverage.quantity} {currentDemoBrokerCoverage.instrument}</dd></div>
+          <div><dt>Net liquidation</dt><dd>{money(currentDemoBrokerCoverage.netLiquidationInCents)}</dd></div>
+          <div><dt>Cash value</dt><dd>{money(currentDemoBrokerCoverage.cashValueInCents)}</dd></div>
+          <div><dt>Duración</dt><dd>{currentDemoBrokerCoverage.duration}</dd></div>
+        </dl>
+      </article>
 
       <div className="demo-history">
         <div className="demo-group-title"><h3>Historial</h3><span>{operationCount}</span></div>
@@ -312,6 +337,155 @@ function PeriodCard({ current, period }: Readonly<{ current?: boolean; period: D
   );
 }
 
+const auditInputLabels: Record<DemoAccountingInputKind, string> = {
+  account_purchase_external: "Compra de cuenta · aporte",
+  account_purchase_generated: "Compra de cuenta · saldo generado",
+  broker_deposit_external: "Depósito broker · aporte",
+  broker_deposit_wallet: "Depósito broker · billetera",
+  broker_withdrawal_personal: "Retiro broker · personal",
+  broker_withdrawal_wallet: "Retiro broker · billetera",
+  operation_result: "Resultado de operación",
+  payout_approved: "Payout aprobado",
+  payout_collected: "Payout cobrado",
+  wallet_contribution: "Aporte a billetera",
+  wallet_withdrawal: "Retiro de billetera",
+};
+
+const amountlessAuditInputs = new Set<DemoAccountingInputKind>(["payout_collected"]);
+const accountAuditInputs = new Set<DemoAccountingInputKind>(["operation_result", "payout_approved"]);
+
+function parseAuditAmount(value: string, signed: boolean) {
+  const normalized = value.trim().replace(",", ".");
+  const pattern = signed ? /^-?\d+(?:\.\d{1,2})?$/ : /^\d+(?:\.\d{1,2})?$/;
+  if (!pattern.test(normalized)) throw new Error("Ingresá un importe válido con hasta dos decimales.");
+  const amountInCents = Math.round(Number(normalized) * 100);
+  if (!Number.isSafeInteger(amountInCents) || (!signed && amountInCents <= 0) || (signed && amountInCents === 0)) {
+    throw new Error("El importe debe ser distinto de cero.");
+  }
+  return amountInCents;
+}
+
+function AccountingAudit() {
+  const [inputs, setInputs] = useState<DemoAccountingInput[]>([]);
+  const [periodId, setPeriodId] = useState<DemoPeriod["id"]>("august");
+  const [kind, setKind] = useState<DemoAccountingInputKind>("operation_result");
+  const [amount, setAmount] = useState("100");
+  const [accountId, setAccountId] = useState("");
+  const [payoutId, setPayoutId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const baseline = periodId === "august" ? augustDemo : julyDemo;
+  const current = useMemo(
+    () => applyDemoAccountingInputs(baseline, inputs.filter((input) => input.id.startsWith(`${periodId}-`))),
+    [baseline, inputs, periodId],
+  );
+  const pendingPayouts = current.fundingWithdrawals.filter((withdrawal) => !withdrawal.collectedOn);
+  const requiresAccount = accountAuditInputs.has(kind);
+  const requiresAmount = !amountlessAuditInputs.has(kind);
+  const operationAccounts = current.accounts.filter((account) => account.state === "live");
+  const payoutAccounts = current.accounts.filter((account) => account.state === "closed" && account.stage !== "Evaluation");
+  const selectableAccounts = kind === "operation_result" ? operationAccounts : payoutAccounts;
+  const metrics = [
+    ["Saldo broker", current.summary.brokerBalanceInCents, baseline.summary.brokerBalanceInCents],
+    ["Saldo billetera", current.summary.walletBalanceInCents, baseline.summary.walletBalanceInCents],
+    ["Payouts pendientes", current.summary.fundingPendingInCents, baseline.summary.fundingPendingInCents],
+    ["Capital neto aportado", current.summary.capitalNetInCents, baseline.summary.capitalNetInCents],
+    ["Resultado del período", current.summary.periodResultInCents, baseline.summary.periodResultInCents],
+    ["Flotante", current.summary.floatingInCents, baseline.summary.floatingInCents],
+    ["Ganancia realizada", current.summary.realizedGainInCents, baseline.summary.realizedGainInCents],
+    ["Comisión de usuario", current.summary.commissionInCents, baseline.summary.commissionInCents],
+    ["Ganancia del usuario", current.summary.traderGainInCents, baseline.summary.traderGainInCents],
+    ["Diferencia de capital", current.summary.positionDifferenceInCents, baseline.summary.positionDifferenceInCents],
+    ["Diferencia de ganancias", current.summary.realizedReconciliationDifferenceInCents, baseline.summary.realizedReconciliationDifferenceInCents],
+  ] as const;
+
+  function addInput(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      const selectedPayout = kind === "payout_collected"
+        ? pendingPayouts.find((withdrawal) => withdrawal.id === payoutId)
+        : null;
+      if (requiresAccount && !selectableAccounts.some((account) => account.id === accountId)) {
+        throw new Error("Elegí la cuenta afectada.");
+      }
+      if (kind === "payout_collected" && !selectedPayout) throw new Error("Elegí el payout cobrado.");
+      const amountInCents = requiresAmount
+        ? parseAuditAmount(amount, kind === "operation_result")
+        : selectedPayout?.amountInCents ?? 0;
+      const next: DemoAccountingInput = {
+        accountId: requiresAccount ? accountId : undefined,
+        amountInCents,
+        id: `${periodId}-audit-${inputs.length + 1}`,
+        kind,
+        payoutId: selectedPayout?.id,
+      };
+      applyDemoAccountingInputs(current, [next]);
+      setInputs((existing) => [...existing, next]);
+      setError(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "No se pudo aplicar el movimiento.");
+    }
+  }
+
+  const periodInputs = inputs.filter((input) => input.id.startsWith(`${periodId}-`));
+
+  return (
+    <section className="demo-audit">
+      <div className="demo-audit-heading">
+        <h3>Prueba contable</h3>
+        <div>
+          <button aria-pressed={periodId === "july"} onClick={() => setPeriodId("july")} type="button">Julio</button>
+          <button aria-pressed={periodId === "august"} onClick={() => setPeriodId("august")} type="button">Agosto</button>
+        </div>
+      </div>
+
+      <form className="demo-audit-form" onSubmit={addInput}>
+        <select aria-label="Tipo de entrada" onChange={(event) => { setKind(event.target.value as DemoAccountingInputKind); setError(null); }} value={kind}>
+          {Object.entries(auditInputLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+        {requiresAccount && (
+          <select aria-label="Cuenta" onChange={(event) => setAccountId(event.target.value)} required value={accountId}>
+            <option value="">Cuenta</option>
+            {selectableAccounts.map((account) => <option key={account.id} value={account.id}>{account.externalId}</option>)}
+          </select>
+        )}
+        {kind === "payout_collected" && (
+          <select aria-label="Payout pendiente" onChange={(event) => setPayoutId(event.target.value)} required value={payoutId}>
+            <option value="">Payout pendiente</option>
+            {pendingPayouts.map((withdrawal) => {
+              const account = current.accounts.find((candidate) => candidate.id === withdrawal.accountId);
+              return <option key={withdrawal.id} value={withdrawal.id}>{account?.externalId ?? "Cuenta"} · {money(withdrawal.amountInCents)}</option>;
+            })}
+          </select>
+        )}
+        {requiresAmount && <input aria-label="Importe en USD" inputMode="decimal" onChange={(event) => setAmount(event.target.value)} placeholder="Importe USD" required value={amount} />}
+        <button className="primary-action" type="submit">Aplicar</button>
+      </form>
+      {error && <p className="demo-audit-error" role="alert">{error}</p>}
+
+      <div className="demo-audit-metrics">
+        {metrics.map(([label, value, original]) => {
+          const delta = (value ?? 0) - (original ?? 0);
+          return (
+            <article className={label.startsWith("Diferencia") && value !== 0 ? "alert" : undefined} key={label}>
+              <span>{label}</span>
+              <strong>{money(value)}</strong>
+              <small className={delta < 0 ? "negative" : delta > 0 ? "positive" : undefined}>{delta === 0 ? "Sin cambio" : `${delta > 0 ? "+" : ""}${money(delta)}`}</small>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="demo-audit-log">
+        <div><strong>Entradas aplicadas</strong><button className="text-action" disabled={periodInputs.length === 0} onClick={() => setInputs((existing) => existing.filter((input) => !input.id.startsWith(`${periodId}-`)))} type="button">Restablecer</button></div>
+        {periodInputs.length === 0 ? <p>Escenario original</p> : periodInputs.map((input) => {
+          const account = current.accounts.find((candidate) => candidate.id === input.accountId);
+          return <p key={input.id}><span>{auditInputLabels[input.kind]}{account ? ` · ${account.externalId}` : ""}</span><strong>{money(input.amountInCents)}</strong></p>;
+        })}
+      </div>
+    </section>
+  );
+}
+
 function AccountingDemo() {
   const summary = augustDemo.summary;
   return (
@@ -329,6 +503,7 @@ function AccountingDemo() {
         <PeriodCard current period={augustDemo} />
         <PeriodCard period={julyDemo} />
       </div>
+      <AccountingAudit />
       <details className="demo-operation-disclosure">
         <summary><span>Retiros</span><strong>{summary.fundingWithdrawals.length}</strong><i aria-hidden="true" /></summary>
         <div className="demo-wallets">

@@ -18,7 +18,7 @@
 | APP-012 | La primera version no incluira cobros en linea, planes publicos ni soporte para multiples organizaciones. | Vigente |
 | APP-013 | La app debera requerir del alumno la misma cantidad o menos de carga manual que Sheets para un resultado equivalente; toda carga adicional requerira una justificacion funcional aprobada. | Vigente |
 | APP-014 | Tras una vista previa explicita, la confirmacion de un Control Diario de operatoria creara automaticamente los registros correspondientes por cuenta. Se elimina la doble carga manual en Registro de Operaciones, conservando correcciones y auditoria. | Vigente |
-| APP-015 | La seleccion de replicas sera explicita, separada de la cuenta lider e independiente por empresa. La interfaz debera admitir hasta 250 cuentas correlativas por empresa sin inferir replicas por consecutividad. | Vigente |
+| APP-015 | La seleccion manual de replicas queda como contingencia para controles históricos. La operación automática correlaciona telemetría real sin pedir líder ni grupo al usuario. | Reemplazada para automatización por APP-085 |
 | APP-016 | El Resumen Operativo se conservara completo en una seccion propia. Inicio mostrara solo una sintesis de sus datos y enlaces al detalle; no reemplaza el resumen. | Vigente |
 | APP-017 | Control Diario tendra un historial de saldos desde el cual se podra corregir una carga. Al confirmar, el valor corregido reemplazara al anterior en la vista y los calculos, y se recalcularan las entradas de todas las cuentas participantes. Se conservara auditoria interna de la correccion. | Vigente |
 | APP-018 | Se permitiran ajustes excepcionales del resultado por cuenta, pero la suma final de lider y replicas debera coincidir exactamente con el resultado total de Control Diario. Una distribucion incongruente no se podra confirmar. | Vigente |
@@ -33,8 +33,8 @@
 | APP-027 | Mientras la matriz completa de roles siga abierta, las altas y revocaciones de acceso se ejecutaran mediante funciones auditadas restringidas a la credencial privilegiada del servidor o al propietario de la base. No existira autorizacion desde el navegador del alumno. | Vigente |
 | APP-028 | Los espacios `Real` y `Practica` permanecen separados y se seleccionan de forma explicita. El selector mensual solo permite elegir periodos ya existentes: no crea ni abre meses automaticamente. La politica de apertura y cierre mensual sigue pendiente del area propietaria. | Vigente |
 | APP-029 | La compra se confirma mediante una unica transaccion validada: el alumno carga empresa, precio y uno de los dos origenes vigentes; el servidor genera fecha, numero general, referencia por empresa, cuenta virgen y auditoria. Hasta definir la politica de cargas tardias, la fecha automatica solo se registra en el mes calendario seleccionado. | Vigente |
-| APP-030 | La distribucion automatica de Control Diario solo se habilita cuando el resultado puede repartirse en centavos exactos entre las cuentas participantes. Si no cierra exactamente, la app bloquea la confirmacion hasta aplicar un ajuste excepcional validado; nunca asigna el sobrante de forma silenciosa. | Vigente |
-| APP-031 | Empresa, lider, replicas y fase se preparan antes de recibir el siguiente saldo. Un saldo recibido desde NinjaTrader exige revision: confirmar, cambiar el destino o informar un error de sincronizacion. No existe `dejar pendiente` ni carga manual como alternativa normal. La contingencia conserva el dato original, exige motivo y saldo corregido, recalcula en NODAL y deja auditoria. | Vigente |
+| APP-030 | El reparto igualitario replica `REDONDEAR` de Sheets por participante y registra la diferencia de redondeo para conciliación. | Reemplazada por APP-087 |
+| APP-031 | Empresa, cuentas y fase se derivan de cuentas vinculadas y telemetría técnica. La revisión manual sólo interviene ante una excepción o conflicto verificable. | Reemplazada para automatización por APP-085 y APP-087 |
 | APP-032 | Hasta implementar el flujo de correccion y recalculo historico, Control Diario solo admite nuevas cargas en orden cronologico dentro del periodo. Una fecha anterior al ultimo control confirmado se bloquea en vez de alterar silenciosamente saldos y registros posteriores. | Vigente |
 | APP-033 | El estado de una cuenta no se actualizara desde un resultado broker aislado. La regla se aplicara cuando la app pueda calcular el `TOTAL GANANCIA` completo de cada fase; hasta entonces el servicio determinista queda probado pero desconectado de la escritura remota. | Vigente |
 | APP-034 | La interfaz de desarrollo de Control Diario guarda movimientos confirmados mediante la transaccion segura del servidor y crea automaticamente los registros por cuenta. Mientras NinjaTrader no este conectado, cada saldo simulado queda identificado por una clave de evento y una observacion de desarrollo. Este guardado no actualiza el estado de las cuentas. | Vigente |
@@ -42,7 +42,7 @@
 | APP-036 | El primer Resumen de progreso se calcula exclusivamente desde Compras, Control Diario, cuentas y Registro de Operaciones. Mantiene separados saldo, movimientos y resultado operativo; una ausencia de saldo se muestra como dato faltante y no como cero. `TOTAL GANANCIA`, billetera, retiros de fondeo, comisiones y conciliaciones permanecen fuera hasta validar sus reglas completas. | Vigente |
 | APP-037 | El detalle consultable de cuenta se integra en Registro y reutiliza la selección por empresa y referencia. Expone compra, precio, origen, estado guardado, actividad, roles y las seis fases. Los valores de fase se denominan subtotales broker visibles y no `TOTAL GANANCIA`; las fases sin actividad permanecen visibles sin inventar importes. | Vigente |
 | APP-038 | Inicio presenta una síntesis calculada del período y una única orientación contextual: registrar una cuenta, establecer el depósito inicial o preparar la próxima operación. No reemplaza Resumen ni solicita datos adicionales; sus enlaces conducen al módulo de origen. | Vigente |
-| APP-039 | La corrección histórica inicial se limita a saldos confirmados de Control Diario. Reemplaza el saldo visible, recalcula cronológicamente saldos y resultados posteriores, reescribe participantes y registros derivados, y conserva instantáneas internas del antes y después con motivo. Si un retiro queda sin fondos o una distribución no cierra en centavos exactos, toda la corrección se revierte. | Vigente |
+| APP-039 | La corrección histórica inicial se limita a saldos confirmados de Control Diario. Reemplaza el saldo visible, recalcula cronológicamente saldos y resultados posteriores, reescribe participantes y registros derivados, y conserva instantáneas internas del antes y después con motivo. Si un retiro queda sin fondos, toda la corrección se revierte; el reparto igualitario usa el redondeo de APP-087. | Vigente |
 | APP-040 | El ajuste excepcional por cuenta parte de la distribución automática, exige un motivo y solo se confirma cuando los importes firmados de líder y réplicas suman exactamente el resultado total. La distribución exacta y su motivo quedan auditados. Una corrección histórica que alcance un reparto excepcional se bloquea antes de sobrescribirlo hasta contar con una redistribución explícita aprobada. | Vigente |
 | APP-041 | La corrección histórica que afecta repartos excepcionales se realiza en dos pasos: primero calcula todos los resultados posteriores y luego exige revisar cada redistribución afectada. La diferencia se propone inicialmente en la cuenta líder, puede editarse por cuenta y solo se confirma si cada suma coincide exactamente. Saldo, registros derivados y auditoría se actualizan en una única transacción. | Vigente |
 | APP-042 | El Historial de actividad del alumno se obtiene mediante una lectura segura y acotada por período propio. Muestra compras, confirmaciones y correcciones con su fecha y motivo, pero no concede acceso a las instantáneas internas de auditoría. Una corrección se distingue visualmente y no aparece como una segunda operación vigente. | Vigente |
@@ -358,11 +358,11 @@ vigente sin aprobacion y evidencia suficiente.
   participación por administrar una mesa y su bonus por mesas directas
   referidas. Los dos últimos componentes sólo se muestran cuando están
   habilitados para esa persona. El nivel vigente aparece en la misma tarjeta.
-- **Capital neto total:** En el dashboard personal representa la sumatoria del
-  capital neto de las cuentas cerradas y coincide con la facturación realizada
-  del período. La simulación lo obtiene de `realizedGainInCents`: USD 10.500 en
-  julio y USD 12.000 en agosto. No debe confundirse con el capital aportado del
-  resumen contable ni con el precio de compra de las cuentas.
+- **Facturación del período:** Es la suma del resultado bruto de las cuentas
+  cerradas y corresponde a `Resumen operativo!O6` en la planilla. La simulación
+  lo obtiene de `realizedGainInCents`: USD 10.500 en julio y USD 12.000 en
+  agosto. `Capital neto aportado` conserva su significado contable independiente:
+  aportes propios menos retiros personales.
 - **Payouts:** Presenta cantidad registrada, importe total y cantidad pendiente
   como tres datos diferenciados.
 - **Capacidades:** Mesa administrada, mesas referidas e identidades son tarjetas
@@ -370,7 +370,7 @@ vigente sin aprobacion y evidencia suficiente.
   convivencia; la aplicación real deberá recibir permisos y agregados desde el
   servidor y no inferirlos desde el rol visible.
 - **Histórico:** El gráfico permite alternar, sin cambiar de página, entre
-  ganancias totales por período y capital neto de cuentas cerradas por período.
+  ganancias totales por período y facturación por período.
   Cada punto expone mes e importe al enfocarlo o apoyar el cursor.
 - **Escenario económico de validación:** En agosto el usuario factura USD
   12.000 y conserva USD 6.000 tras su comisión individual del 50%. Su mesa
@@ -384,3 +384,107 @@ vigente sin aprobacion y evidencia suficiente.
 - **Alcance:** Sustituye para Inicio la presentación aprobada en APP-075. Las
   métricas contables originales siguen disponibles en Contabilidad y conservan
   sus reglas de conciliación.
+
+### APP-085 - La cuenta observada es la unidad de la operación automatizada
+
+- **Estado:** Aprobada el 2026-09-08 e implementada en la simulación y en el
+  dominio técnico de telemetría. La conversión automática a registros
+  económicos reales continúa condicionada a la conciliación del piloto.
+- **Unidad:** Cada combinación de conector, conexión y cuenta NinjaTrader se
+  procesa de manera independiente. Su propio ciclo de posición, ejecuciones y
+  saldo determina apertura, estabilización, cierre y resultado.
+- **Simultaneidad:** Si cinco cuentas operan al mismo tiempo, NODAL conserva
+  cinco operaciones técnicas individuales. El backend correlaciona, sin
+  intervención del usuario, las cuentas prop en la misma dirección con la
+  cobertura broker opuesta cuando coinciden apertura, instrumento y cantidad.
+- **Correlación operativa:** Cuando Replikanto abre la misma posición en varias
+  cuentas prop y la cobertura opuesta en broker, el lote automático conserva
+  sus integrantes y distribuye el resultado broker entre las cuentas prop como
+  hacía la planilla. El reparto usa redondeo de Sheets y guarda la diferencia de
+  redondeo para conciliación.
+- **Sin asignación:** El flujo automático no exige elegir líder, réplicas ni
+  grupo antes o después de operar. Esta decisión sustituye esa parte del
+  recorrido propuesto en APP-079, APP-080, APP-081 y APP-082.
+- **Persistencia:** El lote sí se persiste como vínculo técnico y económico
+  auditable; no es una configuración manual ni una instrucción para Replikanto.
+  Una cuenta broker no puede participar en dos lotes activos simultáneos.
+- **Compatibilidad:** Los controles históricos que ya contienen líder y
+  réplicas conservan su estructura y auditoría. No se reinterpretan ni se
+  reescriben. Los formularios heredados permanecen como contingencia interna
+  hasta que el piloto permita reemplazar su escritura económica con seguridad.
+
+### APP-086 - Banco de pruebas contable integral y reversible
+
+- **Estado:** Implementado el 2026-09-08 dentro de `/app/demo`.
+- **Objetivo:** La simulación permite validar entradas y salidas económicas, no
+  solamente observar una composición visual con números fijos.
+- **Entradas:** Compras con aporte o saldo generado, depósitos broker desde
+  aporte o billetera, retiros broker hacia billetera o personales, resultado
+  individual de una cuenta, payout aprobado, payout cobrado, aporte externo y
+  retiro personal de billetera.
+- **Salidas:** Saldo broker, billetera, payouts pendientes, capital neto,
+  resultado del período, flotante, ganancia realizada, comisión, ganancia del
+  usuario y ambas diferencias de conciliación.
+- **Cálculo:** Cada entrada se procesa con los servicios deterministas vigentes
+  de saldo, resultados por fase, resumen operativo, comisión y rendimiento. El
+  payout aprobado también actualiza el `TOTAL RETIRO` de su cuenta; registrar
+  solamente el pendiente produciría una diferencia de conciliación.
+- **Aislamiento:** Los cambios viven únicamente en memoria, separados por julio
+  y agosto. Se pueden restablecer y nunca escriben en Supabase, Sheets ni datos
+  de usuarios.
+
+### APP-087 - Equivalencia contable de la automatización con la planilla
+
+- **Estado:** Implementada el 2026-09-08; requiere ejecución paralela antes de
+  reemplazar la planilla de producción.
+- **Redondeo:** Todo reparto igualitario se redondea por participante como
+  Google Sheets (`REDONDEAR(resultado / cantidad; 0)`). La diferencia entre la
+  suma repartida y el total recibido queda visible para conciliación.
+- **Fases:** Una pérdida de una fase se arrastra con signo negativo a la fase
+  siguiente. Un resultado positivo sólo se arrastra cuando el origen fue
+  marcado explícitamente como `manual_live`.
+- **Payout:** Aprobar un payout registra su fase, incrementa atómicamente el
+  retiro acumulado de esa fase y recalcula el estado de la cuenta.
+- **Períodos:** El primer control de un período parte del último saldo broker
+  confirmado del período anterior; capital, billetera, resultado acumulado y
+  cobros pendientes también conservan su saldo de apertura.
+- **Cierre técnico:** `CashValue = NetLiquidation` no prueba el cierre. El
+  inventario sólo detecta cuentas; la escritura económica usa el ciclo técnico
+  de posición, dirección, cantidad, ejecuciones y estabilización.
+
+### APP-088 - Administrar una mesa es una capacidad adicional
+
+- **Estado:** Permiso implementado el 2026-09-09 y consumido por el panel
+  restringido definido en APP-089.
+- **Identidad:** El administrador de mesa conserva su acceso personal, opera
+  normalmente y permanece en la mesa de origen definida por sus propios
+  términos. No se transforma en Admin Master.
+- **Fuente:** La capacidad nace exclusivamente de la asignación vigente y activa
+  `manager_id` de `nodal_desk_terms`. Reemplazar o revocar al administrador
+  actualiza el permiso sin modificar su historial ni su pertenencia operativa.
+- **Alcance:** El servidor distingue `master`, `desk` y `none`. El alcance
+  `desk` identifica una única mesa administrada; no concede lectura global ni
+  habilita las funciones reservadas al Admin Master.
+- **Seguridad:** La resolución se ejecuta en la base para el usuario autenticado.
+  No acepta un identificador de usuario o mesa enviado por el navegador y no
+  abre políticas generales de lectura sobre las tablas administrativas.
+
+### APP-089 - Panel restringido del administrador de mesa
+
+- **Estado:** Implementado el 2026-09-09.
+- **Acceso:** Un administrador de mesa vigente ve `Mi mesa` en su navegación
+  personal y puede entrar aunque el conector Ninja esté temporalmente sin señal.
+  Un Admin Master continúa usando exclusivamente `/app/admin`.
+- **Datos:** El panel muestra el período real actual, usuarios directos,
+  facturación, comisión generada, ganancias del administrador y el árbol de
+  mesas derivadas de su propia rama. La ficha desplegable de cada usuario resume
+  cuentas y payouts sin abrir otra página.
+- **Nivel:** La tabla conserva el nivel vigente y marca visualmente una posible
+  promoción cuando los dos períodos anteriores alcanzan la referencia. La marca
+  es informativa y no modifica el nivel.
+- **Límites:** No contiene controles para porcentajes, niveles, estados,
+  movimientos de usuarios, creación o revocación de mesas. Esas decisiones
+  permanecen en el Admin Master.
+- **Aislamiento:** La lectura privilegiada ocurre sólo en el servidor después de
+  resolver la mesa desde la sesión autenticada. La ruta no acepta un id de mesa
+  elegido por el navegador y vuelve a verificar que la asignación siga activa.

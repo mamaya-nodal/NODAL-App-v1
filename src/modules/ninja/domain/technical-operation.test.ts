@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { NinjaTelemetryRow } from "./operation-probe";
 import { buildNinjaTechnicalOperations } from "./technical-operation";
 
-function row(id: number, eventType: NinjaTelemetryRow["event_type"], occurredAt: string, payload: Record<string, unknown>, instrument: string | null = null): NinjaTelemetryRow {
-  return { account_name: "Sim101", connection_name: "Ninja Mauri", event_type: eventType, id, instrument, occurred_at: occurredAt, payload };
+function row(id: number, eventType: NinjaTelemetryRow["event_type"], occurredAt: string, payload: Record<string, unknown>, instrument: string | null = null, accountName = "Sim101"): NinjaTelemetryRow {
+  return { account_name: accountName, connection_name: "Ninja Mauri", event_type: eventType, id, instrument, occurred_at: occurredAt, payload };
 }
 
 describe("Ninja technical operations", () => {
@@ -49,5 +49,19 @@ describe("Ninja technical operations", () => {
     ], new Date("2026-09-07T18:00:30.000Z"));
     expect(operations).toHaveLength(1);
     expect(operations[0].status).toBe("open");
+  });
+
+  it("procesa cinco cuentas simultáneas como cinco operaciones independientes", () => {
+    const accountNames = ["TFY035", "TFY036", "TFY037", "TFY038", "TFY039"];
+    const operations = accountNames.flatMap((accountName, index) => buildNinjaTechnicalOperations([
+      row(index * 10 + 1, "balance", "2026-09-07T18:00:00.000Z", { cashValue: 50_000 + index }, null, accountName),
+      row(index * 10 + 2, "position", "2026-09-07T18:00:01.000Z", { marketPosition: "Long", quantity: 1 }, "MNQ SEP26", accountName),
+      row(index * 10 + 3, "position", "2026-09-07T18:00:05.000Z", { marketPosition: "Flat", quantity: 0 }, "MNQ SEP26", accountName),
+      row(index * 10 + 4, "balance", "2026-09-07T18:00:06.000Z", { cashValue: 50_100 + index }, null, accountName),
+    ], new Date("2026-09-07T18:00:20.000Z")));
+
+    expect(operations).toHaveLength(5);
+    expect(operations.map((operation) => operation.accountName)).toEqual(accountNames);
+    expect(operations.every((operation) => operation.result === 100 && operation.status === "closed")).toBe(true);
   });
 });

@@ -258,7 +258,7 @@ export function ProgressSummary({ accounts, embedded = false, periodId, summary 
             <div className="summary-list">
               {summary.fundingWithdrawals.map((item) => (
                 <p key={item.id}>
-                  <strong>{date(item.approvedOn)}</strong> · {money(item.amountInCents)} · {item.collectedOn ? (
+                  <strong>{date(item.approvedOn)}</strong> · {money(item.amountInCents)}{item.phase ? ` · ${item.phase}` : ""} · {item.collectedOn ? (
                     `Cobrado el ${date(item.collectedOn)}`
                   ) : (
                     <button className="text-action" disabled={saving} onClick={() => collect(item.id)} type="button">

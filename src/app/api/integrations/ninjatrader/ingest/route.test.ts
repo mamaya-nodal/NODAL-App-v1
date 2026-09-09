@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authenticateNinjaConnector, persistNinjaSnapshot, processNinjaTransitions, processNinjaBrokerBalance } = vi.hoisted(() => ({
+const { authenticateNinjaConnector, persistNinjaSnapshot, processNinjaTransitions } = vi.hoisted(() => ({
   authenticateNinjaConnector: vi.fn(),
   persistNinjaSnapshot: vi.fn(),
   processNinjaTransitions: vi.fn(),
-  processNinjaBrokerBalance: vi.fn(),
 }));
 
 vi.mock("@/modules/ninja/server/connector-auth", () => ({
@@ -15,7 +14,6 @@ vi.mock("@/modules/ninja/server/connector-auth", () => ({
 }));
 vi.mock("@/modules/ninja/server/snapshot-persistence", () => ({ persistNinjaSnapshot }));
 vi.mock("@/modules/ninja/server/transition-processing", () => ({ processNinjaTransitions }));
-vi.mock("@/modules/ninja/server/broker-balance-processing", () => ({ processNinjaBrokerBalance }));
 
 import { POST } from "./route";
 
@@ -43,7 +41,6 @@ beforeEach(() => {
   authenticateNinjaConnector.mockResolvedValue({ connectorId: "connector-1", ownerUserId: "user-1" });
   persistNinjaSnapshot.mockResolvedValue({ persisted: true });
   processNinjaTransitions.mockResolvedValue({ detectedChanges: 1, processed: true });
-  processNinjaBrokerBalance.mockResolvedValue({ created: true, processed: true });
 });
 
 describe("POST /api/integrations/ninjatrader/ingest", () => {
@@ -63,13 +60,11 @@ describe("POST /api/integrations/ninjatrader/ingest", () => {
     expect(authenticateNinjaConnector).toHaveBeenCalledWith("access-token");
     expect(persistNinjaSnapshot).toHaveBeenCalledWith("connector-1", payload);
     expect(processNinjaTransitions).toHaveBeenCalledWith("connector-1", payload);
-    expect(processNinjaBrokerBalance).toHaveBeenCalledWith("connector-1", payload);
     await expect(result.json()).resolves.toMatchObject({
       accepted: true,
       persisted: true,
       summary: { accountCount: 1 },
       transitions: { detectedChanges: 1, processed: true },
-      brokerBalance: { created: true, processed: true },
     });
   });
 

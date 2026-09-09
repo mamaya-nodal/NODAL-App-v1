@@ -9,7 +9,7 @@ export type PeriodEarnings = Readonly<{
 }>;
 
 export type PersonalDashboardHistoryPoint = Readonly<{
-  capitalNetInCents: number;
+  billingInCents: number;
   earningsInCents: number;
   periodMonth: string;
 }>;
@@ -21,7 +21,7 @@ export type PersonalDashboardCapabilities = Readonly<{
     payoutTotalInCents: number;
   }>;
   managedDesk?: Readonly<{
-    capitalNetInCents: number;
+    billingInCents: number;
     capacity: number;
     users: number;
   }>;
@@ -34,7 +34,7 @@ export type PersonalDashboardCapabilities = Readonly<{
 
 export type PersonalDashboardData = Readonly<{
   capabilities?: PersonalDashboardCapabilities;
-  capitalNetInCents: number;
+  billingInCents: number;
   earnings: PeriodEarnings;
   history: PersonalDashboardHistoryPoint[];
 }>;

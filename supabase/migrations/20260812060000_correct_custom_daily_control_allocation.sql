@@ -128,6 +128,17 @@ begin
 
   perform set_config('app.explicit_custom_redistribution', 'on', true);
 
+  select controls.balance_after_cents
+  into previous_balance
+  from public.periods as current_period
+  join public.periods as earlier_period
+    on earlier_period.workspace_id = current_period.workspace_id
+    and earlier_period.period_month < current_period.period_month
+  join public.daily_controls as controls on controls.period_id = earlier_period.id
+  where current_period.id = target_period_id
+  order by earlier_period.period_month desc, controls.control_number desc
+  limit 1;
+
   for current_control in
     select controls.* from public.daily_controls as controls
     where controls.period_id = target_period_id
@@ -222,10 +233,7 @@ begin
           get diagnostics matching_count = row_count;
           changed_entries := changed_entries + matching_count;
         else
-          if mod(calculated_result, participant_count) <> 0 then
-            raise exception 'The correction creates a result that cannot be divided into exact cents';
-          end if;
-          allocated_result := calculated_result / participant_count;
+          allocated_result := sign(calculated_result) * round(abs(calculated_result)::numeric / participant_count);
           calculated_destination := case
             when allocated_result > 0 then 'NETO BROKER +'::public.broker_result_destination
             when allocated_result < 0 then 'NETO BROKER -'::public.broker_result_destination
