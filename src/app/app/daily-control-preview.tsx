@@ -51,6 +51,7 @@ type PreviewRow = {
   id: number;
   kind: EntryKind;
   movementInCents: number | null;
+  operatedOn?: string | null;
   operatingResultInCents: number | null;
   participants: Array<{
     accountId: string;
@@ -74,6 +75,15 @@ export type NinjaBrokerBalanceEvent = Readonly<{
   }>;
 }>;
 
+function currentOperationalDay() {
+  return new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+  }).format(new Date());
+}
+
 const entryLabels: Record<EntryKind, string> = {
   balance_update: "Nuevo saldo",
   deposit: "Depósito",
@@ -89,6 +99,7 @@ const syncIssueReasons = [
 
 type DailyControlPreviewProps = {
   accounts: DailyControlAccount[];
+  brokerAccountNames?: readonly string[];
   companies: Array<{ id: string; name: string }>;
   embedded?: boolean;
   initialControls: PersistedDailyControl[];
@@ -96,6 +107,7 @@ type DailyControlPreviewProps = {
   ninjaBrokerSourceNotice: string | null;
   openingBalanceInCents?: number | null;
   periodId: string;
+  propAccountNames?: readonly string[];
 };
 
 function formatMoney(cents: number): string {
@@ -108,6 +120,7 @@ function formatMoney(cents: number): string {
 
 export function DailyControlPreview({
   accounts,
+  brokerAccountNames = [],
   companies,
   embedded = false,
   initialControls,
@@ -115,6 +128,7 @@ export function DailyControlPreview({
   ninjaBrokerSourceNotice,
   openingBalanceInCents = null,
   periodId,
+  propAccountNames = [],
 }: DailyControlPreviewProps) {
   const router = useRouter();
   const initialBalance = initialControls.at(-1)?.balanceInCents ?? openingBalanceInCents;
@@ -277,6 +291,7 @@ export function DailyControlPreview({
         id,
         kind,
         movementInCents: kind === "balance_update" ? null : valueInCents,
+        operatedOn: currentOperationalDay(),
         operatingResultInCents,
         participants,
         valueInCents,
@@ -703,7 +718,14 @@ export function DailyControlPreview({
         </div>
       )}
 
-      <TradeTelemetryProbe />
+      <TradeTelemetryProbe
+        brokerAccountNames={brokerAccountNames}
+        propAccountNames={propAccountNames}
+        todayOperationCount={rows.filter((row) => row.kind === "balance_update" && row.operatedOn === currentOperationalDay()).length}
+        todayResultInCents={rows
+          .filter((row) => row.kind === "balance_update" && row.operatedOn === currentOperationalDay())
+          .reduce((total, row) => total + (row.operatingResultInCents ?? 0), 0)}
+      />
 
       <details
         className={`operation-context-preview${pendingBalance ? " pending" : ""}`}

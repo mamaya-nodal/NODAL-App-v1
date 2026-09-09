@@ -505,3 +505,22 @@ vigente sin aprobacion y evidencia suficiente.
   identidad privilegiada, después de autenticar al usuario, y entrega al cliente
   únicamente sus agregados personales.
 - **Estado:** Implementado el 2026-09-09.
+
+### APP-091 - Las vistas reales adoptan la estructura aprobada en la simulación
+
+- **Cuentas:** Conserva detección y alta real, agrega métricas y filtros, separa
+  activas y vírgenes, y mantiene las cerradas plegadas con carga de ocho en ocho.
+  Cada fila se abre para mostrar estado, fase, compra, cantidad de operaciones y
+  resultado calculado por los servicios contables vigentes.
+- **Operaciones:** Presenta telemetría Ninja en tarjetas, distingue cuentas prop
+  y broker mediante el inventario detectado, muestra saldos, posición, duración
+  e historial. Los ajustes y el resultado detallado por cuenta permanecen
+  disponibles, pero plegados como funciones de excepción.
+- **Contabilidad:** La cabecera prioriza facturación, resultado del período,
+  saldo broker, comisión y ganancia del usuario. Muestra dos períodos y repliega
+  los anteriores; saldos secundarios, retiros, movimientos y conciliaciones se
+  mantienen en secciones desplegables.
+- **Lógica:** No se trasladan números ni acciones exclusivas de la simulación.
+  Todas las cifras provienen de registros reales y de los servicios contables
+  ya conciliados.
+- **Estado:** Implementado el 2026-09-09.

@@ -11,11 +11,20 @@ type TechnicalOperationRow = Readonly<{
   execution_count: number;
   id: number;
   instruments: string[];
+  flat_at: string | null;
+  last_event_at?: string;
   opened_at: string;
   opening_balance: number | string | null;
   result: number | string | null;
   settled_at: string | null;
   status: "closed" | "open" | "settling";
+}>;
+
+type Props = Readonly<{
+  brokerAccountNames?: readonly string[];
+  propAccountNames?: readonly string[];
+  todayOperationCount?: number;
+  todayResultInCents?: number;
 }>;
 
 const labels = {
@@ -40,7 +49,38 @@ function formatTime(value: string) {
   return new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(value));
 }
 
-export function TradeTelemetryProbe() {
+function monthLabel(value: string) {
+  return new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric" }).format(new Date(value));
+}
+
+function duration(openedAt: string, closedAt: string | null) {
+  const seconds = Math.max(0, Math.floor((Date.parse(closedAt ?? new Date().toISOString()) - Date.parse(openedAt)) / 1000));
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function latestOpenPosition(events: NinjaTelemetryRow[], connectionName: string, accountName: string) {
+  const latest = new Map<string, NinjaTelemetryRow>();
+  for (const event of events) {
+    if (event.connection_name !== connectionName || event.account_name !== accountName || event.event_type !== "position" || !event.instrument) continue;
+    const prior = latest.get(event.instrument);
+    if (!prior || prior.occurred_at <= event.occurred_at) latest.set(event.instrument, event);
+  }
+  return [...latest.values()].flatMap((event) => {
+    const quantity = typeof event.payload.quantity === "number" ? event.payload.quantity : 0;
+    const direction = typeof event.payload.marketPosition === "string" ? event.payload.marketPosition : "—";
+    return quantity > 0 && direction !== "Flat"
+      ? [{ direction, instrument: event.instrument ?? "—", quantity }]
+      : [];
+  });
+}
+
+export function TradeTelemetryProbe({
+  brokerAccountNames = [],
+  propAccountNames = [],
+  todayOperationCount = 0,
+  todayResultInCents = 0,
+}: Props) {
   const [events, setEvents] = useState<NinjaTelemetryRow[]>([]);
   const [operations, setOperations] = useState<TechnicalOperationRow[]>([]);
   const [available, setAvailable] = useState(true);
@@ -50,6 +90,24 @@ export function TradeTelemetryProbe() {
       operation.connection_name === probe.connectionName && operation.account_name === probe.accountName,
     ),
   );
+  const propNames = new Set(propAccountNames);
+  const brokerNames = new Set(brokerAccountNames);
+  const activeProbes = visibleProbes.filter((probe) => probe.status === "open" || probe.status === "settling");
+  const activeProps = activeProbes.filter((probe) => propNames.has(probe.accountName));
+  const activeBroker = activeProbes.filter((probe) => brokerNames.has(probe.accountName));
+  const otherActive = activeProbes.filter((probe) => !propNames.has(probe.accountName) && !brokerNames.has(probe.accountName));
+  const brokerFloating = activeBroker.reduce((total, probe) =>
+    total + (probe.netLiquidation !== null && probe.cashValue !== null ? probe.netLiquidation - probe.cashValue : 0), 0);
+  const operationMonths = new Map<string, TechnicalOperationRow[]>();
+  for (const operation of operations.filter((candidate) => candidate.status === "closed")) {
+    const key = operation.opened_at.slice(0, 7);
+    operationMonths.set(key, [...(operationMonths.get(key) ?? []), operation]);
+  }
+  const activeGroups = [
+    activeProps.length > 0 ? { label: "Cuentas prop", probes: activeProps } : null,
+    activeBroker.length > 0 ? { label: "Cobertura", probes: activeBroker } : null,
+    otherActive.length > 0 ? { label: "Otras cuentas", probes: otherActive } : null,
+  ].filter((group): group is { label: string; probes: typeof activeProbes } => group !== null);
 
   useEffect(() => {
     let active = true;
@@ -67,14 +125,90 @@ export function TradeTelemetryProbe() {
   }, []);
 
   return (
-    <section className="telemetry-probe" aria-labelledby="telemetry-probe-title">
-      <div className="telemetry-probe-heading">
-        <h2 id="telemetry-probe-title">Operaciones en curso</h2>
+    <section className="telemetry-probe real-telemetry-overview" aria-labelledby="telemetry-probe-title">
+      <div className="demo-operation-grid">
+        <article className="demo-broker-balance"><span>Cuentas prop en curso</span><strong>{activeProps.length}</strong></article>
+        <article className="demo-broker-balance"><span>Cobertura broker</span><strong className={brokerFloating >= 0 ? "positive" : "negative"}>{formatMoney(brokerFloating)}</strong></article>
+        <article className="demo-today-result"><span>Resultado de hoy</span><strong>{formatMoney(todayResultInCents / 100)}</strong><small>{todayOperationCount} cerradas</small></article>
       </div>
       {!available ? <p className="telemetry-empty">No se pudo actualizar la operación.</p> : null}
-      {visibleProbes.length === 0 ? <p className="telemetry-empty">Sin operaciones activas.</p> : (
-        <div className="telemetry-probe-grid">
-          {visibleProbes.map((probe) => {
+      {activeProps.length > 0 && activeBroker.length > 0 && (
+        <article className="demo-coverage-operation">
+          <div><span className="demo-live-dot" /><strong>Operación sincronizada</strong></div>
+          <p><span>Cuentas prop</span><b>{activeProps.length} detectadas</b></p>
+          <i aria-hidden="true">↔</i>
+          <p><span>Cobertura</span><b>{activeBroker.map((probe) => probe.accountName).join(", ")}</b></p>
+        </article>
+      )}
+      {activeProbes.length === 0 ? <p className="telemetry-empty">Sin operaciones activas.</p> : (
+        <>
+          {activeGroups.map((group) => (
+            <div className="real-live-group" key={group.label}>
+              <div className="demo-group-title demo-live-title"><h3>{group.label}</h3><span>{group.probes.length}</span></div>
+              <div className="demo-live-operations">
+                {group.probes.map((probe) => {
+                  const positions = latestOpenPosition(events, probe.connectionName, probe.accountName);
+                  const operation = operations.find((candidate) =>
+                    candidate.connection_name === probe.connectionName && candidate.account_name === probe.accountName && candidate.status !== "closed",
+                  );
+                  return <article className={`demo-live-operation${group.label === "Cobertura" ? " demo-broker-operation" : ""}`} key={`${probe.connectionName}-${probe.accountName}`}>
+                    <div><span className="demo-live-dot" />{labels[probe.status]}</div>
+                    <h3>{probe.accountName}</h3>
+                    <p>{probe.connectionName}</p>
+                    <dl>
+                      <div><dt>Posición</dt><dd>{positions.length ? positions.map((position) => `${position.direction} · ${position.quantity} ${position.instrument}`).join(" + ") : "Flat"}</dd></div>
+                      <div><dt>Net liquidation</dt><dd>{formatMoney(probe.netLiquidation)}</dd></div>
+                      <div><dt>Cash value</dt><dd>{formatMoney(probe.cashValue)}</dd></div>
+                      <div><dt>Duración</dt><dd>{operation ? duration(operation.opened_at, operation.settled_at) : "—"}</dd></div>
+                    </dl>
+                  </article>;
+                })}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {operationMonths.size > 0 && (
+        <div className="demo-history real-operation-history">
+          <div className="demo-group-title"><h3>Historial</h3><span>{operations.filter((operation) => operation.status === "closed").length}</span></div>
+          {[...operationMonths.entries()].sort(([left], [right]) => right.localeCompare(left)).map(([month, monthOperations], monthIndex) => (
+            <details className="demo-period-history" key={month} open={monthIndex === 0}>
+              <summary>
+                <span>{monthLabel(`${month}-01T12:00:00Z`)}</span>
+                <small>{monthOperations.length} operaciones</small>
+                <strong>{formatMoney(monthOperations.reduce((total, operation) => total + (moneyNumber(operation.result) ?? 0), 0))}</strong>
+                <i aria-hidden="true" />
+              </summary>
+              <div>
+                {monthOperations.map((operation, index) => (
+                  <details className="demo-history-day" key={operation.id} open={monthIndex === 0 && index === 0}>
+                    <summary>
+                      <span>{formatTime(operation.opened_at)}</span>
+                      <small>{operation.account_name}</small>
+                      <strong className={(moneyNumber(operation.result) ?? 0) < 0 ? "negative" : ""}>{formatMoney(moneyNumber(operation.result))}</strong>
+                      <i aria-hidden="true" />
+                    </summary>
+                    <div>
+                      <p>
+                        <span>{operation.account_name}</span>
+                        <small>{operation.instruments.join(" + ") || "Sin instrumento"}</small>
+                        <strong>{duration(operation.opened_at, operation.settled_at)}</strong>
+                      </p>
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
+      )}
+
+      {visibleProbes.some((probe) => !activeProbes.includes(probe)) && (
+        <details className="telemetry-technical-details telemetry-closed-diagnostics">
+          <summary>Datos técnicos recientes</summary>
+          <div className="telemetry-probe-grid">
+          {visibleProbes.filter((probe) => !activeProbes.includes(probe)).map((probe) => {
             const operation = operations.find((candidate) =>
               candidate.connection_name === probe.connectionName && candidate.account_name === probe.accountName,
             );
@@ -105,6 +239,7 @@ export function TradeTelemetryProbe() {
             </article>;
           })}
         </div>
+        </details>
       )}
     </section>
   );

@@ -7007,3 +7007,60 @@ html[data-theme="day"] .demo-stage.live {
   .demo-audit-form { grid-template-columns: 1fr; }
   .demo-audit-metrics { grid-template-columns: 1fr 1fr; }
 }
+
+/* APP-091: las vistas reales reutilizan la jerarquía visual aprobada en la simulación. */
+.real-telemetry-overview,
+.nodal-workspace .real-telemetry-overview {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.real-live-group { min-width: 0; }
+.real-telemetry-overview .demo-operation-grid strong.negative { color: #ff7d72; }
+.real-operation-history { margin-bottom: 18px; }
+.telemetry-closed-diagnostics { margin: 14px 0; }
+.telemetry-closed-diagnostics > .telemetry-probe-grid { padding-bottom: 2px; }
+
+.real-account-results {
+  margin-top: 18px;
+  border: 1px solid var(--app-border);
+  border-radius: 15px;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.real-account-results > summary {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 15px;
+  color: var(--app-title);
+  font-size: 13px;
+  font-weight: 800;
+  list-style: none;
+  cursor: pointer;
+}
+
+.real-account-results > summary::-webkit-details-marker { display: none; }
+.real-account-results > summary > strong { margin-left: auto; color: var(--app-copy); font-size: 10px; }
+.real-account-results > summary > i { width: 20px; color: var(--app-subtle); font-style: normal; text-align: center; }
+.real-account-results > summary > i::before { content: "+"; }
+.real-account-results[open] > summary > i::before { content: "−"; }
+.real-account-results > .operation-register-panel { margin: 0; padding: 0 15px 15px; border: 0; }
+
+.accounting-view .demo-accounting-grid { margin-bottom: 0; }
+.accounting-view .demo-periods-heading { margin-top: 18px; }
+.accounting-view .accounting-period-archive,
+.accounting-view .accounting-balances { margin-top: 10px; }
+.accounting-view .accounting-period-archive > .demo-period-cards { padding: 0 10px 10px; }
+
+html[data-theme="day"] .real-account-results {
+  border-color: #d1ddd3;
+  background: #ffffff;
+  box-shadow: 0 7px 20px rgb(23 34 28 / 4%), inset 0 1px 0 #ffffff;
+}

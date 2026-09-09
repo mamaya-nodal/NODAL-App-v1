@@ -7,6 +7,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { decideAccess } from "@/modules/access/domain/access-decision";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
+import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
 import type {
@@ -58,6 +59,8 @@ import {
 import { ProgressSummary } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
+import { AccountsOverview, type AccountOverviewAccount } from "./accounts-overview";
+import type { AccountingPeriodView } from "./progress-summary";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -83,13 +86,6 @@ function currentMonthInBuenosAires(): string {
   const year = parts.find((part) => part.type === "year")?.value;
   const month = parts.find((part) => part.type === "month")?.value;
   return `${year}-${month}-01`;
-}
-
-function formatMoney(cents: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    currency: "USD",
-    style: "currency",
-  }).format(cents / 100);
 }
 
 const purchaseMessages: Record<string, string> = {
@@ -195,6 +191,8 @@ export default async function PrivateAppPage({
   let linkedNinjaAccountNames = new Set<string>();
   let ninjaNamesByAccountId = new Map<string, string>();
   let ninjaInventories: NinjaInventoryRpcRow[] = [];
+  let connectedNinjaBrokerAccountNames: string[] = [];
+  let connectedNinjaPropAccountNames: string[] = [];
   let ninjaConnector: NinjaConnectorStatus | null = null;
   let ninjaTransitionAlerts: NinjaTransitionAlert[] = [];
   let incomingNinjaBalance: NinjaBrokerBalanceEvent | null = null;
@@ -248,9 +246,12 @@ export default async function PrivateAppPage({
   );
   let purchases: PurchaseView[] = [];
   let accountOptions: AccountView[] = [];
+  let accountHistory: AccountOverviewAccount[] = [];
   let dailyControls: PersistedDailyControl[] = [];
   let operationEntries: OperationRegisterEntry[] = [];
+  let operationEntryHistory: OperationRegisterEntry[] = [];
   let phaseWithdrawals: AccountPhaseWithdrawal[] = [];
+  let phaseWithdrawalHistory: AccountPhaseWithdrawal[] = [];
   let walletMovements: WalletMovement[] = [];
   let fundingWithdrawals: FundingWithdrawal[] = [];
   let operationalSummary: OperationalSummary = buildOperationalSummary({
@@ -259,6 +260,7 @@ export default async function PrivateAppPage({
   let capitalHistory: CapitalHistoryPoint[] = [];
   let homePerformance: HomePerformance = buildHomePerformance([]);
   let personalDashboard: PersonalDashboardData | undefined;
+  let accountingPeriods: AccountingPeriodView[] = [];
   let periodOpening: OperationalOpeningSnapshot = {
     accumulatedResultInCents: 0,
     brokerBalanceInCents: null,
@@ -283,6 +285,9 @@ export default async function PrivateAppPage({
       { data: ninjaTransitionRows },
       { data: ninjaBrokerBalanceRows },
       { data: historicalPurchaseRows },
+      { data: historicalAccountRows },
+      { data: historicalOperationEntryRows },
+      { data: historicalPhaseWithdrawalRows },
       { data: historicalControlRows },
       { data: historicalWalletMovementRows },
       { data: historicalFundingWithdrawalRows },
@@ -340,14 +345,28 @@ export default async function PrivateAppPage({
           .order("approved_on", { ascending: false }),
         supabase
           .from("ninja_account_links")
-          .select("account_id, external_account_name")
-          .is("closed_at", null),
+          .select("account_id, external_account_name, closed_at")
+          .order("linked_at"),
         supabase.rpc("get_current_user_ninja_inventory"),
         supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
         supabase.rpc("get_current_user_pending_ninja_broker_balance"),
         supabase
           .from("purchases")
-          .select("period_id, price_cents, funds_origin")
+          .select("id, account_id, period_id, purchase_number, purchased_on, price_cents, funds_origin")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
+        supabase
+          .from("accounts")
+          .select("id, period_id, company_id, reference_number, state, state_origin")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
+        supabase
+          .from("operation_entries")
+          .select("id, daily_control_id, period_id, account_id, operated_on, phase, participant_role, destination, magnitude_cents, created_at")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id))
+          .order("operated_on", { ascending: false })
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("account_phase_withdrawals")
+          .select("period_id, account_id, phase, total_withdrawal_cents")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("daily_controls")
@@ -371,7 +390,7 @@ export default async function PrivateAppPage({
       displayName: company.display_name,
       id: company.id,
     }));
-    linkedNinjaAccountNames = new Set((ninjaLinkRows ?? []).map((link) => link.external_account_name));
+    linkedNinjaAccountNames = new Set((ninjaLinkRows ?? []).filter((link) => link.closed_at === null).map((link) => link.external_account_name));
     ninjaNamesByAccountId = new Map((ninjaLinkRows ?? []).map((link) => [link.account_id, link.external_account_name]));
     ninjaInventories = (ninjaInventoryRows ?? []) as NinjaInventoryRpcRow[];
     const connectedNinjaAccounts = ninjaInventories.flatMap((inventory) =>
@@ -384,6 +403,13 @@ export default async function PrivateAppPage({
         classifyNinjaAccount(account, account.firstSeenAt ?? new Date().toISOString()).type ===
         "broker",
     );
+    const connectedPropAccounts = connectedNinjaAccounts.filter(
+      (account) =>
+        classifyNinjaAccount(account, account.firstSeenAt ?? new Date().toISOString()).type ===
+        "prop",
+    );
+    connectedNinjaBrokerAccountNames = connectedBrokerAccounts.map((account) => account.accountName);
+    connectedNinjaPropAccountNames = connectedPropAccounts.map((account) => account.accountName);
     if (connectedNinjaAccounts.length > 0 && connectedBrokerAccounts.length === 0) {
       ninjaBrokerSourceNotice =
         "NinjaTrader está conectado, pero no informa ninguna cuenta broker. Los saldos automáticos se reanudarán cuando una cuenta broker vuelva a aparecer en Accounts.";
@@ -493,6 +519,7 @@ export default async function PrivateAppPage({
       participants: (participantsByControlId.get(control.id) ?? []).sort((left, right) =>
         left.role === right.role ? left.accountReference - right.accountReference : left.role === "leader" ? -1 : 1,
       ),
+      operatedOn: control.operated_on,
     }));
     const registerAccountsById = new Map(
       accountOptions.map((account) => [account.id, account]),
@@ -524,6 +551,61 @@ export default async function PrivateAppPage({
         totalWithdrawalInCents: Number(withdrawal.total_withdrawal_cents),
       }];
     });
+    const historicalPeriodsById = new Map(
+      selection.workspace.periods.map((period) => [period.id, period] as const),
+    );
+    const historicalAccountsById = new Map(
+      (historicalAccountRows ?? []).map((account) => [account.id, account]),
+    );
+    const historicalPurchasesByAccountId = new Map(
+      (historicalPurchaseRows ?? []).map((purchase) => [purchase.account_id, purchase]),
+    );
+    accountHistory = (historicalAccountRows ?? []).flatMap((account) => {
+      const company = companiesById.get(account.company_id);
+      const purchase = historicalPurchasesByAccountId.get(account.id);
+      const period = historicalPeriodsById.get(account.period_id);
+      if (!company || !period) return [];
+      return [{
+        companyId: account.company_id,
+        companyName: company.display_name,
+        externalName: ninjaNamesByAccountId.get(account.id) ?? null,
+        fundsOrigin: purchase?.funds_origin ?? null,
+        id: account.id,
+        periodLabel: formatPeriodLabel(period.periodMonth),
+        periodMonth: period.periodMonth,
+        priceInCents: purchase ? Number(purchase.price_cents) : null,
+        purchaseNumber: purchase?.purchase_number ?? null,
+        purchasedOn: purchase?.purchased_on ?? null,
+        referenceNumber: account.reference_number,
+        state: account.state as AccountView["state"],
+        stateOrigin: account.state_origin as AccountView["stateOrigin"],
+      }];
+    });
+    operationEntryHistory = (historicalOperationEntryRows ?? []).flatMap((entry) => {
+      const account = historicalAccountsById.get(entry.account_id);
+      const company = account ? companiesById.get(account.company_id) : null;
+      if (!account || !company) return [];
+      return [{
+        accountId: account.id,
+        accountReference: account.reference_number,
+        companyId: company.id,
+        companyName: company.display_name,
+        dailyControlId: entry.daily_control_id,
+        destination: entry.destination,
+        id: entry.id,
+        magnitudeInCents: Number(entry.magnitude_cents),
+        operatedOn: entry.operated_on,
+        participantRole: entry.participant_role,
+        phase: entry.phase,
+      }];
+    });
+    phaseWithdrawalHistory = (historicalPhaseWithdrawalRows ?? []).flatMap((withdrawal) =>
+      withdrawal.phase === "Evaluacion" ? [] : [{
+        accountId: withdrawal.account_id,
+        phase: withdrawal.phase as AccountPhaseWithdrawal["phase"],
+        totalWithdrawalInCents: Number(withdrawal.total_withdrawal_cents),
+      }],
+    );
     walletMovements = (walletMovementRows ?? []).map((movement) => ({
       amountInCents: Number(movement.amount_cents), id: movement.id,
       kind: movement.kind as WalletMovement["kind"], occurredOn: movement.occurred_on,
@@ -593,6 +675,24 @@ export default async function PrivateAppPage({
         periodMonth: selection.period.periodMonth,
       }],
     };
+    const loadedAccountingPeriods = await loadPeriodSummaries(
+      supabase,
+      selection.workspace.periods
+        .filter((workspacePeriod) => workspacePeriod.periodMonth <= selection.period!.periodMonth)
+        .map((workspacePeriod) => workspacePeriod.id),
+    );
+    accountingPeriods = selection.workspace.periods
+      .filter((workspacePeriod) => workspacePeriod.periodMonth <= selection.period!.periodMonth)
+      .sort((left, right) => right.periodMonth.localeCompare(left.periodMonth))
+      .flatMap((workspacePeriod) => {
+        const loaded = loadedAccountingPeriods.get(workspacePeriod.id)?.summary;
+        const summary = workspacePeriod.id === selection.period!.id ? operationalSummary : loaded;
+        return summary ? [{
+          current: workspacePeriod.id === selection.period!.id,
+          label: formatPeriodLabel(workspacePeriod.periodMonth),
+          summary,
+        }] : [];
+      });
     homePerformance = buildHomePerformance((dailyControlRows ?? []).map((control) => ({
       operatedOn: control.operated_on,
       resultInCents: control.operating_result_cents === null
@@ -755,46 +855,10 @@ export default async function PrivateAppPage({
             return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} key={inventory.connector_id} linkedAccountNames={linkedNinjaAccountNames} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} />;
           })}
 
-          <div className="purchase-list-heading">
-            <h3>Registradas</h3>
-            <strong>Invertido · {formatMoney(purchases.reduce((total, purchase) => total + purchase.priceCents, 0))}</strong>
-          </div>
-
-          <div className="purchase-list" aria-label="Cuentas registradas">
-            {purchases.length === 0 ? (
-              <p className="empty-state">Todavía no hay cuentas registradas.</p>
-            ) : (
-              purchases.map((purchase) => (
-                <article className="purchase-row" key={purchase.id}>
-                  <div>
-                    <p className="purchase-reference">
-                      {purchase.companyCode} · {purchase.externalName ?? `Cuenta ${purchase.referenceNumber}`}
-                    </p>
-                    <p className="purchase-meta">
-                      #{purchase.purchaseNumber} · {purchase.purchasedOn} · {purchase.fundsOrigin}
-                    </p>
-                  </div>
-                  <div className="purchase-values">
-                    <strong>{formatMoney(purchase.priceCents)}</strong>
-                    <span className={`purchase-state purchase-state-${purchase.state}`}>
-                      {purchase.state === "virgin"
-                        ? "Cuenta virgen"
-                        : purchase.state === "live"
-                          ? "Cuenta viva"
-                          : "Cuenta cerrada"}
-                    </span>
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-
-          <OperationRegister
-            accounts={accountOptions}
-            embedded
-            entries={operationEntries}
-            periodId={selection.period.id}
-            withdrawals={phaseWithdrawals}
+          <AccountsOverview
+            accounts={accountHistory}
+            entries={operationEntryHistory}
+            withdrawals={phaseWithdrawalHistory}
           />
 
           <details className="accounting-exception">
@@ -868,6 +932,7 @@ export default async function PrivateAppPage({
           <DailyControlPreview
             key={incomingNinjaBalance?.id ?? "no-ninja-balance"}
             accounts={accountOptions}
+            brokerAccountNames={connectedNinjaBrokerAccountNames}
             companies={companies.map((company) => ({
               id: company.id,
               name: company.displayName,
@@ -878,7 +943,22 @@ export default async function PrivateAppPage({
             ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}
             openingBalanceInCents={periodOpening.brokerBalanceInCents}
             periodId={selection.period.id}
+            propAccountNames={connectedNinjaPropAccountNames}
           />
+          <details className="demo-operation-disclosure real-account-results">
+            <summary>
+              <span>Resultados por cuenta</span>
+              <strong>{accountOptions.length}</strong>
+              <i aria-hidden="true" />
+            </summary>
+            <OperationRegister
+              accounts={accountOptions}
+              embedded
+              entries={operationEntries}
+              periodId={selection.period.id}
+              withdrawals={phaseWithdrawals}
+            />
+          </details>
         </section>
       )}
 
@@ -891,6 +971,8 @@ export default async function PrivateAppPage({
             accounts={accountOptions.map((account) => ({ id: account.id, label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}` }))}
             embedded
             periodId={selection.period.id}
+            periodLabel={formatPeriodLabel(selection.period.periodMonth)}
+            periods={accountingPeriods}
             summary={operationalSummary}
           />
         </section>
