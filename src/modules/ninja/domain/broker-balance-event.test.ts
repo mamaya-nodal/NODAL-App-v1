@@ -31,7 +31,7 @@ function snapshot(accounts: NinjaAccountSnapshot[]): NinjaInventorySnapshot {
 }
 
 describe("extractNinjaBrokerBalance", () => {
-  it("suma solamente las cuentas broker de conexiones aprobadas", () => {
+  it("suma las cuentas broker de conexiones nuevas o ya conocidas", () => {
     expect(
       extractNinjaBrokerBalance(
         snapshot([
@@ -40,7 +40,7 @@ describe("extractNinjaBrokerBalance", () => {
           account("LFE05088021070001", 50_000, "Ninja Mauri"),
           account("Sim101", 100_000),
         ]),
-        new Set(["Ninja Ivo", "Ninja Mauri"]),
+        new Set(),
       ),
     ).toEqual({
       balanceInCents: 867_458,
@@ -54,7 +54,16 @@ describe("extractNinjaBrokerBalance", () => {
   it("no emite un total parcial si una cuenta broker tiene saldo inconsistente", () => {
     const inconsistent = { ...account("1850465", 6_674.58), netLiquidation: 6_700 };
     expect(
-      extractNinjaBrokerBalance(snapshot([inconsistent]), new Set(["Ninja Ivo"])),
+      extractNinjaBrokerBalance(snapshot([inconsistent]), new Set()),
+    ).toBeNull();
+  });
+
+  it("excluye una conexión aislada expresamente", () => {
+    expect(
+      extractNinjaBrokerBalance(
+        snapshot([account("1850465", 6_674.58)]),
+        new Set(["Ninja Ivo"]),
+      ),
     ).toBeNull();
   });
 });

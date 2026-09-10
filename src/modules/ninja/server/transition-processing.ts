@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 import { classifyNinjaAccount } from "../domain/account-classification";
+import { isolatedNinjaConnectionNames, isNinjaConnectionActive } from "../domain/connection-access";
 import type { NinjaInventorySnapshot } from "../domain/ingestion-payload";
 import { isNinjaInventorySnapshot } from "../domain/ingestion-payload";
 import { resolveNinjaReferenceBalance } from "../domain/reference-balance";
@@ -40,14 +41,14 @@ export async function processNinjaTransitions(connectorId: string, snapshot: Nin
   const supabase = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
   const [{ data: reviewRows, error: reviewError }, { data: storedState, error: stateError }] = await Promise.all([
-    supabase.from("ninja_connector_connection_reviews").select("connection_name").eq("connector_id", connectorId).eq("status", "approved"),
+    supabase.from("ninja_connector_connection_reviews").select("connection_name,status").eq("connector_id", connectorId).eq("status", "isolated"),
     supabase.from("ninja_transition_states").select("revision, state").eq("connector_id", connectorId).maybeSingle(),
   ]);
   if (reviewError || stateError) return { detectedChanges: 0, processed: false, reason: "storage_error" };
 
-  const approved = new Set((reviewRows ?? []).map((row) => row.connection_name));
+  const isolated = isolatedNinjaConnectionNames(reviewRows ?? []);
   const connectedNames = [...new Set(snapshot.accounts
-    .filter((account) => approved.has(account.connectionName) && account.connectionStatus.toLowerCase() === "connected")
+    .filter((account) => isNinjaConnectionActive(account.connectionName, isolated) && account.connectionStatus.toLowerCase() === "connected")
     .map((account) => account.connectionName))];
   const observations: NinjaTransitionObservation[] = snapshot.accounts.flatMap((account) => {
     if (!connectedNames.includes(account.connectionName)) return [];

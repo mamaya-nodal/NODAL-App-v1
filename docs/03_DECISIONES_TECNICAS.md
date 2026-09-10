@@ -558,7 +558,7 @@ vigente sin aprobacion y evidencia suficiente.
 
 ### APP-093 - Saldo broker vivo separado del saldo contabilizado
 
-- **Dato vivo:** `Cash Value` de las cuentas broker conectadas y aprobadas se
+- **Dato vivo:** `Cash Value` de las cuentas broker conectadas al conector activo se
   muestra como saldo broker en vivo. No se exige que coincida con Net
   Liquidation, porque esa igualdad no demuestra el cierre de una operación.
 - **Dato contable:** El último saldo confirmado de Control Diario permanece
@@ -580,7 +580,7 @@ vigente sin aprobacion y evidencia suficiente.
   su sesión. El inventario, la telemetría y los lotes de Ivo no se combinan con
   el espacio ni con las cuentas de Mauricio.
 - **Precondiciones:** Admin Master ve en la ficha del usuario si existe el
-  período actual, el conector está en línea, las conexiones fueron autorizadas,
+  período actual, el conector está en línea, hay conexiones activas,
   hay exactamente un broker con cuentas prop y las prop ya fueron incorporadas.
 - **Observación:** La ficha muestra el último inventario, operaciones técnicas y
   conciliaciones automáticas con su causa de bloqueo. Se actualiza cada cinco
@@ -611,8 +611,8 @@ vigente sin aprobacion y evidencia suficiente.
 ### APP-096 - Sincronización visible sin recarga manual
 
 - **Inventario:** La web compara cada cinco segundos una revisión estructural de
-  las cuentas aprobadas. Una cuenta nueva, una desconexión o una aprobación
-  administrativa actualiza la vista sin que el usuario presione F5.
+  las cuentas del conector activo. Una cuenta nueva, una desconexión o un
+  aislamiento administrativo actualiza la vista sin que el usuario presione F5.
 - **Saldos:** Los cambios exclusivos de saldo no recargan toda la página; se
   distribuyen a los paneles vivos mediante el evento del conector.
 - **Dashboard:** Inicio muestra el estado de NinjaTrader y el saldo broker vivo
@@ -620,4 +620,21 @@ vigente sin aprobacion y evidencia suficiente.
   siendo cifras contables y no se sustituyen por movimientos intradía.
 - **Frecuencia:** El navegador consulta cada cinco segundos. La recarga completa
   sólo ocurre ante un cambio estructural, para evitar parpadeos durante un trade.
+- **Estado:** Implementada el 2026-09-10.
+
+### APP-097 - Autorización única por usuario y conector Ninja
+
+- **Frontera de acceso:** Admin Master autoriza el ingreso del usuario a NODAL
+  una sola vez. El código de vinculación emitido desde esa sesión asocia el
+  conector con ese usuario autorizado.
+- **Inventario automático:** Toda conexión y cuenta que NinjaTrader informe
+  posteriormente desde el conector activo se incorpora automáticamente. No se
+  solicita una aprobación adicional por empresa, cuenta o nombre de conexión.
+- **Excepción:** Admin Master puede aislar expresamente una conexión observada
+  si pertenece a otra persona o contamina la prueba. La ausencia de revisión
+  significa activa, no pendiente.
+- **Alcance:** La regla se aplica a inventario visible, detección de compras,
+  saldo broker, transiciones de cuentas y procesamiento técnico de operaciones.
+- **Seguridad:** Registrar una compra sigue exigiendo que la cuenta exista en el
+  inventario recibido del conector autenticado del propio usuario.
 - **Estado:** Implementada el 2026-09-10.

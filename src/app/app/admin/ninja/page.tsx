@@ -23,7 +23,7 @@ type Connection = {
 
 const one = (value: string | string[] | undefined) => typeof value === "string" ? value : undefined;
 const messages: Record<string, string> = {
-  approved: "Conexión autorizada para el flujo oficial.",
+  approved: "Conexión reactivada para el flujo oficial.",
   isolated: "Conexión aislada. Sus cuentas no ingresarán al flujo oficial.",
   invalid_connection: "No se pudo identificar la conexión.",
   not_reviewed: "No se pudo guardar la revisión de la conexión.",
@@ -44,7 +44,7 @@ export default async function AdminNinjaPage({ searchParams }: Props) {
   const connectionRows = (connections ?? []) as Connection[];
 
   return <div className="admin-page admin-shell admin-ninja-page">
-    <header className="workspace-view-heading admin-page-heading"><div><p className="status">CONEXIONES NINJA</p><h2>Conectores</h2></div><p>Estado del complemento y autorización de cada conexión.</p></header>
+    <header className="workspace-view-heading admin-page-heading"><div><p className="status">CONEXIONES NINJA</p><h2>Conectores</h2></div><p>Estado del complemento y conexiones detectadas.</p></header>
 
     {one(result) && messages[one(result)!] ? <p className={`admin-result ${["approved", "isolated"].includes(one(result) ?? "") ? "success" : "error"}`}>{messages[one(result)!]}</p> : null}
 
@@ -61,23 +61,21 @@ export default async function AdminNinjaPage({ searchParams }: Props) {
     </section>
 
     <section className="admin-user-list">
-      <div className="admin-section-heading"><div><p className="status">CONTROL DE ACCESO</p><h3>Conexiones observadas</h3></div></div>
+      <div className="admin-section-heading"><div><p className="status">INVENTARIO</p><h3>Conexiones detectadas</h3></div></div>
       {connectionRows.length ? connectionRows.map((connection) => {
         const connector = connectorRows.find((item) => item.connector_id === connection.connector_id);
-        const approved = connection.review_status === "approved";
         const isolated = connection.review_status === "isolated";
         return <article className="admin-user-row" key={`${connection.connector_id}-${connection.connection_name}`}>
           <div>
             <strong>{connection.connection_name}</strong>
             <span>{connector?.owner_display_name || connector?.owner_email || "Usuario no disponible"} · {connection.account_count} cuentas</span>
-            <small>{approved ? "Sus cuentas ingresan al registro oficial." : isolated ? "Sus cuentas permanecen separadas." : "Pendiente de revisión."}</small>
+            <small>{isolated ? "Sus cuentas permanecen separadas." : "Sus cuentas se incorporan automáticamente."}</small>
           </div>
           <form action={reviewNinjaConnection} className="admin-connection-actions">
             <input name="connector_id" type="hidden" value={connection.connector_id} />
             <input name="connection_name" type="hidden" value={connection.connection_name} />
             <input name="reason" type="hidden" value="Revisión de conexión Ninja" />
-            {!approved && !isolated ? <span className="admin-connection-state pending">Pendiente</span> : null}
-            <button className="primary-action" disabled={approved} name="status" type="submit" value="approved">{approved ? "Autorizada" : "Autorizar"}</button>
+            <button className="primary-action" disabled={!isolated} name="status" type="submit" value="approved">{isolated ? "Reactivar" : "Activa"}</button>
             <button className="admin-revoke" disabled={isolated} name="status" type="submit" value="isolated">{isolated ? "Aislada" : "Aislar"}</button>
           </form>
         </article>;

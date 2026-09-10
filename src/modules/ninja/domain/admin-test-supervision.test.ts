@@ -58,14 +58,14 @@ function fixture(): AdminNinjaTestSupervision {
 }
 
 describe("Ninja test readiness", () => {
-  it("is ready only with current period, online connector, approved inventory and linked prop accounts", () => {
+  it("is ready with a paired connector, active inventory and linked prop accounts", () => {
     const result = deriveNinjaTestReadiness(fixture(), now);
 
     expect(result.ready).toBe(true);
     expect(result.checks.every((check) => check.ok)).toBe(true);
   });
 
-  it("reports missing approval and registration without hiding the detected accounts", () => {
+  it("accepts a newly observed connection without a second approval", () => {
     const data = fixture();
     const result = deriveNinjaTestReadiness({
       ...data,
@@ -75,8 +75,22 @@ describe("Ninja test readiness", () => {
 
     expect(result.ready).toBe(false);
     expect(result.checks.find((check) => check.id === "connections")?.detail)
-      .toBe("Falta autorizar: Ninja Ivo");
+      .toBe("1 conexiones activas");
     expect(result.checks.find((check) => check.id === "links")?.detail)
       .toBe("1 cuentas prop pendientes de incorporar");
+  });
+
+  it("excludes an expressly isolated connection from the operational inventory", () => {
+    const data = fixture();
+    const result = deriveNinjaTestReadiness({
+      ...data,
+      connections: [{ accountCount: 2, name: "Ninja Ivo", status: "isolated" }],
+    }, now);
+
+    expect(result.ready).toBe(false);
+    expect(result.props).toHaveLength(0);
+    expect(result.brokers).toHaveLength(0);
+    expect(result.checks.find((check) => check.id === "connections")?.detail)
+      .toBe("Todavía no hay conexiones activas");
   });
 });

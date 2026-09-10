@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import type { NinjaTelemetryRow } from "../domain/operation-probe";
 import { classifyNinjaAccount } from "../domain/account-classification";
+import { isolatedNinjaConnectionNames, isNinjaConnectionActive } from "../domain/connection-access";
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
 import { buildNinjaTechnicalOperations } from "../domain/technical-operation";
 import { persistAutomaticOperationBatches } from "./automatic-operation-processing";
@@ -34,18 +35,18 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
       .maybeSingle(),
     supabase
       .from("ninja_connector_connection_reviews")
-      .select("connection_name")
+      .select("connection_name,status")
       .eq("connector_id", connectorId)
-      .eq("status", "approved"),
+      .eq("status", "isolated"),
   ]);
   if (allowlistResult.error || linksResult.error || inventoryResult.error || reviewsResult.error) {
     return { processedAccounts: 0, persistedOperations: 0 };
   }
 
-  const approvedConnections = new Set((reviewsResult.data ?? []).map((row) => row.connection_name));
+  const isolatedConnections = isolatedNinjaConnectionNames(reviewsResult.data ?? []);
   const candidates = new Map<string, { account_name: string; connection_name: string }>();
   const add = (connectionName: string, accountName: string) => {
-    if (!approvedConnections.has(connectionName)) return;
+    if (!isNinjaConnectionActive(connectionName, isolatedConnections)) return;
     candidates.set(`${connectionName}\u0000${accountName}`, {
       account_name: accountName,
       connection_name: connectionName,

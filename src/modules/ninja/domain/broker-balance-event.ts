@@ -1,4 +1,5 @@
 import { classifyNinjaAccount } from "./account-classification";
+import { isNinjaConnectionActive } from "./connection-access";
 import type { NinjaInventorySnapshot } from "./ingestion-payload";
 import { resolveNinjaReferenceBalance } from "./reference-balance";
 
@@ -13,11 +14,11 @@ export type NinjaBrokerBalanceCandidate = Readonly<{
 
 export function extractNinjaBrokerBalance(
   snapshot: NinjaInventorySnapshot,
-  approvedConnections: ReadonlySet<string>,
+  isolatedConnections: ReadonlySet<string>,
 ): NinjaBrokerBalanceCandidate | null {
   const brokerAccounts = snapshot.accounts.filter((account) => {
     if (
-      !approvedConnections.has(account.connectionName) ||
+      !isNinjaConnectionActive(account.connectionName, isolatedConnections) ||
       account.connectionStatus.toLowerCase() !== "connected"
     ) return false;
 

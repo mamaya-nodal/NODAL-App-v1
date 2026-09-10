@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { extractNinjaBrokerBalance } from "../domain/broker-balance-event";
+import { isolatedNinjaConnectionNames } from "../domain/connection-access";
 import {
   isNinjaInventorySnapshot,
   type NinjaInventorySnapshot,
@@ -27,14 +28,14 @@ export async function processNinjaBrokerBalance(
   });
   const { data: reviewRows, error: reviewError } = await supabase
     .from("ninja_connector_connection_reviews")
-    .select("connection_name")
+    .select("connection_name,status")
     .eq("connector_id", connectorId)
-    .eq("status", "approved");
+    .eq("status", "isolated");
   if (reviewError) return { created: false, processed: false, reason: "storage_error" };
 
   const candidate = extractNinjaBrokerBalance(
     snapshot,
-    new Set((reviewRows ?? []).map((row) => row.connection_name)),
+    isolatedNinjaConnectionNames(reviewRows ?? []),
   );
   if (!candidate) {
     return {

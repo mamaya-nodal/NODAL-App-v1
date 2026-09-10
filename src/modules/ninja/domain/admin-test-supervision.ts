@@ -1,4 +1,5 @@
 import { classifyNinjaAccount } from "./account-classification";
+import { isNinjaConnectionActive } from "./connection-access";
 import type { NinjaAccountSnapshot } from "./ingestion-payload";
 
 export type NinjaSupervisionConnection = Readonly<{
@@ -97,7 +98,14 @@ export function deriveNinjaTestReadiness(
   nowInMilliseconds = Date.now(),
 ) {
   const observedAt = data.inventory.observedAt ?? data.connector?.lastSeenAt ?? null;
-  const classified = data.inventory.accounts.map((account) => ({
+  const isolatedConnections = new Set(
+    data.connections
+      .filter((connection) => connection.status === "isolated")
+      .map((connection) => connection.name),
+  );
+  const classified = data.inventory.accounts
+    .filter((account) => isNinjaConnectionActive(account.connectionName, isolatedConnections))
+    .map((account) => ({
     account,
     detected: classifyNinjaAccount(
       account,
@@ -119,13 +127,8 @@ export function deriveNinjaTestReadiness(
   const observedConnections = new Set(
     data.inventory.accounts.map((account) => account.connectionName),
   );
-  const approvedConnections = new Set(
-    data.connections
-      .filter((connection) => connection.status === "approved")
-      .map((connection) => connection.name),
-  );
-  const unapprovedConnections = [...observedConnections].filter(
-    (connectionName) => !approvedConnections.has(connectionName),
+  const activeConnections = [...observedConnections].filter(
+    (connectionName) => isNinjaConnectionActive(connectionName, isolatedConnections),
   );
 
   const checks: NinjaTestReadinessCheck[] = [
@@ -146,14 +149,12 @@ export function deriveNinjaTestReadiness(
       ok: connectorIsOnline,
     },
     {
-      detail: unapprovedConnections.length === 0 && observedConnections.size > 0
-        ? `${approvedConnections.size} conexiones autorizadas`
-        : unapprovedConnections.length > 0
-          ? `Falta autorizar: ${unapprovedConnections.join(", ")}`
-          : "Todavía no hay conexiones observadas",
+      detail: activeConnections.length > 0
+        ? `${activeConnections.length} conexiones activas${isolatedConnections.size > 0 ? ` · ${isolatedConnections.size} aisladas` : ""}`
+        : "Todavía no hay conexiones activas",
       id: "connections",
       label: "Conexiones",
-      ok: unapprovedConnections.length === 0 && observedConnections.size > 0,
+      ok: activeConnections.length > 0,
     },
     {
       detail: brokers.length === 1 && props.length > 0
