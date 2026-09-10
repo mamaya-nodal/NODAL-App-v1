@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
 import { buildNinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,9 @@ export async function GET() {
   const error = statusResult.error ?? inventoryResult.error;
   return Response.json(
     {
+      inventoryRevision: error
+        ? null
+        : buildNinjaInventoryRevision(inventoryResult.data ?? []),
       liveBrokerBalance: error
         ? null
         : buildNinjaLiveBrokerBalance(inventoryResult.data ?? []),

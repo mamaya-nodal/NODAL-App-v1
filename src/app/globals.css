@@ -5832,6 +5832,26 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.home-live-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 43px;
+  margin-bottom: 12px;
+  padding: 0 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--app-panel) 92%, transparent);
+  color: var(--app-copy);
+  font-size: var(--home-label-size);
+}
+.home-live-status span { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+.home-live-status span i { width: 7px; height: 7px; border-radius: 50%; background: var(--app-subtle); }
+.home-live-status span.online { color: var(--app-accent); }
+.home-live-status span.online i { background: var(--app-accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--app-accent) 13%, transparent); }
+.home-live-status strong { color: var(--app-title); font-weight: 700; }
+
 .home-financial-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(220px, .75fr);
@@ -6048,6 +6068,7 @@ html[data-theme="day"] .home-performance-grid > article {
 }
 
 @media (max-width: 460px) {
+  .home-live-status { align-items: flex-start; flex-direction: column; gap: 6px; padding-block: 11px; }
   .home-financial-grid { grid-template-columns: 1fr; }
   .home-net-result { grid-column: auto; }
   .home-financial-metric { min-height: 108px; }

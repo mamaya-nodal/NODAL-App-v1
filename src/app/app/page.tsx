@@ -11,6 +11,7 @@ import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summarie
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
 import { buildNinjaLiveBrokerBalance, type NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
+import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
 import type {
   AccountPhaseWithdrawal,
 } from "@/modules/operations/domain/account-phase-results";
@@ -205,6 +206,7 @@ export default async function PrivateAppPage({
   let incomingNinjaBalance: NinjaBrokerBalanceEvent | null = null;
   let liveNinjaBrokerBalance: NinjaLiveBrokerBalance | null = null;
   let ninjaBrokerSourceNotice: string | null = null;
+  let ninjaInventoryRevision = buildNinjaInventoryRevision([]);
 
   if (allowed) {
     const [{ data: workspaces }, { data: ninjaConnectorRows }] = await Promise.all([
@@ -402,6 +404,7 @@ export default async function PrivateAppPage({
     linkedNinjaAccountNames = new Set((ninjaLinkRows ?? []).filter((link) => link.closed_at === null).map((link) => link.external_account_name));
     ninjaNamesByAccountId = new Map((ninjaLinkRows ?? []).map((link) => [link.account_id, link.external_account_name]));
     ninjaInventories = (ninjaInventoryRows ?? []) as NinjaInventoryRpcRow[];
+    ninjaInventoryRevision = buildNinjaInventoryRevision(ninjaInventories);
     const connectedNinjaAccounts = ninjaInventories.flatMap((inventory) =>
       inventory.accounts.filter(
         (account) => account.connectionStatus.toLowerCase() === "connected",
@@ -778,7 +781,7 @@ export default async function PrivateAppPage({
       userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
       username={typeof user.user_metadata?.username === "string" ? user.user_metadata.username : undefined}
     >
-      <NinjaConnectorMonitor online={connectorOnline} />
+      <NinjaConnectorMonitor inventoryRevision={ninjaInventoryRevision} online={connectorOnline} />
       {!connectorOnline ? (
         <p className="notice connector-offline-notice" role="status">
           Conector sin señal. Estás viendo los últimos datos guardados.
@@ -847,6 +850,8 @@ export default async function PrivateAppPage({
         <HomeOverview
           capitalHistory={capitalHistory}
           dashboard={personalDashboard}
+          liveBrokerBalance={liveNinjaBrokerBalance}
+          ninjaOnline={connectorOnline}
           performance={homePerformance}
           periodLabel={formatPeriodLabel(selection.period.periodMonth)}
           summary={operationalSummary}

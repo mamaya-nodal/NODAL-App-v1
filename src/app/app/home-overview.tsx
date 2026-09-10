@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type {
   CapitalHistoryPoint,
@@ -12,10 +12,14 @@ import {
   type PersonalDashboardData,
 } from "@/modules/summary/domain/personal-dashboard";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
+import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
+import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 
 type HomeOverviewProps = Readonly<{
   capitalHistory: CapitalHistoryPoint[];
   dashboard?: PersonalDashboardData;
+  liveBrokerBalance?: NinjaLiveBrokerBalance | null;
+  ninjaOnline?: boolean;
   performance: HomePerformance;
   periodLabel: string;
   summary: OperationalSummary;
@@ -77,8 +81,10 @@ function EarningsItem({ label, valueInCents }: Readonly<{ label: string; valueIn
   return <div><span>{label}</span><strong>{formatMoney(valueInCents)}</strong></div>;
 }
 
-export function HomeOverview({ capitalHistory, dashboard, performance, periodLabel, summary }: HomeOverviewProps) {
+export function HomeOverview({ capitalHistory, dashboard, liveBrokerBalance = null, ninjaOnline = false, performance, periodLabel, summary }: HomeOverviewProps) {
   const [chartMetric, setChartMetric] = useState<ChartMetric>(dashboard ? "earnings" : "billing");
+  const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
+  const [liveOnline, setLiveOnline] = useState(ninjaOnline);
   const earnings = dashboard?.earnings ?? buildPeriodEarnings({ ownOperationsInCents: summary.traderGainInCents });
   const billingInCents = dashboard?.billingInCents ?? summary.realizedGainInCents;
   const payout = payoutDashboardSummary(summary.fundingWithdrawals);
@@ -96,8 +102,24 @@ export function HomeOverview({ capitalHistory, dashboard, performance, periodLab
   const capabilities = dashboard?.capabilities;
   const hasCapabilities = Boolean(capabilities?.managedDesk || capabilities?.referredDesks || capabilities?.identities);
 
+  useEffect(() => {
+    const receiveStatus = (event: Event) => {
+      const detail = (event as CustomEvent<NinjaStatusEventDetail>).detail;
+      setLiveBalance(detail.liveBrokerBalance);
+      setLiveOnline(detail.online);
+    };
+    window.addEventListener(NINJA_STATUS_EVENT, receiveStatus);
+    return () => window.removeEventListener(NINJA_STATUS_EVENT, receiveStatus);
+  }, []);
+
   return (
     <section aria-label="Inicio" className="home-overview-panel" id="inicio">
+      {liveBalance && (
+        <div className="home-live-status">
+          <span className={liveOnline ? "online" : undefined}><i aria-hidden="true" />NinjaTrader {liveOnline ? "en vivo" : "último dato"}</span>
+          <strong>Saldo broker {formatMoney(liveBalance.balanceInCents)}</strong>
+        </div>
+      )}
       <div className="home-financial-grid">
         <article className={`home-net-result${dashboard ? "" : " legacy"}`}>
           {dashboard ? <>

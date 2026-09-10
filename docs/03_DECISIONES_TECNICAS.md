@@ -607,3 +607,17 @@ vigente sin aprobacion y evidencia suficiente.
   del usuario permanece separada de la autenticación de Google.
 - **Estado:** Implementada el 2026-09-09 para iniciar la prueba integral desde la
   PC de Ivo.
+
+### APP-096 - Sincronización visible sin recarga manual
+
+- **Inventario:** La web compara cada cinco segundos una revisión estructural de
+  las cuentas aprobadas. Una cuenta nueva, una desconexión o una aprobación
+  administrativa actualiza la vista sin que el usuario presione F5.
+- **Saldos:** Los cambios exclusivos de saldo no recargan toda la página; se
+  distribuyen a los paneles vivos mediante el evento del conector.
+- **Dashboard:** Inicio muestra el estado de NinjaTrader y el saldo broker vivo
+  como dato operativo separado. Las ganancias, facturación y comisiones siguen
+  siendo cifras contables y no se sustituyen por movimientos intradía.
+- **Frecuencia:** El navegador consulta cada cinco segundos. La recarga completa
+  sólo ocurre ante un cambio estructural, para evitar parpadeos durante un trade.
+- **Estado:** Implementada el 2026-09-10.
