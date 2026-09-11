@@ -24,8 +24,7 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
     supabase
       .from("ninja_account_links")
       .select("connection_name,external_account_name")
-      .eq("connector_id", connectorId)
-      .is("closed_at", null),
+      .eq("connector_id", connectorId),
     supabase
       .from("ninja_inventory_snapshots")
       .select("accounts,observed_at")

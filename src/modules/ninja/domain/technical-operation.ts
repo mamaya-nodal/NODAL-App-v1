@@ -24,6 +24,20 @@ function numeric(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function settledCashValue(row: NinjaTelemetryRow): number | null {
+  if (row.event_type !== "balance") return null;
+  const cashValue = numeric(row.payload.cashValue);
+  const netLiquidation = numeric(row.payload.netLiquidation);
+  if (cashValue === null) return null;
+  if (netLiquidation === null) return cashValue;
+  // Antes de la apertura Ninja puede descontar comisiones unos milisegundos
+  // antes de informar la posición. Conservamos el último saldo realmente plano
+  // para que esas comisiones formen parte del resultado de la operación.
+  return netLiquidation !== null && netLiquidation > 0 && Math.abs(cashValue - netLiquidation) < 0.005
+    ? cashValue
+    : null;
+}
+
 function isOpenPosition(row: NinjaTelemetryRow) {
   return row.event_type === "position"
     && typeof row.payload.quantity === "number"
@@ -51,7 +65,7 @@ type WorkingOperation = {
 function finish(operation: WorkingOperation, settledAt: string | null): NinjaTechnicalOperation {
   const status = settledAt ? "closed" : operation.flatAt ? "settling" : "open";
   const result = operation.openingBalance !== null && operation.closingBalance !== null
-    ? operation.closingBalance - operation.openingBalance
+    ? Math.round((operation.closingBalance - operation.openingBalance) * 100) / 100
     : null;
   return {
     accountName: operation.accountName,
@@ -94,7 +108,7 @@ export function buildNinjaTechnicalOperations(
     }
 
     if (!current && row.event_type === "balance") {
-      previousBalance = numeric(row.payload.cashValue);
+      previousBalance = settledCashValue(row) ?? previousBalance ?? numeric(row.payload.cashValue);
       continue;
     }
     if (!current && row.event_type !== "execution" && !isOpenPosition(row)) continue;

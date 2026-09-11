@@ -100,6 +100,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     const { data: currentControl } = await supabase.from("daily_controls")
       .select("balance_after_cents")
       .eq("period_id", periodId)
+      .lte("created_at", openedAt)
       .order("control_number", { ascending: false })
       .limit(1)
       .maybeSingle();

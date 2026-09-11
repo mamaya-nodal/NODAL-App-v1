@@ -70,7 +70,7 @@ function presentation(
 
   return {
     account,
-    resultInCents: account.state === "virgin" ? null : latestResult,
+    resultInCents: account.state === "virgin" || accountEntries.length === 0 ? null : latestResult,
     stage: activePhase === "Evaluacion" ? "Evaluation" : "Funded",
     trades: new Set(accountEntries.map((entry) => entry.dailyControlId)).size,
   };

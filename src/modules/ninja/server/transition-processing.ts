@@ -110,3 +110,25 @@ export async function bootstrapNinjaTransitions(connectorId: string): Promise<Tr
     ? processNinjaTransitions(connectorId, snapshot)
     : { detectedChanges: 0, processed: false, reason: "storage_error" };
 }
+
+export async function refreshNinjaTransitionsFromLatestSnapshot(
+  connectorId: string,
+): Promise<TransitionProcessingResult> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRoleKey) return { detectedChanges: 0, processed: false, reason: "not_configured" };
+  const supabase = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const { data: latest, error } = await supabase
+    .from("ninja_inventory_snapshots")
+    .select("event_id, observed_at, accounts")
+    .eq("connector_id", connectorId)
+    .order("observed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return { detectedChanges: 0, processed: false, reason: "storage_error" };
+  if (!latest) return { detectedChanges: 0, processed: true };
+  const snapshot = { accounts: latest.accounts, eventId: latest.event_id, kind: "inventory_snapshot", observedAt: latest.observed_at };
+  return isNinjaInventorySnapshot(snapshot)
+    ? processNinjaTransitions(connectorId, snapshot)
+    : { detectedChanges: 0, processed: false, reason: "storage_error" };
+}

@@ -10,10 +10,12 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({})) as { connectorVersion?: unknown };
   const connector = await authenticateNinjaConnector(bearerToken(request));
   if (connector) {
+    // Primero reconstruimos las operaciones mientras todos los vinculos de cuenta
+    // siguen disponibles. Recién después aplicamos quemados y cierres de vínculo.
+    await bootstrapNinjaBrokerBalance(connector.connectorId);
+    await refreshNinjaTechnicalOperations(connector.connectorId);
     await Promise.all([
       refreshNinjaTransitionsFromLatestSnapshot(connector.connectorId),
-      bootstrapNinjaBrokerBalance(connector.connectorId),
-      refreshNinjaTechnicalOperations(connector.connectorId),
       rememberNinjaConnectorVersion(connector.connectorId, body.connectorVersion),
     ]);
   }

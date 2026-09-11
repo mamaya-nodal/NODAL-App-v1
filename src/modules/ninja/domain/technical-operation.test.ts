@@ -38,6 +38,23 @@ describe("Ninja technical operations", () => {
     expect(operations[0].status).toBe("settling");
   });
 
+  it("incluye las comisiones descontadas instantes antes de informar la posición", () => {
+    const operations = buildNinjaTechnicalOperations([
+      row(1, "balance", "2026-09-11T18:55:07.000Z", { cashValue: 50_000, netLiquidation: 50_000 }),
+      row(2, "balance", "2026-09-11T18:56:28.711Z", { cashValue: 49_995.86, netLiquidation: 50_000 }),
+      row(3, "position", "2026-09-11T18:56:28.715Z", { marketPosition: "Long", quantity: 3 }, "NQ SEP26"),
+      row(4, "position", "2026-09-11T19:50:00.242Z", { marketPosition: "Flat", quantity: 0 }, "NQ SEP26"),
+      row(5, "balance", "2026-09-11T19:50:00.500Z", { cashValue: 47_747.72, netLiquidation: 47_747.72 }),
+    ], new Date("2026-09-11T19:50:11.000Z"));
+
+    expect(operations[0]).toEqual(expect.objectContaining({
+      closingBalance: 47_747.72,
+      openingBalance: 50_000,
+      result: -2_252.28,
+      status: "closed",
+    }));
+  });
+
   it("mantiene un mismo ciclo si vuelve a abrir antes de diez segundos", () => {
     const operations = buildNinjaTechnicalOperations([
       row(1, "balance", "2026-09-07T18:00:00.000Z", { cashValue: 100_000 }),
