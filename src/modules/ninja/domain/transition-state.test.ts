@@ -26,4 +26,21 @@ describe("evolveNinjaTransitionState", () => {
     expect(funded.changes).toMatchObject([{ kind: "evaluation_to_funded", automatic: true }]);
     expect(funded.state.lives).toMatchObject([{ status: "active", tracked: { externalAccountName: "LFF1" } }]);
   });
+
+  it("marca la quema al tocar el piso aunque la cuenta siga conectada", () => {
+    sequence = 0;
+    const first = evolveNinjaTransitionState({ businessDate: "2026-09-11", connectedNames: ["Tradeify"], createLifeId: id, observations: [{ ...observation("TDFY1", "Evaluation"), connectionName: "Tradeify" }], state: { lives: [] } });
+    const burned = evolveNinjaTransitionState({ businessDate: "2026-09-11", connectedNames: ["Tradeify"], createLifeId: id, observations: [{ ...observation("TDFY1", "Evaluation", 47_747.72), connectionName: "Tradeify" }], state: first.state });
+
+    expect(burned.changes).toMatchObject([{
+      automatic: true,
+      fromAccountName: "TDFY1",
+      kind: "burned",
+      toAccountName: null,
+    }]);
+    expect(burned.state.lives).toMatchObject([{ status: "burned", tracked: { balanceInCents: 4_774_772 } }]);
+
+    const repeated = evolveNinjaTransitionState({ businessDate: "2026-09-11", connectedNames: ["Tradeify"], createLifeId: id, observations: [{ ...observation("TDFY1", "Evaluation", 47_747.72), connectionName: "Tradeify" }], state: burned.state });
+    expect(repeated.changes).toHaveLength(0);
+  });
 });

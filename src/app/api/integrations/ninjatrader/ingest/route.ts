@@ -5,6 +5,7 @@ import {
 import { rememberLocalNinjaSnapshot } from "@/modules/ninja/server/local-snapshot-store";
 import { persistNinjaSnapshot } from "@/modules/ninja/server/snapshot-persistence";
 import { processNinjaTransitions } from "@/modules/ninja/server/transition-processing";
+import { ensureNinjaBrokerBalanceBaseline } from "@/modules/ninja/server/broker-balance-processing";
 import { authenticateNinjaConnector, bearerToken } from "@/modules/ninja/server/connector-auth";
 
 export const dynamic = "force-dynamic";
@@ -54,9 +55,15 @@ export async function POST(request: Request) {
     rememberLocalNinjaSnapshot(connector.connectorId, payload);
   }
   const persistence = await persistNinjaSnapshot(connector.connectorId, payload);
-  const transitions = persistence.persisted
-    ? await processNinjaTransitions(connector.connectorId, payload)
-    : { detectedChanges: 0, processed: false, reason: persistence.reason };
+  const [transitions, brokerBaseline] = persistence.persisted
+    ? await Promise.all([
+        processNinjaTransitions(connector.connectorId, payload),
+        ensureNinjaBrokerBalanceBaseline(connector.connectorId, payload),
+      ])
+    : [
+        { detectedChanges: 0, processed: false, reason: persistence.reason },
+        { created: false, processed: false, reason: persistence.reason },
+      ];
 
   // El inventario técnico se conserva para detección y revisión. Este receptor
   // no crea por sí solo compras ni movimientos económicos.
@@ -68,6 +75,7 @@ export async function POST(request: Request) {
       persisted: persistence.persisted,
       persistenceReason: persistence.persisted ? undefined : persistence.reason,
       summary,
+      brokerBaseline,
       transitions,
     },
     202,

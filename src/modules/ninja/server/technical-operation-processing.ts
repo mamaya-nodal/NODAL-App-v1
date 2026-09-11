@@ -15,7 +15,7 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
   const supabase = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const [allowlistResult, linksResult, inventoryResult, reviewsResult] = await Promise.all([
+  const [allowlistResult, linksResult, inventoryResult, reviewsResult, unsettledResult] = await Promise.all([
     supabase
       .from("ninja_operation_probe_allowlist")
       .select("connection_name,account_name")
@@ -38,8 +38,14 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
       .select("connection_name,status")
       .eq("connector_id", connectorId)
       .eq("status", "isolated"),
+    supabase
+      .from("ninja_operation_probe_sessions")
+      .select("id,connection_name,account_name,opened_at,opening_event_id,status")
+      .eq("connector_id", connectorId)
+      .neq("status", "closed")
+      .order("opened_at"),
   ]);
-  if (allowlistResult.error || linksResult.error || inventoryResult.error || reviewsResult.error) {
+  if (allowlistResult.error || linksResult.error || inventoryResult.error || reviewsResult.error || unsettledResult.error) {
     return { processedAccounts: 0, persistedOperations: 0 };
   }
 
@@ -65,18 +71,49 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
   const observedAccounts = [...candidates.values()];
   if (!observedAccounts.length) return { processedAccounts: 0, persistedOperations: 0 };
 
-  let persistedOperations = 0;
-  for (const account of observedAccounts) {
-    const { data, error } = await supabase
-      .from("ninja_trade_telemetry_events")
-      .select("id,event_type,occurred_at,connection_name,account_name,instrument,payload")
-      .eq("connector_id", connectorId)
-      .eq("connection_name", account.connection_name)
-      .eq("account_name", account.account_name)
-      .order("occurred_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(5_000);
-    if (error || !data?.length) continue;
+  const operationCounts = await Promise.all(observedAccounts.map(async (account) => {
+    const unsettled = (unsettledResult.data ?? []).filter((session) =>
+      session.connection_name === account.connection_name &&
+      session.account_name === account.account_name,
+    );
+    let startAt: string;
+    if (unsettled.length > 0) {
+      startAt = new Date(Date.parse(unsettled[0].opened_at) - 5 * 60_000).toISOString();
+    } else {
+      const { data: latestClosed } = await supabase
+        .from("ninja_operation_probe_sessions")
+        .select("last_event_at")
+        .eq("connector_id", connectorId)
+        .eq("connection_name", account.connection_name)
+        .eq("account_name", account.account_name)
+        .eq("status", "closed")
+        .order("last_event_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      startAt = latestClosed?.last_event_at ?? new Date(Date.now() - 12 * 60 * 60_000).toISOString();
+    }
+
+    const data: Array<Record<string, unknown>> = [];
+    const pageSize = 1_000;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data: page, error } = await supabase
+        .from("ninja_trade_telemetry_events")
+        .select("id,event_type,occurred_at,connection_name,account_name,instrument,payload")
+        .eq("connector_id", connectorId)
+        .eq("connection_name", account.connection_name)
+        .eq("account_name", account.account_name)
+        .gte("occurred_at", startAt)
+        .order("occurred_at")
+        .order("id")
+        .range(offset, offset + pageSize - 1);
+      if (error || !page) {
+        data.length = 0;
+        break;
+      }
+      data.push(...page);
+      if (page.length < pageSize) break;
+    }
+    if (!data.length) return 0;
 
     const rows = data.map((row) => ({
       account_name: row.account_name,
@@ -88,7 +125,7 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
       payload: row.payload,
     })) as NinjaTelemetryRow[];
     const operations = buildNinjaTechnicalOperations(rows, new Date());
-    if (!operations.length) continue;
+    if (!operations.length) return 0;
 
     const { error: upsertError } = await supabase
       .from("ninja_operation_probe_sessions")
@@ -111,9 +148,25 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
         status: operation.status,
         updated_at: new Date().toISOString(),
       })), { onConflict: "connector_id,opening_event_id" });
-    if (!upsertError) persistedOperations += operations.length;
-  }
+    if (!upsertError) {
+      const validOpeningIds = new Set(operations.map((operation) => operation.openingEventId));
+      const staleIds = unsettled
+        .filter((session) => !validOpeningIds.has(Number(session.opening_event_id)))
+        .map((session) => session.id);
+      // Retira artefactos creados cuando el límite anterior de 1.000 filas
+      // cortaba una operación larga y confundía su cierre con otra apertura.
+      if (staleIds.length > 0) {
+        await supabase.from("ninja_operation_probe_sessions").delete().in("id", staleIds);
+      }
+      return operations.length;
+    }
+    return 0;
+  }));
 
   const batches = await persistAutomaticOperationBatches(connectorId);
-  return { processedAccounts: observedAccounts.length, persistedOperations, ...batches };
+  return {
+    processedAccounts: observedAccounts.length,
+    persistedOperations: operationCounts.reduce((total, count) => total + count, 0),
+    ...batches,
+  };
 }

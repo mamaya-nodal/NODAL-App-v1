@@ -4,7 +4,7 @@ import { detectNinjaAccountChanges, observeTrackedNinjaAccount, startTrackingNin
 export type NinjaTransitionLife = Readonly<{
   connectionName: string;
   lifeId: string;
-  status: "active" | "missing";
+  status: "active" | "burned" | "missing";
   tracked: TrackedNinjaAccount;
 }>;
 
@@ -36,17 +36,37 @@ export function evolveNinjaTransitionState(args: Readonly<{
     const newlyMissing = new Set<string>();
 
     lives = lives.map((life) => {
-      if (life.connectionName !== connectionName || life.status !== "active") return life;
+      if (life.connectionName !== connectionName) return life;
       const observation = observationByName.get(life.tracked.externalAccountName);
+      if (life.status === "burned") {
+        return observation ? life : { ...life, status: "missing" as const };
+      }
+      if (life.status !== "active") return life;
       if (!observation) {
         newlyMissing.add(life.lifeId);
         return { ...life, status: "missing" as const };
       }
       if (observation.balanceStatus !== "verified") return life;
-      return { ...life, tracked: observeTrackedNinjaAccount(life.tracked, observation.balanceInCents, args.businessDate) };
+      const tracked = observeTrackedNinjaAccount(life.tracked, observation.balanceInCents, args.businessDate);
+      if (tracked.balanceInCents <= tracked.burnFloorInCents) {
+        changes.push({
+          automatic: true,
+          connectionName,
+          fromAccountName: tracked.externalAccountName,
+          fromLifeId: life.lifeId,
+          kind: "burned",
+          reason: "El saldo de la cuenta alcanzó su piso de quema vigente.",
+          toAccountName: null,
+          toLifeId: null,
+        });
+        return { ...life, status: "burned" as const, tracked };
+      }
+      return { ...life, tracked };
     });
 
-    const activeNames = new Set(lives.filter((life) => life.connectionName === connectionName && life.status === "active").map((life) => life.tracked.externalAccountName));
+    const activeNames = new Set(lives.filter((life) =>
+      life.connectionName === connectionName && life.status !== "missing",
+    ).map((life) => life.tracked.externalAccountName));
     const appeared = observations.filter((item) => item.balanceStatus === "verified" && !activeNames.has(item.externalAccountName));
     const missingLives = lives.filter((life) => life.connectionName === connectionName && life.status === "missing");
     const candidates = appeared.length ? missingLives : missingLives.filter((life) => newlyMissing.has(life.lifeId));

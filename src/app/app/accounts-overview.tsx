@@ -22,6 +22,8 @@ type Props = Readonly<{
 }>;
 
 export type AccountOverviewAccount = RegisterAccount & Readonly<{
+  currentCashValueInCents: number | null;
+  initialBalanceInCents: number | null;
   periodLabel: string;
   periodMonth: string;
 }>;
@@ -36,7 +38,7 @@ type AccountPresentation = Readonly<{
 function money(cents: number) {
   return new Intl.NumberFormat("es-AR", {
     currency: "USD",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
     style: "currency",
   }).format(cents / 100);
 }
@@ -87,8 +89,14 @@ function AccountCard({ item }: Readonly<{
           <small>{account.externalName ?? `Cuenta ${account.referenceNumber}`}</small>
         </span>
         <span className={`demo-stage ${stage.toLowerCase()}`}>{stage}</span>
+        <span className="demo-account-balance">
+          <small>Cash value</small>
+          <strong>{account.currentCashValueInCents === null ? "—" : money(account.currentCashValueInCents)}</strong>
+        </span>
         <span className={`demo-account-result${(resultInCents ?? 0) < 0 ? " negative" : ""}`}>
-          {resultInCents === null ? "Sin operar" : money(resultInCents)}
+          {resultInCents === null
+            ? account.state === "closed" ? "Cierre detectado" : "Sin operar"
+            : money(resultInCents)}
         </span>
         <i aria-hidden="true" />
       </summary>
@@ -97,7 +105,10 @@ function AccountCard({ item }: Readonly<{
         <div><span>Período</span><strong>{account.periodLabel}</strong></div>
         <div><span>Compra</span><strong>{date(account.purchasedOn)}</strong></div>
         <div><span>Trades</span><strong>{trades}</strong></div>
-        <div><span>Resultado</span><strong>{resultInCents === null ? "—" : money(resultInCents)}</strong></div>
+        <div><span>Capital inicial</span><strong>{account.initialBalanceInCents === null ? "—" : money(account.initialBalanceInCents)}</strong></div>
+        <div><span>Cash value actual</span><strong>{account.currentCashValueInCents === null ? "—" : money(account.currentCashValueInCents)}</strong></div>
+        <div><span>Variación prop</span><strong>{account.initialBalanceInCents === null || account.currentCashValueInCents === null ? "—" : money(account.currentCashValueInCents - account.initialBalanceInCents)}</strong></div>
+        <div><span>Resultado contable</span><strong>{resultInCents === null ? account.state === "closed" ? "Pendiente" : "—" : money(resultInCents)}</strong></div>
       </div>
     </details>
   );

@@ -6943,6 +6943,9 @@ html[data-theme="day"] .accounting-history {
 .demo-stage.evaluation { color: #6ecbff; background: rgb(110 203 255 / 11%); }
 .demo-stage.funded { color: #ffae59; background: rgb(255 174 89 / 11%); }
 .demo-stage.live { color: var(--app-positive); background: color-mix(in srgb, var(--app-accent) 11%, transparent); }
+.demo-account-balance { width: 112px; display: grid; gap: 3px; text-align: right; }
+.demo-account-balance small { color: var(--app-subtle); font-size: 9px; font-weight: 600; }
+.demo-account-balance strong { color: var(--app-title); font-size: 12px; font-weight: 800; }
 .demo-account-result { width: 104px; color: var(--app-positive); font-size: 12px; font-weight: 850; text-align: right; }
 .demo-account-result.negative,
 .demo-history-day strong.negative { color: #ff7d72; }
@@ -6967,7 +6970,7 @@ html[data-theme="day"] .accounting-history {
 
 .demo-account-detail {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 8px;
   padding: 0 15px 15px;
 }
@@ -7226,6 +7229,7 @@ html[data-theme="day"] .demo-stage.live {
   .demo-account-card > summary { gap: 8px; }
   .demo-stage { min-width: 64px; }
   .demo-account-result { display: none; }
+  .demo-account-balance { width: auto; }
   .demo-account-detail { grid-template-columns: 1fr 1fr; }
   .demo-operation-grid { grid-template-columns: 1fr; }
   .demo-operation-grid > article:last-child { grid-column: auto; }
@@ -7411,6 +7415,97 @@ html[data-theme="day"] .automatic-batch-list article {
 .nodal-workspace .broker-live-meta b {
   color: var(--app-copy);
   font-weight: 700;
+}
+
+.broker-balance-history {
+  margin-top: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.broker-balance-history > summary {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  color: var(--app-title);
+  font-size: 13px;
+  font-weight: 800;
+  list-style: none;
+  cursor: pointer;
+}
+
+.broker-balance-history > summary::-webkit-details-marker { display: none; }
+.broker-balance-history > summary > strong {
+  margin-left: auto;
+  color: var(--app-subtle);
+  font-size: 10px;
+}
+.broker-balance-history > summary > i { width: 16px; color: var(--app-subtle); font-style: normal; text-align: center; }
+.broker-balance-history > summary > i::before { content: "+"; }
+.broker-balance-history[open] > summary > i::before { content: "−"; }
+.broker-balance-history-list { display: grid; gap: 7px; padding: 0 10px 10px; }
+.broker-balance-history-list article {
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(110px, 1fr));
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--app-input);
+}
+.broker-balance-history-list article > div { min-width: 0; display: grid; gap: 4px; }
+.broker-balance-history-list span { color: var(--app-subtle); font-size: 9px; }
+.broker-balance-history-list strong { color: var(--app-title); font-size: 11px; }
+.broker-balance-history-list strong.positive { color: var(--app-positive); }
+.broker-balance-history-list strong.negative { color: #ff7d72; }
+
+.broker-balance-history {
+  margin-top: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.broker-balance-history > summary {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  color: var(--app-title);
+  font-size: 13px;
+  font-weight: 800;
+  list-style: none;
+  cursor: pointer;
+}
+
+.broker-balance-history > summary::-webkit-details-marker { display: none; }
+.broker-balance-history > summary > strong { margin-left: auto; color: var(--app-copy); font-size: 10px; }
+.broker-balance-history > summary > i { width: 20px; color: var(--app-subtle); font-style: normal; text-align: center; }
+.broker-balance-history > summary > i::before { content: "+"; }
+.broker-balance-history[open] > summary > i::before { content: "−"; }
+.broker-balance-history-list { display: grid; gap: 7px; padding: 0 10px 10px; }
+.broker-balance-history-list article {
+  display: grid;
+  grid-template-columns: minmax(170px, 1.4fr) repeat(3, minmax(110px, 1fr));
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--app-input);
+}
+.broker-balance-history-list article > div { display: grid; gap: 4px; }
+.broker-balance-history-list article span { color: var(--app-subtle); font-size: 9px; }
+.broker-balance-history-list article strong { color: var(--app-title); font-size: 11px; }
+
+@media (max-width: 760px) {
+  .broker-balance-history-list article { grid-template-columns: 1fr 1fr; }
 }
 
 .accounting-view .demo-period-cards {

@@ -5,6 +5,7 @@ import { correlateAutomaticOperationBatches } from "../domain/automatic-operatio
 import { projectAutomaticAccounting, type AutomaticAccountingMember } from "../domain/automatic-accounting-projection";
 import { classifyNinjaAccount } from "../domain/account-classification";
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
+import { recordNinjaBrokerOperationBalance } from "./broker-balance-processing";
 
 type AccountingPhase = AutomaticAccountingMember["phase"];
 
@@ -94,7 +95,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     if (!latestPhaseByAccountId.has(entry.account_id)) latestPhaseByAccountId.set(entry.account_id, entry.phase as AccountingPhase);
   }
   const expectedBalanceByPeriod = new Map<string, number | null>();
-  const loadExpectedBalance = async (periodId: string) => {
+  const loadExpectedBalance = async (periodId: string, openedAt: string) => {
     if (expectedBalanceByPeriod.has(periodId)) return expectedBalanceByPeriod.get(periodId) ?? null;
     const { data: currentControl } = await supabase.from("daily_controls")
       .select("balance_after_cents")
@@ -124,6 +125,19 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
         expectedBalanceByPeriod.set(periodId, value);
         return value;
       }
+    }
+    const { data: automaticBaseline } = await supabase
+      .from("ninja_broker_balance_events")
+      .select("balance_cents")
+      .eq("connector_id", connectorId)
+      .lte("observed_at", openedAt)
+      .order("observed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (automaticBaseline) {
+      const value = Number(automaticBaseline.balance_cents);
+      expectedBalanceByPeriod.set(periodId, value);
+      return value;
     }
     expectedBalanceByPeriod.set(periodId, null);
     return null;
@@ -160,7 +174,9 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     });
     const uniquePeriod = new Set(projectionMembers.map((member) => member.periodId));
     const projectionPeriodId = uniquePeriod.size === 1 ? projectionMembers[0]?.periodId ?? null : null;
-    const expectedOpeningBalanceInCents = projectionPeriodId ? await loadExpectedBalance(projectionPeriodId) : null;
+    const expectedOpeningBalanceInCents = projectionPeriodId
+      ? await loadExpectedBalance(projectionPeriodId, batch.broker.openedAt)
+      : null;
     const brokerOpeningBalanceInCents = batch.broker.openingBalance === null ? null : roundLikeSheets(batch.broker.openingBalance * 100);
     const brokerClosingBalanceInCents = batch.broker.closingBalance === null ? null : roundLikeSheets(batch.broker.closingBalance * 100);
     const projection = projectAutomaticAccounting({
@@ -190,6 +206,16 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       updated_at: new Date().toISOString(),
     }, { onConflict: "connector_id,broker_session_id" }).select("id").single();
     if (error || !stored) continue;
+    if (batch.broker.closingBalance !== null) {
+      await recordNinjaBrokerOperationBalance({
+        accountName: batch.broker.accountName,
+        balance: batch.broker.closingBalance,
+        connectionName: batch.broker.connectionName,
+        connectorId,
+        observedAt: batch.broker.lastEventAt,
+        openingEventId: batch.broker.openingEventId,
+      });
+    }
     await supabase.from("ninja_operation_batch_members").delete().eq("batch_id", stored.id);
     const members = [{
       account_id: null,

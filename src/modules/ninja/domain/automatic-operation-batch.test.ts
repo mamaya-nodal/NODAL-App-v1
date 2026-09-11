@@ -36,7 +36,7 @@ describe("automatic operation batches", () => {
     const broker = operation({
       accountName: "Broker principal",
       direction: "Short",
-      quantity: 5,
+      quantity: 1,
       result: 500,
       role: "broker",
     });
@@ -76,23 +76,29 @@ describe("automatic operation batches", () => {
     expect(brokerAccountConflicts([first, second])).toEqual(["Ninja Mauri\u0000Broker principal"]);
   });
 
-  it("marks an ambiguous coverage as a conflict instead of guessing participants", () => {
-    const props = Array.from({ length: 6 }, (_, index) => operation({
+  it("does not require broker and replicated prop quantities to be equal", () => {
+    const props = Array.from({ length: 5 }, (_, index) => operation({
       accountName: `TFY${index + 40}`,
       direction: "Long",
-      quantity: 1,
+      quantity: 3,
       role: "prop",
     }));
     const broker = operation({
       accountName: "Broker principal",
       direction: "Short",
-      quantity: 5,
+      quantity: 1,
+      result: 720.64,
       role: "broker",
     });
 
     expect(correlateAutomaticOperationBatches([...props, broker])[0]).toMatchObject({
-      props: [],
-      status: "conflict",
+      brokerResultInCents: 72_064,
+      distributedInCents: 72_065,
+      props: Array.from({ length: 5 }, () => expect.objectContaining({
+        allocatedBrokerResultInCents: 14_413,
+      })),
+      roundingDifferenceInCents: 1,
+      status: "ready",
     });
   });
 });

@@ -46,10 +46,9 @@ export function correlateAutomaticOperationBatches(
         opposite(operation.direction, broker.direction) &&
         sameSingleInstrument(operation, broker),
       );
-    const quantity = candidates.reduce((total, candidate) => total + candidate.operation.quantity, 0);
     const result = broker.result === null ? null : roundLikeSheets(broker.result * 100);
-    const conflict = broker.instruments.length !== 1 || quantity > broker.quantity;
-    if (candidates.length === 0 || result === null || quantity !== broker.quantity || conflict) {
+    const conflict = broker.instruments.length !== 1 || broker.direction === null || broker.quantity <= 0;
+    if (candidates.length === 0 || result === null || conflict) {
       return {
         broker,
         brokerResultInCents: result ?? 0,

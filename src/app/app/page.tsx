@@ -52,6 +52,7 @@ import type { NinjaConnectorStatus } from "./ninja-connector-panel";
 import {
   DailyControlPreview,
   type NinjaBrokerBalanceEvent,
+  type NinjaBrokerBalanceHistoryItem,
   type PersistedDailyControl,
 } from "./daily-control-preview";
 import { HomeOverview } from "./home-overview";
@@ -158,6 +159,7 @@ type NinjaBrokerBalanceRpcRow = {
   id: string;
   observed_at: string;
   source_accounts: NinjaBrokerBalanceEvent["sourceAccounts"];
+  source_event_id: string;
 };
 
 export default async function PrivateAppPage({
@@ -204,9 +206,11 @@ export default async function PrivateAppPage({
   let ninjaConnector: NinjaConnectorStatus | null = null;
   let ninjaTransitionAlerts: NinjaTransitionAlert[] = [];
   let incomingNinjaBalance: NinjaBrokerBalanceEvent | null = null;
+  let ninjaBrokerBalanceHistory: NinjaBrokerBalanceHistoryItem[] = [];
   let liveNinjaBrokerBalance: NinjaLiveBrokerBalance | null = null;
   let ninjaBrokerSourceNotice: string | null = null;
   let ninjaInventoryRevision = buildNinjaInventoryRevision([]);
+  let ninjaAccountBalances = new Map<string, { currentInCents: number | null; initialInCents: number | null }>();
 
   if (allowed) {
     const [{ data: workspaces }, { data: ninjaConnectorRows }] = await Promise.all([
@@ -356,11 +360,15 @@ export default async function PrivateAppPage({
           .order("approved_on", { ascending: false }),
         supabase
           .from("ninja_account_links")
-          .select("account_id, external_account_name, closed_at")
+          .select("account_id, connection_name, external_account_name, closed_at")
           .order("linked_at"),
         supabase.rpc("get_current_user_ninja_inventory"),
         supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
-        supabase.rpc("get_current_user_pending_ninja_broker_balance"),
+        supabase
+          .from("ninja_broker_balance_events")
+          .select("id, observed_at, balance_cents, source_accounts, source_event_id")
+          .order("observed_at", { ascending: false })
+          .limit(30),
         supabase
           .from("purchases")
           .select("id, account_id, period_id, purchase_number, purchased_on, price_cents, funds_origin")
@@ -404,6 +412,21 @@ export default async function PrivateAppPage({
     linkedNinjaAccountNames = new Set((ninjaLinkRows ?? []).filter((link) => link.closed_at === null).map((link) => link.external_account_name));
     ninjaNamesByAccountId = new Map((ninjaLinkRows ?? []).map((link) => [link.account_id, link.external_account_name]));
     ninjaInventories = (ninjaInventoryRows ?? []) as NinjaInventoryRpcRow[];
+    const latestNinjaAccounts = new Map(ninjaInventories.flatMap((inventory) =>
+      inventory.accounts.map((account) => [`${account.connectionName}\u0000${account.accountName}`, {
+        account,
+        observedAt: inventory.observed_at,
+      }] as const),
+    ));
+    ninjaAccountBalances = new Map((ninjaLinkRows ?? []).flatMap((link) => {
+      const latest = latestNinjaAccounts.get(`${link.connection_name}\u0000${link.external_account_name}`);
+      if (!latest) return [];
+      const classification = classifyNinjaAccount(latest.account, latest.observedAt);
+      return [[link.account_id, {
+        currentInCents: latest.account.cashValue === null ? null : Math.round(latest.account.cashValue * 100),
+        initialInCents: classification.type === "prop" ? classification.accountSizeInCents : null,
+      }] as const];
+    }));
     ninjaInventoryRevision = buildNinjaInventoryRevision(ninjaInventories);
     const connectedNinjaAccounts = ninjaInventories.flatMap((inventory) =>
       inventory.accounts.filter(
@@ -440,17 +463,20 @@ export default async function PrivateAppPage({
         resolutionStatus: row.resolution_status,
         toAccountName: row.to_account_name,
       }));
-    const brokerBalanceRow = (ninjaBrokerBalanceRows?.[0] ?? null) as
-      | NinjaBrokerBalanceRpcRow
-      | null;
-    incomingNinjaBalance = brokerBalanceRow
-      ? {
-          balanceInCents: Number(brokerBalanceRow.balance_cents),
-          id: brokerBalanceRow.id,
-          observedAt: brokerBalanceRow.observed_at,
-          sourceAccounts: brokerBalanceRow.source_accounts,
-        }
-      : null;
+    const brokerRowsAscending = [...((ninjaBrokerBalanceRows ?? []) as NinjaBrokerBalanceRpcRow[])].reverse();
+    ninjaBrokerBalanceHistory = brokerRowsAscending.map((row, index) => {
+      const previous = index === 0 ? null : Number(brokerRowsAscending[index - 1].balance_cents);
+      const balance = Number(row.balance_cents);
+      return {
+        balanceInCents: balance,
+        changeInCents: previous === null ? null : balance - previous,
+        id: row.id,
+        kind: row.source_event_id.startsWith("ninja-operation:") ? "operation" as const : "initial" as const,
+        observedAt: row.observed_at,
+        previousBalanceInCents: previous,
+      };
+    }).reverse();
+    incomingNinjaBalance = null;
     const accountsById = new Map(
       (accountRows ?? []).map((account) => [account.id, account]),
     );
@@ -578,12 +604,15 @@ export default async function PrivateAppPage({
       const purchase = historicalPurchasesByAccountId.get(account.id);
       const period = historicalPeriodsById.get(account.period_id);
       if (!company || !period) return [];
+      const ninjaBalance = ninjaAccountBalances.get(account.id);
       return [{
         companyId: account.company_id,
         companyName: company.display_name,
+        currentCashValueInCents: ninjaBalance?.currentInCents ?? null,
         externalName: ninjaNamesByAccountId.get(account.id) ?? null,
         fundsOrigin: purchase?.funds_origin ?? null,
         id: account.id,
+        initialBalanceInCents: ninjaBalance?.initialInCents ?? null,
         periodLabel: formatPeriodLabel(period.periodMonth),
         periodMonth: period.periodMonth,
         priceInCents: purchase ? Number(purchase.price_cents) : null,
@@ -983,7 +1012,7 @@ export default async function PrivateAppPage({
             <h2 id="operations-title">Operaciones</h2>
           </div>
           <DailyControlPreview
-            key={incomingNinjaBalance?.id ?? "no-ninja-balance"}
+            key={ninjaBrokerBalanceHistory[0]?.id ?? "no-ninja-balance"}
             accounts={accountOptions}
             brokerAccountNames={connectedNinjaBrokerAccountNames}
             companies={companies.map((company) => ({
@@ -993,6 +1022,7 @@ export default async function PrivateAppPage({
             embedded
             initialControls={dailyControls}
             incomingNinjaBalance={incomingNinjaBalance}
+            ninjaBrokerBalanceHistory={ninjaBrokerBalanceHistory}
             initialLiveNinjaBalance={liveNinjaBrokerBalance}
             ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}
             ninjaOnline={connectorOnline}

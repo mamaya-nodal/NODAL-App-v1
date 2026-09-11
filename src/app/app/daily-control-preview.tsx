@@ -77,6 +77,15 @@ export type NinjaBrokerBalanceEvent = Readonly<{
   }>;
 }>;
 
+export type NinjaBrokerBalanceHistoryItem = Readonly<{
+  balanceInCents: number;
+  changeInCents: number | null;
+  id: string;
+  kind: "initial" | "operation";
+  observedAt: string;
+  previousBalanceInCents: number | null;
+}>;
+
 function currentOperationalDay() {
   return new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
@@ -107,6 +116,7 @@ type DailyControlPreviewProps = {
   initialControls: PersistedDailyControl[];
   initialLiveNinjaBalance: NinjaLiveBrokerBalance | null;
   incomingNinjaBalance: NinjaBrokerBalanceEvent | null;
+  ninjaBrokerBalanceHistory?: readonly NinjaBrokerBalanceHistoryItem[];
   ninjaBrokerSourceNotice: string | null;
   ninjaOnline: boolean;
   openingBalanceInCents?: number | null;
@@ -130,6 +140,7 @@ export function DailyControlPreview({
   initialControls,
   initialLiveNinjaBalance,
   incomingNinjaBalance,
+  ninjaBrokerBalanceHistory = [],
   ninjaBrokerSourceNotice,
   ninjaOnline,
   openingBalanceInCents = null,
@@ -723,6 +734,8 @@ export function DailyControlPreview({
     }
   }
 
+  const latestAutomaticBalance = ninjaBrokerBalanceHistory[0]?.balanceInCents ?? null;
+
   return (
     <section
       className="daily-preview-panel"
@@ -884,7 +897,8 @@ export function DailyControlPreview({
           {liveNinjaBalance ? formatMoney(liveNinjaBalance.balanceInCents) : "Sin datos de Ninja"}
         </strong>
         <div className="broker-live-meta">
-          <span>Contabilizado <b>{balanceInCents === null ? "—" : formatMoney(balanceInCents)}</b></span>
+          <span>Último cierre <b>{latestAutomaticBalance === null ? "—" : formatMoney(latestAutomaticBalance)}</b></span>
+          <span>Contabilidad <b>{balanceInCents === null ? "Pendiente" : formatMoney(balanceInCents)}</b></span>
           {liveNinjaBalance && (
             <span>
               {liveNinjaBalance.sourceAccounts.map((account) => account.accountName).join(" + ")}
@@ -895,8 +909,32 @@ export function DailyControlPreview({
         </div>
       </div>
 
+      {ninjaBrokerBalanceHistory.length > 0 && (
+        <details className="broker-balance-history" open>
+          <summary>
+            <span>Evolución del saldo</span>
+            <strong>{ninjaBrokerBalanceHistory.length}</strong>
+            <i aria-hidden="true" />
+          </summary>
+          <div className="broker-balance-history-list">
+            {ninjaBrokerBalanceHistory.map((item) => (
+              <article key={item.id}>
+                <div>
+                  <strong>{item.kind === "initial" ? "Saldo inicial detectado" : "Operación cerrada"}</strong>
+                  <span>{new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date(item.observedAt))}</span>
+                </div>
+                <div><span>Anterior</span><strong>{item.previousBalanceInCents === null ? "—" : formatMoney(item.previousBalanceInCents)}</strong></div>
+                <div><span>Variación</span><strong className={(item.changeInCents ?? 0) < 0 ? "negative" : "positive"}>{item.changeInCents === null ? "—" : formatMoney(item.changeInCents)}</strong></div>
+                <div><span>Nuevo saldo</span><strong>{formatMoney(item.balanceInCents)}</strong></div>
+              </article>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {!liveNinjaBalance && (
       <details className="accounting-exception daily-movement-exception">
-        <summary>Ajuste manual de saldo</summary>
+        <summary>Registrar saldo excepcional</summary>
         <form
           className={`daily-preview-form${entryKind === "balance_update" ? "" : " with-origin"}`}
           onSubmit={addPreviewEntry}
@@ -978,6 +1016,7 @@ export function DailyControlPreview({
         </button>
         </form>
       </details>
+      )}
 
       {error && (
         <p className="purchase-message error" role="alert">
