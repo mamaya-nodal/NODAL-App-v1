@@ -26,6 +26,7 @@ export type AccountOverviewAccount = RegisterAccount & Readonly<{
   initialBalanceInCents: number | null;
   periodLabel: string;
   periodMonth: string;
+  technicalTradeCount: number;
 }>;
 
 type AccountPresentation = Readonly<{
@@ -72,7 +73,10 @@ function presentation(
     account,
     resultInCents: account.state === "virgin" || accountEntries.length === 0 ? null : latestResult,
     stage: activePhase === "Evaluacion" ? "Evaluation" : "Funded",
-    trades: new Set(accountEntries.map((entry) => entry.dailyControlId)).size,
+    trades: Math.max(
+      new Set(accountEntries.map((entry) => entry.dailyControlId)).size,
+      account.technicalTradeCount,
+    ),
   };
 }
 

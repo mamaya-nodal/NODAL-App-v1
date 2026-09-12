@@ -162,6 +162,13 @@ type NinjaBrokerBalanceRpcRow = {
   source_event_id: string;
 };
 
+type NinjaOperationProbeRpcRow = {
+  account_name: string;
+  closing_balance: number | string | null;
+  connection_name: string;
+  status: "closed" | "open" | "settling";
+};
+
 export default async function PrivateAppPage({
   searchParams,
 }: PrivateAppPageProps) {
@@ -210,7 +217,11 @@ export default async function PrivateAppPage({
   let liveNinjaBrokerBalance: NinjaLiveBrokerBalance | null = null;
   let ninjaBrokerSourceNotice: string | null = null;
   let ninjaInventoryRevision = buildNinjaInventoryRevision([]);
-  let ninjaAccountBalances = new Map<string, { currentInCents: number | null; initialInCents: number | null }>();
+  let ninjaAccountBalances = new Map<string, {
+    currentInCents: number | null;
+    initialInCents: number | null;
+    technicalTradeCount: number;
+  }>();
 
   if (allowed) {
     const [{ data: workspaces }, { data: ninjaConnectorRows }] = await Promise.all([
@@ -297,6 +308,7 @@ export default async function PrivateAppPage({
       { data: fundingWithdrawalRows },
       { data: ninjaLinkRows },
       { data: ninjaInventoryRows },
+      { data: ninjaOperationProbeRows },
       { data: ninjaTransitionRows },
       { data: ninjaBrokerBalanceRows },
       { data: historicalPurchaseRows },
@@ -363,6 +375,7 @@ export default async function PrivateAppPage({
           .select("account_id, connection_name, external_account_name, closed_at")
           .order("linked_at"),
         supabase.rpc("get_current_user_ninja_inventory"),
+        supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),
         supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
         supabase
           .from("ninja_broker_balance_events")
@@ -412,19 +425,44 @@ export default async function PrivateAppPage({
     linkedNinjaAccountNames = new Set((ninjaLinkRows ?? []).filter((link) => link.closed_at === null).map((link) => link.external_account_name));
     ninjaNamesByAccountId = new Map((ninjaLinkRows ?? []).map((link) => [link.account_id, link.external_account_name]));
     ninjaInventories = (ninjaInventoryRows ?? []) as NinjaInventoryRpcRow[];
-    const latestNinjaAccounts = new Map(ninjaInventories.flatMap((inventory) =>
+    const latestNinjaAccounts = new Map<string, {
+      account: NinjaAccountSnapshot & { firstSeenAt?: string };
+      observedAt: string;
+    }>(ninjaInventories.flatMap((inventory) =>
       inventory.accounts.map((account) => [`${account.connectionName}\u0000${account.accountName}`, {
         account,
         observedAt: inventory.observed_at,
       }] as const),
     ));
+    const technicalSessions = (ninjaOperationProbeRows ?? []) as NinjaOperationProbeRpcRow[];
+    const technicalSessionsByAccount = new Map<string, NinjaOperationProbeRpcRow[]>();
+    for (const session of technicalSessions) {
+      const key = `${session.connection_name}\u0000${session.account_name}`;
+      technicalSessionsByAccount.set(key, [...(technicalSessionsByAccount.get(key) ?? []), session]);
+    }
     ninjaAccountBalances = new Map((ninjaLinkRows ?? []).flatMap((link) => {
-      const latest = latestNinjaAccounts.get(`${link.connection_name}\u0000${link.external_account_name}`);
-      if (!latest) return [];
-      const classification = classifyNinjaAccount(latest.account, latest.observedAt);
+      const key = `${link.connection_name}\u0000${link.external_account_name}`;
+      const latest = latestNinjaAccounts.get(key);
+      const sessions = technicalSessionsByAccount.get(key) ?? [];
+      const lastClosedBalance = sessions.find((session) => session.closing_balance !== null)?.closing_balance ?? null;
+      const accountForClassification: NinjaAccountSnapshot = latest?.account ?? {
+        accountName: link.external_account_name,
+        cashValue: null,
+        connectionName: link.connection_name,
+        connectionStatus: "Disconnected",
+        netLiquidation: null,
+        providerName: "NinjaTrader",
+        realizedProfitLoss: null,
+        totalCashBalance: null,
+        unrealizedProfitLoss: null,
+      };
+      const classification = classifyNinjaAccount(accountForClassification, latest?.observedAt ?? new Date().toISOString());
       return [[link.account_id, {
-        currentInCents: latest.account.cashValue === null ? null : Math.round(latest.account.cashValue * 100),
+        currentInCents: latest?.account.cashValue !== null && latest?.account.cashValue !== undefined
+          ? Math.round(latest.account.cashValue * 100)
+          : lastClosedBalance === null ? null : Math.round(Number(lastClosedBalance) * 100),
         initialInCents: classification.type === "prop" ? classification.accountSizeInCents : null,
+        technicalTradeCount: sessions.length,
       }] as const];
     }));
     ninjaInventoryRevision = buildNinjaInventoryRevision(ninjaInventories);
@@ -621,6 +659,7 @@ export default async function PrivateAppPage({
         referenceNumber: account.reference_number,
         state: account.state as AccountView["state"],
         stateOrigin: account.state_origin as AccountView["stateOrigin"],
+        technicalTradeCount: ninjaBalance?.technicalTradeCount ?? 0,
       }];
     });
     operationEntryHistory = (historicalOperationEntryRows ?? []).flatMap((entry) => {
