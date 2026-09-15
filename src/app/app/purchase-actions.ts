@@ -24,7 +24,7 @@ function safeContextUrl(mode: string, period: string, result: string): string {
     params.set("period", period);
   }
 
-  return `/app?${params.toString()}`;
+  return `/app?${params.toString()}#cuentas`;
 }
 
 export async function createPurchase(formData: FormData): Promise<never> {
