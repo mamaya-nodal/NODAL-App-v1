@@ -22,12 +22,21 @@ type Input = Readonly<{
   brokerResultInCents: number;
   expectedOpeningBalanceInCents: number | null;
   members: readonly AutomaticAccountingMember[];
+  technicalMemberCount: number;
 }>;
 
 export function projectAutomaticAccounting(input: Input): AutomaticAccountingProjection {
   const base = { accountCount: input.members.length, companyId: null, phase: null, periodId: null };
   if (input.batchStatus !== "ready") {
     return { ...base, reason: input.batchStatus === "conflict" ? "Cobertura ambigua" : "Cobertura sin cuentas prop compatibles", status: "blocked" };
+  }
+  if (input.members.length !== input.technicalMemberCount) {
+    const missing = Math.max(input.technicalMemberCount - input.members.length, 0);
+    return {
+      ...base,
+      reason: `Falta registrar ${missing} de las ${input.technicalMemberCount} cuentas prop de la operación`,
+      status: "blocked",
+    };
   }
   if (input.members.length === 0) {
     return { ...base, reason: "El lote no contiene cuentas prop", status: "blocked" };

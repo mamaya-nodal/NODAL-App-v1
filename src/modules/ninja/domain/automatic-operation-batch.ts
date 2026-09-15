@@ -40,7 +40,6 @@ export function correlateAutomaticOperationBatches(
       .map((operation, index) => ({ index, operation }))
       .filter(({ index, operation }) =>
         operation.role === "prop" &&
-        operation.accountId !== null &&
         !usedProps.has(index) &&
         Math.abs(Date.parse(operation.openedAt) - Date.parse(broker.openedAt)) <= openingToleranceMs &&
         opposite(operation.direction, broker.direction) &&

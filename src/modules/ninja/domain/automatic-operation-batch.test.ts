@@ -103,4 +103,30 @@ describe("automatic operation batches", () => {
       status: "ready",
     });
   });
+
+  it("preserves unregistered prop legs so the batch cannot close with only a subset", () => {
+    const props = Array.from({ length: 5 }, (_, index) => operation({
+      accountId: index < 2 ? `account-${index}` : null,
+      accountName: `TFY${index + 50}`,
+      direction: "Long",
+      quantity: 3,
+      role: "prop",
+    }));
+    const broker = operation({
+      accountName: "Broker principal",
+      direction: "Short",
+      quantity: 1,
+      result: 699.26,
+      role: "broker",
+    });
+
+    const [batch] = correlateAutomaticOperationBatches([...props, broker]);
+
+    expect(batch.status).toBe("ready");
+    expect(batch.props).toHaveLength(5);
+    expect(batch.props.filter((prop) => prop.accountId === null)).toHaveLength(3);
+    expect(batch.props.map((prop) => prop.allocatedBrokerResultInCents))
+      .toEqual([13_985, 13_985, 13_985, 13_985, 13_985]);
+    expect(batch.roundingDifferenceInCents).toBe(-1);
+  });
 });

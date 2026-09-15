@@ -56,8 +56,18 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     const key = `${session.connection_name}\u0000${session.account_name}`;
     const link = linkForSession(session);
     const accountId = link?.account_id ?? null;
-    const observedType = inventoryClassifications.get(key)?.type;
-    if (!accountId && observedType !== "broker") return [];
+    const detected = inventoryClassifications.get(key) ?? classifyNinjaAccount({
+      accountName: session.account_name,
+      cashValue: null,
+      connectionName: session.connection_name,
+      connectionStatus: "Connected",
+      netLiquidation: null,
+      providerName: "NinjaTrader",
+      realizedProfitLoss: null,
+      totalCashBalance: null,
+      unrealizedProfitLoss: null,
+    }, session.opened_at);
+    if (!accountId && detected.type !== "broker" && detected.type !== "prop") return [];
     return [{
       accountId,
       accountName: session.account_name,
@@ -75,7 +85,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       openingEventId: Number(session.opening_event_id),
       quantity: session.quantity,
       result: session.result === null ? null : Number(session.result),
-      role: accountId ? "prop" as const : "broker" as const,
+      role: accountId || detected.type === "prop" ? "prop" as const : "broker" as const,
       settledAt: session.settled_at,
       status: session.status as "closed" | "open" | "settling",
     }];
@@ -205,6 +215,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       brokerResultInCents: batch.brokerResultInCents,
       expectedOpeningBalanceInCents,
       members: projectionMembers,
+      technicalMemberCount: batch.props.length,
     });
     const { data: stored, error } = await supabase.from("ninja_operation_batches").upsert({
       accounting_blocking_reason: projection.reason,

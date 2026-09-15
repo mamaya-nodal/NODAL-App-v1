@@ -19,6 +19,7 @@ describe("automatic accounting projection", () => {
       brokerResultInCents: 50_000,
       expectedOpeningBalanceInCents: 5_000_000,
       members: Array.from({ length: 5 }, (_, index) => member(`account-${index}`)),
+      technicalMemberCount: 5,
     });
     expect(result).toEqual({
       accountCount: 5,
@@ -38,6 +39,7 @@ describe("automatic accounting projection", () => {
       brokerResultInCents: 10_000,
       expectedOpeningBalanceInCents: null,
       members: [member("account-1")],
+      technicalMemberCount: 1,
     })).toMatchObject({ reason: "Falta registrar el depósito inicial del broker", status: "blocked" });
   });
 
@@ -49,6 +51,23 @@ describe("automatic accounting projection", () => {
       brokerResultInCents: 20_000,
       expectedOpeningBalanceInCents: 5_000_000,
       members: [member("account-1"), { ...member("account-2"), companyId: "company-2" }],
+      technicalMemberCount: 2,
     })).toMatchObject({ reason: "Las cuentas pertenecen a empresas distintas", status: "blocked" });
+  });
+
+  it("espera las cuentas técnicas que todavía no fueron registradas", () => {
+    expect(projectAutomaticAccounting({
+      batchStatus: "ready",
+      brokerClosingBalanceInCents: 5_020_000,
+      brokerOpeningBalanceInCents: 5_000_000,
+      brokerResultInCents: 20_000,
+      expectedOpeningBalanceInCents: 5_000_000,
+      members: [member("account-1"), member("account-2")],
+      technicalMemberCount: 5,
+    })).toMatchObject({
+      accountCount: 2,
+      reason: "Falta registrar 3 de las 5 cuentas prop de la operación",
+      status: "blocked",
+    });
   });
 });
