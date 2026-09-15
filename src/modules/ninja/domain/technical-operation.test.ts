@@ -8,6 +8,38 @@ function row(id: number, eventType: NinjaTelemetryRow["event_type"], occurredAt:
 }
 
 describe("Ninja technical operations", () => {
+  it("usa el inventario previo cuando Ninja envía la ejecución antes del primer saldo", () => {
+    const operations = buildNinjaTechnicalOperations([
+      row(2, "execution", "2026-09-15T12:18:23.000Z", {}, "NQ DEC26"),
+      row(3, "position", "2026-09-15T12:18:23.100Z", { marketPosition: "Long", quantity: 3 }, "NQ DEC26"),
+      row(4, "balance", "2026-09-15T12:18:24.000Z", { cashValue: 49_995.86, netLiquidation: 49_990 }),
+      row(5, "position", "2026-09-15T12:24:00.000Z", { marketPosition: "Flat", quantity: 0 }, "NQ DEC26"),
+      row(6, "balance", "2026-09-15T12:24:01.000Z", { cashValue: 48_002.72, netLiquidation: 48_002.72 }),
+    ], new Date("2026-09-15T12:24:12.000Z"), 50_000);
+
+    expect(operations[0]).toMatchObject({
+      closingBalance: 48_002.72,
+      openingBalance: 50_000,
+      result: -1_997.28,
+      status: "closed",
+    });
+  });
+
+  it("conserva el mínimo intradiario de Net Liquidation como evidencia de quema", () => {
+    const operations = buildNinjaTechnicalOperations([
+      row(1, "balance", "2026-09-15T12:18:22.000Z", { cashValue: 50_000, netLiquidation: 50_000 }),
+      row(2, "position", "2026-09-15T12:18:23.000Z", { marketPosition: "Long", quantity: 3 }, "NQ DEC26"),
+      row(3, "balance", "2026-09-15T12:23:59.000Z", { cashValue: 49_995.86, netLiquidation: 47_996.36 }),
+      row(4, "position", "2026-09-15T12:24:00.000Z", { marketPosition: "Flat", quantity: 0 }, "NQ DEC26"),
+      row(5, "balance", "2026-09-15T12:24:01.000Z", { cashValue: 48_002.72, netLiquidation: 48_002.72 }),
+    ], new Date("2026-09-15T12:24:12.000Z"));
+
+    expect(operations[0]).toMatchObject({
+      minimumNetLiquidation: 47_996.36,
+      minimumNetLiquidationAt: "2026-09-15T12:23:59.000Z",
+    });
+  });
+
   it("convierte una entrada y salida estabilizada en una operación cerrada", () => {
     const operations = buildNinjaTechnicalOperations([
       row(1, "balance", "2026-09-07T18:00:00.000Z", { cashValue: 100_000 }),

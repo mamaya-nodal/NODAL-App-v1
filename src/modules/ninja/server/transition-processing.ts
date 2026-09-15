@@ -7,6 +7,7 @@ import type { NinjaInventorySnapshot } from "../domain/ingestion-payload";
 import { isNinjaInventorySnapshot } from "../domain/ingestion-payload";
 import { resolveNinjaReferenceBalance } from "../domain/reference-balance";
 import { evolveNinjaTransitionState, type NinjaTransitionObservation, type NinjaTransitionState } from "../domain/transition-state";
+import type { NinjaTechnicalOperation } from "../domain/technical-operation";
 
 export type TransitionProcessingResult = Readonly<{
   detectedChanges: number;
@@ -131,4 +132,68 @@ export async function refreshNinjaTransitionsFromLatestSnapshot(
   return isNinjaInventorySnapshot(snapshot)
     ? processNinjaTransitions(connectorId, snapshot)
     : { detectedChanges: 0, processed: false, reason: "storage_error" };
+}
+
+export async function processNinjaOperationBurns(
+  connectorId: string,
+  operations: readonly NinjaTechnicalOperation[],
+): Promise<TransitionProcessingResult> {
+  const candidates = operations.filter((operation) =>
+    operation.status === "closed" &&
+    operation.minimumNetLiquidation !== null &&
+    operation.minimumNetLiquidationAt !== null,
+  );
+  if (candidates.length === 0) return { detectedChanges: 0, processed: true };
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRoleKey) return { detectedChanges: 0, processed: false, reason: "not_configured" };
+  const supabase = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const { data: storedState, error } = await supabase
+    .from("ninja_transition_states")
+    .select("revision,state")
+    .eq("connector_id", connectorId)
+    .maybeSingle();
+  if (error || !storedState) return { detectedChanges: 0, processed: false, reason: "storage_error" };
+
+  const state = validState(storedState.state);
+  const operationByAccount = new Map(candidates.map((operation) => [
+    `${operation.connectionName}\u0000${operation.accountName}`,
+    operation,
+  ]));
+  const events: Array<Record<string, unknown>> = [];
+  const lives = state.lives.map((life) => {
+    if (life.status !== "active") return life;
+    const operation = operationByAccount.get(`${life.connectionName}\u0000${life.tracked.externalAccountName}`);
+    if (!operation || operation.minimumNetLiquidation === null || operation.minimumNetLiquidationAt === null) return life;
+    const minimumInCents = Math.round(operation.minimumNetLiquidation * 100);
+    if (minimumInCents > life.tracked.burnFloorInCents) return life;
+    events.push({
+      automatic: true,
+      connectionName: life.connectionName,
+      fromAccountName: life.tracked.externalAccountName,
+      fromLifeId: life.lifeId,
+      kind: "burned",
+      occurredAt: operation.minimumNetLiquidationAt,
+      reason: "Net Liquidation tocó el piso de quema vigente durante la operación.",
+      sourceEventId: `ninja-operation-burn:${operation.openingEventId}`,
+      toAccountName: null,
+      toLifeId: null,
+    });
+    return {
+      ...life,
+      status: "burned" as const,
+      tracked: { ...life.tracked, balanceInCents: minimumInCents },
+    };
+  });
+  if (events.length === 0) return { detectedChanges: 0, processed: true };
+  const { data: committed, error: commitError } = await supabase.rpc("commit_ninja_transition_state", {
+    expected_revision: Number(storedState.revision),
+    target_connector_id: connectorId,
+    target_events: events,
+    target_state: { lives },
+  });
+  return commitError || committed !== true
+    ? { detectedChanges: 0, processed: false, reason: "storage_error" }
+    : { detectedChanges: events.length, processed: true };
 }

@@ -15,6 +15,8 @@ function operation(input: Partial<ClassifiedTechnicalOperation> & Pick<Classifie
     flatAt: "2026-09-08T14:00:10.000Z",
     instruments: ["MNQ DEC26"],
     lastEventAt: "2026-09-08T14:00:11.000Z",
+    minimumNetLiquidation: 49_900,
+    minimumNetLiquidationAt: "2026-09-08T14:00:09.000Z",
     openedAt: "2026-09-08T14:00:01.000Z",
     openingBalance: 50_000,
     openingEventId: Number(input.accountName.replace(/\D/g, "")) || 1,

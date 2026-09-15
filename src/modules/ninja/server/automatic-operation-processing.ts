@@ -29,7 +29,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
   });
 
   const [{ data: sessions, error: sessionsError }, { data: links, error: linksError }, { data: inventory }] = await Promise.all([
-    supabase.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,result,execution_count,instruments,direction,quantity").eq("connector_id", connectorId).order("opened_at").order("id"),
+    supabase.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,execution_count,instruments,direction,quantity").eq("connector_id", connectorId).order("opened_at").order("id"),
     supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at").eq("connector_id", connectorId),
     supabase.from("ninja_inventory_snapshots").select("accounts,observed_at").eq("connector_id", connectorId).order("observed_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
@@ -68,6 +68,8 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       flatAt: session.flat_at,
       instruments: session.instruments,
       lastEventAt: session.last_event_at,
+      minimumNetLiquidation: session.minimum_net_liquidation === null ? null : Number(session.minimum_net_liquidation),
+      minimumNetLiquidationAt: session.minimum_net_liquidation_at,
       openedAt: session.opened_at,
       openingBalance: session.opening_balance === null ? null : Number(session.opening_balance),
       openingEventId: Number(session.opening_event_id),
@@ -238,7 +240,16 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     if (!memberError) {
       persistedBatches += 1;
       if (projection.status === "shadow_ready" && projection.periodId && brokerClosingBalanceInCents !== null) {
-        expectedBalanceByPeriod.set(projection.periodId, brokerClosingBalanceInCents);
+        const { error: commitError } = await supabase.rpc("commit_ninja_automatic_operation_batch", {
+          target_batch_id: stored.id,
+        });
+        if (!commitError) {
+          expectedBalanceByPeriod.set(projection.periodId, brokerClosingBalanceInCents);
+        } else {
+          await supabase.from("ninja_operation_batches").update({
+            accounting_blocking_reason: "El cierre quedó conciliado, pero no pudo registrarse automáticamente.",
+          }).eq("id", stored.id);
+        }
       }
     }
   }

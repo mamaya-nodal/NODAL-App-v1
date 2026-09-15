@@ -166,6 +166,8 @@ type NinjaOperationProbeRpcRow = {
   account_name: string;
   closing_balance: number | string | null;
   connection_name: string;
+  minimum_net_liquidation: number | string | null;
+  minimum_net_liquidation_at: string | null;
   status: "closed" | "open" | "settling";
 };
 
@@ -220,6 +222,7 @@ export default async function PrivateAppPage({
   let ninjaAccountBalances = new Map<string, {
     currentInCents: number | null;
     initialInCents: number | null;
+    minimumNetLiquidationInCents: number | null;
     technicalTradeCount: number;
   }>();
 
@@ -445,6 +448,7 @@ export default async function PrivateAppPage({
       const latest = latestNinjaAccounts.get(key);
       const sessions = technicalSessionsByAccount.get(key) ?? [];
       const lastClosedBalance = sessions.find((session) => session.closing_balance !== null)?.closing_balance ?? null;
+      const lastMinimumNetLiquidation = sessions.find((session) => session.minimum_net_liquidation !== null)?.minimum_net_liquidation ?? null;
       const accountForClassification: NinjaAccountSnapshot = latest?.account ?? {
         accountName: link.external_account_name,
         cashValue: null,
@@ -462,6 +466,7 @@ export default async function PrivateAppPage({
           ? Math.round(latest.account.cashValue * 100)
           : lastClosedBalance === null ? null : Math.round(Number(lastClosedBalance) * 100),
         initialInCents: classification.type === "prop" ? classification.accountSizeInCents : null,
+        minimumNetLiquidationInCents: lastMinimumNetLiquidation === null ? null : Math.round(Number(lastMinimumNetLiquidation) * 100),
         technicalTradeCount: sessions.length,
       }] as const];
     }));
@@ -651,6 +656,7 @@ export default async function PrivateAppPage({
         fundsOrigin: purchase?.funds_origin ?? null,
         id: account.id,
         initialBalanceInCents: ninjaBalance?.initialInCents ?? null,
+        minimumNetLiquidationInCents: ninjaBalance?.minimumNetLiquidationInCents ?? null,
         periodLabel: formatPeriodLabel(period.periodMonth),
         periodMonth: period.periodMonth,
         priceInCents: purchase ? Number(purchase.price_cents) : null,

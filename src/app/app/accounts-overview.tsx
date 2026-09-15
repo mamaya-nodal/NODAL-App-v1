@@ -24,6 +24,7 @@ type Props = Readonly<{
 export type AccountOverviewAccount = RegisterAccount & Readonly<{
   currentCashValueInCents: number | null;
   initialBalanceInCents: number | null;
+  minimumNetLiquidationInCents: number | null;
   periodLabel: string;
   periodMonth: string;
   technicalTradeCount: number;
@@ -111,6 +112,9 @@ function AccountCard({ item }: Readonly<{
         <div><span>Trades</span><strong>{trades}</strong></div>
         <div><span>Capital inicial</span><strong>{account.initialBalanceInCents === null ? "—" : money(account.initialBalanceInCents)}</strong></div>
         <div><span>Cash value actual</span><strong>{account.currentCashValueInCents === null ? "—" : money(account.currentCashValueInCents)}</strong></div>
+        {account.minimumNetLiquidationInCents !== null && (
+          <div><span>Mínimo Net Liquidation</span><strong>{money(account.minimumNetLiquidationInCents)}</strong></div>
+        )}
         <div><span>Variación prop</span><strong>{account.initialBalanceInCents === null || account.currentCashValueInCents === null ? "—" : money(account.currentCashValueInCents - account.initialBalanceInCents)}</strong></div>
         <div><span>Resultado contable</span><strong>{resultInCents === null ? account.state === "closed" ? "Pendiente" : "—" : money(resultInCents)}</strong></div>
       </div>

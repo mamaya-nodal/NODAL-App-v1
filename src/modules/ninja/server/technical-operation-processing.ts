@@ -4,8 +4,9 @@ import type { NinjaTelemetryRow } from "../domain/operation-probe";
 import { classifyNinjaAccount } from "../domain/account-classification";
 import { isolatedNinjaConnectionNames, isNinjaConnectionActive } from "../domain/connection-access";
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
-import { buildNinjaTechnicalOperations } from "../domain/technical-operation";
+import { buildNinjaTechnicalOperations, type NinjaTechnicalOperation } from "../domain/technical-operation";
 import { persistAutomaticOperationBatches } from "./automatic-operation-processing";
+import { processNinjaOperationBurns } from "./transition-processing";
 
 export async function refreshNinjaTechnicalOperations(connectorId: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -39,9 +40,9 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
       .eq("status", "isolated"),
     supabase
       .from("ninja_operation_probe_sessions")
-      .select("id,connection_name,account_name,opened_at,opening_event_id,status")
+      .select("id,connection_name,account_name,opened_at,opening_event_id,status,opening_balance")
       .eq("connector_id", connectorId)
-      .neq("status", "closed")
+      .or("status.neq.closed,opening_balance.is.null")
       .order("opened_at"),
   ]);
   if (allowlistResult.error || linksResult.error || inventoryResult.error || reviewsResult.error || unsettledResult.error) {
@@ -123,7 +124,21 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
       occurred_at: row.occurred_at,
       payload: row.payload,
     })) as NinjaTelemetryRow[];
-    const operations = buildNinjaTechnicalOperations(rows, new Date());
+    const { data: baselineInventory } = await supabase
+      .from("ninja_inventory_snapshots")
+      .select("accounts,observed_at")
+      .eq("connector_id", connectorId)
+      .lte("observed_at", rows[0].occurred_at)
+      .order("observed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const baselineAccount = ((baselineInventory?.accounts ?? []) as NinjaAccountSnapshot[]).find((candidate) =>
+      candidate.connectionName === account.connection_name && candidate.accountName === account.account_name,
+    );
+    const baselineBalance = baselineAccount?.cashValue !== null && baselineAccount?.cashValue !== undefined
+      ? baselineAccount.cashValue
+      : null;
+    const operations = buildNinjaTechnicalOperations(rows, new Date(), baselineBalance);
     if (!operations.length) return 0;
 
     const { error: upsertError } = await supabase
@@ -138,6 +153,8 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
         flat_at: operation.flatAt,
         instruments: operation.instruments,
         last_event_at: operation.lastEventAt,
+        minimum_net_liquidation: operation.minimumNetLiquidation,
+        minimum_net_liquidation_at: operation.minimumNetLiquidationAt,
         opened_at: operation.openedAt,
         opening_balance: operation.openingBalance,
         opening_event_id: operation.openingEventId,
@@ -150,6 +167,7 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
     if (!upsertError) {
       const validOpeningIds = new Set(operations.map((operation) => operation.openingEventId));
       const staleIds = unsettled
+        .filter((session) => session.status !== "closed")
         .filter((session) => !validOpeningIds.has(Number(session.opening_event_id)))
         .map((session) => session.id);
       // Retira artefactos creados cuando el límite anterior de 1.000 filas
@@ -163,6 +181,31 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
   }));
 
   const batches = await persistAutomaticOperationBatches(connectorId);
+  const { data: burnRows } = await supabase
+    .from("ninja_operation_probe_sessions")
+    .select("account_name,closing_balance,connection_name,direction,execution_count,flat_at,instruments,last_event_at,minimum_net_liquidation,minimum_net_liquidation_at,opened_at,opening_balance,opening_event_id,quantity,result,settled_at,status")
+    .eq("connector_id", connectorId)
+    .eq("status", "closed")
+    .not("minimum_net_liquidation", "is", null);
+  await processNinjaOperationBurns(connectorId, (burnRows ?? []).map((operation) => ({
+    accountName: operation.account_name,
+    closingBalance: operation.closing_balance === null ? null : Number(operation.closing_balance),
+    connectionName: operation.connection_name,
+    direction: operation.direction as NinjaTechnicalOperation["direction"],
+    executionCount: operation.execution_count,
+    flatAt: operation.flat_at,
+    instruments: operation.instruments,
+    lastEventAt: operation.last_event_at,
+    minimumNetLiquidation: operation.minimum_net_liquidation === null ? null : Number(operation.minimum_net_liquidation),
+    minimumNetLiquidationAt: operation.minimum_net_liquidation_at,
+    openedAt: operation.opened_at,
+    openingBalance: operation.opening_balance === null ? null : Number(operation.opening_balance),
+    openingEventId: Number(operation.opening_event_id),
+    quantity: operation.quantity,
+    result: operation.result === null ? null : Number(operation.result),
+    settledAt: operation.settled_at,
+    status: operation.status as NinjaTechnicalOperation["status"],
+  })));
   return {
     processedAccounts: observedAccounts.length,
     persistedOperations: operationCounts.reduce((total, count) => total + count, 0),

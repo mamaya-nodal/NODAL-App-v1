@@ -9,6 +9,8 @@ export type NinjaTechnicalOperation = Readonly<{
   flatAt: string | null;
   instruments: readonly string[];
   lastEventAt: string;
+  minimumNetLiquidation: number | null;
+  minimumNetLiquidationAt: string | null;
   openedAt: string;
   openingBalance: number | null;
   openingEventId: number;
@@ -54,6 +56,8 @@ type WorkingOperation = {
   flatAt: string | null;
   instruments: Set<string>;
   lastEventAt: string;
+  minimumNetLiquidation: number | null;
+  minimumNetLiquidationAt: string | null;
   openedAt: string;
   openingBalance: number | null;
   openingEventId: number;
@@ -76,6 +80,8 @@ function finish(operation: WorkingOperation, settledAt: string | null): NinjaTec
     flatAt: operation.flatAt,
     instruments: [...operation.instruments],
     lastEventAt: operation.lastEventAt,
+    minimumNetLiquidation: operation.minimumNetLiquidation,
+    minimumNetLiquidationAt: operation.minimumNetLiquidationAt,
     openedAt: operation.openedAt,
     openingBalance: operation.openingBalance,
     openingEventId: operation.openingEventId,
@@ -89,12 +95,13 @@ function finish(operation: WorkingOperation, settledAt: string | null): NinjaTec
 export function buildNinjaTechnicalOperations(
   rows: readonly NinjaTelemetryRow[],
   now = new Date(),
+  fallbackOpeningBalance: number | null = null,
 ): NinjaTechnicalOperation[] {
   const ordered = [...rows].sort((left, right) =>
     left.occurred_at.localeCompare(right.occurred_at) || left.id - right.id,
   );
   const operations: NinjaTechnicalOperation[] = [];
-  let previousBalance: number | null = null;
+  let previousBalance: number | null = fallbackOpeningBalance;
   let current: WorkingOperation | null = null;
 
   for (const row of ordered) {
@@ -123,6 +130,8 @@ export function buildNinjaTechnicalOperations(
         flatAt: null,
         instruments: new Set<string>(),
         lastEventAt: row.occurred_at,
+        minimumNetLiquidation: null,
+        minimumNetLiquidationAt: null,
         openedAt: row.occurred_at,
         openingBalance: previousBalance,
         openingEventId: row.id,
@@ -155,6 +164,11 @@ export function buildNinjaTechnicalOperations(
 
     if (row.event_type === "balance") {
       const cashValue = numeric(row.payload.cashValue);
+      const netLiquidation = numeric(row.payload.netLiquidation);
+      if (netLiquidation !== null && (current.minimumNetLiquidation === null || netLiquidation < current.minimumNetLiquidation)) {
+        current.minimumNetLiquidation = netLiquidation;
+        current.minimumNetLiquidationAt = row.occurred_at;
+      }
       if (current.flatAt && row.occurred_at >= current.flatAt) current.closingBalance = cashValue;
     }
   }
