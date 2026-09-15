@@ -29,7 +29,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
   });
 
   const [{ data: sessions, error: sessionsError }, { data: links, error: linksError }, { data: inventory }] = await Promise.all([
-    supabase.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,execution_count,instruments,direction,quantity").eq("connector_id", connectorId).order("opened_at").order("id"),
+    supabase.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,execution_count,instruments,direction,quantity").eq("connector_id", connectorId).is("excluded_at", null).order("opened_at").order("id"),
     supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at").eq("connector_id", connectorId),
     supabase.from("ninja_inventory_snapshots").select("accounts,observed_at").eq("connector_id", connectorId).order("observed_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
@@ -109,13 +109,30 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
   const expectedBalanceByPeriod = new Map<string, number | null>();
   const loadExpectedBalance = async (periodId: string, openedAt: string) => {
     if (expectedBalanceByPeriod.has(periodId)) return expectedBalanceByPeriod.get(periodId) ?? null;
-    const { data: currentControl } = await supabase.from("daily_controls")
-      .select("balance_after_cents")
-      .eq("period_id", periodId)
-      .lte("created_at", openedAt)
-      .order("control_number", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [{ data: currentControl }, { data: excludedSession }] = await Promise.all([
+      supabase.from("daily_controls")
+        .select("balance_after_cents,created_at")
+        .eq("period_id", periodId)
+        .lte("created_at", openedAt)
+        .order("control_number", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase.from("ninja_operation_probe_sessions")
+        .select("closing_balance,settled_at")
+        .eq("connector_id", connectorId)
+        .not("excluded_at", "is", null)
+        .not("closing_balance", "is", null)
+        .not("settled_at", "is", null)
+        .lte("settled_at", openedAt)
+        .order("settled_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    if (excludedSession && (!currentControl || Date.parse(excludedSession.settled_at) > Date.parse(currentControl.created_at))) {
+      const value = roundLikeSheets(Number(excludedSession.closing_balance) * 100);
+      expectedBalanceByPeriod.set(periodId, value);
+      return value;
+    }
     if (currentControl) {
       const value = Number(currentControl.balance_after_cents);
       expectedBalanceByPeriod.set(periodId, value);

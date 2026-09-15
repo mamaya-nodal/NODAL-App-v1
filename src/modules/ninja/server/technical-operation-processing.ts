@@ -186,6 +186,7 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
     .select("account_name,closing_balance,connection_name,direction,execution_count,flat_at,instruments,last_event_at,minimum_net_liquidation,minimum_net_liquidation_at,opened_at,opening_balance,opening_event_id,quantity,result,settled_at,status")
     .eq("connector_id", connectorId)
     .eq("status", "closed")
+    .is("excluded_at", null)
     .not("minimum_net_liquidation", "is", null);
   await processNinjaOperationBurns(connectorId, (burnRows ?? []).map((operation) => ({
     accountName: operation.account_name,
