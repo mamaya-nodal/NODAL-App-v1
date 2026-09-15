@@ -48,7 +48,7 @@ import { DetectedNinjaAccounts } from "./detected-ninja-accounts";
 import { NinjaConnectorGate } from "./ninja-connector-gate";
 import { NinjaConnectorMonitor } from "./ninja-connector-monitor";
 import { NinjaTransitionAlerts, type NinjaTransitionAlert } from "./ninja-transition-alerts";
-import type { NinjaConnectorStatus } from "./ninja-connector-panel";
+import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
 import {
   DailyControlPreview,
   type NinjaBrokerBalanceEvent,
@@ -851,9 +851,18 @@ export default async function PrivateAppPage({
     >
       <NinjaConnectorMonitor inventoryRevision={ninjaInventoryRevision} online={connectorOnline} />
       {!connectorOnline ? (
-        <p className="notice connector-offline-notice" role="status">
-          Conector sin señal. Estás viendo los últimos datos guardados.
-        </p>
+        <div className="notice connector-offline-notice" role="status">
+          <span>Conector sin señal. Estás viendo los últimos datos guardados.</span>
+          <details className="connector-recovery">
+            <summary>Volver a vincular</summary>
+            <div className="connector-recovery-panel">
+              <a className="connector-recovery-download" download href="/downloads/NODAL-Ninja-Connector.zip">
+                Descargar conector
+              </a>
+              <NinjaConnectorPanel compact connector={ninjaConnector} />
+            </div>
+          </details>
+        </div>
       ) : null}
       <header className="app-header" aria-labelledby="private-title">
         <div className="app-brand-row">

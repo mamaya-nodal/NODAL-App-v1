@@ -5813,6 +5813,10 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 .diagnostic-trigger:disabled { cursor: not-allowed; opacity: 0.48; }
 
 .nodal-workspace .connector-offline-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0 0 14px;
   padding: 10px 13px;
   border: 1px solid color-mix(in srgb, #f2b84b 38%, var(--app-border));
@@ -5820,6 +5824,46 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   background: color-mix(in srgb, #f2b84b 8%, var(--app-panel));
   color: var(--app-title);
   font-size: 12px;
+}
+
+.connector-recovery { position: relative; flex: 0 0 auto; }
+.connector-recovery > summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--brand);
+  font-weight: 800;
+}
+.connector-recovery > summary::-webkit-details-marker { display: none; }
+.connector-recovery-panel {
+  position: absolute;
+  z-index: 12;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(330px, calc(100vw - 48px));
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-panel);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 22%);
+}
+.connector-recovery-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-bottom: 9px;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  color: var(--app-title);
+  font-weight: 800;
+  text-decoration: none;
+}
+.connector-recovery-panel .ninja-pairing-panel.is-compact { margin: 0; padding: 0; background: transparent; box-shadow: none; }
+
+@media (max-width: 640px) {
+  .nodal-workspace .connector-offline-notice { align-items: flex-start; flex-direction: column; }
+  .connector-recovery { width: 100%; }
+  .connector-recovery-panel { right: auto; left: 0; }
 }
 
 /* Inicio financiero: jerarquía validada en el mockup de contenido. */
