@@ -41,6 +41,7 @@ function sessionState(session: NinjaSupervisionSession) {
 }
 
 function batchState(batch: NinjaSupervisionBatch) {
+  if (batch.accountingStatus === "committed") return "Registrada";
   if (batch.accountingStatus === "shadow_ready") return "Conciliada";
   if (batch.status === "unmatched") return "Sin contraparte";
   if (batch.status === "conflict") return "Conflicto";
@@ -153,11 +154,11 @@ export function AdminNinjaTestSupervisionPanel({ initialData, userId }: Props) {
         <section>
           <div className="admin-ninja-section-heading">
             <h3>Conciliación automática</h3>
-            <span>Modo prueba</span>
+            <span>Registro contable</span>
           </div>
           <div className="admin-ninja-event-list">
             {data.batches.length === 0 ? <p className="admin-ninja-empty">Sin agrupaciones procesadas.</p> : data.batches.slice(0, 10).map((batch) => (
-              <article className={batch.accountingStatus === "shadow_ready" ? "reconciled" : "blocked"} key={batch.id}>
+              <article className={batch.accountingStatus === "blocked" ? "blocked" : "reconciled"} key={batch.id}>
                 <div><strong>{batch.brokerAccount ?? "Broker"}</strong><span>{batch.propAccounts.length} cuentas prop</span></div>
                 <div><strong>{batchState(batch)}</strong><span>{batch.blockingReason ?? `${batch.company ?? ""} ${batch.phase ?? ""}`.trim()}</span></div>
                 <div><strong>{money(batch.brokerResultInCents)}</strong><span>{time(batch.openedAt)}</span></div>
