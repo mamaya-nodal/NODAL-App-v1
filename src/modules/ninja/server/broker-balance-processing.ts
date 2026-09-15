@@ -53,6 +53,19 @@ export async function processNinjaBrokerBalance(
     target_source_event_id: snapshot.eventId,
   });
 
+  if (!error) {
+    const { error: baselineError } = await supabase.rpc(
+      "commit_ninja_initial_broker_balance",
+      {
+        target_connector_id: connectorId,
+        target_source_event_id: snapshot.eventId,
+      },
+    );
+    if (baselineError) {
+      return { created: data === true, processed: false, reason: "storage_error" };
+    }
+  }
+
   return error
     ? { created: false, processed: false, reason: "storage_error" }
     : { created: data === true, processed: true };
