@@ -149,6 +149,22 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
   for (const batch of batches) {
     const brokerSession = sessions.find((session) => Number(session.opening_event_id) === batch.broker.openingEventId);
     if (!brokerSession) continue;
+    const { data: existingCommitted } = await supabase
+      .from("ninja_operation_batches")
+      .select("accounting_period_id,accounting_status,daily_control_id")
+      .eq("connector_id", connectorId)
+      .eq("broker_session_id", brokerSession.id)
+      .maybeSingle();
+    if (existingCommitted?.accounting_status === "committed" && existingCommitted.daily_control_id) {
+      persistedBatches += 1;
+      if (existingCommitted.accounting_period_id && batch.broker.closingBalance !== null) {
+        expectedBalanceByPeriod.set(
+          existingCommitted.accounting_period_id,
+          roundLikeSheets(batch.broker.closingBalance * 100),
+        );
+      }
+      continue;
+    }
     const projectionMembers = batch.props.flatMap((prop): AutomaticAccountingMember[] => {
       if (!prop.accountId) return [];
       const account = accountsById.get(prop.accountId);
