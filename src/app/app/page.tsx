@@ -1,5 +1,6 @@
 import { applyIndividualCommission } from '@/modules/summary/domain/individual-commission';
 import { loadIndividualCommission } from '@/modules/summary/server/individual-commission';
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -419,6 +420,18 @@ export default async function PrivateAppPage({
           .eq("is_active", true)
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
       ]);
+    const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const historicalManualAccountBalanceRows = serviceUrl && serviceKey
+      ? (await createServiceClient(serviceUrl, serviceKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        })
+          .from("manual_account_balance_observations")
+          .select("account_id, period_id, initial_balance_cents, cash_value_cents, trade_number, observed_at, created_at")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id))
+          .order("observed_at", { ascending: false })
+          .order("created_at", { ascending: false })).data ?? []
+      : [];
 
     companies = (companyRows ?? []).map((company) => ({
       code: company.code,
@@ -642,20 +655,34 @@ export default async function PrivateAppPage({
     const historicalPurchasesByAccountId = new Map(
       (historicalPurchaseRows ?? []).map((purchase) => [purchase.account_id, purchase]),
     );
+    const manualBalanceByAccountId = new Map<string, {
+      cashValueInCents: number;
+      initialBalanceInCents: number;
+      tradeCount: number;
+    }>();
+    for (const observation of historicalManualAccountBalanceRows ?? []) {
+      if (manualBalanceByAccountId.has(observation.account_id)) continue;
+      manualBalanceByAccountId.set(observation.account_id, {
+        cashValueInCents: Number(observation.cash_value_cents),
+        initialBalanceInCents: Number(observation.initial_balance_cents),
+        tradeCount: Number(observation.trade_number),
+      });
+    }
     accountHistory = (historicalAccountRows ?? []).flatMap((account) => {
       const company = companiesById.get(account.company_id);
       const purchase = historicalPurchasesByAccountId.get(account.id);
       const period = historicalPeriodsById.get(account.period_id);
       if (!company || !period) return [];
       const ninjaBalance = ninjaAccountBalances.get(account.id);
+      const manualBalance = manualBalanceByAccountId.get(account.id);
       return [{
         companyId: account.company_id,
         companyName: company.display_name,
-        currentCashValueInCents: ninjaBalance?.currentInCents ?? null,
+        currentCashValueInCents: ninjaBalance?.currentInCents ?? manualBalance?.cashValueInCents ?? null,
         externalName: ninjaNamesByAccountId.get(account.id) ?? null,
         fundsOrigin: purchase?.funds_origin ?? null,
         id: account.id,
-        initialBalanceInCents: ninjaBalance?.initialInCents ?? null,
+        initialBalanceInCents: ninjaBalance?.initialInCents ?? manualBalance?.initialBalanceInCents ?? null,
         minimumNetLiquidationInCents: ninjaBalance?.minimumNetLiquidationInCents ?? null,
         periodLabel: formatPeriodLabel(period.periodMonth),
         periodMonth: period.periodMonth,
@@ -665,7 +692,7 @@ export default async function PrivateAppPage({
         referenceNumber: account.reference_number,
         state: account.state as AccountView["state"],
         stateOrigin: account.state_origin as AccountView["stateOrigin"],
-        technicalTradeCount: ninjaBalance?.technicalTradeCount ?? 0,
+        technicalTradeCount: ninjaBalance?.technicalTradeCount ?? manualBalance?.tradeCount ?? 0,
       }];
     });
     operationEntryHistory = (historicalOperationEntryRows ?? []).flatMap((entry) => {
