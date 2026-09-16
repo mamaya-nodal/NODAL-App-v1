@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 import { requireNodalAdmin } from "@/modules/admin/server/admin-access";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
@@ -60,7 +61,7 @@ export default async function StudentAdminDetail({ params, searchParams }: Props
   return (
     <div className="admin-page admin-shell">
       <header className="workspace-view-heading admin-page-heading">
-        <div><h2>{student.display_name || student.email}</h2></div>
+        <div><h2>{student.display_name || student.email}</h2><Link className="admin-preview-link" href={`/app/preview/${student.id}#inicio`}>Ver su aplicación</Link></div>
         <p>{student.email}{selectedPeriod ? ` · ${periodLabel(selectedPeriod.period_month)}` : " · Sin período disponible"}</p>
       </header>
 
