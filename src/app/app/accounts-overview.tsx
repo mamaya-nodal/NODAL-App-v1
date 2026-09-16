@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   calculateAccountResult,
@@ -12,6 +13,7 @@ import {
 } from "@/modules/operations/domain/operation-register";
 
 import type { RegisterAccount } from "./operation-register";
+import { deleteManualAccount } from "./purchase-actions";
 
 type AccountFilter = "active" | "all" | "closed" | "evaluation" | "funded";
 
@@ -22,12 +24,23 @@ type Props = Readonly<{
 }>;
 
 export type AccountOverviewAccount = RegisterAccount & Readonly<{
+  canDelete?: boolean;
   currentCashValueInCents: number | null;
   initialBalanceInCents: number | null;
   minimumNetLiquidationInCents: number | null;
   periodLabel: string;
   periodMonth: string;
   technicalTradeCount: number;
+  economicHistory?: AccountEconomicHistoryRow[];
+}>;
+
+export type AccountEconomicHistoryRow = Readonly<{
+  accumulatedInCents: number;
+  brokerResultInCents: number | null;
+  concept: "Cobertura" | "Examen" | "Payout";
+  phase: string;
+  propResultInCents: number | null;
+  tradeNumber: number | null;
 }>;
 
 type AccountPresentation = Readonly<{
@@ -84,6 +97,9 @@ function presentation(
 function AccountCard({ item }: Readonly<{
   item: AccountPresentation;
 }>) {
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const { account, resultInCents, stage, trades } = item;
   const state = account.state === "closed" ? "Cerrada" : account.state === "virgin" ? "Virgen" : "Activa";
   return (
@@ -118,6 +134,29 @@ function AccountCard({ item }: Readonly<{
         <div><span>Variación prop</span><strong>{account.initialBalanceInCents === null || account.currentCashValueInCents === null ? "—" : money(account.currentCashValueInCents - account.initialBalanceInCents)}</strong></div>
         <div><span>Resultado contable</span><strong>{resultInCents === null ? account.state === "closed" ? "Pendiente" : "—" : money(resultInCents)}</strong></div>
       </div>
+      {account.canDelete && (
+        <div className="manual-account-delete">
+          <button aria-label="Eliminar cuenta manual" disabled={deleting} onClick={async () => {
+            if (!window.confirm("¿Eliminar esta cuenta manual? Solo se eliminará si nunca tuvo actividad.")) return;
+            setDeleting(true);
+            const result = await deleteManualAccount(account.id);
+            setDeleting(false);
+            setDeleteMessage(result.message);
+            if (result.ok) router.refresh();
+          }} title="Eliminar cuenta manual" type="button"><span aria-hidden="true">×</span> Eliminar cuenta</button>
+          {deleteMessage && <small>{deleteMessage}</small>}
+        </div>
+      )}
+      {(account.economicHistory?.length ?? 0) > 0 && (
+        <div className="account-economic-history">
+          <div className="account-economic-history-head"><span>N° trade</span><span>Etapa</span><span>Resultado prop</span><span>Resultado broker</span><span>Acumulado</span><span>Concepto</span></div>
+          {account.economicHistory!.map((row, index) => (
+            <div className="account-economic-history-row" key={`${row.concept}-${row.tradeNumber ?? 0}-${index}`}>
+              <span>{row.tradeNumber ?? "—"}</span><span>{row.phase}</span><span>{row.propResultInCents === null ? "—" : money(row.propResultInCents)}</span><span>{row.brokerResultInCents === null ? "—" : money(row.brokerResultInCents)}</span><strong>{money(row.accumulatedInCents)}</strong><span>{row.concept}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </details>
   );
 }

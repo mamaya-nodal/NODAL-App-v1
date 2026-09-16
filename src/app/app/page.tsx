@@ -61,10 +61,11 @@ import {
   OperationRegister,
   type RegisterAccount,
 } from "./operation-register";
-import { ProgressSummary } from "./progress-summary";
+import { ProgressSummary, type WalletView } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
 import { AccountsOverview, type AccountOverviewAccount } from "./accounts-overview";
+import { PurchasePaymentFields } from "./purchase-payment-fields";
 import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary";
 
 type PrivateAppPageProps = {
@@ -282,6 +283,7 @@ export default async function PrivateAppPage({
   let phaseWithdrawals: AccountPhaseWithdrawal[] = [];
   let phaseWithdrawalHistory: AccountPhaseWithdrawal[] = [];
   let walletMovements: WalletMovement[] = [];
+  let walletViews: WalletView[] = [];
   let fundingWithdrawals: FundingWithdrawal[] = [];
   let operationalSummary: OperationalSummary = buildOperationalSummary({
     accounts: [], controls: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [], walletMovements: [],
@@ -322,6 +324,7 @@ export default async function PrivateAppPage({
       { data: historicalControlRows },
       { data: historicalWalletMovementRows },
       { data: historicalFundingWithdrawalRows },
+      { data: walletRows },
     ] =
       await Promise.all([
         supabase
@@ -336,14 +339,14 @@ export default async function PrivateAppPage({
         supabase
           .from("purchases")
           .select(
-            "id, account_id, purchase_number, purchased_on, price_cents, funds_origin",
+            "id, account_id, purchase_number, purchased_on, price_cents, funds_origin, wallet_id",
           )
           .eq("period_id", selection.period.id)
           .order("purchase_number", { ascending: false }),
         supabase
           .from("daily_controls")
           .select(
-            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, allocation_reason, source, created_at",
+            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, allocation_reason, source, created_at, wallet_id, transfer_fee_cents",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
@@ -365,12 +368,12 @@ export default async function PrivateAppPage({
           .eq("period_id", selection.period.id),
         supabase
           .from("wallet_movements")
-          .select("id, occurred_on, kind, amount_cents, observation, created_at")
+          .select("id, wallet_id, occurred_on, kind, amount_cents, fee_cents, observation, created_at")
           .eq("period_id", selection.period.id)
           .order("occurred_on", { ascending: false }),
         supabase
           .from("funding_withdrawals")
-          .select("id, account_id, approved_on, amount_cents, collected_on, phase, created_at")
+          .select("id, account_id, approved_on, amount_cents, collected_on, phase, wallet_id, collection_fee_cents, created_at")
           .eq("period_id", selection.period.id)
           .eq("is_active", true)
           .order("approved_on", { ascending: false }),
@@ -388,7 +391,7 @@ export default async function PrivateAppPage({
           .limit(30),
         supabase
           .from("purchases")
-          .select("id, account_id, period_id, purchase_number, purchased_on, price_cents, funds_origin")
+          .select("id, account_id, period_id, purchase_number, purchased_on, price_cents, funds_origin, wallet_id")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("accounts")
@@ -406,31 +409,52 @@ export default async function PrivateAppPage({
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("daily_controls")
-          .select("period_id, control_number, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents")
+          .select("period_id, control_number, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, wallet_id, transfer_fee_cents")
           .order("period_id")
           .order("control_number")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("wallet_movements")
-          .select("id, period_id, occurred_on, kind, amount_cents, observation")
+          .select("id, period_id, wallet_id, occurred_on, kind, amount_cents, fee_cents, observation")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("funding_withdrawals")
-          .select("period_id, amount_cents, collected_on")
+          .select("period_id, account_id, phase, amount_cents, collected_on, wallet_id, collection_fee_cents")
           .eq("is_active", true)
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
+        supabase
+          .from("nodal_wallets")
+          .select("id,name")
+          .eq("workspace_id", selection.workspace.id)
+          .eq("is_active", true)
+          .order("created_at"),
       ]);
+    walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
+      const { data } = await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id });
+      return { balanceInCents: Number(data ?? 0), id: wallet.id, name: wallet.name };
+    }));
     const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const historicalManualAccountBalanceRows = serviceUrl && serviceKey
-      ? (await createServiceClient(serviceUrl, serviceKey, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        })
-          .from("manual_account_balance_observations")
-          .select("account_id, period_id, initial_balance_cents, cash_value_cents, trade_number, observed_at, created_at")
-          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id))
-          .order("observed_at", { ascending: false })
-          .order("created_at", { ascending: false })).data ?? []
+    const privileged = serviceUrl && serviceKey ? createServiceClient(serviceUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    }) : null;
+    const accountIds = (historicalAccountRows ?? []).map((account) => account.id);
+    const [historicalManualAccountBalanceRows, technicalMemberRows] = privileged ? await Promise.all([
+      privileged.from("manual_account_balance_observations")
+        .select("account_id, period_id, initial_balance_cents, cash_value_cents, trade_number, observed_at, created_at")
+        .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id))
+        .order("observed_at", { ascending: false }).order("created_at", { ascending: false })
+        .then(({ data }) => data ?? []),
+      accountIds.length ? privileged.from("ninja_operation_batch_members")
+        .select("account_id,session_id,allocated_broker_result_cents,role")
+        .in("account_id", accountIds).eq("role", "prop")
+        .then(({ data }) => data ?? []) : Promise.resolve([]),
+    ]) : [[], []];
+    const technicalSessionIds = technicalMemberRows.map((row) => row.session_id);
+    const technicalSessionRows = privileged && technicalSessionIds.length
+      ? (await privileged.from("ninja_operation_probe_sessions")
+          .select("id,account_name,result,opened_at")
+          .in("id", technicalSessionIds).order("opened_at")).data ?? []
       : [];
 
     companies = (companyRows ?? []).map((company) => ({
@@ -675,11 +699,62 @@ export default async function PrivateAppPage({
       if (!company || !period) return [];
       const ninjaBalance = ninjaAccountBalances.get(account.id);
       const manualBalance = manualBalanceByAccountId.get(account.id);
+      const purchaseCost = purchase ? Number(purchase.price_cents) : 0;
+      let accumulated = -purchaseCost;
+      const sessionById = new Map(technicalSessionRows.map((session) => [Number(session.id), session]));
+      const technicalRows = technicalMemberRows
+        .filter((member) => member.account_id === account.id)
+        .flatMap((member) => {
+          const session = sessionById.get(Number(member.session_id));
+          if (!session) return [];
+          return [{
+            broker: Number(member.allocated_broker_result_cents ?? 0),
+            date: session.opened_at,
+            prop: session.result === null ? null : Math.round(Number(session.result) * 100),
+          }];
+        })
+        .sort((left, right) => left.date.localeCompare(right.date));
+      const economicHistory: NonNullable<AccountOverviewAccount["economicHistory"]> = [{
+        accumulatedInCents: accumulated, brokerResultInCents: null, concept: "Examen",
+        phase: "—", propResultInCents: null, tradeNumber: null,
+      }];
+      technicalRows.forEach((row, index) => {
+        accumulated += row.broker;
+        const matchingEntry = (historicalOperationEntryRows ?? []).find((entry) => entry.account_id === account.id && entry.operated_on === row.date.slice(0, 10));
+        economicHistory.push({ accumulatedInCents: accumulated, brokerResultInCents: row.broker,
+          concept: "Cobertura", phase: matchingEntry?.phase ?? "Evaluacion", propResultInCents: row.prop,
+          tradeNumber: index + 1 });
+      });
+      if (technicalRows.length === 0) {
+        let priorCashValue: number | null = null;
+        [...(historicalManualAccountBalanceRows ?? [])]
+          .filter((row) => row.account_id === account.id)
+          .sort((left, right) => left.trade_number - right.trade_number || left.observed_at.localeCompare(right.observed_at))
+          .forEach((row) => {
+            const cashValue = Number(row.cash_value_cents);
+            const propResult = cashValue - (priorCashValue ?? Number(row.initial_balance_cents));
+            priorCashValue = cashValue;
+            economicHistory.push({ accumulatedInCents: accumulated, brokerResultInCents: null,
+              concept: "Cobertura", phase: "Evaluacion", propResultInCents: propResult,
+              tradeNumber: Number(row.trade_number) });
+          });
+      }
+      (historicalFundingWithdrawalRows ?? []).filter((row) => row.account_id === account.id && row.collected_on).forEach((row) => {
+        const net = Number(row.amount_cents) - Number(row.collection_fee_cents ?? 0);
+        accumulated += net;
+        economicHistory.push({ accumulatedInCents: accumulated, brokerResultInCents: null, concept: "Payout",
+          phase: row.phase ?? "Funded", propResultInCents: null, tradeNumber: null });
+      });
       return [{
+        canDelete: account.state === "virgin" && !ninjaNamesByAccountId.has(account.id) && !manualBalance
+          && !(historicalOperationEntryRows ?? []).some((entry) => entry.account_id === account.id)
+          && !(historicalFundingWithdrawalRows ?? []).some((withdrawal) => withdrawal.account_id === account.id)
+          && !technicalMemberRows.some((member) => member.account_id === account.id),
         companyId: account.company_id,
         companyName: company.display_name,
         currentCashValueInCents: ninjaBalance?.currentInCents ?? manualBalance?.cashValueInCents ?? null,
         externalName: ninjaNamesByAccountId.get(account.id) ?? null,
+        economicHistory,
         fundsOrigin: purchase?.funds_origin ?? null,
         id: account.id,
         initialBalanceInCents: ninjaBalance?.initialInCents ?? manualBalance?.initialBalanceInCents ?? null,
@@ -724,11 +799,15 @@ export default async function PrivateAppPage({
       amountInCents: Number(movement.amount_cents), id: movement.id,
       kind: movement.kind as WalletMovement["kind"], occurredOn: movement.occurred_on,
       observation: movement.observation,
+      feeInCents: Number(movement.fee_cents ?? 0),
+      walletId: movement.wallet_id,
     }));
     fundingWithdrawals = (fundingWithdrawalRows ?? []).map((withdrawal) => ({
       accountId: withdrawal.account_id, amountInCents: Number(withdrawal.amount_cents),
       approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, id: withdrawal.id,
+      feeInCents: Number(withdrawal.collection_fee_cents ?? 0),
       phase: withdrawal.phase,
+      walletId: withdrawal.wallet_id,
     }));
     economicTrace = [
       ...(dailyControlRows ?? []).flatMap((control): EconomicTraceItem[] =>
@@ -749,7 +828,11 @@ export default async function PrivateAppPage({
           ? "Aporte a billetera"
           : movement.kind === "personal_withdrawal"
             ? "Retiro de billetera"
-            : "Cobro pendiente anterior",
+            : movement.kind === "broker_to_wallet"
+              ? "Transferencia broker → billetera"
+              : movement.kind === "wallet_to_broker"
+                ? "Transferencia billetera → broker"
+                : "Cobro pendiente anterior",
         source: "Manual",
       })),
       ...(fundingWithdrawalRows ?? []).flatMap((withdrawal): EconomicTraceItem[] => [{
@@ -777,11 +860,13 @@ export default async function PrivateAppPage({
         operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),
         originDestination: control.origin_destination,
         periodId: control.period_id,
+        transferFeeInCents: Number(control.transfer_fee_cents ?? 0),
       })),
       currentPeriodId: selection.period.id,
       fundingWithdrawals: (historicalFundingWithdrawalRows ?? []).map((withdrawal) => ({
         amountInCents: Number(withdrawal.amount_cents),
         collectedOn: withdrawal.collected_on,
+        feeInCents: Number(withdrawal.collection_fee_cents ?? 0),
         periodId: withdrawal.period_id,
       })),
       periodIdsInOrder: [...selection.workspace.periods]
@@ -796,6 +881,7 @@ export default async function PrivateAppPage({
         amountInCents: Number(movement.amount_cents),
         id: movement.id,
         kind: movement.kind,
+        feeInCents: Number(movement.fee_cents ?? 0),
         observation: movement.observation,
         occurredOn: movement.occurred_on,
         periodId: movement.period_id,
@@ -812,6 +898,7 @@ export default async function PrivateAppPage({
         kind: control.kind, movementInCents: control.movement_cents === null ? null : Number(control.movement_cents),
         operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),
         originDestination: control.origin_destination,
+        transferFeeInCents: Number(control.transfer_fee_cents ?? 0),
       })),
       entries: operationEntries, fundingWithdrawals, opening: periodOpening, phaseWithdrawals, walletMovements,
     });
@@ -1015,7 +1102,7 @@ export default async function PrivateAppPage({
               account.firstSeenAt ?? inventory.observed_at,
             ));
             const companyIds = Object.fromEntries(companies.flatMap((company) => [[company.code.toLowerCase(), company.id], [company.displayName.toLowerCase(), company.id]]));
-            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} key={inventory.connector_id} linkedAccountNames={linkedNinjaAccountNames} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} />;
+            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} key={inventory.connector_id} linkedAccountNames={linkedNinjaAccountNames} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} wallets={walletViews} />;
           })}
 
           <AccountsOverview
@@ -1060,12 +1147,8 @@ export default async function PrivateAppPage({
                 />
               </div>
 
-              <div className="form-field">
-                <label htmlFor="funds_origin">Origen de fondos</label>
-                <select id="funds_origin" name="funds_origin" required defaultValue="Aporte trader">
-                  <option value="Aporte trader">Aporte trader</option>
-                  <option value="Saldo generado">Saldo generado</option>
-                </select>
+              <div className="form-field purchase-payment-source">
+                <PurchasePaymentFields wallets={walletViews} />
               </div>
 
               <button className="primary-action" type="submit">
@@ -1143,6 +1226,7 @@ export default async function PrivateAppPage({
             periodLabel={formatPeriodLabel(selection.period.periodMonth)}
             periods={accountingPeriods}
             summary={operationalSummary}
+            wallets={walletViews}
           />
         </section>
       )}

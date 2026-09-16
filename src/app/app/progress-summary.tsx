@@ -9,8 +9,10 @@ import { buildSummaryAlerts } from "@/modules/summary/domain/summary-alerts";
 import { buildConciliationBreakdown } from "@/modules/summary/domain/conciliation-breakdown";
 import {
   collectFundingWithdrawal,
+  createWallet,
   createFundingWithdrawal,
   createWalletMovement,
+  renameWallet,
 } from "./summary-actions";
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 
@@ -24,6 +26,13 @@ type Props = Readonly<{
   periods?: AccountingPeriodView[];
   periodId: string;
   summary: OperationalSummary;
+  wallets: WalletView[];
+}>;
+
+export type WalletView = Readonly<{
+  balanceInCents: number;
+  id: string;
+  name: string;
 }>;
 
 export type EconomicTraceItem = Readonly<{
@@ -67,13 +76,15 @@ const date = (value: string) =>
 const labels = {
   external_contribution: "Aporte externo a billetera",
   personal_withdrawal: "Retiro personal desde billetera",
-  prior_pending_collection: "Cobro pendiente anterior",
+  broker_to_wallet: "Transferencia broker → billetera",
+  wallet_to_broker: "Transferencia billetera → broker",
 } as const;
 
-export function ProgressSummary({ accounts, economicTrace = [], embedded = false, liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periods = [], summary }: Props) {
+export function ProgressSummary({ accounts, economicTrace = [], embedded = false, liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periods = [], summary, wallets }: Props) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [movementKind, setMovementKind] = useState<keyof typeof labels>("external_contribution");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
   const [liveOnline, setLiveOnline] = useState(ninjaOnline);
   const alerts = buildSummaryAlerts(summary);
@@ -104,13 +115,41 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       kind: String(form.get("kind") ?? ""),
       observation: String(form.get("observation") ?? ""),
       periodId,
+      walletId: String(form.get("wallet") ?? ""),
+      fee: String(form.get("fee") ?? ""),
     });
     setSaving(false);
     setMessage(result.message);
     if (result.ok) {
       event.currentTarget.reset();
+      setMovementKind("external_contribution");
       router.refresh();
     }
+  }
+
+  async function addWallet(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSaving(true);
+    const result = await createWallet({
+      date: String(form.get("date") ?? ""),
+      name: String(form.get("name") ?? ""),
+      openingBalance: String(form.get("opening_balance") ?? ""),
+      periodId,
+    });
+    setSaving(false);
+    setMessage(result.message);
+    if (result.ok) { event.currentTarget.reset(); router.refresh(); }
+  }
+
+  async function updateWalletName(event: FormEvent<HTMLFormElement>, walletId: string) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSaving(true);
+    const result = await renameWallet({ name: String(form.get("name") ?? ""), walletId });
+    setSaving(false);
+    setMessage(result.message);
+    if (result.ok) router.refresh();
   }
 
   async function withdrawal(event: FormEvent<HTMLFormElement>) {
@@ -131,11 +170,15 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     }
   }
 
-  async function collect(id: string) {
+  async function collect(event: FormEvent<HTMLFormElement>, id: string) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
     setSaving(true);
     const result = await collectFundingWithdrawal({
       collectedOn: today(),
+      fee: String(form.get("fee") ?? ""),
       periodId,
+      walletId: String(form.get("wallet") ?? ""),
       withdrawalId: id,
     });
     setSaving(false);
@@ -229,10 +272,28 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       <details className="demo-operation-disclosure accounting-balances">
         <summary><span>Otros saldos</span><strong>{money(summary.walletBalanceInCents)}</strong><i aria-hidden="true" /></summary>
         <div className="demo-wallets">
-          <p><span>Saldo billetera</span><strong>{money(summary.walletBalanceInCents)}</strong></p>
+          {wallets.map((wallet) => (
+            <div className="named-wallet-row" key={wallet.id}>
+              <form onSubmit={(event) => updateWalletName(event, wallet.id)}>
+                <input aria-label={`Nombre de ${wallet.name}`} defaultValue={wallet.name} name="name" />
+                <button disabled={saving} type="submit">Guardar</button>
+              </form>
+              <strong>{money(wallet.balanceInCents)}</strong>
+            </div>
+          ))}
+          <p><span>Total billeteras</span><strong>{money(summary.walletBalanceInCents)}</strong></p>
           <p><span>Payouts pendientes</span><strong>{money(summary.fundingPendingInCents)}</strong></p>
           <p><span>Capital neto aportado</span><strong>{money(summary.capitalNetInCents)}</strong></p>
           <p><span>Flotante</span><strong>{money(summary.floatingInCents)}</strong></p>
+          <details className="wallet-create-inline">
+            <summary>+ Agregar billetera</summary>
+            <form className="summary-form" onSubmit={addWallet}>
+              <input name="name" placeholder="Nombre de la billetera" required />
+              <input defaultValue={today()} name="date" required type="date" />
+              <input inputMode="decimal" name="opening_balance" placeholder="Saldo inicial USD (opcional)" />
+              <button disabled={saving}>Crear billetera</button>
+            </form>
+          </details>
         </div>
       </details>
 
@@ -286,13 +347,20 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <strong>{summary.walletMovements.length}</strong>
           </summary>
           <form className="summary-form" onSubmit={wallet}>
+            <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required>
+              <option disabled value="">Billetera</option>
+              {wallets.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
             <input defaultValue={today()} name="date" required type="date" />
-            <select defaultValue="external_contribution" name="kind">
+            <select name="kind" onChange={(event) => setMovementKind(event.target.value as keyof typeof labels)} value={movementKind}>
               {Object.entries(labels).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>
             <input inputMode="decimal" name="amount" placeholder="Importe USD" required />
+            {(movementKind === "broker_to_wallet" || movementKind === "wallet_to_broker") && (
+              <input inputMode="decimal" min="0" name="fee" placeholder="Fee real USD (opcional)" />
+            )}
             <input name="observation" placeholder="Observación (opcional)" />
             <button disabled={saving}>Guardar movimiento</button>
           </form>
@@ -300,7 +368,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <div className="summary-list">
               {summary.walletMovements.map((movement) => (
                 <p key={movement.id}>
-                  <strong>{date(movement.occurredOn)}</strong> · {labels[movement.kind]} · {money(movement.amountInCents)}
+                  <strong>{date(movement.occurredOn)}</strong> · {wallets.find((wallet) => wallet.id === movement.walletId)?.name ?? "Billetera"} · {labels[movement.kind as keyof typeof labels] ?? "Movimiento de billetera"} · {money(movement.amountInCents)}{(movement.feeInCents ?? 0) > 0 ? ` · Fee ${money(movement.feeInCents ?? 0)}` : ""}
                 </p>
               ))}
             </div>
@@ -309,7 +377,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
 
         <details className="accounting-action-card demo-operation-disclosure">
           <summary>
-            <span>Retiros de fondeo</span>
+            <span>Payouts</span>
             <strong>{summary.fundingWithdrawals.length}</strong>
           </summary>
           <form className="summary-form" onSubmit={withdrawal}>
@@ -321,20 +389,26 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             </select>
             <input defaultValue={today()} name="approved_on" required type="date" />
             <input inputMode="decimal" name="amount" placeholder="Importe aprobado" required />
-            <button disabled={saving}>Registrar retiro</button>
+            <button disabled={saving}>Registrar payout</button>
           </form>
           {summary.fundingWithdrawals.length > 0 && (
             <div className="summary-list">
               {summary.fundingWithdrawals.map((item) => (
-                <p key={item.id}>
-                  <strong>{date(item.approvedOn)}</strong> · {money(item.amountInCents)}{item.phase ? ` · ${item.phase}` : ""} · {item.collectedOn ? (
-                    `Cobrado el ${date(item.collectedOn)}`
+                <div className="payout-list-row" key={item.id}>
+                  <p><strong>{date(item.approvedOn)}</strong> · {money(item.amountInCents)}{item.phase ? ` · ${item.phase}` : ""}</p>
+                  {item.collectedOn ? (
+                    <span>Cobrado el {date(item.collectedOn)}{(item.feeInCents ?? 0) > 0 ? ` · Fee ${money(item.feeInCents ?? 0)}` : ""}</span>
                   ) : (
-                    <button className="text-action" disabled={saving} onClick={() => collect(item.id)} type="button">
-                      Confirmar cobro
-                    </button>
+                    <form className="payout-collection-form" onSubmit={(event) => collect(event, item.id)}>
+                      <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required aria-label="Billetera de destino">
+                        <option disabled value="">Billetera</option>
+                        {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
+                      </select>
+                      <input inputMode="decimal" min="0" name="fee" placeholder="Fee USD" />
+                      <button className="text-action" disabled={saving || wallets.length === 0} type="submit">Confirmar cobro</button>
+                    </form>
                   )}
-                </p>
+                </div>
               ))}
             </div>
           )}

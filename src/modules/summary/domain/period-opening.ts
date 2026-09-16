@@ -21,6 +21,7 @@ type HistoricalWalletMovement = WalletMovement & Readonly<{
 type HistoricalFundingWithdrawal = Readonly<{
   amountInCents: number;
   collectedOn: string | null;
+  feeInCents?: number;
   periodId: string;
 }>;
 
@@ -45,23 +46,29 @@ export function buildPeriodOpening(input: Readonly<{
 
   const approved = sum(funding.map((withdrawal) => withdrawal.amountInCents));
   const collected = sum(funding.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.amountInCents));
+  const collectedNet = sum(funding.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.amountInCents - (withdrawal.feeInCents ?? 0)));
   const priorPendingCollections = sum(wallet.filter((movement) => movement.kind === "prior_pending_collection").map((movement) => movement.amountInCents));
   const externalWallet = sum(wallet.filter((movement) => movement.kind === "external_contribution").map((movement) => movement.amountInCents));
   const personalWallet = sum(wallet.filter((movement) => movement.kind === "personal_withdrawal").map((movement) => movement.amountInCents));
+  const brokerWalletIn = sum(wallet.filter((movement) => movement.kind === "broker_to_wallet").map((movement) => movement.amountInCents - (movement.feeInCents ?? 0)));
+  const brokerWalletOut = sum(wallet.filter((movement) => movement.kind === "wallet_to_broker").map((movement) => movement.amountInCents));
   const generatedPurchases = sum(purchases.filter((purchase) => purchase.fundsOrigin === "Saldo generado").map((purchase) => purchase.priceInCents));
   const contributedPurchases = sum(purchases.filter((purchase) => purchase.fundsOrigin === "Aporte trader").map((purchase) => purchase.priceInCents));
   const brokerContribution = sum(controls.filter((control) => control.kind === "deposit" && control.originDestination === "Aporte trader").map((control) => control.movementInCents ?? 0));
   const brokerPersonalWithdrawal = sum(controls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Retiro personal").map((control) => control.movementInCents ?? 0));
-  const walletToBroker = sum(controls.filter((control) => control.kind === "deposit" && control.originDestination === "Saldo billetera").map((control) => control.movementInCents ?? 0));
-  const brokerToWallet = sum(controls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Saldo billetera").map((control) => control.movementInCents ?? 0));
+  const walletToBroker = sum(controls.filter((control) => control.kind === "deposit" && control.originDestination === "Saldo billetera").map((control) => (control.movementInCents ?? 0) + (control.transferFeeInCents ?? 0)));
+  const brokerToWallet = sum(controls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Saldo billetera").map((control) => (control.movementInCents ?? 0) - (control.transferFeeInCents ?? 0)));
   const brokerOperatingResult = sum(controls.map((control) => control.operatingResultInCents ?? 0));
   const totalPurchases = sum(purchases.map((purchase) => purchase.priceInCents));
+  const transferFees = sum(wallet.map((movement) => movement.feeInCents ?? 0))
+    + sum(funding.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.feeInCents ?? 0))
+    + sum(controls.map((control) => control.transferFeeInCents ?? 0));
 
   return {
-    accumulatedResultInCents: brokerOperatingResult - totalPurchases + approved,
+    accumulatedResultInCents: brokerOperatingResult - totalPurchases + approved - transferFees,
     brokerBalanceInCents: latestPriorControls.at(-1)?.balanceAfterInCents ?? null,
     capitalNetInCents: contributedPurchases + brokerContribution + externalWallet - brokerPersonalWithdrawal - personalWallet,
     fundingPendingInCents: Math.max(0, approved - collected - priorPendingCollections),
-    walletBalanceInCents: collected + priorPendingCollections - generatedPurchases - walletToBroker + brokerToWallet + externalWallet - personalWallet,
+    walletBalanceInCents: collectedNet + priorPendingCollections - generatedPurchases - walletToBroker + brokerToWallet + brokerWalletIn - brokerWalletOut + externalWallet - personalWallet,
   };
 }

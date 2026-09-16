@@ -20,14 +20,17 @@ export type SummaryControl = Readonly<{
   movementInCents: number | null;
   operatingResultInCents: number | null;
   originDestination: "Aporte trader" | "Saldo billetera" | "Retiro personal" | null;
+  transferFeeInCents?: number;
 }>;
 
 export type WalletMovement = Readonly<{
   amountInCents: number;
+  feeInCents?: number;
   id: string;
-  kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection";
+  kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker";
   occurredOn: string;
   observation: string | null;
+  walletId?: string;
 }>;
 
 export type FundingWithdrawal = Readonly<{
@@ -35,7 +38,9 @@ export type FundingWithdrawal = Readonly<{
   amountInCents: number;
   approvedOn: string;
   collectedOn: string | null;
+  feeInCents?: number;
   id: string;
+  walletId?: string | null;
   phase?: AccountPhaseWithdrawal["phase"] | null;
 }>;
 
@@ -132,17 +137,23 @@ export function buildOperationalSummary(input: Readonly<{
   const totalPurchases = sum(input.accounts.map((account) => account.priceInCents));
   const approved = sum(input.fundingWithdrawals.map((withdrawal) => withdrawal.amountInCents));
   const collected = sum(input.fundingWithdrawals.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.amountInCents));
+  const collectedNet = sum(input.fundingWithdrawals.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.amountInCents - (withdrawal.feeInCents ?? 0)));
   const generatedPurchases = sum(input.accounts.filter((account) => account.fundsOrigin === "Saldo generado").map((account) => account.priceInCents));
   const brokerContribution = sum(orderedControls.filter((control) => control.kind === "deposit" && control.originDestination === "Aporte trader").map((control) => control.movementInCents ?? 0));
   const brokerPersonalWithdrawal = sum(orderedControls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Retiro personal").map((control) => control.movementInCents ?? 0));
-  const walletToBroker = sum(orderedControls.filter((control) => control.kind === "deposit" && control.originDestination === "Saldo billetera").map((control) => control.movementInCents ?? 0));
-  const brokerToWallet = sum(orderedControls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Saldo billetera").map((control) => control.movementInCents ?? 0));
+  const legacyWalletToBroker = sum(orderedControls.filter((control) => control.kind === "deposit" && control.originDestination === "Saldo billetera").map((control) => (control.movementInCents ?? 0) + (control.transferFeeInCents ?? 0)));
+  const legacyBrokerToWallet = sum(orderedControls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Saldo billetera").map((control) => (control.movementInCents ?? 0) - (control.transferFeeInCents ?? 0)));
   const externalWallet = sum(input.walletMovements.filter((movement) => movement.kind === "external_contribution").map((movement) => movement.amountInCents));
   const priorPendingCollection = sum(input.walletMovements.filter((movement) => movement.kind === "prior_pending_collection").map((movement) => movement.amountInCents));
   const personalWalletWithdrawal = sum(input.walletMovements.filter((movement) => movement.kind === "personal_withdrawal").map((movement) => movement.amountInCents));
+  const brokerToWallet = sum(input.walletMovements.filter((movement) => movement.kind === "broker_to_wallet").map((movement) => movement.amountInCents - (movement.feeInCents ?? 0)));
+  const walletToBroker = sum(input.walletMovements.filter((movement) => movement.kind === "wallet_to_broker").map((movement) => movement.amountInCents));
+  const transferFees = sum(input.walletMovements.map((movement) => movement.feeInCents ?? 0))
+    + sum(input.fundingWithdrawals.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.feeInCents ?? 0))
+    + sum(orderedControls.map((control) => control.transferFeeInCents ?? 0));
   const capitalNetInCents = opening.capitalNetInCents + sum(input.accounts.filter((account) => account.fundsOrigin === "Aporte trader").map((account) => account.priceInCents)) + brokerContribution + externalWallet - brokerPersonalWithdrawal - personalWalletWithdrawal;
-  const walletBalanceInCents = opening.walletBalanceInCents + collected + priorPendingCollection - generatedPurchases - walletToBroker + brokerToWallet + externalWallet - personalWalletWithdrawal;
-  const periodResultInCents = brokerOperatingResult - totalPurchases + approved;
+  const walletBalanceInCents = opening.walletBalanceInCents + collectedNet + priorPendingCollection - generatedPurchases - legacyWalletToBroker + legacyBrokerToWallet - walletToBroker + brokerToWallet + externalWallet - personalWalletWithdrawal;
+  const periodResultInCents = brokerOperatingResult - totalPurchases + approved - transferFees;
   const accumulatedResultInCents = opening.accumulatedResultInCents + periodResultInCents;
   const fundingPendingInCents = Math.max(0, opening.fundingPendingInCents + approved - collected - priorPendingCollection);
   const positionObservableInCents = (brokerBalanceInCents ?? 0) + walletBalanceInCents + fundingPendingInCents;

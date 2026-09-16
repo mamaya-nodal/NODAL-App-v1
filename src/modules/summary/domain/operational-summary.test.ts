@@ -84,4 +84,44 @@ describe("operational summary", () => {
     expect(summary.capitalNetInCents).toBe(400_000);
     expect(summary.positionDifferenceInCents).toBe(0);
   });
+
+  it("reconcilia aporte, compra desde billetera y reutilización sin duplicar capital", () => {
+    const summary = buildOperationalSummary({
+      accounts: [{ id: "virgin", state: "virgin", stateOrigin: "automatic", priceInCents: 8_000, fundsOrigin: "Saldo generado" }],
+      controls: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [],
+      walletMovements: [{ id: "opening", walletId: "wallet", kind: "external_contribution", amountInCents: 10_000, occurredOn: "2026-09-01", observation: "Saldo inicial" }],
+    });
+
+    expect(summary.capitalNetInCents).toBe(10_000);
+    expect(summary.walletBalanceInCents).toBe(2_000);
+    expect(summary.periodResultInCents).toBe(-8_000);
+    expect(summary.positionDifferenceInCents).toBe(0);
+  });
+
+  it("registra el fee real de billetera a broker como costo sin convertir el traspaso en capital", () => {
+    const summary = buildOperationalSummary({
+      accounts: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [],
+      controls: [{ controlNumber: 1, kind: "balance_update", movementInCents: null, operatingResultInCents: null, originDestination: null, balanceAfterInCents: 99_700 }],
+      walletMovements: [
+        { id: "opening", walletId: "wallet", kind: "external_contribution", amountInCents: 100_000, occurredOn: "2026-09-01", observation: null },
+        { id: "transfer", walletId: "wallet", kind: "wallet_to_broker", amountInCents: 100_000, feeInCents: 300, occurredOn: "2026-09-02", observation: null },
+      ],
+    });
+
+    expect(summary.capitalNetInCents).toBe(100_000);
+    expect(summary.walletBalanceInCents).toBe(0);
+    expect(summary.periodResultInCents).toBe(-300);
+    expect(summary.positionDifferenceInCents).toBe(0);
+  });
+
+  it("ingresa un payout neto del fee y mantiene la conciliación", () => {
+    const summary = buildOperationalSummary({
+      accounts: [], controls: [], entries: [], phaseWithdrawals: [], walletMovements: [],
+      fundingWithdrawals: [{ id: "payout", accountId: "funded", amountInCents: 100_000, feeInCents: 300, approvedOn: "2026-09-02", collectedOn: "2026-09-03", walletId: "wallet" }],
+    });
+
+    expect(summary.walletBalanceInCents).toBe(99_700);
+    expect(summary.periodResultInCents).toBe(99_700);
+    expect(summary.positionDifferenceInCents).toBe(0);
+  });
 });

@@ -33,6 +33,7 @@ export async function createPurchase(formData: FormData): Promise<never> {
   const periodId = formText(formData, "period_id");
   const companyId = formText(formData, "company_id");
   const fundsOrigin = formText(formData, "funds_origin");
+  const walletId = formText(formData, "wallet_id") || null;
   let priceCents: number;
 
   try {
@@ -51,11 +52,12 @@ export async function createPurchase(formData: FormData): Promise<never> {
     redirect("/");
   }
 
-  const { error } = await supabase.rpc("create_nodal_purchase", {
+  const { error } = await supabase.rpc("create_nodal_purchase_with_wallet", {
     target_company_id: companyId,
     target_funds_origin: fundsOrigin,
     target_period_id: periodId,
     target_price_cents: priceCents,
+    target_wallet_id: walletId,
   });
 
   if (error) {
@@ -75,6 +77,7 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
   const periodId = formText(formData, "period_id");
   const companyId = formText(formData, "company_id");
   const fundsOrigin = formText(formData, "funds_origin");
+  const walletId = formText(formData, "wallet_id") || null;
   const purchasedOn = formText(formData, "purchased_on");
   const firstSeenAt = formText(formData, "first_seen_at");
   let priceCents: number;
@@ -91,7 +94,7 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
-  const { error } = await supabase.rpc("create_nodal_detected_purchase", {
+  const { error } = await supabase.rpc("create_nodal_detected_purchase_with_wallet", {
     target_company_id: companyId,
     target_connection_name: formText(formData, "connection_name"),
     target_external_account_name: formText(formData, "external_account_name"),
@@ -101,6 +104,7 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
     target_period_id: periodId,
     target_price_cents: priceCents,
     target_purchased_on: purchasedOn,
+    target_wallet_id: walletId,
   });
 
   if (error) {
@@ -110,4 +114,15 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
 
   revalidatePath("/app");
   redirect(safeContextUrl(mode, period, "created"));
+}
+
+export async function deleteManualAccount(accountId: string): Promise<Readonly<{ ok: boolean; message: string }>> {
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(accountId)) return { ok: false, message: "La cuenta no es válida." };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "La sesión venció." };
+  const { error } = await supabase.rpc("delete_nodal_manual_account", { target_account_id: accountId });
+  if (error) return { ok: false, message: error.message.includes("unused manual") ? "Solo puede eliminarse una cuenta manual virgen y sin actividad." : "No se pudo eliminar la cuenta." };
+  revalidatePath("/app");
+  return { ok: true, message: "Cuenta manual eliminada." };
 }

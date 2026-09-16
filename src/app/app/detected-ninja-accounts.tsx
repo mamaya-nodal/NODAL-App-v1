@@ -1,5 +1,6 @@
 import type { DetectedNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import { createDetectedPurchase } from "./purchase-actions";
+import { PurchasePaymentFields } from "./purchase-payment-fields";
 
 type Props = {
   accounts: readonly DetectedNinjaAccount[];
@@ -10,9 +11,10 @@ type Props = {
   online: boolean;
   period: string;
   periodId: string;
+  wallets: ReadonlyArray<{ id: string; name: string }>;
 };
 
-export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linkedAccountNames, mode, online, period, periodId }: Props) {
+export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linkedAccountNames, mode, online, period, periodId, wallets }: Props) {
   const detectedPropAccounts = accounts.filter((account) => account.type === "prop");
   const propAccounts = detectedPropAccounts.filter((account) => !linkedAccountNames.has(account.accountName));
   return (
@@ -39,7 +41,7 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linke
             <div className="ninja-registration-fields">
               <label>Fecha de compra sugerida<input defaultValue={account.suggestedPurchaseDate} name="purchased_on" required type="date" /></label>
               <label>Precio de compra (USD)<input inputMode="decimal" min="0" name="price" placeholder="Completar" required step="0.01" type="number" /></label>
-              <label>Origen de fondos<select defaultValue="Aporte trader" name="funds_origin"><option value="Aporte trader">Aporte trader</option><option value="Saldo generado">Saldo generado</option></select></label>
+              <PurchasePaymentFields wallets={[...wallets]} />
             </div>
             <div className="ninja-detected-footer"><p className="ninja-detected-note">Primera detección: {account.suggestedPurchaseDate}</p><button className="primary-action" disabled={!companyIds[account.companyCode?.toLowerCase() ?? ""]} type="submit">Registrar cuenta</button></div>
           </form>

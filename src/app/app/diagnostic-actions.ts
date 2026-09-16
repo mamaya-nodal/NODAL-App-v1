@@ -46,12 +46,12 @@ export async function investigateAlert(input: Readonly<{
     supabase.from("companies").select("id, display_name"),
     supabase.from("accounts").select("id, company_id, reference_number, state, state_origin").eq("period_id", input.periodId),
     supabase.from("purchases").select("account_id, price_cents, funds_origin").eq("period_id", input.periodId),
-    supabase.from("daily_controls").select("id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, phase").eq("period_id", input.periodId).order("control_number"),
+    supabase.from("daily_controls").select("id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, phase, transfer_fee_cents").eq("period_id", input.periodId).order("control_number"),
     supabase.from("daily_control_participants").select("daily_control_id, account_id, allocated_result_cents").eq("period_id", input.periodId),
     supabase.from("operation_entries").select("id, daily_control_id, account_id, operated_on, phase, participant_role, destination, magnitude_cents").eq("period_id", input.periodId),
     supabase.from("account_phase_withdrawals").select("account_id, phase, total_withdrawal_cents").eq("period_id", input.periodId),
-    supabase.from("wallet_movements").select("id, occurred_on, kind, amount_cents, observation").eq("period_id", input.periodId),
-    supabase.from("funding_withdrawals").select("id, account_id, approved_on, amount_cents, collected_on").eq("period_id", input.periodId).eq("is_active", true),
+    supabase.from("wallet_movements").select("id, wallet_id, occurred_on, kind, amount_cents, fee_cents, observation").eq("period_id", input.periodId),
+    supabase.from("funding_withdrawals").select("id, account_id, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents").eq("period_id", input.periodId).eq("is_active", true),
     supabase.rpc("list_nodal_period_activity", { target_period_id: input.periodId }),
   ]);
   if ([accountsResult, purchasesResult, controlsResult, participantsResult, entriesResult, phaseWithdrawalsResult, walletResult, fundingResult].some((result) => result.error)) return { ok: false, message: "No se pudo reconstruir el expediente de esta alerta." };
@@ -65,11 +65,11 @@ export async function investigateAlert(input: Readonly<{
     participantRole: entry.participant_role, phase: entry.phase,
   }));
   const phaseWithdrawals: AccountPhaseWithdrawal[] = (phaseWithdrawalsResult.data ?? []).flatMap((withdrawal) => withdrawal.phase === "Evaluacion" ? [] : [{ accountId: withdrawal.account_id, phase: withdrawal.phase as AccountPhaseWithdrawal["phase"], totalWithdrawalInCents: Number(withdrawal.total_withdrawal_cents) }]);
-  const walletMovements: WalletMovement[] = (walletResult.data ?? []).map((movement) => ({ id: movement.id, occurredOn: movement.occurred_on, kind: movement.kind as WalletMovement["kind"], amountInCents: Number(movement.amount_cents), observation: movement.observation }));
-  const fundingWithdrawals: FundingWithdrawal[] = (fundingResult.data ?? []).map((withdrawal) => ({ id: withdrawal.id, accountId: withdrawal.account_id, approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, amountInCents: Number(withdrawal.amount_cents) }));
+  const walletMovements: WalletMovement[] = (walletResult.data ?? []).map((movement) => ({ id: movement.id, occurredOn: movement.occurred_on, kind: movement.kind as WalletMovement["kind"], amountInCents: Number(movement.amount_cents), feeInCents: Number(movement.fee_cents ?? 0), observation: movement.observation, walletId: movement.wallet_id }));
+  const fundingWithdrawals: FundingWithdrawal[] = (fundingResult.data ?? []).map((withdrawal) => ({ id: withdrawal.id, accountId: withdrawal.account_id, approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, amountInCents: Number(withdrawal.amount_cents), feeInCents: Number(withdrawal.collection_fee_cents ?? 0), walletId: withdrawal.wallet_id }));
   const operationalSummary = buildOperationalSummary({
     accounts: (accountsResult.data ?? []).map((account) => { const purchase = purchases.get(account.id); return { id: account.id, state: account.state, stateOrigin: account.state_origin as AccountStateOrigin, priceInCents: Number(purchase?.price_cents ?? 0), fundsOrigin: purchase?.funds_origin === "Saldo generado" ? "Saldo generado" : "Aporte trader" }; }),
-    controls: (controlsResult.data ?? []).map((control) => ({ balanceAfterInCents: Number(control.balance_after_cents), controlNumber: control.control_number, kind: control.kind, movementInCents: control.movement_cents === null ? null : Number(control.movement_cents), operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents), originDestination: control.origin_destination })),
+    controls: (controlsResult.data ?? []).map((control) => ({ balanceAfterInCents: Number(control.balance_after_cents), controlNumber: control.control_number, kind: control.kind, movementInCents: control.movement_cents === null ? null : Number(control.movement_cents), operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents), originDestination: control.origin_destination, transferFeeInCents: Number(control.transfer_fee_cents ?? 0) })),
     entries, fundingWithdrawals, phaseWithdrawals, walletMovements,
   });
   const alertCode = input.alertCode as SummaryAlert["code"];
