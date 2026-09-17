@@ -111,7 +111,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     if (expectedBalanceByPeriod.has(periodId)) return expectedBalanceByPeriod.get(periodId) ?? null;
     const [{ data: currentControl }, { data: excludedSession }] = await Promise.all([
       supabase.from("daily_controls")
-        .select("balance_after_cents,created_at")
+        .select("balance_after_cents,created_at,received_balance_cents,sync_issue_reason")
         .eq("period_id", periodId)
         .lte("created_at", openedAt)
         .order("control_number", { ascending: false })
@@ -134,7 +134,9 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       return value;
     }
     if (currentControl) {
-      const value = Number(currentControl.balance_after_cents);
+      const value = currentControl.sync_issue_reason && currentControl.received_balance_cents !== null
+        ? Number(currentControl.received_balance_cents)
+        : Number(currentControl.balance_after_cents);
       expectedBalanceByPeriod.set(periodId, value);
       return value;
     }
@@ -148,10 +150,12 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       .lt("period_month", currentPeriod.period_month)
       .order("period_month", { ascending: false });
     for (const prior of priorPeriods ?? []) {
-      const { data: priorControl } = await supabase.from("daily_controls").select("balance_after_cents")
+      const { data: priorControl } = await supabase.from("daily_controls").select("balance_after_cents,received_balance_cents,sync_issue_reason")
         .eq("period_id", prior.id).order("control_number", { ascending: false }).limit(1).maybeSingle();
       if (priorControl) {
-        const value = Number(priorControl.balance_after_cents);
+        const value = priorControl.sync_issue_reason && priorControl.received_balance_cents !== null
+          ? Number(priorControl.received_balance_cents)
+          : Number(priorControl.balance_after_cents);
         expectedBalanceByPeriod.set(periodId, value);
         return value;
       }
