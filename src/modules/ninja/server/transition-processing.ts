@@ -149,14 +149,18 @@ export async function processNinjaOperationBurns(
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return { detectedChanges: 0, processed: false, reason: "not_configured" };
   const supabase = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { data: storedState, error } = await supabase
-    .from("ninja_transition_states")
-    .select("revision,state")
-    .eq("connector_id", connectorId)
-    .maybeSingle();
-  if (error || !storedState) return { detectedChanges: 0, processed: false, reason: "storage_error" };
+  const burnSourceIds = candidates.map((operation) => `ninja-operation-burn:${operation.openingEventId}`);
+  const [{ data: storedState, error }, { data: priorBurnRows, error: priorBurnError }] = await Promise.all([
+    supabase.from("ninja_transition_states").select("revision,state").eq("connector_id", connectorId).maybeSingle(),
+    supabase.from("ninja_account_change_events").select("source_event_id,from_life_id")
+      .eq("connector_id", connectorId).eq("event_type", "burned").in("source_event_id", burnSourceIds),
+  ]);
+  if (error || priorBurnError || !storedState) {
+    return { detectedChanges: 0, processed: false, reason: "storage_error" };
+  }
 
   const state = validState(storedState.state);
+  const priorBurnKeys = new Set((priorBurnRows ?? []).map((row) => `${row.source_event_id}\u0000${row.from_life_id}`));
   const operationByAccount = new Map(candidates.map((operation) => [
     `${operation.connectionName}\u0000${operation.accountName}`,
     operation,
@@ -166,6 +170,8 @@ export async function processNinjaOperationBurns(
     if (life.status !== "active") return life;
     const operation = operationByAccount.get(`${life.connectionName}\u0000${life.tracked.externalAccountName}`);
     if (!operation || operation.minimumNetLiquidation === null || operation.minimumNetLiquidationAt === null) return life;
+    const sourceEventId = `ninja-operation-burn:${operation.openingEventId}`;
+    if (priorBurnKeys.has(`${sourceEventId}\u0000${life.lifeId}`)) return life;
     const minimumInCents = Math.round(operation.minimumNetLiquidation * 100);
     if (minimumInCents > life.tracked.burnFloorInCents) return life;
     events.push({
@@ -176,7 +182,7 @@ export async function processNinjaOperationBurns(
       kind: "burned",
       occurredAt: operation.minimumNetLiquidationAt,
       reason: "Net Liquidation tocó el piso de quema vigente durante la operación.",
-      sourceEventId: `ninja-operation-burn:${operation.openingEventId}`,
+      sourceEventId,
       toAccountName: null,
       toLifeId: null,
     });
