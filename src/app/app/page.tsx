@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { createClient } from "@/lib/supabase/server";
+import { buildManualAccountEconomicHistory } from "@/modules/operations/domain/manual-account-economic-history";
 import { decideAccess } from "@/modules/access/domain/access-decision";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
@@ -729,18 +730,33 @@ export default async function PrivateAppPage({
           tradeNumber: index + 1 });
       });
       if (technicalRows.length === 0) {
-        let priorCashValue: number | null = null;
-        [...(historicalManualAccountBalanceRows ?? [])]
+        const manualBalances = [...(historicalManualAccountBalanceRows ?? [])]
           .filter((row) => row.account_id === account.id)
           .sort((left, right) => left.trade_number - right.trade_number || left.observed_at.localeCompare(right.observed_at))
-          .forEach((row) => {
-            const cashValue = Number(row.cash_value_cents);
-            const propResult = cashValue - (priorCashValue ?? Number(row.initial_balance_cents));
-            priorCashValue = cashValue;
-            economicHistory.push({ accumulatedInCents: accumulated, brokerResultInCents: null,
-              concept: "Cobertura", phase: "Evaluacion", propResultInCents: propResult,
-              tradeNumber: Number(row.trade_number) });
-          });
+          .map((row) => ({
+            cashValueInCents: Number(row.cash_value_cents),
+            initialBalanceInCents: Number(row.initial_balance_cents),
+            tradeNumber: Number(row.trade_number),
+          }));
+        const manualBrokerEntries = [...(historicalOperationEntryRows ?? [])]
+          .filter((entry) => entry.account_id === account.id)
+          .sort((left, right) => left.operated_on.localeCompare(right.operated_on) || left.created_at.localeCompare(right.created_at))
+          .map((entry) => ({
+            brokerResultInCents: entry.destination === "NETO BROKER +"
+              ? Number(entry.magnitude_cents)
+              : entry.destination === "NETO BROKER -" ? -Number(entry.magnitude_cents) : 0,
+            phase: entry.phase,
+          }));
+        const manualHistory = buildManualAccountEconomicHistory({
+          accumulatedInCents: accumulated,
+          balanceHistory: manualBalances,
+          brokerHistory: manualBrokerEntries,
+        });
+        manualHistory.forEach((row) => economicHistory.push({
+          ...row,
+          concept: "Cobertura",
+        }));
+        accumulated = manualHistory.at(-1)?.accumulatedInCents ?? accumulated;
       }
       (historicalFundingWithdrawalRows ?? []).filter((row) => row.account_id === account.id && row.collected_on).forEach((row) => {
         const net = Number(row.amount_cents) - Number(row.collection_fee_cents ?? 0);
