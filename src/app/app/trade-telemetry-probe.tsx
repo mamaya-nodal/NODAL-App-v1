@@ -123,7 +123,7 @@ function ManualCoverageAssignment({ accounts, batch }: Readonly<{
         type="button"
       >
         <span aria-hidden="true">{expanded ? "−" : "+"}</span>
-        Asignar cuentas manualmente
+        Asignar cuentas
       </button>
       {expanded && <form
         className="manual-coverage-panel"

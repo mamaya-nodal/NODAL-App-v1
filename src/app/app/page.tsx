@@ -1214,11 +1214,11 @@ export default async function PrivateAppPage({
             initialControls={dailyControls}
             incomingNinjaBalance={incomingNinjaBalance}
             manualCoverageAccounts={accountOptions
-              .filter((account) => !account.externalName)
+              .filter((account) => account.state !== "closed")
               .map((account) => ({
                 companyName: account.companyName,
                 id: account.id,
-                label: `Cuenta ${account.referenceNumber}`,
+                label: account.externalName ?? `Cuenta ${account.referenceNumber}`,
                 state: account.state,
               }))}
             ninjaBrokerBalanceHistory={ninjaBrokerBalanceHistory}

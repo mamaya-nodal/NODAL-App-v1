@@ -37,6 +37,8 @@ export async function assignManualAccountsToCoverage(input: Readonly<{
     const detail = error.message.toLowerCase();
     const message = detail.includes("different phases")
       ? "Las cuentas seleccionadas están en etapas distintas. Revisalas antes de asignar."
+      : detail.includes("open account owned")
+        ? "Sólo podés seleccionar cuentas abiertas de tu espacio."
       : detail.includes("same company and period")
         ? "Todas las cuentas deben pertenecer a la misma empresa y período."
         : detail.includes("older coverage")
