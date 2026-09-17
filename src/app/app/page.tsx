@@ -7,6 +7,7 @@ import Image from "next/image";
 
 import { createClient } from "@/lib/supabase/server";
 import { buildManualAccountEconomicHistory } from "@/modules/operations/domain/manual-account-economic-history";
+import { buildDetectedAccountEconomicHistory } from "@/modules/operations/domain/detected-account-economic-history";
 import { decideAccess } from "@/modules/access/domain/access-decision";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
@@ -451,15 +452,21 @@ export default async function PrivateAppPage({
         .order("observed_at", { ascending: false }).order("created_at", { ascending: false })
         .then(({ data }) => data ?? []),
       accountIds.length ? privileged.from("ninja_operation_batch_members")
-        .select("account_id,session_id,allocated_broker_result_cents,role")
+        .select("account_id,batch_id,session_id,allocated_broker_result_cents,role")
         .in("account_id", accountIds).eq("role", "prop")
         .then(({ data }) => data ?? []) : Promise.resolve([]),
     ]) : [[], []];
     const technicalSessionIds = technicalMemberRows.map((row) => row.session_id);
+    const technicalBatchIds = [...new Set(technicalMemberRows.map((row) => row.batch_id))];
     const technicalSessionRows = privileged && technicalSessionIds.length
       ? (await privileged.from("ninja_operation_probe_sessions")
           .select("id,account_name,result,opened_at")
           .in("id", technicalSessionIds).order("opened_at")).data ?? []
+      : [];
+    const technicalBatchRows = privileged && technicalBatchIds.length
+      ? (await privileged.from("ninja_operation_batches")
+          .select("id,daily_control_id")
+          .in("id", technicalBatchIds).not("daily_control_id", "is", null)).data ?? []
       : [];
 
     companies = (companyRows ?? []).map((company) => ({
@@ -713,14 +720,19 @@ export default async function PrivateAppPage({
       const purchaseCost = purchase ? Number(purchase.price_cents) : 0;
       let accumulated = -purchaseCost;
       const sessionById = new Map(technicalSessionRows.map((session) => [Number(session.id), session]));
+      const controlByBatchId = new Map(technicalBatchRows.flatMap((batch) =>
+        batch.daily_control_id ? [[batch.id, batch.daily_control_id] as const] : [],
+      ));
       const technicalRows = technicalMemberRows
         .filter((member) => member.account_id === account.id)
         .flatMap((member) => {
           const session = sessionById.get(Number(member.session_id));
-          if (!session) return [];
+          const dailyControlId = controlByBatchId.get(member.batch_id);
+          if (!session || !dailyControlId) return [];
           return [{
             broker: Number(member.allocated_broker_result_cents ?? 0),
             date: session.opened_at,
+            dailyControlId,
             prop: session.result === null ? null : Math.round(Number(session.result) * 100),
           }];
         })
@@ -729,13 +741,20 @@ export default async function PrivateAppPage({
         accumulatedInCents: accumulated, brokerResultInCents: null, concept: "Examen",
         phase: "—", propResultInCents: null, tradeNumber: null,
       }];
-      technicalRows.forEach((row, index) => {
-        accumulated += row.broker;
-        const matchingEntry = (historicalOperationEntryRows ?? []).find((entry) => entry.account_id === account.id && entry.operated_on === row.date.slice(0, 10));
-        economicHistory.push({ accumulatedInCents: accumulated, brokerResultInCents: row.broker,
-          concept: "Cobertura", phase: matchingEntry?.phase ?? "Evaluacion", propResultInCents: row.prop,
-          tradeNumber: index + 1 });
+      const detectedHistory = buildDetectedAccountEconomicHistory({
+        accumulatedInCents: accumulated,
+        accountingEntries: (historicalOperationEntryRows ?? [])
+          .filter((entry) => entry.account_id === account.id)
+          .map((entry) => ({ dailyControlId: entry.daily_control_id, phase: entry.phase })),
+        trades: technicalRows.map((row) => ({
+          brokerResultInCents: row.broker,
+          dailyControlId: row.dailyControlId,
+          openedAt: row.date,
+          propResultInCents: row.prop,
+        })),
       });
+      detectedHistory.forEach((row) => economicHistory.push({ ...row, concept: "Cobertura" }));
+      accumulated = detectedHistory.at(-1)?.accumulatedInCents ?? accumulated;
       if (technicalRows.length === 0) {
         const manualBalances = [...(historicalManualAccountBalanceRows ?? [])]
           .filter((row) => row.account_id === account.id)
