@@ -56,7 +56,7 @@ export default async function AdminUserPreview({ params }: Props) {
   const period = [...(workspace.periods ?? [])].sort((a, b) => b.period_month.localeCompare(a.period_month))[0];
   if (!period) notFound();
 
-  const [{ data: accounts }, { data: manualBalances }, { data: controls }, summaries] = await Promise.all([
+  const [{ data: accounts }, { data: manualBalances }, { data: operationEntries }, { data: controls }, summaries] = await Promise.all([
     service
       .from("accounts")
       .select("id,reference_number,state,state_origin,companies(display_name),purchases(price_cents,purchased_on,funds_origin)")
@@ -67,6 +67,11 @@ export default async function AdminUserPreview({ params }: Props) {
       .select("account_id,cash_value_cents,trade_number,observed_at")
       .eq("period_id", period.id)
       .order("observed_at", { ascending: false }),
+    service
+      .from("operation_entries")
+      .select("account_id,phase,created_at")
+      .eq("period_id", period.id)
+      .order("created_at", { ascending: false }),
     service
       .from("daily_controls")
       .select("id,control_number,operated_on,kind,balance_after_cents,operating_result_cents,source,created_at")
@@ -90,6 +95,10 @@ export default async function AdminUserPreview({ params }: Props) {
   }
   const linkByAccount = new Map(supervision.links.map((link) => [link.accountId, link]));
   const inventoryByName = new Map(supervision.inventory.accounts.map((account) => [account.accountName, account]));
+  const latestPhaseByAccount = new Map<string, string>();
+  for (const entry of operationEntries ?? []) {
+    if (!latestPhaseByAccount.has(entry.account_id)) latestPhaseByAccount.set(entry.account_id, entry.phase);
+  }
   const accountRows = (accounts ?? []).map((account) => {
     const company = relation(account.companies);
     const purchase = relation(account.purchases);
@@ -106,6 +115,9 @@ export default async function AdminUserPreview({ params }: Props) {
       id: account.id,
       observedAt: manual?.observedAt ?? supervision.inventory.observedAt,
       price: Number(purchase?.price_cents ?? 0),
+      stage: latestPhaseByAccount.get(account.id) === "Evaluacion" || !latestPhaseByAccount.has(account.id)
+        ? "Evaluation"
+        : "Funded",
       state: account.state,
       trade: manual?.trade ?? 0,
     };
@@ -159,7 +171,7 @@ export default async function AdminUserPreview({ params }: Props) {
           {accountRows.map((account) => <details className="demo-account-card" key={account.id}>
             <summary>
               <span className="demo-account-identity"><strong>{account.company}</strong><small>{account.externalName}</small></span>
-              <span className="demo-stage evaluation">Evaluation</span>
+              <span className={`demo-stage ${account.stage.toLowerCase()}`}>{account.stage}</span>
               <span className="demo-account-balance"><small>Cash value</small><strong>{money(account.cashValue)}</strong></span>
               <span className="demo-account-result">{account.state === "closed" ? "Cerrada" : account.state === "live" ? "Activa" : "Sin operar"}</span>
             </summary>
