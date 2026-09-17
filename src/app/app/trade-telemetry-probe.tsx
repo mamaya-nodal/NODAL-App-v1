@@ -94,6 +94,7 @@ function ManualCoverageAssignment({ accounts, batch }: Readonly<{
   batch: AutomaticBatchRow;
 }>) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [closeAccounts, setCloseAccounts] = useState(false);
   const [feedback, setFeedback] = useState<{ message: string; ok: boolean } | null>(null);
@@ -111,9 +112,46 @@ function ManualCoverageAssignment({ accounts, batch }: Readonly<{
   }
 
   return (
-    <details className="manual-coverage-assignment">
-      <summary>Asignar cuentas manualmente</summary>
-      <div className="manual-coverage-panel">
+    <section className={`manual-coverage-assignment${expanded ? " open" : ""}`}>
+      <button
+        aria-expanded={expanded}
+        className="manual-coverage-toggle"
+        onClick={() => {
+          setExpanded((current) => !current);
+          setFeedback(null);
+        }}
+        type="button"
+      >
+        <span aria-hidden="true">{expanded ? "−" : "+"}</span>
+        Asignar cuentas manualmente
+      </button>
+      {expanded && <form
+        className="manual-coverage-panel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (pending || selectedIds.length === 0) return;
+          setFeedback(null);
+          startTransition(async () => {
+            try {
+              const result = await assignManualAccountsToCoverage({
+                accountIds: selectedIds,
+                batchId: batch.id,
+                closeAccounts,
+              });
+              setFeedback(result);
+              if (result.ok) {
+                setSelectedIds([]);
+                router.refresh();
+              }
+            } catch {
+              setFeedback({
+                message: "No se pudo completar la conciliación. La cobertura no fue modificada; actualizá la página e intentá nuevamente.",
+                ok: false,
+              });
+            }
+          });
+        }}
+      >
         <p>Elegí todas las cuentas que participaron. NODAL vinculará un registro existente o distribuirá esta cobertura sin duplicarla.</p>
         <div className="manual-coverage-account-list">
           {accounts.map((account) => (
@@ -139,22 +177,13 @@ function ManualCoverageAssignment({ accounts, batch }: Readonly<{
         <button
           className="manual-coverage-submit"
           disabled={pending || selectedIds.length === 0}
-          onClick={() => startTransition(async () => {
-            const result = await assignManualAccountsToCoverage({
-              accountIds: selectedIds,
-              batchId: batch.id,
-              closeAccounts,
-            });
-            setFeedback(result);
-            if (result.ok) router.refresh();
-          })}
-          type="button"
+          type="submit"
         >
           {pending ? "Asignando…" : "Asignar y conciliar"}
         </button>
-        {feedback && <p className={`manual-coverage-feedback ${feedback.ok ? "success" : "error"}`} role="status">{feedback.message}</p>}
-      </div>
-    </details>
+        {feedback && <p aria-live="polite" className={`manual-coverage-feedback ${feedback.ok ? "success" : "error"}`} role="status">{feedback.message}</p>}
+      </form>}
+    </section>
   );
 }
 

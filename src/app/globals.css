@@ -7372,17 +7372,22 @@ html[data-theme="day"] .demo-stage.live {
   border-top: 1px solid var(--app-border);
   padding-top: 10px;
 }
-.manual-coverage-assignment > summary {
+.manual-coverage-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   width: max-content;
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: var(--app-accent);
   font-size: .69rem;
   font-weight: 850;
-  list-style: none;
   cursor: pointer;
 }
-.manual-coverage-assignment > summary::before { content: "+ "; }
-.manual-coverage-assignment[open] > summary::before { content: "− "; }
-.manual-coverage-assignment > summary::-webkit-details-marker { display: none; }
+.manual-coverage-toggle:hover { text-decoration: underline; }
+.manual-coverage-toggle:focus-visible { outline: 2px solid var(--app-accent); outline-offset: 4px; border-radius: 3px; }
+.manual-coverage-toggle > span { width: 9px; text-align: center; }
 .manual-coverage-panel { display: grid !important; gap: 12px !important; padding-top: 12px; }
 .manual-coverage-panel > p {
   margin: 0;
