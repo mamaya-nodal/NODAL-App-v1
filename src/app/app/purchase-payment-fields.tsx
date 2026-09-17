@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 
-type WalletOption = Readonly<{ id: string; name: string }>;
+type WalletOption = Readonly<{ balanceInCents: number; id: string; name: string }>;
+
+function money(cents: number) {
+  return new Intl.NumberFormat("es-AR", {
+    currency: "USD",
+    maximumFractionDigits: 2,
+    style: "currency",
+  }).format(cents / 100);
+}
 
 export function PurchasePaymentFields({ wallets }: Readonly<{ wallets: WalletOption[] }>) {
   const [source, setSource] = useState<"Aporte trader" | "Saldo generado">("Aporte trader");
@@ -15,12 +23,19 @@ export function PurchasePaymentFields({ wallets }: Readonly<{ wallets: WalletOpt
         </select>
       </label>
       {source === "Saldo generado" && (
-        <label>Billetera
-          <select defaultValue="" name="wallet_id" required>
-            <option disabled value="">Elegí una billetera</option>
-            {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
-          </select>
-        </label>
+        <>
+          <label>Billetera
+            <select defaultValue="" name="wallet_id" required>
+              <option disabled value="">Elegí una billetera</option>
+              {wallets.map((wallet) => (
+                <option key={wallet.id} value={wallet.id}>
+                  {wallet.name} — disponible {money(wallet.balanceInCents)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <small className="purchase-wallet-help">La compra se descuenta únicamente de la billetera elegida.</small>
+        </>
       )}
     </>
   );

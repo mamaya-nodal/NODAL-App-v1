@@ -84,6 +84,11 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [walletSavingId, setWalletSavingId] = useState<string | null>(null);
+  const [walletFeedback, setWalletFeedback] = useState<Record<string, string>>({});
+  const [walletNames, setWalletNames] = useState<Record<string, string>>(() =>
+    Object.fromEntries(wallets.map((wallet) => [wallet.id, wallet.name])),
+  );
   const [movementKind, setMovementKind] = useState<keyof typeof labels>("external_contribution");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
   const [liveOnline, setLiveOnline] = useState(ninjaOnline);
@@ -144,11 +149,12 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
 
   async function updateWalletName(event: FormEvent<HTMLFormElement>, walletId: string) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setSaving(true);
-    const result = await renameWallet({ name: String(form.get("name") ?? ""), walletId });
-    setSaving(false);
-    setMessage(result.message);
+    const name = (walletNames[walletId] ?? "").trim();
+    setWalletSavingId(walletId);
+    setWalletFeedback((current) => ({ ...current, [walletId]: "" }));
+    const result = await renameWallet({ name, walletId });
+    setWalletSavingId(null);
+    setWalletFeedback((current) => ({ ...current, [walletId]: result.message }));
     if (result.ok) router.refresh();
   }
 
@@ -275,10 +281,29 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           {wallets.map((wallet) => (
             <div className="named-wallet-row" key={wallet.id}>
               <form onSubmit={(event) => updateWalletName(event, wallet.id)}>
-                <input aria-label={`Nombre de ${wallet.name}`} defaultValue={wallet.name} name="name" />
-                <button disabled={saving} type="submit">Guardar</button>
+                <label htmlFor={`wallet-name-${wallet.id}`}>Nombre de la billetera</label>
+                <div>
+                  <input
+                    aria-label={`Nombre de ${wallet.name}`}
+                    id={`wallet-name-${wallet.id}`}
+                    maxLength={80}
+                    name="name"
+                    onChange={(event) => setWalletNames((current) => ({
+                      ...current,
+                      [wallet.id]: event.target.value,
+                    }))}
+                    value={walletNames[wallet.id] ?? wallet.name}
+                  />
+                  <button
+                    disabled={walletSavingId === wallet.id || !(walletNames[wallet.id] ?? "").trim() || (walletNames[wallet.id] ?? "").trim() === wallet.name}
+                    type="submit"
+                  >
+                    {walletSavingId === wallet.id ? "Guardando…" : "Guardar nombre"}
+                  </button>
+                </div>
+                {walletFeedback[wallet.id] && <small role="status">{walletFeedback[wallet.id]}</small>}
               </form>
-              <strong>{money(wallet.balanceInCents)}</strong>
+              <div className="named-wallet-balance"><span>Saldo disponible</span><strong>{money(wallet.balanceInCents)}</strong></div>
             </div>
           ))}
           <p><span>Total billeteras</span><strong>{money(summary.walletBalanceInCents)}</strong></p>

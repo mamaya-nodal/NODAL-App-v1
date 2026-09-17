@@ -101,6 +101,9 @@ const purchaseMessages: Record<string, string> = {
   not_created: "La compra no pudo confirmarse. No se guardó ningún dato.",
   period_not_current:
     "Ese período no admite una compra con fecha automática. La carga histórica sigue pendiente de definición.",
+  wallet_insufficient: "La billetera elegida no tiene saldo suficiente para pagar esta cuenta. No se guardó ningún dato.",
+  wallet_not_available: "La billetera elegida ya no está disponible. Elegí otra billetera.",
+  wallet_required: "Elegí la billetera desde la que querés pagar la cuenta.",
 };
 
 const resetMessages: Record<string, string> = {

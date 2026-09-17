@@ -11,7 +11,7 @@ type Props = {
   online: boolean;
   period: string;
   periodId: string;
-  wallets: ReadonlyArray<{ id: string; name: string }>;
+  wallets: ReadonlyArray<{ balanceInCents: number; id: string; name: string }>;
 };
 
 export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linkedAccountNames, mode, online, period, periodId, wallets }: Props) {

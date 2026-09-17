@@ -52,6 +52,20 @@ export async function createPurchase(formData: FormData): Promise<never> {
     redirect("/");
   }
 
+  if (fundsOrigin === "Saldo generado") {
+    if (!walletId) redirect(safeContextUrl(mode, period, "wallet_required"));
+    const { data: walletBalance, error: walletError } = await supabase.rpc(
+      "calculate_nodal_wallet_balance",
+      { target_wallet_id: walletId },
+    );
+    if (walletError || walletBalance === null) {
+      redirect(safeContextUrl(mode, period, "wallet_not_available"));
+    }
+    if (Number(walletBalance) < priceCents) {
+      redirect(safeContextUrl(mode, period, "wallet_insufficient"));
+    }
+  }
+
   const { error } = await supabase.rpc("create_nodal_purchase_with_wallet", {
     target_company_id: companyId,
     target_funds_origin: fundsOrigin,
@@ -61,9 +75,15 @@ export async function createPurchase(formData: FormData): Promise<never> {
   });
 
   if (error) {
-    const result = error.message.includes("selected current month")
-      ? "period_not_current"
-      : "not_created";
+    const result = error.message.includes("insufficient")
+      ? "wallet_insufficient"
+      : error.message.includes("Wallet is required")
+        ? "wallet_required"
+        : error.message.includes("Wallet is not available")
+          ? "wallet_not_available"
+          : error.message.includes("selected current month")
+            ? "period_not_current"
+            : "not_created";
     redirect(safeContextUrl(mode, period, result));
   }
 
@@ -94,6 +114,20 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
+  if (fundsOrigin === "Saldo generado") {
+    if (!walletId) redirect(safeContextUrl(mode, period, "wallet_required"));
+    const { data: walletBalance, error: walletError } = await supabase.rpc(
+      "calculate_nodal_wallet_balance",
+      { target_wallet_id: walletId },
+    );
+    if (walletError || walletBalance === null) {
+      redirect(safeContextUrl(mode, period, "wallet_not_available"));
+    }
+    if (Number(walletBalance) < priceCents) {
+      redirect(safeContextUrl(mode, period, "wallet_insufficient"));
+    }
+  }
+
   const { error } = await supabase.rpc("create_nodal_detected_purchase_with_wallet", {
     target_company_id: companyId,
     target_connection_name: formText(formData, "connection_name"),
@@ -108,7 +142,15 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
   });
 
   if (error) {
-    const result = error.message.includes("already linked") ? "already_created" : "not_created";
+    const result = error.message.includes("already linked")
+      ? "already_created"
+      : error.message.includes("insufficient")
+        ? "wallet_insufficient"
+        : error.message.includes("Wallet is required")
+          ? "wallet_required"
+          : error.message.includes("Wallet is not available")
+            ? "wallet_not_available"
+            : "not_created";
     redirect(safeContextUrl(mode, period, result));
   }
 
