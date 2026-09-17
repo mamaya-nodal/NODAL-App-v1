@@ -43,4 +43,26 @@ describe("evolveNinjaTransitionState", () => {
     const repeated = evolveNinjaTransitionState({ businessDate: "2026-09-11", connectedNames: ["Tradeify"], createLifeId: id, observations: [{ ...observation("TDFY1", "Evaluation", 47_747.72), connectionName: "Tradeify" }], state: burned.state });
     expect(repeated.changes).toHaveLength(0);
   });
+
+  it("revierte una quema automática si Ninja vuelve a mostrar la misma cuenta activa sobre el piso", () => {
+    sequence = 0;
+    const first = evolveNinjaTransitionState({ businessDate: "2026-09-17", connectedNames: ["Tradeify"], createLifeId: id,
+      observations: [{ ...observation("FTDFYSLX1", "Funded"), companyCode: "TRADEFY", connectionName: "Tradeify", product: "Select Flex" }], state: { lives: [] } });
+    const raisedFloor = evolveNinjaTransitionState({ businessDate: "2026-09-17", connectedNames: ["Tradeify"], createLifeId: id,
+      observations: [{ ...observation("FTDFYSLX1", "Funded", 52_100), companyCode: "TRADEFY", connectionName: "Tradeify", product: "Select Flex" }], state: first.state });
+    const burned = evolveNinjaTransitionState({ businessDate: "2026-09-17", connectedNames: ["Tradeify"], createLifeId: id,
+      observations: [{ ...observation("FTDFYSLX1", "Funded", 49_774.24), companyCode: "TRADEFY", connectionName: "Tradeify", product: "Select Flex" }], state: raisedFloor.state });
+    const recovered = evolveNinjaTransitionState({ businessDate: "2026-09-17", connectedNames: ["Tradeify"], createLifeId: id,
+      observations: [{ ...observation("FTDFYSLX1", "Funded", 53_838.48), companyCode: "TRADEFY", connectionName: "Tradeify", product: "Select Flex" }], state: burned.state });
+
+    expect(recovered.changes).toMatchObject([{
+      automatic: true,
+      fromAccountName: "FTDFYSLX1",
+      kind: "burn_reversed",
+    }]);
+    expect(recovered.state.lives).toMatchObject([{
+      status: "active",
+      tracked: { balanceInCents: 5_383_848, externalAccountName: "FTDFYSLX1" },
+    }]);
+  });
 });

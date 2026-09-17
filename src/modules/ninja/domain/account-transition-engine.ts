@@ -27,6 +27,7 @@ export type NinjaAccountChange = Readonly<{
   fromAccountName: string | null;
   kind:
     | "burned"
+    | "burn_reversed"
     | "evaluation_to_funded"
     | "funded_to_live_review"
     | "new_account"

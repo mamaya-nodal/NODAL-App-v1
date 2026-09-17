@@ -39,7 +39,21 @@ export function evolveNinjaTransitionState(args: Readonly<{
       if (life.connectionName !== connectionName) return life;
       const observation = observationByName.get(life.tracked.externalAccountName);
       if (life.status === "burned") {
-        return observation ? life : { ...life, status: "missing" as const };
+        if (!observation) return { ...life, status: "missing" as const };
+        if (observation.balanceStatus !== "verified"
+          || observation.balanceInCents <= life.tracked.burnFloorInCents) return life;
+        const tracked = observeTrackedNinjaAccount(life.tracked, observation.balanceInCents, args.businessDate);
+        changes.push({
+          automatic: true,
+          connectionName,
+          fromAccountName: tracked.externalAccountName,
+          fromLifeId: life.lifeId,
+          kind: "burn_reversed",
+          reason: "NinjaTrader volvió a informar la misma cuenta activa y por encima del piso; se revirtió la quema automática anterior.",
+          toAccountName: null,
+          toLifeId: null,
+        });
+        return { ...life, status: "active" as const, tracked };
       }
       if (life.status !== "active") return life;
       if (!observation) {
