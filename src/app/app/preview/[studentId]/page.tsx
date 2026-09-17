@@ -93,7 +93,9 @@ export default async function AdminUserPreview({ params }: Props) {
       });
     }
   }
-  const linkByAccount = new Map(supervision.links.map((link) => [link.accountId, link]));
+  const linkByAccount = new Map(
+    supervision.links.filter((link) => link.closedAt === null).map((link) => [link.accountId, link]),
+  );
   const inventoryByName = new Map(supervision.inventory.accounts.map((account) => [account.accountName, account]));
   const latestPhaseByAccount = new Map<string, string>();
   for (const entry of operationEntries ?? []) {
@@ -115,9 +117,11 @@ export default async function AdminUserPreview({ params }: Props) {
       id: account.id,
       observedAt: manual?.observedAt ?? supervision.inventory.observedAt,
       price: Number(purchase?.price_cents ?? 0),
-      stage: latestPhaseByAccount.get(account.id) === "Evaluacion" || !latestPhaseByAccount.has(account.id)
-        ? "Evaluation"
-        : "Funded",
+      stage: link?.phase === "Funded" || link?.phase === "Live"
+        ? "Funded"
+        : latestPhaseByAccount.get(account.id) === "Evaluacion" || !latestPhaseByAccount.has(account.id)
+          ? "Evaluation"
+          : "Funded",
       state: account.state,
       trade: manual?.trade ?? 0,
     };

@@ -11,10 +11,12 @@ export type NinjaSupervisionConnection = Readonly<{
 export type NinjaSupervisionLink = Readonly<{
   accountId: string;
   accountName: string;
+  closedAt: string | null;
   company: string;
   connectionName: string;
   firstSeenAt: string;
   periodMonth: string;
+  phase: "Evaluation" | "Funded" | "Live" | null;
   state: string;
 }>;
 
@@ -115,7 +117,8 @@ export function deriveNinjaTestReadiness(
   const props = classified.filter((item) => item.detected.type === "prop");
   const brokers = classified.filter((item) => item.detected.type === "broker");
   const linked = new Set(
-    data.links.map((link) => accountKey(link.connectionName, link.accountName)),
+    data.links.filter((link) => link.closedAt === null)
+      .map((link) => accountKey(link.connectionName, link.accountName)),
   );
   const missingLinks = props.filter(
     ({ account }) => !linked.has(accountKey(account.connectionName, account.accountName)),

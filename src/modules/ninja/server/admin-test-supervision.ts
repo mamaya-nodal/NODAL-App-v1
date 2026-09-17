@@ -61,7 +61,7 @@ export async function loadAdminNinjaTestSupervision(
   const [inventoryResult, reviewsResult, linksResult, sessionsResult, batchesResult] = await Promise.all([
     service.from("ninja_inventory_snapshots").select("accounts,observed_at").eq("connector_id", connector.id).order("observed_at", { ascending: false }).limit(1).maybeSingle(),
     service.from("ninja_connector_connection_reviews").select("connection_name,status").eq("connector_id", connector.id),
-    service.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at").eq("connector_id", connector.id),
+    service.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at,phase").eq("connector_id", connector.id),
     service.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opened_at,flat_at,settled_at,status,opening_balance,closing_balance,result,execution_count,instruments,direction,quantity").eq("connector_id", connector.id).is("excluded_at", null).order("opened_at", { ascending: false }).order("id", { ascending: false }).limit(30),
     service.from("ninja_operation_batches").select("id,broker_session_id,status,broker_result_cents,distributed_cents,rounding_difference_cents,opened_at,settled_at,accounting_mode,accounting_status,accounting_blocking_reason,accounting_company_id,accounting_phase,operated_on").eq("connector_id", connector.id).order("opened_at", { ascending: false }).limit(30),
   ]);
@@ -88,8 +88,11 @@ export async function loadAdminNinjaTestSupervision(
     const accountPeriod = Array.isArray(account.periods) ? account.periods[0] : account.periods;
     return [{
       accountId: link.account_id, accountName: link.external_account_name,
+      closedAt: link.closed_at,
       company: company?.display_name ?? "Sin empresa", connectionName: link.connection_name,
-      firstSeenAt: link.first_seen_at, periodMonth: accountPeriod?.period_month ?? "", state: account.state,
+      firstSeenAt: link.first_seen_at, periodMonth: accountPeriod?.period_month ?? "",
+      phase: link.phase === "Evaluation" || link.phase === "Funded" || link.phase === "Live" ? link.phase : null,
+      state: account.state,
     }];
   });
 

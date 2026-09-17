@@ -41,10 +41,12 @@ function fixture(): AdminNinjaTestSupervision {
     links: [{
       accountId: "prop-account",
       accountName: "LFE05088021070001",
+      closedAt: null,
       company: "Lucid",
       connectionName: "Ninja Ivo",
       firstSeenAt: "2026-09-09T17:00:00.000Z",
       periodMonth: "2026-09-01",
+      phase: "Evaluation",
       state: "virgin",
     }],
     sessions: [],
