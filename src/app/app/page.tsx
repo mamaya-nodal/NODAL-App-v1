@@ -1189,6 +1189,14 @@ export default async function PrivateAppPage({
             embedded
             initialControls={dailyControls}
             incomingNinjaBalance={incomingNinjaBalance}
+            manualCoverageAccounts={accountOptions
+              .filter((account) => !account.externalName)
+              .map((account) => ({
+                companyName: account.companyName,
+                id: account.id,
+                label: `Cuenta ${account.referenceNumber}`,
+                state: account.state,
+              }))}
             ninjaBrokerBalanceHistory={ninjaBrokerBalanceHistory}
             initialLiveNinjaBalance={liveNinjaBrokerBalance}
             ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}

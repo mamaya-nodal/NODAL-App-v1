@@ -17,7 +17,7 @@ import {
 } from "@/modules/control-diario/domain/balance-rules";
 import type { ControlOriginDestination } from "@/modules/control-diario/domain/control-catalogs";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
-import { TradeTelemetryProbe } from "./trade-telemetry-probe";
+import { TradeTelemetryProbe, type ManualCoverageAccount } from "./trade-telemetry-probe";
 import {
   assertCanReceiveBrokerBalance,
   correctBrokerBalanceReview,
@@ -116,6 +116,7 @@ type DailyControlPreviewProps = {
   initialControls: PersistedDailyControl[];
   initialLiveNinjaBalance: NinjaLiveBrokerBalance | null;
   incomingNinjaBalance: NinjaBrokerBalanceEvent | null;
+  manualCoverageAccounts?: readonly ManualCoverageAccount[];
   ninjaBrokerBalanceHistory?: readonly NinjaBrokerBalanceHistoryItem[];
   ninjaBrokerSourceNotice: string | null;
   ninjaOnline: boolean;
@@ -140,6 +141,7 @@ export function DailyControlPreview({
   initialControls,
   initialLiveNinjaBalance,
   incomingNinjaBalance,
+  manualCoverageAccounts = [],
   ninjaBrokerBalanceHistory = [],
   ninjaBrokerSourceNotice,
   ninjaOnline,
@@ -751,6 +753,7 @@ export function DailyControlPreview({
 
       <TradeTelemetryProbe
         brokerAccountNames={brokerAccountNames}
+        manualAccounts={manualCoverageAccounts}
         propAccountNames={propAccountNames}
         todayOperationCount={rows.filter((row) => row.kind === "balance_update" && row.operatedOn === currentOperationalDay()).length}
         todayResultInCents={rows

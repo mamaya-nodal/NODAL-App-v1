@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import { buildNinjaOperationProbe, type NinjaTelemetryRow } from "@/modules/ninja/domain/operation-probe";
+import { assignManualAccountsToCoverage } from "./coverage-assignment-actions";
 
 type TechnicalOperationRow = Readonly<{
   account_name: string;
@@ -42,9 +44,17 @@ type AutomaticBatchRow = Readonly<{
 
 type Props = Readonly<{
   brokerAccountNames?: readonly string[];
+  manualAccounts?: readonly ManualCoverageAccount[];
   propAccountNames?: readonly string[];
   todayOperationCount?: number;
   todayResultInCents?: number;
+}>;
+
+export type ManualCoverageAccount = Readonly<{
+  companyName: string;
+  id: string;
+  label: string;
+  state: "closed" | "live" | "virgin";
 }>;
 
 const labels = {
@@ -79,6 +89,75 @@ function duration(openedAt: string, closedAt: string | null) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+function ManualCoverageAssignment({ accounts, batch }: Readonly<{
+  accounts: readonly ManualCoverageAccount[];
+  batch: AutomaticBatchRow;
+}>) {
+  const router = useRouter();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [closeAccounts, setCloseAccounts] = useState(false);
+  const [feedback, setFeedback] = useState<{ message: string; ok: boolean } | null>(null);
+  const [pending, startTransition] = useTransition();
+  const selectedCompany = accounts.find((account) => selectedIds.includes(account.id))?.companyName ?? null;
+  const allocation = selectedIds.length > 0
+    ? Math.round(Number(batch.broker_result_cents) / selectedIds.length)
+    : null;
+
+  function toggleAccount(accountId: string) {
+    setFeedback(null);
+    setSelectedIds((current) => current.includes(accountId)
+      ? current.filter((id) => id !== accountId)
+      : [...current, accountId]);
+  }
+
+  return (
+    <details className="manual-coverage-assignment">
+      <summary>Asignar cuentas manualmente</summary>
+      <div className="manual-coverage-panel">
+        <p>Elegí todas las cuentas que participaron. NODAL vinculará un registro existente o distribuirá esta cobertura sin duplicarla.</p>
+        <div className="manual-coverage-account-list">
+          {accounts.map((account) => (
+            <label className={selectedIds.includes(account.id) ? "selected" : ""} key={account.id}>
+              <input
+                checked={selectedIds.includes(account.id)}
+                disabled={pending || (selectedCompany !== null && selectedCompany !== account.companyName)}
+                onChange={() => toggleAccount(account.id)}
+                type="checkbox"
+              />
+              <span><strong>{account.label}</strong><small>{account.companyName} · {account.state === "closed" ? "Cerrada" : account.state === "live" ? "Activa" : "Virgen"}</small></span>
+            </label>
+          ))}
+        </div>
+        <div className="manual-coverage-summary">
+          <span>{selectedIds.length} {selectedIds.length === 1 ? "cuenta seleccionada" : "cuentas seleccionadas"}</span>
+          <strong>{allocation === null ? "—" : `${formatMoney(allocation / 100)} por cuenta`}</strong>
+        </div>
+        <label className="manual-coverage-close">
+          <input checked={closeAccounts} disabled={pending} onChange={(event) => setCloseAccounts(event.target.checked)} type="checkbox" />
+          <span><strong>Estas cuentas quedaron cerradas</strong><small>Usalo cuando este trade haya quemado o cerrado todas las cuentas seleccionadas.</small></span>
+        </label>
+        <button
+          className="manual-coverage-submit"
+          disabled={pending || selectedIds.length === 0}
+          onClick={() => startTransition(async () => {
+            const result = await assignManualAccountsToCoverage({
+              accountIds: selectedIds,
+              batchId: batch.id,
+              closeAccounts,
+            });
+            setFeedback(result);
+            if (result.ok) router.refresh();
+          })}
+          type="button"
+        >
+          {pending ? "Asignando…" : "Asignar y conciliar"}
+        </button>
+        {feedback && <p className={`manual-coverage-feedback ${feedback.ok ? "success" : "error"}`} role="status">{feedback.message}</p>}
+      </div>
+    </details>
+  );
+}
+
 function latestOpenPosition(events: NinjaTelemetryRow[], connectionName: string, accountName: string) {
   const latest = new Map<string, NinjaTelemetryRow>();
   for (const event of events) {
@@ -97,6 +176,7 @@ function latestOpenPosition(events: NinjaTelemetryRow[], connectionName: string,
 
 export function TradeTelemetryProbe({
   brokerAccountNames = [],
+  manualAccounts = [],
   propAccountNames = [],
   todayOperationCount = 0,
   todayResultInCents = 0,
@@ -170,7 +250,7 @@ export function TradeTelemetryProbe({
           </summary>
           <div className="automatic-batch-list">
             {batches.slice(0, 8).map((batch) => (
-              <article key={batch.id}>
+              <article className={batch.accounting_status === "blocked" ? "blocked" : ""} key={batch.id}>
                 <div>
                   <strong>{batch.company_name ?? "Cobertura sin asignar"}</strong>
                   <span>{batch.prop_accounts.length} {batch.prop_accounts.length === 1 ? "cuenta" : "cuentas"}{batch.phase ? ` · ${batch.phase}` : ""}</span>
@@ -181,6 +261,9 @@ export function TradeTelemetryProbe({
                     {batch.accounting_status === "blocked" ? batch.blocking_reason ?? "Revisar" : "Conciliada"}
                   </span>
                 </div>
+                {batch.accounting_status === "blocked" && batch.correlation_status === "unmatched" && manualAccounts.length > 0 && (
+                  <ManualCoverageAssignment accounts={manualAccounts} batch={batch} />
+                )}
               </article>
             ))}
           </div>

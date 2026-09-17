@@ -638,3 +638,17 @@ vigente sin aprobacion y evidencia suficiente.
 - **Seguridad:** Registrar una compra sigue exigiendo que la cuenta exista en el
   inventario recibido del conector autenticado del propio usuario.
 - **Estado:** Implementada el 2026-09-10.
+
+### APP-099 - Asignación manual de coberturas a cuentas sin telemetría prop
+
+- **Caso:** Una cobertura broker puede quedar sin cuentas compatibles cuando
+  las cuentas prop fueron creadas manualmente y se operaron desde otro Ninja.
+- **Decisión:** El usuario selecciona las cuentas que participaron desde la
+  propia cobertura pendiente. Si el mismo resultado ya posee un Control Diario
+  con esas cuentas, NODAL sólo lo vincula; si falta, crea un único control y
+  reparte el resultado con el redondeo vigente.
+- **Cierre:** La asignación permite indicar expresamente que el trade cerró las
+  cuentas. No se infiere una quema sin telemetría ni confirmación del usuario.
+- **Trazabilidad:** La cobertura, el control, las cuentas, el reparto, la
+  reutilización y el cierre opcional quedan auditados e idempotentes.
+- **Estado:** Implementada el 2026-09-17 durante la prueba integral de Ivo.
