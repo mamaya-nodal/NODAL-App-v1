@@ -42,10 +42,17 @@ const INITIAL_BURN_FLOOR_IN_CENTS = 4_800_000;
 const EVALUATION_TARGET_IN_CENTS = 5_300_100;
 const FUNDED_FLOOR_IN_CENTS = 5_010_000;
 
+const APPROVED_PHASE_PRODUCT_TRANSITIONS: Readonly<Record<string, readonly string[]>> = {
+  TOPSTEP: ["Trading Combine→Express", "Express→"],
+  TRADEFY: ["Select→Select Flex"],
+  TPT: ["→PRO"],
+};
+
 function sameProgram(left: Pick<TrackedNinjaAccount, "accountSizeInCents" | "companyCode" | "product">, right: Pick<NewNinjaAccount, "accountSizeInCents" | "companyCode" | "product">) {
-  return left.companyCode === right.companyCode
-    && left.product === right.product
-    && left.accountSizeInCents === right.accountSizeInCents;
+  if (left.companyCode !== right.companyCode || left.accountSizeInCents !== right.accountSizeInCents) return false;
+  if (left.product === right.product) return true;
+  const transition = `${left.product ?? ""}→${right.product ?? ""}`;
+  return APPROVED_PHASE_PRODUCT_TRANSITIONS[left.companyCode]?.includes(transition) ?? false;
 }
 function byExternalName<T extends { externalAccountName: string }>(left: T, right: T) {
   return left.externalAccountName.localeCompare(right.externalAccountName);

@@ -64,6 +64,21 @@ describe("cambios de inventario Ninja", () => {
     expect(changes.every((change) => change.automatic)).toBe(true);
   });
 
+  it("enlaza las cinco Tradeify aunque el nombre comercial cambie de Select a Select Flex", () => {
+    const disappeared = [1, 2, 3, 4, 5].map((number) => startTrackingNinjaAccount({
+      ...account(`TDFYSL50${number}`, "Evaluation", 53_025.44, "TRADEFY"),
+      product: "Select",
+    }, "2026-09-17"));
+    const appeared = [1, 2, 3, 4, 5].map((number) => ({
+      ...account(`FTDFYSLX50${number}`, "Funded", 50_000, "TRADEFY"),
+      product: "Select Flex",
+    }));
+
+    const changes = detectNinjaAccountChanges(disappeared, appeared);
+    expect(changes).toHaveLength(5);
+    expect(changes.every((change) => change.kind === "evaluation_to_funded" && change.automatic)).toBe(true);
+  });
+
   it("crea una vida nueva al detectar un reset de evaluación", () => {
     const prior = observeTrackedNinjaAccount(
       startTrackingNinjaAccount(account("LFE05088021070001", "Evaluation"), "2026-08-24"),
