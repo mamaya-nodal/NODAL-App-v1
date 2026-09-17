@@ -215,6 +215,7 @@ export default async function PrivateAppPage({
   let companies: Array<{ code: string; displayName: string; id: string }> = [];
   let linkedNinjaAccountNames = new Set<string>();
   let ninjaNamesByAccountId = new Map<string, string>();
+  let ninjaPhasesByAccountId = new Map<string, "Evaluation" | "Funded" | "Live">();
   let ninjaInventories: NinjaInventoryRpcRow[] = [];
   let connectedNinjaBrokerAccountNames: string[] = [];
   let connectedNinjaPropAccountNames: string[] = [];
@@ -383,7 +384,7 @@ export default async function PrivateAppPage({
           .order("approved_on", { ascending: false }),
         supabase
           .from("ninja_account_links")
-          .select("account_id, connection_name, external_account_name, closed_at")
+          .select("account_id, connection_name, external_account_name, phase, closed_at")
           .order("linked_at"),
         supabase.rpc("get_current_user_ninja_inventory"),
         supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),
@@ -467,7 +468,13 @@ export default async function PrivateAppPage({
       id: company.id,
     }));
     linkedNinjaAccountNames = new Set((ninjaLinkRows ?? []).filter((link) => link.closed_at === null).map((link) => link.external_account_name));
-    ninjaNamesByAccountId = new Map((ninjaLinkRows ?? []).map((link) => [link.account_id, link.external_account_name]));
+    const activeNinjaLinks = (ninjaLinkRows ?? []).filter((link) => link.closed_at === null);
+    ninjaNamesByAccountId = new Map(activeNinjaLinks.map((link) => [link.account_id, link.external_account_name]));
+    ninjaPhasesByAccountId = new Map(activeNinjaLinks.flatMap((link) =>
+      link.phase === "Evaluation" || link.phase === "Funded" || link.phase === "Live"
+        ? [[link.account_id, link.phase] as const]
+        : [],
+    ));
     ninjaInventories = (ninjaInventoryRows ?? []) as NinjaInventoryRpcRow[];
     const latestNinjaAccounts = new Map<string, {
       account: NinjaAccountSnapshot & { firstSeenAt?: string };
@@ -772,6 +779,7 @@ export default async function PrivateAppPage({
         companyId: account.company_id,
         companyName: company.display_name,
         currentCashValueInCents: ninjaBalance?.currentInCents ?? manualBalance?.cashValueInCents ?? null,
+        currentNinjaPhase: ninjaPhasesByAccountId.get(account.id) ?? null,
         externalName: ninjaNamesByAccountId.get(account.id) ?? null,
         economicHistory,
         fundsOrigin: purchase?.funds_origin ?? null,

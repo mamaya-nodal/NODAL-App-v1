@@ -26,6 +26,7 @@ type Props = Readonly<{
 export type AccountOverviewAccount = RegisterAccount & Readonly<{
   canDelete?: boolean;
   currentCashValueInCents: number | null;
+  currentNinjaPhase: "Evaluation" | "Funded" | "Live" | null;
   initialBalanceInCents: number | null;
   minimumNetLiquidationInCents: number | null;
   periodLabel: string;
@@ -86,7 +87,9 @@ function presentation(
   return {
     account,
     resultInCents: account.state === "virgin" || accountEntries.length === 0 ? null : latestResult,
-    stage: activePhase === "Evaluacion" ? "Evaluation" : "Funded",
+    stage: account.currentNinjaPhase === "Funded" || account.currentNinjaPhase === "Live"
+      ? "Funded"
+      : activePhase === "Evaluacion" ? "Evaluation" : "Funded",
     trades: Math.max(
       new Set(accountEntries.map((entry) => entry.dailyControlId)).size,
       account.technicalTradeCount,
