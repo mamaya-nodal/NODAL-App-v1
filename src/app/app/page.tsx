@@ -1095,6 +1095,13 @@ export default async function PrivateAppPage({
           dashboard={personalDashboard}
           liveBrokerBalance={liveNinjaBrokerBalance}
           ninjaOnline={connectorOnline}
+          openingSetupPreview={
+            accountHistory.length === 0 &&
+            dailyControls.length === 0 &&
+            operationEntryHistory.length === 0 &&
+            walletMovements.length === 0 &&
+            fundingWithdrawals.length === 0
+          }
           performance={homePerformance}
           periodLabel={formatPeriodLabel(selection.period.periodMonth)}
           summary={operationalSummary}
