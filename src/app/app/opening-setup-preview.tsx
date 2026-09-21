@@ -1,13 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
+import { confirmOpeningSetup } from "./opening-setup-actions";
 import styles from "./opening-setup-preview.module.css";
 
 type StartMode = "reconstruct" | "zero";
 
 type Props = Readonly<{
   autoOpen?: boolean;
+  periodId: string;
+}>;
+
+type BatchDraft = Readonly<{
+  accountCount: string;
+  accountSize: string;
+  companyName: string;
+  costPerAccount: string;
+  currentCashValue: string;
+  stage: "evaluation" | "funded" | "virgin";
 }>;
 
 type Draft = Readonly<{
@@ -43,6 +55,11 @@ const initialDraft: Draft = {
   virginAccounts: "",
   walletBalance: "",
   workingCapital: "",
+};
+
+const initialBatch: BatchDraft = {
+  accountCount: "", accountSize: "50000", companyName: "", costPerAccount: "",
+  currentCashValue: "", stage: "evaluation",
 };
 
 const zeroSteps = ["Punto de partida", "Dinero disponible", "Cuentas iniciales", "Vista previa"];
@@ -121,13 +138,16 @@ function SummaryItem({ label, value }: Readonly<{ label: string; value: string }
   return <div className={styles.summaryItem}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-export function OpeningSetupPreview({ autoOpen = false }: Props) {
+export function OpeningSetupPreview({ autoOpen = false, periodId }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(autoOpen);
   const [mode, setMode] = useState<StartMode | null>(null);
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(initialDraft);
   const [showBatchForm, setShowBatchForm] = useState(false);
-  const [finished, setFinished] = useState(false);
+  const [batch, setBatch] = useState<BatchDraft>(initialBatch);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const steps = mode === "reconstruct" ? reconstructionSteps : zeroSteps;
   const lastStep = steps.length - 1;
 
@@ -150,34 +170,43 @@ export function OpeningSetupPreview({ autoOpen = false }: Props) {
   function choose(nextMode: StartMode) {
     setMode(nextMode);
     setStep(1);
-    setFinished(false);
+    setMessage(null);
   }
 
   function restart() {
     setMode(null);
     setStep(0);
     setDraft(initialDraft);
+    setBatch(initialBatch);
     setShowBatchForm(false);
-    setFinished(false);
+    setMessage(null);
   }
 
-  function finishPreview() {
-    setFinished(true);
-    setOpen(false);
+  function finishSetup() {
+    if (!mode) return;
+    setMessage(null);
+    startTransition(async () => {
+      const result = await confirmOpeningSetup({ ...draft, batches: showBatchForm ? [batch] : [], mode, periodId });
+      setMessage(result.message);
+      if (result.ok) {
+        setOpen(false);
+        router.refresh();
+      }
+    });
   }
 
   return (
     <>
       <article className={styles.launcher}>
         <div>
-          <span>{finished ? "VISTA PREVIA COMPLETADA" : "PREPARACIÓN INICIAL"}</span>
+          <span>PREPARACIÓN INICIAL</span>
           <h2>Configurá tu punto de partida</h2>
           <p>
             Elegí si empezás desde cero o si necesitás reconstruir la situación con la que llegás a NODAL.
           </p>
         </div>
         <button onClick={() => setOpen(true)} type="button">
-          {finished ? "Volver a revisar" : "Comenzar"}
+          Comenzar
         </button>
       </article>
 
@@ -189,12 +218,12 @@ export function OpeningSetupPreview({ autoOpen = false }: Props) {
                 <span>CONFIGURACIÓN DE APERTURA</span>
                 <h2 id="opening-setup-title">Tu punto de partida en NODAL</h2>
               </div>
-              <button aria-label="Cerrar vista previa" className={styles.close} onClick={() => setOpen(false)} type="button">×</button>
+              <button aria-label="Cerrar configuración" className={styles.close} onClick={() => setOpen(false)} type="button">×</button>
             </header>
 
             <div className={styles.previewNotice}>
-              <strong>Vista previa</strong>
-              <span>Podés completar y recorrer todo. Todavía no se guardará información contable.</span>
+              <strong>Apertura real</strong>
+              <span>Al confirmar, este pantallazo quedará guardado y alimentará tu panel. No se inventarán trades ni cuentas cerradas.</span>
             </div>
 
             <div className={styles.body}>
@@ -278,14 +307,14 @@ export function OpeningSetupPreview({ autoOpen = false }: Props) {
                     </button>
                     {showBatchForm ? (
                       <div className={styles.batchForm}>
-                        <div className={styles.batchHeading}><strong>Lote 1</strong><span>Datos de prueba</span></div>
+                        <div className={styles.batchHeading}><strong>Lote 1</strong><span>Detalle opcional</span></div>
                         <div className={styles.fieldsThree}>
-                          <label className={styles.field}><span>Empresa</span><select defaultValue=""><option disabled value="">Elegí una empresa</option><option>LUCID</option><option>TRADEIFY</option><option>Otra</option></select></label>
-                          <label className={styles.field}><span>Tamaño</span><select defaultValue="50000"><option value="50000">US$ 50.000</option></select></label>
-                          <label className={styles.field}><span>Etapa actual</span><select defaultValue="evaluation"><option value="virgin">Virgen</option><option value="evaluation">Evaluación</option><option value="funded">Funded</option></select></label>
-                          <label className={styles.field}><span>Cantidad</span><input min="1" placeholder="5" type="number" /></label>
-                          <label className={styles.field}><span>Costo por cuenta</span><input placeholder="138,00" type="number" /></label>
-                          <label className={styles.field}><span>Cash value actual</span><input placeholder="50.000,00" type="number" /></label>
+                          <label className={styles.field}><span>Empresa</span><select onChange={(event) => setBatch((current) => ({ ...current, companyName: event.target.value }))} value={batch.companyName}><option disabled value="">Elegí una empresa</option><option>LUCID</option><option>TRADEIFY</option><option>Otra</option></select></label>
+                          <label className={styles.field}><span>Tamaño</span><select onChange={(event) => setBatch((current) => ({ ...current, accountSize: event.target.value }))} value={batch.accountSize}><option value="50000">US$ 50.000</option></select></label>
+                          <label className={styles.field}><span>Etapa actual</span><select onChange={(event) => setBatch((current) => ({ ...current, stage: event.target.value as BatchDraft["stage"] }))} value={batch.stage}><option value="virgin">Virgen</option><option value="evaluation">Evaluación</option><option value="funded">Funded</option></select></label>
+                          <label className={styles.field}><span>Cantidad</span><input min="1" onChange={(event) => setBatch((current) => ({ ...current, accountCount: event.target.value }))} placeholder="5" type="number" value={batch.accountCount} /></label>
+                          <label className={styles.field}><span>Costo por cuenta</span><input onChange={(event) => setBatch((current) => ({ ...current, costPerAccount: event.target.value }))} placeholder="138,00" type="number" value={batch.costPerAccount} /></label>
+                          <label className={styles.field}><span>Cash value actual</span><input onChange={(event) => setBatch((current) => ({ ...current, currentCashValue: event.target.value }))} placeholder="50.000,00" type="number" value={batch.currentCashValue} /></label>
                         </div>
                       </div>
                     ) : null}
@@ -324,7 +353,7 @@ export function OpeningSetupPreview({ autoOpen = false }: Props) {
                   <div className={styles.formSection}>
                     <p className={styles.eyebrow}>VISTA PREVIA DE APERTURA</p>
                     <h3>Así comenzaría tu cuenta</h3>
-                    <p className={styles.description}>Revisá el pantallazo antes de que diseñemos el guardado y la aprobación administrativa.</p>
+                    <p className={styles.description}>Revisá el pantallazo. Al confirmar, quedará como apertura auditable del período y se verá en el panel.</p>
                     <div className={styles.summaryGrid}>
                       <SummaryItem label="Capital neto aportado" value={money(totals.netCapital)} />
                       <SummaryItem label="Posición observable" value={money(totals.observable)} />
@@ -346,10 +375,11 @@ export function OpeningSetupPreview({ autoOpen = false }: Props) {
 
             <footer className={styles.footer}>
               <button className={styles.textButton} onClick={restart} type="button">Cambiar opción</button>
+              {message ? <p className={styles.actionMessage} role="status">{message}</p> : null}
               <div>
                 {step > 0 ? <button className={styles.backButton} onClick={() => setStep((current) => Math.max(0, current - 1))} type="button">Atrás</button> : null}
                 {step > 0 && step < lastStep ? <button className={styles.nextButton} onClick={() => setStep((current) => Math.min(lastStep, current + 1))} type="button">Continuar</button> : null}
-                {step === lastStep ? <button className={styles.nextButton} onClick={finishPreview} type="button">Finalizar vista previa</button> : null}
+                {step === lastStep ? <button className={styles.nextButton} disabled={isPending} onClick={finishSetup} type="button">{isPending ? "Guardando…" : "Confirmar punto de partida"}</button> : null}
               </div>
             </footer>
           </section>

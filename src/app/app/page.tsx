@@ -34,6 +34,11 @@ import {
 import { buildPeriodOpening } from "@/modules/summary/domain/period-opening";
 import type { OperationalOpeningSnapshot } from "@/modules/summary/domain/operational-summary";
 import {
+  operationalOpeningFromRecord,
+  type OpeningAccountStage,
+  type PeriodOpeningRecord,
+} from "@/modules/summary/domain/opening-snapshot";
+import {
   buildPeriodEarnings,
   type PersonalDashboardData,
 } from "@/modules/summary/domain/personal-dashboard";
@@ -68,6 +73,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
 import { AccountsOverview, type AccountOverviewAccount } from "./accounts-overview";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
+import { OpeningAccountReferences, OpeningOperationReference } from "./opening-snapshot-panels";
 import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary";
 
 type PrivateAppPageProps = {
@@ -299,6 +305,7 @@ export default async function PrivateAppPage({
   let personalDashboard: PersonalDashboardData | undefined;
   let accountingPeriods: AccountingPeriodView[] = [];
   let economicTrace: EconomicTraceItem[] = [];
+  let openingSnapshot: PeriodOpeningRecord | null = null;
   let periodOpening: OperationalOpeningSnapshot = {
     accumulatedResultInCents: 0,
     brokerBalanceInCents: null,
@@ -331,6 +338,8 @@ export default async function PrivateAppPage({
       { data: historicalWalletMovementRows },
       { data: historicalFundingWithdrawalRows },
       { data: walletRows },
+      { data: openingSnapshotRows },
+      { data: openingBatchRows },
     ] =
       await Promise.all([
         supabase
@@ -434,6 +443,13 @@ export default async function PrivateAppPage({
           .eq("workspace_id", selection.workspace.id)
           .eq("is_active", true)
           .order("created_at"),
+        supabase
+          .from("period_opening_snapshots")
+          .select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
+        supabase
+          .from("period_opening_account_batches")
+          .select("opening_snapshot_id,company_name,account_size_cents,stage,account_count,cost_per_account_cents,current_cash_value_cents"),
       ]);
     walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
       const { data } = await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id });
@@ -897,7 +913,33 @@ export default async function PrivateAppPage({
         status: null,
       }] : [])]),
     ].sort((left, right) => right.date.localeCompare(left.date) || right.id.localeCompare(left.id));
-    periodOpening = buildPeriodOpening({
+    const openingRecords: (PeriodOpeningRecord & { periodId: string })[] = (openingSnapshotRows ?? []).map((row) => ({
+      batches: (openingBatchRows ?? []).filter((batch) => batch.opening_snapshot_id === row.id).map((batch) => ({
+        accountCount: Number(batch.account_count),
+        accountSizeInCents: Number(batch.account_size_cents),
+        companyName: batch.company_name,
+        costPerAccountInCents: Number(batch.cost_per_account_cents),
+        currentCashValueInCents: batch.current_cash_value_cents === null ? null : Number(batch.current_cash_value_cents),
+        stage: batch.stage as OpeningAccountStage,
+      })),
+      brokerBalanceInCents: row.broker_balance_cents === null ? null : Number(row.broker_balance_cents),
+      closedAccountsReference: Number(row.closed_accounts_reference),
+      contributedCapitalInCents: Number(row.contributed_capital_cents),
+      cutoverDate: row.cutover_date,
+      floatingInCents: Number(row.floating_cents),
+      fundedAccounts: Number(row.funded_accounts),
+      fundingPendingInCents: Number(row.funding_pending_cents),
+      id: row.id,
+      liveEvaluationAccounts: Number(row.live_evaluation_accounts),
+      mode: row.start_mode as PeriodOpeningRecord["mode"],
+      periodId: row.period_id,
+      personalWithdrawalsInCents: Number(row.personal_withdrawals_cents),
+      priorRealizedResultInCents: Number(row.prior_realized_result_cents),
+      virginAccounts: Number(row.virgin_accounts),
+      walletBalanceInCents: Number(row.wallet_balance_cents),
+    }));
+    openingSnapshot = openingRecords.find((record) => record.periodId === selection.period!.id) ?? null;
+    const historicalOpening = buildPeriodOpening({
       controls: (historicalControlRows ?? []).map((control) => ({
         balanceAfterInCents: Number(control.balance_after_cents),
         controlNumber: control.control_number,
@@ -933,6 +975,26 @@ export default async function PrivateAppPage({
         periodId: movement.period_id,
       })),
     });
+    const orderedWorkspacePeriods = [...selection.workspace.periods]
+      .sort((left, right) => left.periodMonth.localeCompare(right.periodMonth));
+    const periodIndex = orderedWorkspacePeriods.findIndex((workspacePeriod) => workspacePeriod.id === selection.period!.id);
+    const applicableSnapshots = openingRecords.filter((record) => {
+      const index = orderedWorkspacePeriods.findIndex((workspacePeriod) => workspacePeriod.id === record.periodId);
+      return index >= 0 && index <= periodIndex;
+    }).map(operationalOpeningFromRecord);
+    periodOpening = applicableSnapshots.reduce<OperationalOpeningSnapshot>((total, snapshot) => ({
+      accountStates: {
+        closed: (total.accountStates?.closed ?? 0) + (snapshot.accountStates?.closed ?? 0),
+        live: (total.accountStates?.live ?? 0) + (snapshot.accountStates?.live ?? 0),
+        virgin: (total.accountStates?.virgin ?? 0) + (snapshot.accountStates?.virgin ?? 0),
+      },
+      accumulatedResultInCents: total.accumulatedResultInCents + snapshot.accumulatedResultInCents,
+      brokerBalanceInCents: snapshot.brokerBalanceInCents ?? total.brokerBalanceInCents,
+      capitalNetInCents: total.capitalNetInCents + snapshot.capitalNetInCents,
+      floatingInCents: (total.floatingInCents ?? 0) + (snapshot.floatingInCents ?? 0),
+      fundingPendingInCents: total.fundingPendingInCents + snapshot.fundingPendingInCents,
+      walletBalanceInCents: total.walletBalanceInCents + snapshot.walletBalanceInCents,
+    }), historicalOpening);
     operationalSummary = buildOperationalSummary({
       accounts: accountOptions.map((account) => ({
         fundsOrigin: account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
@@ -1096,13 +1158,16 @@ export default async function PrivateAppPage({
           liveBrokerBalance={liveNinjaBrokerBalance}
           ninjaOnline={connectorOnline}
           openingSetupPreview={
+            openingSnapshot === null &&
             accountHistory.length === 0 &&
             dailyControls.length === 0 &&
             operationEntryHistory.length === 0 &&
             walletMovements.length === 0 &&
             fundingWithdrawals.length === 0
           }
+          openingSnapshot={openingSnapshot}
           performance={homePerformance}
+          periodId={selection.period.id}
           periodLabel={formatPeriodLabel(selection.period.periodMonth)}
           summary={operationalSummary}
         />
@@ -1157,6 +1222,8 @@ export default async function PrivateAppPage({
             const companyIds = Object.fromEntries(companies.flatMap((company) => [[company.code.toLowerCase(), company.id], [company.displayName.toLowerCase(), company.id]]));
             return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} key={inventory.connector_id} linkedAccountNames={linkedNinjaAccountNames} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} wallets={walletViews} />;
           })}
+
+          {openingSnapshot ? <OpeningAccountReferences opening={openingSnapshot} /> : null}
 
           <AccountsOverview
             accounts={accountHistory}
@@ -1228,6 +1295,7 @@ export default async function PrivateAppPage({
           <div className="workspace-section-heading">
             <h2 id="operations-title">Operaciones</h2>
           </div>
+          {openingSnapshot ? <OpeningOperationReference opening={openingSnapshot} /> : null}
           <DailyControlPreview
             key={ninjaBrokerBalanceHistory[0]?.id ?? "no-ninja-balance"}
             accounts={accountOptions}

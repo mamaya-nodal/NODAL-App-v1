@@ -9,6 +9,7 @@ import { readAll } from './read-all';
 import { loadIndividualCommission } from '@/modules/summary/server/individual-commission';
 import type { AccountPhaseWithdrawal } from "@/modules/operations/domain/account-phase-results";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
+import { operationalOpeningFromRecord, type PeriodOpeningRecord } from "@/modules/summary/domain/opening-snapshot";
 
 type Supabase = Awaited<
   ReturnType<typeof import("@/lib/supabase/server").createClient>
@@ -36,7 +37,7 @@ export async function loadPeriodSummaries(
   }
   if (periodIds.length === 0) return result;
 
-  const [accountsResult, purchasesResult, controlsResult, entriesResult, withdrawalsResult, walletResult, fundingResult] = await Promise.all([
+  const [accountsResult, purchasesResult, controlsResult, entriesResult, withdrawalsResult, walletResult, fundingResult, openingResult] = await Promise.all([
     readAll(supabase.from("accounts").select("id, period_id, state, state_origin").in("period_id", periodIds).order("id")),
     readAll(supabase.from("purchases").select("account_id, period_id, price_cents, funds_origin").in("period_id", periodIds).order("id")),
     readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, transfer_fee_cents").in("period_id", periodIds).order("id")),
@@ -44,6 +45,7 @@ export async function loadPeriodSummaries(
     readAll(supabase.from("account_phase_withdrawals").select("period_id, account_id, phase, total_withdrawal_cents").in("period_id", periodIds).order("id")),
     readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, occurred_on, kind, amount_cents, fee_cents, observation").in("period_id", periodIds).order("id")),
     readAll(supabase.from("funding_withdrawals").select("id, period_id, account_id, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents").eq("is_active", true).in("period_id", periodIds).order("id")),
+    readAll(supabase.from("period_opening_snapshots").select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference").in("period_id", periodIds).order("id")),
   ]);
 
   const accounts = accountsResult.data ?? [];
@@ -53,7 +55,8 @@ export async function loadPeriodSummaries(
   const phaseWithdrawals = withdrawalsResult.data ?? [];
   const walletMovements = walletResult.data ?? [];
   const fundingWithdrawals = fundingResult.data ?? [];
-  const failed=[accountsResult,purchasesResult,controlsResult,entriesResult,withdrawalsResult,walletResult,fundingResult].find(r=>r.error);
+  const openings = openingResult.data ?? [];
+  const failed=[accountsResult,purchasesResult,controlsResult,entriesResult,withdrawalsResult,walletResult,fundingResult,openingResult].find(r=>r.error);
   if(failed)throw new Error('No se pudieron verificar los importes del período.');
   const {data:periodOwners,error:ownersError}=await supabase.from('periods').select('id,period_month,workspaces(owner_user_id)').in('id',periodIds);
   if(ownersError)throw new Error('No se pudieron verificar los períodos.');
@@ -115,6 +118,24 @@ export async function loadPeriodSummaries(
         walletId: withdrawal.wallet_id,
       }));
     const controlsForPeriod = controls.filter((control) => control.period_id === periodId);
+    const openingRow = openings.find((opening) => opening.period_id === periodId);
+    const opening = openingRow ? operationalOpeningFromRecord({
+      batches: [],
+      brokerBalanceInCents: openingRow.broker_balance_cents === null ? null : Number(openingRow.broker_balance_cents),
+      closedAccountsReference: Number(openingRow.closed_accounts_reference),
+      contributedCapitalInCents: Number(openingRow.contributed_capital_cents),
+      cutoverDate: openingRow.cutover_date,
+      floatingInCents: Number(openingRow.floating_cents),
+      fundedAccounts: Number(openingRow.funded_accounts),
+      fundingPendingInCents: Number(openingRow.funding_pending_cents),
+      id: openingRow.id,
+      liveEvaluationAccounts: Number(openingRow.live_evaluation_accounts),
+      mode: openingRow.start_mode as PeriodOpeningRecord["mode"],
+      personalWithdrawalsInCents: Number(openingRow.personal_withdrawals_cents),
+      priorRealizedResultInCents: Number(openingRow.prior_realized_result_cents),
+      virginAccounts: Number(openingRow.virgin_accounts),
+      walletBalanceInCents: Number(openingRow.wallet_balance_cents),
+    }) : undefined;
     const operatingDates = controlsForPeriod
       .filter((control) => control.kind === "balance_update")
       .map((control) => control.operated_on)
@@ -143,6 +164,7 @@ export async function loadPeriodSummaries(
         })),
         entries: entriesForPeriod,
         fundingWithdrawals: fundingForPeriod,
+        opening,
         phaseWithdrawals: phaseWithdrawalsForPeriod,
         walletMovements: walletForPeriod,
       }),agreements.get(periodId)??null),

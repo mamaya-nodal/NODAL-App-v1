@@ -45,9 +45,11 @@ export type FundingWithdrawal = Readonly<{
 }>;
 
 export type OperationalOpeningSnapshot = Readonly<{
+  accountStates?: Readonly<{ virgin: number; live: number; closed: number }>;
   accumulatedResultInCents: number;
   brokerBalanceInCents: number | null;
   capitalNetInCents: number;
+  floatingInCents?: number;
   fundingPendingInCents: number;
   walletBalanceInCents: number;
 }>;
@@ -107,9 +109,11 @@ export function buildOperationalSummary(input: Readonly<{
   walletMovements: WalletMovement[];
 }>): OperationalSummary {
   const opening: OperationalOpeningSnapshot = input.opening ?? {
+    accountStates: { closed: 0, live: 0, virgin: 0 },
     accumulatedResultInCents: 0,
     brokerBalanceInCents: null,
     capitalNetInCents: 0,
+    floatingInCents: 0,
     fundingPendingInCents: 0,
     walletBalanceInCents: 0,
   };
@@ -123,13 +127,14 @@ export function buildOperationalSummary(input: Readonly<{
     ).phaseResults].reverse().find((phase) => phase.totalGainInCents !== 0)?.totalGainInCents ?? 0,
   }));
   const states = {
-    closed: input.accounts.filter((account) => account.state === "closed").length,
-    live: input.accounts.filter((account) => account.state === "live").length,
-    virgin: input.accounts.filter((account) => account.state === "virgin").length,
+    closed: (opening.accountStates?.closed ?? 0) + input.accounts.filter((account) => account.state === "closed").length,
+    live: (opening.accountStates?.live ?? 0) + input.accounts.filter((account) => account.state === "live").length,
+    virgin: (opening.accountStates?.virgin ?? 0) + input.accounts.filter((account) => account.state === "virgin").length,
   };
   const manualAccountStateCount = input.accounts.filter((account) => account.stateOrigin !== "automatic").length;
   const realizedGainInCents = sum(accountTotals.filter(({ account }) => account.state === "closed").map(({ total }) => total));
-  const floatingInCents = Math.abs(sum(accountTotals.filter(({ account }) => account.state === "live").map(({ total }) => total)));
+  const floatingInCents = (opening.floatingInCents ?? 0)
+    + Math.abs(sum(accountTotals.filter(({ account }) => account.state === "live").map(({ total }) => total)));
   const virginPriceInCents = sum(input.accounts.filter((account) => account.state === "virgin").map((account) => account.priceInCents));
   const orderedControls = [...input.controls].sort((left, right) => left.controlNumber - right.controlNumber);
   const brokerBalanceInCents = orderedControls.at(-1)?.balanceAfterInCents ?? opening.brokerBalanceInCents;

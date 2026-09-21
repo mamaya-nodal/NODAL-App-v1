@@ -12,9 +12,11 @@ import {
   type PersonalDashboardData,
 } from "@/modules/summary/domain/personal-dashboard";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
+import type { PeriodOpeningRecord } from "@/modules/summary/domain/opening-snapshot";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 import { OpeningSetupPreview } from "./opening-setup-preview";
+import { OpeningSnapshotHome } from "./opening-snapshot-panels";
 
 type HomeOverviewProps = Readonly<{
   capitalHistory: CapitalHistoryPoint[];
@@ -22,6 +24,8 @@ type HomeOverviewProps = Readonly<{
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
   ninjaOnline?: boolean;
   openingSetupPreview?: boolean;
+  openingSnapshot?: PeriodOpeningRecord | null;
+  periodId?: string;
   performance: HomePerformance;
   periodLabel: string;
   summary: OperationalSummary;
@@ -83,7 +87,7 @@ function EarningsItem({ label, valueInCents }: Readonly<{ label: string; valueIn
   return <div><span>{label}</span><strong>{formatMoney(valueInCents)}</strong></div>;
 }
 
-export function HomeOverview({ capitalHistory, dashboard, liveBrokerBalance = null, ninjaOnline = false, openingSetupPreview = false, performance, periodLabel, summary }: HomeOverviewProps) {
+export function HomeOverview({ capitalHistory, dashboard, liveBrokerBalance = null, ninjaOnline = false, openingSetupPreview = false, openingSnapshot = null, performance, periodId, periodLabel, summary }: HomeOverviewProps) {
   const [chartMetric, setChartMetric] = useState<ChartMetric>(dashboard ? "earnings" : "billing");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
   const [liveOnline, setLiveOnline] = useState(ninjaOnline);
@@ -116,7 +120,8 @@ export function HomeOverview({ capitalHistory, dashboard, liveBrokerBalance = nu
 
   return (
     <section aria-label="Inicio" className="home-overview-panel" id="inicio">
-      {openingSetupPreview ? <OpeningSetupPreview autoOpen /> : null}
+      {openingSetupPreview && periodId ? <OpeningSetupPreview autoOpen periodId={periodId} /> : null}
+      {openingSnapshot ? <OpeningSnapshotHome opening={openingSnapshot} /> : null}
       {liveBalance && (
         <div className="home-live-status">
           <span className={liveOnline ? "online" : undefined}><i aria-hidden="true" />NinjaTrader {liveOnline ? "en vivo" : "último dato"}</span>

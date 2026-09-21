@@ -37,6 +37,42 @@
   box-shadow: 0 8px 20px rgb(76 151 34 / 18%);
 }
 
+.savedOpening,
+.openingAccounts,
+.openingOperation {
+  margin-bottom: 14px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 30%, var(--app-border));
+  border-radius: 16px;
+  background: linear-gradient(130deg, color-mix(in srgb, var(--app-accent) 9%, var(--app-panel)), var(--app-panel));
+}
+.savedOpening { display: grid; align-items: center; gap: 18px; grid-template-columns: minmax(220px, .8fr) minmax(420px, 1.2fr); }
+.savedOpening > div:first-child > span,
+.openingAccounts > div:first-child > span,
+.openingOperation span { color: var(--app-accent); font-size: 9px; font-weight: 900; letter-spacing: 1px; }
+.savedOpening h2,
+.openingAccounts h3 { margin: 5px 0; color: var(--app-title); font-size: 18px; }
+.savedOpening > div:first-child p,
+.openingAccounts > div:first-child p,
+.openingOperation p { margin: 0; color: var(--app-copy); font-size: 10px; line-height: 1.5; }
+.savedMetrics,
+.openingCounts { display: grid; gap: 9px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.savedMetrics p,
+.openingCounts p { margin: 0; padding: 12px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-panel); }
+.savedMetrics span,
+.openingCounts span { display: block; margin-bottom: 5px; color: var(--app-subtle); font-size: 9px; }
+.savedMetrics strong,
+.openingCounts strong { color: var(--app-title); font-size: 13px; }
+.openingAccounts { margin: 0 0 14px; }
+.openingCounts { margin-top: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.openingBatches { display: grid; gap: 8px; margin-top: 10px; }
+.openingBatches p { display: flex; justify-content: space-between; gap: 14px; margin: 0; padding: 10px 12px; border-radius: 9px; background: var(--app-panel); color: var(--app-copy); font-size: 10px; }
+.openingBatches strong { color: var(--app-title); }
+.openingOperation { margin: 0 0 14px; }
+.openingOperation > div { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 7px; }
+.openingOperation > div strong { color: var(--app-title); font-size: 11px; }
+.openingOperation b { color: var(--app-title); }
+
 .backdrop {
   position: fixed;
   z-index: 1000;
@@ -134,11 +170,15 @@
 .reconciliation p { margin: 7px 0 0; font-size: 10px; line-height: 1.4; }
 .footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px 24px; border-top: 1px solid var(--app-border); background: var(--app-panel); }
 .footer > div { display: flex; gap: 9px; }
+.actionMessage { flex: 1; margin: 0; color: var(--app-copy); font-size: 10px; text-align: right; }
 .textButton,
 .backButton { min-height: 40px; padding: 0 14px; border: 0; background: transparent; color: var(--app-copy); font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
 .backButton { border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-input); color: var(--app-title); }
 
 @media (max-width: 760px) {
+  .savedOpening { grid-template-columns: 1fr; }
+  .savedMetrics,
+  .openingCounts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .launcher { align-items: stretch; flex-direction: column; }
   .launcher > button { width: 100%; }
   .backdrop { padding: 0; place-items: stretch; }
@@ -158,6 +198,7 @@
   .choice { min-height: 0; }
   .choice p { min-height: 0; }
   .footer { padding: 12px 14px; }
+  .actionMessage { display: none; }
   .textButton { display: none; }
   .footer > div { width: 100%; }
   .footer :is(.backButton, .nextButton) { flex: 1; }
