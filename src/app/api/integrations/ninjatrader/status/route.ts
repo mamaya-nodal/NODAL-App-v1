@@ -24,6 +24,7 @@ export async function GET() {
       liveBrokerBalance: error
         ? null
         : buildNinjaLiveBrokerBalance(inventoryResult.data ?? []),
+      linked: !error && statusResult.data?.[0]?.status === "active",
       online: !error && Boolean(statusResult.data?.[0]?.is_online),
     },
     { headers: { "Cache-Control": "no-store, max-age=0" }, status: error ? 503 : 200 },

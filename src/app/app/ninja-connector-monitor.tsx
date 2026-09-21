@@ -6,10 +6,11 @@ import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-
 
 type Props = Readonly<{
   inventoryRevision?: string;
+  linked?: boolean;
   online: boolean;
 }>;
 
-export function NinjaConnectorMonitor({ inventoryRevision, online }: Props) {
+export function NinjaConnectorMonitor({ inventoryRevision, linked = true, online }: Props) {
   useEffect(() => {
     let active = true;
     const check = async () => {
@@ -20,6 +21,7 @@ export function NinjaConnectorMonitor({ inventoryRevision, online }: Props) {
           window.dispatchEvent(new CustomEvent<NinjaStatusEventDetail>(NINJA_STATUS_EVENT, {
             detail: {
               inventoryRevision: result.inventoryRevision ?? null,
+              linked: Boolean(result.linked),
               liveBrokerBalance: result.liveBrokerBalance ?? null,
               online: Boolean(result.online),
             },
@@ -28,7 +30,7 @@ export function NinjaConnectorMonitor({ inventoryRevision, online }: Props) {
         const inventoryChanged = inventoryRevision !== undefined &&
           typeof result.inventoryRevision === "string" &&
           result.inventoryRevision !== inventoryRevision;
-        if (active && response.ok && (Boolean(result.online) !== online || inventoryChanged)) {
+        if (active && response.ok && (Boolean(result.linked) !== linked || Boolean(result.online) !== online || inventoryChanged)) {
           // Una recarga completa conserva el hash de la sección activa. El refresh
           // del router puede reconstruir la URL del servidor sin ese fragmento.
           window.location.reload();
@@ -40,7 +42,7 @@ export function NinjaConnectorMonitor({ inventoryRevision, online }: Props) {
     void check();
     const interval = window.setInterval(check, 5_000);
     return () => { active = false; window.clearInterval(interval); };
-  }, [inventoryRevision, online]);
+  }, [inventoryRevision, linked, online]);
 
   return null;
 }

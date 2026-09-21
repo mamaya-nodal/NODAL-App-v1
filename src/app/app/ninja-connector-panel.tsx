@@ -34,7 +34,7 @@ export function NinjaConnectorPanel({ compact = false, connector }: Props) {
 
   return (
     <section className={`ninja-pairing-panel${compact ? " is-compact" : ""}`} aria-labelledby="ninja-pairing-title">
-      <NinjaConnectorMonitor online={online} />
+      <NinjaConnectorMonitor linked={connector?.status === "active"} online={online} />
       <div className={`ninja-detections-heading${compact ? " visually-compact" : ""}`}>
         <div>
           <p className="status">CONEXIÓN CON NINJATRADER</p>
