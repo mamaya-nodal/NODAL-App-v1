@@ -51,6 +51,33 @@ describe("pisos y objetivos del seguimiento Ninja", () => {
       "new_account",
     ]);
   });
+
+  it("aplica el trailing EOD de FTMO Growth 50K y lo bloquea en 50K", () => {
+    let tracked = startTrackingNinjaAccount({
+      ...account("FTMO157754", "Evaluation"),
+      companyCode: "FTMO",
+      product: "Growth",
+    }, "2026-09-21");
+    tracked = observeTrackedNinjaAccount(tracked, 5_150_000, "2026-09-21");
+    tracked = observeTrackedNinjaAccount(tracked, 5_100_000, "2026-09-22");
+    expect(tracked.burnFloorInCents).toBe(4_950_000);
+
+    tracked = observeTrackedNinjaAccount(tracked, 5_300_000, "2026-09-22");
+    expect(tracked.reachedEvaluationTarget).toBe(true);
+    tracked = observeTrackedNinjaAccount(tracked, 5_250_000, "2026-09-23");
+    expect(tracked.burnFloorInCents).toBe(5_000_000);
+  });
+
+  it("mantiene el trailing EOD de FTMO Growth al pasar a Sim-Funded", () => {
+    let tracked = startTrackingNinjaAccount({
+      ...account("FTMO-FUNDED-TEST", "Funded"),
+      companyCode: "FTMO",
+      product: "Growth",
+    }, "2026-09-21");
+    tracked = observeTrackedNinjaAccount(tracked, 5_240_000, "2026-09-21");
+    tracked = observeTrackedNinjaAccount(tracked, 5_180_000, "2026-09-22");
+    expect(tracked.burnFloorInCents).toBe(5_000_000);
+  });
 });
 describe("cambios de inventario Ninja", () => {
   it("resuelve el ejemplo de cinco evaluaciones: tres pasan y dos se queman", () => {

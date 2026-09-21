@@ -41,6 +41,7 @@ export type NinjaAccountChange = Readonly<{
 const INITIAL_BALANCE_IN_CENTS = 5_000_000;
 const INITIAL_BURN_FLOOR_IN_CENTS = 4_800_000;
 const EVALUATION_TARGET_IN_CENTS = 5_300_100;
+const FTMO_GROWTH_EVALUATION_TARGET_IN_CENTS = 5_300_000;
 const FUNDED_FLOOR_IN_CENTS = 5_010_000;
 
 const APPROVED_PHASE_PRODUCT_TRANSITIONS: Readonly<Record<string, readonly string[]>> = {
@@ -63,6 +64,14 @@ function fundedTriggerInCents(companyCode: string) {
   return companyCode === "TOPSTEP" ? 5_200_000 : 5_210_000;
 }
 
+function isFtmoGrowth(account: Pick<TrackedNinjaAccount, "companyCode" | "product">) {
+  return account.companyCode === "FTMO" && account.product === "Growth";
+}
+
+function evaluationTargetInCents(account: Pick<TrackedNinjaAccount, "companyCode" | "product">) {
+  return isFtmoGrowth(account) ? FTMO_GROWTH_EVALUATION_TARGET_IN_CENTS : EVALUATION_TARGET_IN_CENTS;
+}
+
 export function startTrackingNinjaAccount(account: NewNinjaAccount, businessDate: string): TrackedNinjaAccount {
   if (account.accountSizeInCents !== INITIAL_BALANCE_IN_CENTS) {
     throw new Error("NODAL todavía no tiene una regla de riesgo aprobada para ese tamaño de cuenta.");
@@ -72,7 +81,7 @@ export function startTrackingNinjaAccount(account: NewNinjaAccount, businessDate
     burnFloorInCents: INITIAL_BURN_FLOOR_IN_CENTS,
     highestEodBalanceInCents: account.balanceInCents,
     lastBusinessDate: businessDate,
-    reachedEvaluationTarget: account.phase === "Evaluation" && account.balanceInCents >= EVALUATION_TARGET_IN_CENTS,
+    reachedEvaluationTarget: account.phase === "Evaluation" && account.balanceInCents >= evaluationTargetInCents(account),
   };
 }
 
@@ -86,10 +95,19 @@ export function observeTrackedNinjaAccount(
 
   if (businessDate !== account.lastBusinessDate && account.phase === "Evaluation") {
     highestEodBalanceInCents = Math.max(highestEodBalanceInCents, account.balanceInCents);
-    burnFloorInCents = Math.max(INITIAL_BURN_FLOOR_IN_CENTS, highestEodBalanceInCents - 200_000);
+    const trailingFloor = Math.max(INITIAL_BURN_FLOOR_IN_CENTS, highestEodBalanceInCents - 200_000);
+    burnFloorInCents = isFtmoGrowth(account)
+      ? Math.min(INITIAL_BALANCE_IN_CENTS, trailingFloor)
+      : trailingFloor;
   }
 
-  if (account.phase === "Funded" && balanceInCents >= fundedTriggerInCents(account.companyCode)) {
+  if (businessDate !== account.lastBusinessDate && account.phase === "Funded" && isFtmoGrowth(account)) {
+    highestEodBalanceInCents = Math.max(highestEodBalanceInCents, account.balanceInCents);
+    burnFloorInCents = Math.min(
+      INITIAL_BALANCE_IN_CENTS,
+      Math.max(INITIAL_BURN_FLOOR_IN_CENTS, highestEodBalanceInCents - 200_000),
+    );
+  } else if (account.phase === "Funded" && balanceInCents >= fundedTriggerInCents(account.companyCode)) {
     burnFloorInCents = FUNDED_FLOOR_IN_CENTS;
   }
 
@@ -100,7 +118,7 @@ export function observeTrackedNinjaAccount(
     highestEodBalanceInCents,
     lastBusinessDate: businessDate,
     reachedEvaluationTarget: account.reachedEvaluationTarget
-      || (account.phase === "Evaluation" && balanceInCents >= EVALUATION_TARGET_IN_CENTS),
+      || (account.phase === "Evaluation" && balanceInCents >= evaluationTargetInCents(account)),
   };
 }
 

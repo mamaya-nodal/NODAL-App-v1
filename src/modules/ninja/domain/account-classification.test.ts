@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { NinjaAccountSnapshot } from "./ingestion-payload";
-import { classifyNinjaAccount } from "./account-classification";
+import { classifyNinjaAccount, hasApprovedAutomaticRiskRule } from "./account-classification";
 
 function account(accountName: string, connectionName = "Ninja"): NinjaAccountSnapshot {
   return {
@@ -32,6 +32,9 @@ describe("classifyNinjaAccount", () => {
     ["TOPX577166", "Topstep", "TOPSTEP", "Live", null],
     ["FFF396922", "Funded Futures Family", "FFF", "Evaluation", "Prime 50K"],
     ["FFFUNDED922746", "Funded Futures Family", "FFF", "Funded", "Prime 50K"],
+    ["FTMO157754", "FTMO", "FTMO", "Evaluation", "Growth"],
+    ["FTMO384610", "FTMO", "FTMO", "Evaluation", "Growth"],
+    ["FTMO314114", "FTMO", "FTMO", "Evaluation", "Growth"],
     ["TDFYSL50123456", "Tradeify", "TRADEFY", "Evaluation", "Select"],
     ["FTDFYSLX50123456", "Tradeify", "TRADEFY", "Funded", "Select Flex"],
     ["TAKEPROFIT123456", "Take Profit Trader", "TPT", "Evaluation", null],
@@ -50,5 +53,20 @@ describe("classifyNinjaAccount", () => {
     expect(classifyNinjaAccount(account("Sim101"), "2026-08-26T12:00:00Z").type).toBe("simulator");
     expect(classifyNinjaAccount(account("LFE-NO-CONFIRMADA"), "2026-08-26T12:00:00Z").type).toBe("unknown");
     expect(classifyNinjaAccount(account("FFFUNDEDABCDEF"), "2026-08-26T12:00:00Z").type).toBe("unknown");
+    expect(classifyNinjaAccount(account("FTMO-157754"), "2026-08-26T12:00:00Z").type).toBe("unknown");
+    expect(classifyNinjaAccount(account("XFTMO157754"), "2026-08-26T12:00:00Z").type).toBe("unknown");
+  });
+
+  it("detecta la nomenclatura aprobada como FTMO Futures Growth 50K", () => {
+    const detected = classifyNinjaAccount(account("FTMO157754", "FTMO NinjaTrader"), "2026-09-21T12:00:00Z");
+    expect(detected).toMatchObject({
+      accountSizeInCents: 5_000_000,
+      company: "FTMO",
+      companyCode: "FTMO",
+      phase: "Evaluation",
+      product: "Growth",
+      type: "prop",
+    });
+    expect(hasApprovedAutomaticRiskRule(detected)).toBe(true);
   });
 });

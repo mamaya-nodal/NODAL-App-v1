@@ -38,6 +38,9 @@ const PROP_ACCOUNT_RULES: readonly PropAccountRule[] = [
   { accountSizeInCents: 5_000_000, company: "Topstep", companyCode: "TOPSTEP", pattern: /^TOPX[A-Z0-9-]+$/, phase: "Live", product: null },
   { accountSizeInCents: 5_000_000, company: "Funded Futures Family", companyCode: "FFF", pattern: /^FFFUNDED\d{6}$/, phase: "Funded", product: "Prime 50K" },
   { accountSizeInCents: 5_000_000, company: "Funded Futures Family", companyCode: "FFF", pattern: /^FFF\d{6}$/, phase: "Evaluation", product: "Prime 50K" },
+  // El alcance aprobado por el usuario para esta nomenclatura es FTMO Futures
+  // Growth 50K. Funded y Live permanecen pendientes de ejemplos reales.
+  { accountSizeInCents: 5_000_000, company: "FTMO", companyCode: "FTMO", pattern: /^FTMO\d+$/, phase: "Evaluation", product: "Growth" },
   { accountSizeInCents: 5_000_000, company: "Tradeify", companyCode: "TRADEFY", pattern: /^FTDFYSLX50[A-Z0-9-]*$/, phase: "Funded", product: "Select Flex" },
   { accountSizeInCents: 5_000_000, company: "Tradeify", companyCode: "TRADEFY", pattern: /^TDFYSL50[A-Z0-9-]*$/, phase: "Evaluation", product: "Select" },
   { accountSizeInCents: 5_000_000, company: "Take Profit Trader", companyCode: "TPT", pattern: /^TAKEPROFITPRO[A-Z0-9-]*$/, phase: "Funded", product: "PRO" },
@@ -50,6 +53,11 @@ function dateInBuenosAires(isoDate: string) {
   }).formatToParts(new Date(isoDate));
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
   return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+export function hasApprovedAutomaticRiskRule(account: DetectedNinjaAccount) {
+  return account.type === "prop"
+    && (account.companyCode !== "FTMO" || account.product === "Growth");
 }
 
 export function classifyNinjaAccount(account: NinjaAccountSnapshot, firstSeenAt: string): DetectedNinjaAccount {

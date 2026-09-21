@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
-import { classifyNinjaAccount } from "../domain/account-classification";
+import { classifyNinjaAccount, hasApprovedAutomaticRiskRule } from "../domain/account-classification";
 import { isolatedNinjaConnectionNames, isNinjaConnectionActive } from "../domain/connection-access";
 import type { NinjaInventorySnapshot } from "../domain/ingestion-payload";
 import { isNinjaInventorySnapshot } from "../domain/ingestion-payload";
@@ -55,6 +55,7 @@ export async function processNinjaTransitions(connectorId: string, snapshot: Nin
     if (!connectedNames.includes(account.connectionName)) return [];
     const classified = classifyNinjaAccount(account, snapshot.observedAt);
     if (classified.type !== "prop" || !classified.companyCode || !classified.phase || classified.accountSizeInCents === null) return [];
+    if (!hasApprovedAutomaticRiskRule(classified)) return [];
     const balance = resolveNinjaReferenceBalance(account);
     return [{
       balanceInCents: balance.balanceInCents ?? 0,
