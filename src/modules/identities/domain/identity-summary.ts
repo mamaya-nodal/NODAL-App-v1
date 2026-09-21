@@ -3,6 +3,7 @@ export type DocumentationStatus = "complete" | "pending" | "received";
 export type CredentialsStatus = "complete" | "pending" | "update_required";
 
 export type ManagedIdentity = Readonly<{
+  contactEmail: string | null;
   credentialsStatus: CredentialsStatus;
   documentationStatus: DocumentationStatus;
   driveFolderUrl: string | null;
@@ -10,6 +11,19 @@ export type ManagedIdentity = Readonly<{
   id: string;
   lastName: string;
   onboardingStatus: IdentityStatus;
+}>;
+
+export type IdentityRequestStatus = "accepted" | "rejected" | "sending" | "sent" | "submitted";
+
+export type IdentityOnboardingRequest = Readonly<{
+  createdAt: string;
+  documentReference: string | null;
+  firstName: string | null;
+  id: string;
+  lastName: string | null;
+  phone: string | null;
+  recipientEmail: string;
+  status: IdentityRequestStatus;
 }>;
 
 export type IdentityAccount = Readonly<{

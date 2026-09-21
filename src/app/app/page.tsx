@@ -11,6 +11,7 @@ import { buildDetectedAccountEconomicHistory } from "@/modules/operations/domain
 import {
   buildIdentitySummaries,
   type IdentityAccount,
+  type IdentityOnboardingRequest,
   type IdentitySummary,
   type ManagedIdentity,
 } from "@/modules/identities/domain/identity-summary";
@@ -313,6 +314,7 @@ export default async function PrivateAppPage({
   let accountingPeriods: AccountingPeriodView[] = [];
   let economicTrace: EconomicTraceItem[] = [];
   let identityAccounts: IdentityAccount[] = [];
+  let identityRequests: IdentityOnboardingRequest[] = [];
   let identitySummaries: IdentitySummary[] = [];
   let openingSnapshot: PeriodOpeningRecord | null = null;
   let periodOpening: OperationalOpeningSnapshot = {
@@ -884,10 +886,10 @@ export default async function PrivateAppPage({
       phase: withdrawal.phase,
       walletId: withdrawal.wallet_id,
     }));
-    const [{ data: identityRows }, { data: identityAssignmentRows }] = await Promise.all([
+    const [{ data: identityRows }, { data: identityAssignmentRows }, { data: identityRequestRows }] = await Promise.all([
       supabase
         .from("nodal_identities")
-        .select("id,first_name,last_name,onboarding_status,documentation_status,credentials_status,drive_folder_url")
+        .select("id,first_name,last_name,contact_email,onboarding_status,documentation_status,credentials_status,drive_folder_url")
         .eq("workspace_id", selection.workspace.id)
         .order("last_name")
         .order("first_name"),
@@ -896,6 +898,11 @@ export default async function PrivateAppPage({
         .select("identity_id,account_id")
         .eq("workspace_id", selection.workspace.id)
         .is("unassigned_at", null),
+      supabase
+        .from("identity_onboarding_requests")
+        .select("id,recipient_email,status,first_name,last_name,document_reference,phone,created_at")
+        .eq("workspace_id", selection.workspace.id)
+        .order("created_at", { ascending: false }),
     ]);
     const identityByAccountId = new Map(
       (identityAssignmentRows ?? []).map((assignment) => [assignment.account_id, assignment.identity_id]),
@@ -912,6 +919,7 @@ export default async function PrivateAppPage({
     }));
     identitySummaries = buildIdentitySummaries(
       (identityRows ?? []).map((identity): ManagedIdentity => ({
+        contactEmail: identity.contact_email,
         credentialsStatus: identity.credentials_status,
         documentationStatus: identity.documentation_status,
         driveFolderUrl: identity.drive_folder_url,
@@ -922,6 +930,16 @@ export default async function PrivateAppPage({
       })),
       identityAccounts,
     );
+    identityRequests = (identityRequestRows ?? []).map((request) => ({
+      createdAt: request.created_at,
+      documentReference: request.document_reference,
+      firstName: request.first_name,
+      id: request.id,
+      lastName: request.last_name,
+      phone: request.phone,
+      recipientEmail: request.recipient_email,
+      status: request.status,
+    }));
     economicTrace = [
       ...(dailyControlRows ?? []).flatMap((control): EconomicTraceItem[] =>
         control.kind === "balance_update" || control.movement_cents === null ? [] : [{
@@ -1422,6 +1440,7 @@ export default async function PrivateAppPage({
         <IdentitiesWorkspace
           accounts={identityAccounts}
           identities={identitySummaries}
+          requests={identityRequests}
           workspaceId={selection.workspace.id}
         />
       )}

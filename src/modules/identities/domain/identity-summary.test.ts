@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildIdentitySummaries, type ManagedIdentity } from "./identity-summary";
 
 const identities: ManagedIdentity[] = [{
+  contactEmail: "ana@example.com",
   credentialsStatus: "pending",
   documentationStatus: "received",
   driveFolderUrl: null,
