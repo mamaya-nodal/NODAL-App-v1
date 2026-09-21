@@ -8,6 +8,12 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { buildManualAccountEconomicHistory } from "@/modules/operations/domain/manual-account-economic-history";
 import { buildDetectedAccountEconomicHistory } from "@/modules/operations/domain/detected-account-economic-history";
+import {
+  buildIdentitySummaries,
+  type IdentityAccount,
+  type IdentitySummary,
+  type ManagedIdentity,
+} from "@/modules/identities/domain/identity-summary";
 import { decideAccess } from "@/modules/access/domain/access-decision";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
@@ -75,6 +81,7 @@ import { AccountsOverview, type AccountOverviewAccount } from "./accounts-overvi
 import { PurchasePaymentFields } from "./purchase-payment-fields";
 import { OpeningAccountReferences, OpeningOperationReference } from "./opening-snapshot-panels";
 import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary";
+import { IdentitiesWorkspace } from "./identities-workspace";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -305,6 +312,8 @@ export default async function PrivateAppPage({
   let personalDashboard: PersonalDashboardData | undefined;
   let accountingPeriods: AccountingPeriodView[] = [];
   let economicTrace: EconomicTraceItem[] = [];
+  let identityAccounts: IdentityAccount[] = [];
+  let identitySummaries: IdentitySummary[] = [];
   let openingSnapshot: PeriodOpeningRecord | null = null;
   let periodOpening: OperationalOpeningSnapshot = {
     accumulatedResultInCents: 0,
@@ -875,6 +884,44 @@ export default async function PrivateAppPage({
       phase: withdrawal.phase,
       walletId: withdrawal.wallet_id,
     }));
+    const [{ data: identityRows }, { data: identityAssignmentRows }] = await Promise.all([
+      supabase
+        .from("nodal_identities")
+        .select("id,first_name,last_name,onboarding_status,documentation_status,credentials_status,drive_folder_url")
+        .eq("workspace_id", selection.workspace.id)
+        .order("last_name")
+        .order("first_name"),
+      supabase
+        .from("identity_account_assignments")
+        .select("identity_id,account_id")
+        .eq("workspace_id", selection.workspace.id)
+        .is("unassigned_at", null),
+    ]);
+    const identityByAccountId = new Map(
+      (identityAssignmentRows ?? []).map((assignment) => [assignment.account_id, assignment.identity_id]),
+    );
+    identityAccounts = accountHistory.map((account) => ({
+      currentIdentityId: identityByAccountId.get(account.id) ?? null,
+      id: account.id,
+      label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}`,
+      payoutInCents: (historicalFundingWithdrawalRows ?? [])
+        .filter((withdrawal) => withdrawal.account_id === account.id)
+        .reduce((total, withdrawal) => total + Number(withdrawal.amount_cents), 0),
+      resultInCents: account.economicHistory?.at(-1)?.accumulatedInCents ?? 0,
+      state: account.state,
+    }));
+    identitySummaries = buildIdentitySummaries(
+      (identityRows ?? []).map((identity): ManagedIdentity => ({
+        credentialsStatus: identity.credentials_status,
+        documentationStatus: identity.documentation_status,
+        driveFolderUrl: identity.drive_folder_url,
+        firstName: identity.first_name,
+        id: identity.id,
+        lastName: identity.last_name,
+        onboardingStatus: identity.onboarding_status,
+      })),
+      identityAccounts,
+    );
     economicTrace = [
       ...(dailyControlRows ?? []).flatMap((control): EconomicTraceItem[] =>
         control.kind === "balance_update" || control.movement_cents === null ? [] : [{
@@ -1137,6 +1184,7 @@ export default async function PrivateAppPage({
             <a href="#cuentas">Cuentas</a>
             <a href="#operaciones">Operaciones</a>
             <a href="#contabilidad">Contabilidad</a>
+            <a href="#identidades">Identidades</a>
             {nodalUser?.access_role === "admin" && (
               <Link href="/app/admin">Administración</Link>
             )}
@@ -1368,6 +1416,14 @@ export default async function PrivateAppPage({
             wallets={walletViews}
           />
         </section>
+      )}
+
+      {allowed && selection?.period && (
+        <IdentitiesWorkspace
+          accounts={identityAccounts}
+          identities={identitySummaries}
+          workspaceId={selection.workspace.id}
+        />
       )}
 
       {allowed && !selection && (

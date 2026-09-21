@@ -3898,9 +3898,82 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .nodal-workspace[data-active-view="home"] .workspace-content > #inicio,
 .nodal-workspace[data-active-view="accounts"] .workspace-content > #cuentas,
 .nodal-workspace[data-active-view="operations"] .workspace-content > #operaciones,
-.nodal-workspace[data-active-view="accounting"] .workspace-content > #contabilidad {
+.nodal-workspace[data-active-view="accounting"] .workspace-content > #contabilidad,
+.nodal-workspace[data-active-view="identities"] .workspace-content > #identidades {
   display: block;
   animation: workspace-view-in .22s ease both;
+}
+
+/* Gestion de identidades: atribucion operativa sin secretos digitales. */
+.identities-view { min-width: 0; color: var(--app-title); }
+.identities-heading > div { display: grid; gap: 4px; }
+.identities-heading p { margin: 0; color: var(--app-subtle); font-size: 12px; }
+.identity-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.identity-kpis article { display: grid; gap: 8px; min-height: 94px; padding: 16px; border: 1px solid var(--app-border); border-radius: 15px; background: var(--app-panel); }
+.identity-kpis span { color: var(--app-subtle); font-size: 11px; }
+.identity-kpis strong { align-self: end; font-size: 23px; letter-spacing: -.8px; }
+.identity-safety-note { display: grid; gap: 4px; margin-bottom: 12px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--app-accent) 45%, var(--app-border)); border-radius: 14px; background: color-mix(in srgb, var(--app-accent) 8%, var(--app-panel)); }
+.identity-safety-note strong { font-size: 13px; }
+.identity-safety-note span { color: var(--app-subtle); font-size: 11px; }
+.identity-message { margin: 10px 0; color: var(--app-accent); font-size: 12px; font-weight: 750; }
+.identity-create-card,
+.identity-card { margin-bottom: 10px; overflow: hidden; border: 1px solid var(--app-border); border-radius: 15px; background: var(--app-panel); }
+.identity-create-card > summary,
+.identity-card > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 62px; padding: 14px 16px; cursor: pointer; list-style: none; }
+.identity-create-card > summary::-webkit-details-marker,
+.identity-card > summary::-webkit-details-marker { display: none; }
+.identity-create-card > summary i::after,
+.identity-card > summary i::after { color: var(--app-subtle); content: "+"; font-style: normal; font-size: 20px; }
+.identity-create-card[open] > summary i::after,
+.identity-card[open] > summary i::after { content: "−"; }
+.identity-create-card > summary span { font-size: 13px; font-weight: 800; }
+.identity-card > summary { display: grid; grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(100px, .7fr)) auto; }
+.identity-card > summary > span { display: grid; gap: 4px; }
+.identity-card > summary small { color: var(--app-subtle); font-size: 10px; font-weight: 650; }
+.identity-card > summary strong { font-size: 13px; }
+.identity-form,
+.identity-status-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 16px 16px; }
+.identity-form label,
+.identity-status-form label,
+.identity-assignment-form label { display: grid; gap: 6px; }
+.identity-form label > span,
+.identity-status-form label > span,
+.identity-assignment-form label > span { color: var(--app-subtle); font-size: 10px; font-weight: 750; }
+.identity-form :is(input, select),
+.identity-status-form :is(input, select),
+.identity-assignment-form :is(input, select) { min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-input); color: var(--app-title); }
+.identity-form .identity-drive-field,
+.identity-status-form .identity-drive-field { grid-column: 1 / -1; }
+.identity-form button,
+.identity-status-form button { justify-self: start; }
+.identity-detail { padding: 0 16px 16px; border-top: 1px solid var(--app-border); }
+.identity-status-form { padding: 16px 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.identity-account-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 10px; margin-bottom: 14px; }
+.identity-account-summary > div { display: grid; gap: 5px; padding: 13px; border: 1px solid var(--app-border); border-radius: 12px; }
+.identity-account-summary span { color: var(--app-subtle); font-size: 10px; }
+.identity-account-summary a { align-self: center; color: var(--app-accent); font-size: 11px; font-weight: 800; }
+.identity-account-summary .negative { color: #ff8a80; }
+.identity-assigned-accounts { margin: 12px 0; }
+.identity-assigned-accounts h3 { margin: 0 0 8px; font-size: 13px; }
+.identity-assigned-accounts > p,
+.identity-empty { color: var(--app-subtle); font-size: 11px; }
+.identity-assigned-accounts > div { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; min-height: 48px; padding: 8px 0; border-top: 1px solid var(--app-border); }
+.identity-assigned-accounts > div > span:first-child { display: grid; gap: 3px; }
+.identity-assigned-accounts small { color: var(--app-subtle); font-size: 10px; }
+.identity-assigned-accounts button { border: 0; background: transparent; color: #ff8a80; cursor: pointer; font-size: 11px; font-weight: 800; }
+.identity-assignment-form { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 10px; padding-top: 12px; border-top: 1px solid var(--app-border); }
+.identity-empty { display: grid; gap: 5px; padding: 28px; border: 1px dashed var(--app-border); border-radius: 15px; text-align: center; }
+
+@media (max-width: 800px) {
+  .identity-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .identity-card > summary { grid-template-columns: 1fr auto; }
+  .identity-card > summary > span:not(:first-child) { display: none; }
+  .identity-status-form,
+  .identity-form,
+  .identity-account-summary,
+  .identity-assignment-form { grid-template-columns: 1fr; }
+  .identity-status-form .identity-drive-field,
+  .identity-form .identity-drive-field { grid-column: auto; }
 }
 
 @keyframes workspace-view-in {

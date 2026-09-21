@@ -10,13 +10,14 @@ import type { AdministrationScope } from "@/modules/admin/domain/administration-
 import { ThemeToggle } from "./theme-toggle";
 import { WorkspaceIcon, type WorkspaceIconName } from "./workspace-icon";
 
-type View = "home" | "accounts" | "operations" | "accounting";
+type View = "home" | "accounts" | "operations" | "accounting" | "identities";
 
 const views: ReadonlyArray<Readonly<{ hash: string; icon: WorkspaceIconName; label: string; value: View }>> = [
   { hash: "inicio", icon: "home", label: "Inicio", value: "home" },
   { hash: "cuentas", icon: "plus", label: "Cuentas", value: "accounts" },
   { hash: "operaciones", icon: "daily", label: "Operaciones", value: "operations" },
   { hash: "contabilidad", icon: "summary", label: "Contabilidad", value: "accounting" },
+  { hash: "identidades", icon: "identities", label: "Identidades", value: "identities" },
 ];
 
 const legacyViews: Readonly<Record<string, View>> = {
