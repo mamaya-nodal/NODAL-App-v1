@@ -30,7 +30,7 @@ export function buildConciliationBreakdown(summary: OperationalSummary): Concili
       ],
       expected: [
         { href: "#contabilidad", label: "Capital neto aportado", valueInCents: summary.capitalNetInCents },
-        { href: "#operaciones", label: "Resultado del período", valueInCents: summary.periodResultInCents },
+        { href: "#operaciones", label: "Resultado acumulado", valueInCents: summary.accumulatedResultInCents },
       ],
     },
     gains: {

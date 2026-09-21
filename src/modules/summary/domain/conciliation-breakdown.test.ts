@@ -3,7 +3,7 @@ import { buildConciliationBreakdown } from "./conciliation-breakdown";
 import type { OperationalSummary } from "./operational-summary";
 
 const summary: OperationalSummary = {
-  accumulatedResultInCents: 0,
+  accumulatedResultInCents: 20_000,
   accountStates: { virgin: 1, live: 1, closed: 1 }, brokerBalanceInCents: 100_000,
   capitalNetInCents: 80_000, commissionInCents: 0, commissionRateLabel: "Sin comisión", floatingInCents: 5_000,
   fundingCollectedInCents: 0, fundingPendingInCents: 2_000, fundingWithdrawals: [], manualAccountStateCount: 0,

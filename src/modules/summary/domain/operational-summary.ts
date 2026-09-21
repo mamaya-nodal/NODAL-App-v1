@@ -50,6 +50,7 @@ export type OperationalOpeningSnapshot = Readonly<{
   brokerBalanceInCents: number | null;
   capitalNetInCents: number;
   floatingInCents?: number;
+  gainReconciliationBaselineInCents?: number;
   fundingPendingInCents: number;
   walletBalanceInCents: number;
 }>;
@@ -181,7 +182,8 @@ export function buildOperationalSummary(input: Readonly<{
     positionExpectedInCents,
     positionObservableInCents,
     realizedGainInCents,
-    realizedReconciliationDifferenceInCents: realizedGainInCents - (periodResultInCents + floatingInCents + virginPriceInCents),
+    realizedReconciliationDifferenceInCents: realizedGainInCents - (periodResultInCents + floatingInCents + virginPriceInCents)
+      + (opening.gainReconciliationBaselineInCents ?? 0),
     traderGainInCents: Math.max(realizedGainInCents, 0) - commission.amountInCents,
     virginPriceInCents,
     walletBalanceInCents,

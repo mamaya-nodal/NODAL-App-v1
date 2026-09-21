@@ -120,7 +120,7 @@ export function HomeOverview({ capitalHistory, dashboard, liveBrokerBalance = nu
 
   return (
     <section aria-label="Inicio" className="home-overview-panel" id="inicio">
-      {openingSetupPreview && periodId ? <OpeningSetupPreview autoOpen periodId={periodId} /> : null}
+      {openingSetupPreview && periodId ? <OpeningSetupPreview autoOpen liveBrokerBalance={liveBalance} periodId={periodId} /> : null}
       {openingSnapshot ? <OpeningSnapshotHome opening={openingSnapshot} /> : null}
       {liveBalance && (
         <div className="home-live-status">

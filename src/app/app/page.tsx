@@ -340,6 +340,7 @@ export default async function PrivateAppPage({
       { data: walletRows },
       { data: openingSnapshotRows },
       { data: openingBatchRows },
+      { data: openingWalletRows },
     ] =
       await Promise.all([
         supabase
@@ -450,6 +451,9 @@ export default async function PrivateAppPage({
         supabase
           .from("period_opening_account_batches")
           .select("opening_snapshot_id,company_name,account_size_cents,stage,account_count,cost_per_account_cents,current_cash_value_cents"),
+        supabase
+          .from("period_opening_wallets")
+          .select("opening_snapshot_id,wallet_id,balance_cents,nodal_wallets(name)"),
       ]);
     walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
       const { data } = await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id });
@@ -934,9 +938,14 @@ export default async function PrivateAppPage({
       mode: row.start_mode as PeriodOpeningRecord["mode"],
       periodId: row.period_id,
       personalWithdrawalsInCents: Number(row.personal_withdrawals_cents),
-      priorRealizedResultInCents: Number(row.prior_realized_result_cents),
+      inferredResultInCents: Number(row.prior_realized_result_cents),
       virginAccounts: Number(row.virgin_accounts),
       walletBalanceInCents: Number(row.wallet_balance_cents),
+      wallets: (openingWalletRows ?? []).filter((wallet) => wallet.opening_snapshot_id === row.id).map((wallet) => ({
+        balanceInCents: Number(wallet.balance_cents),
+        id: wallet.wallet_id,
+        name: wallet.nodal_wallets[0]?.name ?? "Billetera",
+      })),
     }));
     openingSnapshot = openingRecords.find((record) => record.periodId === selection.period!.id) ?? null;
     const historicalOpening = buildPeriodOpening({
@@ -992,6 +1001,7 @@ export default async function PrivateAppPage({
       brokerBalanceInCents: snapshot.brokerBalanceInCents ?? total.brokerBalanceInCents,
       capitalNetInCents: total.capitalNetInCents + snapshot.capitalNetInCents,
       floatingInCents: (total.floatingInCents ?? 0) + (snapshot.floatingInCents ?? 0),
+      gainReconciliationBaselineInCents: (total.gainReconciliationBaselineInCents ?? 0) + (snapshot.gainReconciliationBaselineInCents ?? 0),
       fundingPendingInCents: total.fundingPendingInCents + snapshot.fundingPendingInCents,
       walletBalanceInCents: total.walletBalanceInCents + snapshot.walletBalanceInCents,
     }), historicalOpening);

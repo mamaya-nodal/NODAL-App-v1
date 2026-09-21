@@ -132,9 +132,10 @@ export async function loadPeriodSummaries(
       liveEvaluationAccounts: Number(openingRow.live_evaluation_accounts),
       mode: openingRow.start_mode as PeriodOpeningRecord["mode"],
       personalWithdrawalsInCents: Number(openingRow.personal_withdrawals_cents),
-      priorRealizedResultInCents: Number(openingRow.prior_realized_result_cents),
+      inferredResultInCents: Number(openingRow.prior_realized_result_cents),
       virginAccounts: Number(openingRow.virgin_accounts),
       walletBalanceInCents: Number(openingRow.wallet_balance_cents),
+      wallets: [],
     }) : undefined;
     const operatingDates = controlsForPeriod
       .filter((control) => control.kind === "balance_update")

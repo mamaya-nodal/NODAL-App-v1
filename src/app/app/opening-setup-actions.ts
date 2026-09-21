@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { buildNinjaLiveBrokerBalance, type NinjaInventoryView } from "@/modules/ninja/domain/live-broker-balance";
 import type { OpeningAccountStage } from "@/modules/summary/domain/opening-snapshot";
 
 type Result = Readonly<{ ok: boolean; message: string }>;
@@ -16,7 +17,6 @@ type BatchInput = Readonly<{
 }>;
 export type OpeningSetupInput = Readonly<{
   batches: BatchInput[];
-  brokerBalance: string;
   closedAccounts: string;
   contributedCapital: string;
   fundedAccounts: string;
@@ -25,10 +25,9 @@ export type OpeningSetupInput = Readonly<{
   pendingPayouts: string;
   periodId: string;
   personalWithdrawals: string;
-  priorRealizedResult: string;
   reconstructionDate: string;
   virginAccounts: string;
-  walletBalance: string;
+  wallets: ReadonlyArray<Readonly<{ balance: string; name: string }>>;
   workingCapital: string;
 }>;
 
@@ -56,13 +55,10 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
   }
 
   const money = {
-    broker: input.brokerBalance.trim() ? cents(input.brokerBalance) : null,
     contributed: cents(input.contributedCapital),
-    floating: cents(input.workingCapital, true),
+    floating: cents(input.workingCapital),
     pending: cents(input.pendingPayouts),
-    prior: cents(input.priorRealizedResult, true),
     withdrawals: cents(input.personalWithdrawals),
-    wallet: cents(input.walletBalance),
   };
   const accounts = {
     closed: count(input.closedAccounts),
@@ -72,6 +68,17 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
   };
   if (Object.values(money).some((value) => value === null) || Object.values(accounts).some((value) => value === null)) {
     return { ok: false, message: "Revisá los importes y las cantidades ingresadas." };
+  }
+
+  const wallets = input.wallets.flatMap((wallet) => {
+    if (!wallet.name.trim() && !wallet.balance.trim()) return [];
+    const balanceInCents = cents(wallet.balance);
+    if (!wallet.name.trim() || balanceInCents === null) return [null];
+    return [{ balanceInCents, name: wallet.name.trim() }];
+  });
+  const walletNames = wallets.flatMap((wallet) => wallet ? [wallet.name.toLocaleLowerCase("es")] : []);
+  if (wallets.some((wallet) => wallet === null) || new Set(walletNames).size !== walletNames.length) {
+    return { ok: false, message: "Completá nombre y saldo de cada billetera, sin repetir nombres." };
   }
 
   const batches = input.batches.flatMap((batch) => {
@@ -97,9 +104,14 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "La sesión venció." };
+  const { data: inventory, error: inventoryError } = await supabase.rpc("get_current_user_ninja_inventory");
+  const liveBroker = inventoryError ? null : buildNinjaLiveBrokerBalance((inventory ?? []) as NinjaInventoryView[]);
+  if (!liveBroker) {
+    return { ok: false, message: "Conectá NinjaTrader para que NODAL tome el saldo broker antes de confirmar." };
+  }
   const { error } = await supabase.rpc("confirm_nodal_period_opening", {
     target_batches: batches,
-    target_broker_balance_cents: money.broker,
+    target_broker_balance_cents: liveBroker.balanceInCents,
     target_closed_accounts_reference: accounts.closed,
     target_contributed_capital_cents: money.contributed,
     target_cutover_date: input.reconstructionDate,
@@ -109,10 +121,9 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
     target_live_evaluation_accounts: accounts.live,
     target_period_id: input.periodId,
     target_personal_withdrawals_cents: money.withdrawals,
-    target_prior_realized_result_cents: money.prior,
     target_start_mode: input.mode,
     target_virgin_accounts: accounts.virgin,
-    target_wallet_balance_cents: money.wallet,
+    target_wallets: wallets,
   });
   if (error) {
     if (error.message.includes("already confirmed")) return { ok: false, message: "Este punto de partida ya fue confirmado." };

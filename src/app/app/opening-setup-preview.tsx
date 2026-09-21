@@ -4,14 +4,18 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { confirmOpeningSetup } from "./opening-setup-actions";
+import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import styles from "./opening-setup-preview.module.css";
 
 type StartMode = "reconstruct" | "zero";
 
 type Props = Readonly<{
   autoOpen?: boolean;
+  liveBrokerBalance?: NinjaLiveBrokerBalance | null;
   periodId: string;
 }>;
+
+type WalletDraft = Readonly<{ balance: string; id: string; name: string }>;
 
 type BatchDraft = Readonly<{
   accountCount: string;
@@ -23,29 +27,24 @@ type BatchDraft = Readonly<{
 }>;
 
 type Draft = Readonly<{
-  brokerBalance: string;
   closedAccounts: string;
   contributedCapital: string;
   fundedAccounts: string;
   liveEvaluationAccounts: string;
   pendingPayouts: string;
   personalWithdrawals: string;
-  priorRealizedResult: string;
   reconstructionDate: string;
   virginAccounts: string;
-  walletBalance: string;
   workingCapital: string;
 }>;
 
 const initialDraft: Draft = {
-  brokerBalance: "",
   closedAccounts: "",
   contributedCapital: "",
   fundedAccounts: "",
   liveEvaluationAccounts: "",
   pendingPayouts: "",
   personalWithdrawals: "",
-  priorRealizedResult: "",
   reconstructionDate: new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
     month: "2-digit",
@@ -53,7 +52,6 @@ const initialDraft: Draft = {
     year: "numeric",
   }).format(new Date()),
   virginAccounts: "",
-  walletBalance: "",
   workingCapital: "",
 };
 
@@ -138,12 +136,27 @@ function SummaryItem({ label, value }: Readonly<{ label: string; value: string }
   return <div className={styles.summaryItem}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-export function OpeningSetupPreview({ autoOpen = false, periodId }: Props) {
+function WalletEditor({ onChange, wallets }: Readonly<{
+  onChange: (wallets: WalletDraft[]) => void;
+  wallets: WalletDraft[];
+}>) {
+  return <div className={styles.walletEditor}>
+    {wallets.map((wallet, index) => <div className={styles.walletRow} key={wallet.id}>
+      <label className={styles.field}><span>Nombre de la billetera</span><input aria-label={`Nombre de billetera ${index + 1}`} onChange={(event) => onChange(wallets.map((item) => item.id === wallet.id ? { ...item, name: event.target.value } : item))} value={wallet.name} /></label>
+      <label className={styles.field}><span>Saldo (USD)</span><input aria-label={`Saldo de billetera ${index + 1}`} inputMode="decimal" min="0" onChange={(event) => onChange(wallets.map((item) => item.id === wallet.id ? { ...item, balance: event.target.value } : item))} type="number" value={wallet.balance} /></label>
+      {wallets.length > 1 ? <button aria-label={`Eliminar billetera ${index + 1}`} className={styles.removeWallet} onClick={() => onChange(wallets.filter((item) => item.id !== wallet.id))} type="button">×</button> : null}
+    </div>)}
+    <button className={styles.secondaryButton} onClick={() => onChange([...wallets, { balance: "", id: crypto.randomUUID(), name: "" }])} type="button">+ Agregar billetera</button>
+  </div>;
+}
+
+export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance = null, periodId }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(autoOpen);
   const [mode, setMode] = useState<StartMode | null>(null);
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(initialDraft);
+  const [wallets, setWallets] = useState<WalletDraft[]>([{ balance: "", id: "opening-wallet-1", name: "" }]);
   const [showBatchForm, setShowBatchForm] = useState(false);
   const [batch, setBatch] = useState<BatchDraft>(initialBatch);
   const [message, setMessage] = useState<string | null>(null);
@@ -152,16 +165,20 @@ export function OpeningSetupPreview({ autoOpen = false, periodId }: Props) {
   const lastStep = steps.length - 1;
 
   const totals = useMemo(() => {
-    const observable = amount(draft.brokerBalance) + amount(draft.walletBalance) + amount(draft.pendingPayouts);
-    const netCapital = amount(draft.contributedCapital) - amount(draft.personalWithdrawals);
-    const declaredResult = amount(draft.priorRealizedResult) + amount(draft.workingCapital);
+    const broker = (liveBrokerBalance?.balanceInCents ?? 0) / 100;
+    const walletTotal = wallets.reduce((total, wallet) => total + amount(wallet.balance), 0);
+    const observable = broker + walletTotal + amount(draft.pendingPayouts);
+    const netCapital = mode === "zero"
+      ? broker + walletTotal
+      : amount(draft.contributedCapital) - amount(draft.personalWithdrawals);
+    const inferredResult = observable - netCapital;
     return {
-      declaredResult,
-      difference: observable - netCapital - declaredResult,
+      inferredResult,
       netCapital,
       observable,
+      walletTotal,
     };
-  }, [draft]);
+  }, [draft, liveBrokerBalance, mode, wallets]);
 
   function update(name: keyof Draft, value: string) {
     setDraft((current) => ({ ...current, [name]: value }));
@@ -178,6 +195,7 @@ export function OpeningSetupPreview({ autoOpen = false, periodId }: Props) {
     setStep(0);
     setDraft(initialDraft);
     setBatch(initialBatch);
+    setWallets([{ balance: "", id: "opening-wallet-1", name: "" }]);
     setShowBatchForm(false);
     setMessage(null);
   }
@@ -186,7 +204,7 @@ export function OpeningSetupPreview({ autoOpen = false, periodId }: Props) {
     if (!mode) return;
     setMessage(null);
     startTransition(async () => {
-      const result = await confirmOpeningSetup({ ...draft, batches: showBatchForm ? [batch] : [], mode, periodId });
+      const result = await confirmOpeningSetup({ ...draft, batches: showBatchForm ? [batch] : [], mode, periodId, wallets });
       setMessage(result.message);
       if (result.ok) {
         setOpen(false);
@@ -258,11 +276,8 @@ export function OpeningSetupPreview({ autoOpen = false, periodId }: Props) {
                     <p className={styles.eyebrow}>DINERO DISPONIBLE</p>
                     <h3>¿Con qué fondos comenzás?</h3>
                     <p className={styles.description}>El saldo broker se tomará del conector. Informá solamente el dinero disponible fuera del broker.</p>
-                    <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>Sin datos de Ninja</strong><small>Se completará automáticamente al recibir señal.</small></div>
-                    <div className={styles.fields}>
-                      <Field hint="Se registrará como aporte inicial del trader." label="Saldo inicial de billeteras (USD)" name="walletBalance" onChange={update} placeholder="0,00" type="number" value={draft.walletBalance} />
-                      <Field hint="Opcional, si además depositaste dinero directamente en el broker." label="Otro aporte inicial (USD)" name="contributedCapital" onChange={update} placeholder="0,00" type="number" value={draft.contributedCapital} />
-                    </div>
+                    <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{liveBrokerBalance ? money(liveBrokerBalance.balanceInCents / 100) : "Sin datos de Ninja"}</strong><small>Se toma automáticamente del conector y no se edita aquí.</small></div>
+                    <WalletEditor onChange={setWallets} wallets={wallets} />
                   </div>
                 ) : null}
 
@@ -326,9 +341,9 @@ export function OpeningSetupPreview({ autoOpen = false, periodId }: Props) {
                     <p className={styles.eyebrow}>POSICIÓN ACTUAL</p>
                     <h3>¿Qué dinero existe hoy dentro del circuito?</h3>
                     <p className={styles.description}>Los movimientos entre broker y billetera no son aportes nuevos. Registramos cada ubicación una sola vez.</p>
+                    <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{liveBrokerBalance ? money(liveBrokerBalance.balanceInCents / 100) : "Sin datos de Ninja"}</strong><small>Se toma automáticamente del conector y no se edita aquí.</small></div>
+                    <WalletEditor onChange={setWallets} wallets={wallets} />
                     <div className={styles.fields}>
-                      <Field hint="En la versión final llegará automáticamente desde Ninja." label="Saldo broker actual (USD)" name="brokerBalance" onChange={update} placeholder="0,00" type="number" value={draft.brokerBalance} />
-                      <Field label="Saldo total en billeteras (USD)" name="walletBalance" onChange={update} placeholder="0,00" type="number" value={draft.walletBalance} />
                       <Field label="Payouts aprobados pendientes (USD)" name="pendingPayouts" onChange={update} placeholder="0,00" type="number" value={draft.pendingPayouts} />
                       <Field label="Capital externo aportado (USD)" name="contributedCapital" onChange={update} placeholder="0,00" type="number" value={draft.contributedCapital} />
                       <Field label="Retiros personales realizados (USD)" name="personalWithdrawals" onChange={update} placeholder="0,00" type="number" value={draft.personalWithdrawals} />
@@ -339,10 +354,9 @@ export function OpeningSetupPreview({ autoOpen = false, periodId }: Props) {
                 {mode === "reconstruct" && step === 4 ? (
                   <div className={styles.formSection}>
                     <p className={styles.eyebrow}>PROGRESO PREVIO</p>
-                    <h3>Separá lo realizado de lo que todavía está en juego</h3>
-                    <p className={styles.description}>No necesitás reconstruir cada trade. Podés traer un resultado acumulado y el flotante de las cuentas que siguen vivas.</p>
+                    <h3>Registrá lo que todavía está en juego</h3>
+                    <p className={styles.description}>El resultado acumulado se infiere automáticamente desde tus saldos y el capital neto. Solo necesitamos el flotante de las cuentas que siguen vivas.</p>
                     <div className={styles.fields}>
-                      <Field hint="Ganancia o pérdida de ciclos ya terminados." label="Resultado realizado anterior (USD)" name="priorRealizedResult" onChange={update} placeholder="0,00" type="number" value={draft.priorRealizedResult} />
                       <Field hint="Cobertura acumulada de las cuentas que continúan vivas." label="Flotante actual (USD)" name="workingCapital" onChange={update} placeholder="0,00" type="number" value={draft.workingCapital} />
                     </div>
                     <div className={styles.tip}><strong>Después podrás detallarlo</strong><span>Los lotes de cuentas permitirán distribuir el flotante sin cargar cada operación anterior.</span></div>
@@ -357,16 +371,14 @@ export function OpeningSetupPreview({ autoOpen = false, periodId }: Props) {
                     <div className={styles.summaryGrid}>
                       <SummaryItem label="Capital neto aportado" value={money(totals.netCapital)} />
                       <SummaryItem label="Posición observable" value={money(totals.observable)} />
-                      <SummaryItem label="Resultado previo declarado" value={money(totals.declaredResult)} />
+                      <SummaryItem label="Resultado acumulado inferido" value={money(totals.inferredResult)} />
                       <SummaryItem label="Flotante" value={money(amount(draft.workingCapital))} />
                       <SummaryItem label="Cuentas vigentes" value={String(amount(draft.virginAccounts) + amount(draft.liveEvaluationAccounts) + amount(draft.fundedAccounts))} />
                       <SummaryItem label="Cuentas cerradas previas" value={draft.closedAccounts || "0"} />
                     </div>
-                    <div className={`${styles.reconciliation} ${Math.abs(totals.difference) < 0.005 ? styles.reconciled : ""}`}>
-                      <div><span>Diferencia por explicar</span><strong>{money(totals.difference)}</strong></div>
-                      <p>{Math.abs(totals.difference) < 0.005
-                        ? "La apertura cierra con los valores ingresados."
-                        : "Esta diferencia quedaría pendiente de revisión; nunca se convertirá automáticamente en aporte o ganancia."}</p>
+                    <div className={`${styles.reconciliation} ${styles.reconciled}`}>
+                      <div><span>Diferencia de apertura</span><strong>{money(0)}</strong></div>
+                      <p>La apertura queda conciliada por definición. Desde el corte, cualquier diferencia nueva aparecerá para revisión.</p>
                     </div>
                   </div>
                 ) : null}

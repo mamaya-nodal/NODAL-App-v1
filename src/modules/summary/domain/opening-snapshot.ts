@@ -11,6 +11,12 @@ export type OpeningAccountBatch = Readonly<{
   stage: OpeningAccountStage;
 }>;
 
+export type OpeningWallet = Readonly<{
+  balanceInCents: number;
+  id: string;
+  name: string;
+}>;
+
 export type PeriodOpeningRecord = Readonly<{
   batches: OpeningAccountBatch[];
   brokerBalanceInCents: number | null;
@@ -24,9 +30,10 @@ export type PeriodOpeningRecord = Readonly<{
   liveEvaluationAccounts: number;
   mode: "reconstruct" | "zero";
   personalWithdrawalsInCents: number;
-  priorRealizedResultInCents: number;
+  inferredResultInCents: number;
   virginAccounts: number;
   walletBalanceInCents: number;
+  wallets: OpeningWallet[];
 }>;
 
 export function operationalOpeningFromRecord(record: PeriodOpeningRecord): OperationalOpeningSnapshot {
@@ -40,12 +47,12 @@ export function operationalOpeningFromRecord(record: PeriodOpeningRecord): Opera
       live: record.liveEvaluationAccounts + record.fundedAccounts,
       virgin: record.virginAccounts,
     },
-    accumulatedResultInCents: record.priorRealizedResultInCents + record.floatingInCents,
+    accumulatedResultInCents: record.inferredResultInCents,
     brokerBalanceInCents: record.brokerBalanceInCents,
     capitalNetInCents,
     floatingInCents: Math.abs(record.floatingInCents),
+    gainReconciliationBaselineInCents: Math.abs(record.floatingInCents),
     fundingPendingInCents: record.fundingPendingInCents,
     walletBalanceInCents: record.walletBalanceInCents,
   };
 }
-
