@@ -7616,6 +7616,65 @@ html[data-theme="day"] .manual-coverage-close { background: #ffffff; }
   font-weight: 700;
 }
 
+.broker-account-breakdown {
+  display: grid;
+  gap: 7px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border);
+}
+
+.broker-account-breakdown form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.broker-account-breakdown form > div {
+  display: grid;
+  gap: 2px;
+}
+
+.broker-account-breakdown input {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  color: var(--app-title);
+  background: var(--app-input);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.broker-account-breakdown small,
+.broker-account-breakdown > p {
+  margin: 0;
+  color: var(--app-subtle);
+  font-size: 10px;
+}
+
+.broker-account-breakdown form > strong {
+  white-space: nowrap;
+  color: var(--app-title);
+  font-size: 12px;
+}
+
+.broker-account-breakdown button {
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--app-title);
+  background: var(--app-accent);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.broker-account-breakdown button:disabled { cursor: wait; opacity: 0.65; }
+
 .broker-balance-history {
   margin-top: 10px;
   border: 1px solid var(--app-border);
@@ -7773,6 +7832,8 @@ html[data-theme="day"] .manual-coverage-close { background: #ffffff; }
 
 @media (max-width: 680px) {
   .nodal-workspace .broker-live-meta { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .broker-account-breakdown form { grid-template-columns: minmax(0, 1fr) auto; }
+  .broker-account-breakdown button { grid-column: 1 / -1; }
   .accounting-view .demo-period-cards dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 

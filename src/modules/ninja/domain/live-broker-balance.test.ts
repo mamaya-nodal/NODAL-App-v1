@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { NinjaAccountSnapshot } from "./ingestion-payload";
-import { buildNinjaLiveBrokerBalance } from "./live-broker-balance";
+import { applyNinjaBrokerAccountAliases, buildNinjaLiveBrokerBalance } from "./live-broker-balance";
 
 function account(input: Partial<NinjaAccountSnapshot> & Pick<NinjaAccountSnapshot, "accountName">): NinjaAccountSnapshot {
   return {
@@ -39,5 +39,46 @@ describe("live Ninja broker balance", () => {
       ],
       observed_at: "2026-09-09T12:33:40Z",
     }])?.balanceInCents).toBe(500_000);
+  });
+
+  it("sums several broker accounts without losing their individual balances", () => {
+    const balance = buildNinjaLiveBrokerBalance([{
+      accounts: [
+        account({ accountName: "1850465", cashValue: 5_000 }),
+        account({ accountName: "220022", cashValue: 7_350.25 }),
+      ],
+      observed_at: "2026-09-22T12:33:40Z",
+    }]);
+
+    expect(balance).toEqual({
+      balanceInCents: 1_235_025,
+      observedAt: "2026-09-22T12:33:40Z",
+      sourceAccounts: [
+        { accountName: "1850465", balanceInCents: 500_000, connectionName: "Ninja" },
+        { accountName: "220022", balanceInCents: 735_025, connectionName: "Ninja" },
+      ],
+    });
+  });
+
+  it("adds aliases without changing account identity or totals", () => {
+    const balance = buildNinjaLiveBrokerBalance([{
+      accounts: [account({ accountName: "1850465", cashValue: 5_000 })],
+      observed_at: "2026-09-22T12:33:40Z",
+    }]);
+
+    expect(applyNinjaBrokerAccountAliases(balance, [{
+      accountName: "1850465",
+      connectionName: "Ninja",
+      displayName: "Cobertura identidad Juli",
+    }])).toEqual({
+      balanceInCents: 500_000,
+      observedAt: "2026-09-22T12:33:40Z",
+      sourceAccounts: [{
+        accountName: "1850465",
+        balanceInCents: 500_000,
+        connectionName: "Ninja",
+        displayName: "Cobertura identidad Juli",
+      }],
+    });
   });
 });

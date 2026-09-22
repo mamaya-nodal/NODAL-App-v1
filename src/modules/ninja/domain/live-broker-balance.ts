@@ -13,7 +13,14 @@ export type NinjaLiveBrokerBalance = Readonly<{
     accountName: string;
     balanceInCents: number;
     connectionName: string;
+    displayName?: string;
   }>;
+}>;
+
+export type NinjaBrokerAccountAlias = Readonly<{
+  accountName: string;
+  connectionName: string;
+  displayName: string;
 }>;
 
 function cents(value: number) {
@@ -53,5 +60,27 @@ export function buildNinjaLiveBrokerBalance(
         connectionName: source.connectionName,
       }))
       .sort((left, right) => `${left.connectionName}\u0000${left.accountName}`.localeCompare(`${right.connectionName}\u0000${right.accountName}`)),
+  };
+}
+
+export function applyNinjaBrokerAccountAliases(
+  balance: NinjaLiveBrokerBalance | null,
+  aliases: readonly NinjaBrokerAccountAlias[],
+): NinjaLiveBrokerBalance | null {
+  if (!balance) return null;
+  const aliasesByAccount = new Map(
+    aliases.map((alias) => [
+      `${alias.connectionName}\u0000${alias.accountName}`,
+      alias.displayName,
+    ]),
+  );
+  return {
+    ...balance,
+    sourceAccounts: balance.sourceAccounts.map((account) => ({
+      ...account,
+      displayName: aliasesByAccount.get(
+        `${account.connectionName}\u0000${account.accountName}`,
+      ),
+    })),
   };
 }

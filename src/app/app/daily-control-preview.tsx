@@ -43,6 +43,7 @@ import {
   correctDailyControlBalance,
 } from "./daily-control-actions";
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
+import { BrokerAccountBreakdown } from "./broker-account-breakdown";
 
 type EntryKind = DailyBalanceEntry["kind"];
 
@@ -904,12 +905,15 @@ export function DailyControlPreview({
           <span>Contabilidad <b>{balanceInCents === null ? "Pendiente" : formatMoney(balanceInCents)}</b></span>
           {liveNinjaBalance && (
             <span>
-              {liveNinjaBalance.sourceAccounts.map((account) => account.accountName).join(" + ")}
+              {liveNinjaBalance.sourceAccounts.length > 1
+                ? `${liveNinjaBalance.sourceAccounts.length} cuentas`
+                : liveNinjaBalance.sourceAccounts[0]?.displayName ?? liveNinjaBalance.sourceAccounts[0]?.accountName}
               {" · "}
               {new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit" }).format(new Date(liveNinjaBalance.observedAt))}
             </span>
           )}
         </div>
+        {liveNinjaBalance ? <BrokerAccountBreakdown accounts={liveNinjaBalance.sourceAccounts} /> : null}
       </div>
 
       {ninjaBrokerBalanceHistory.length > 0 && (

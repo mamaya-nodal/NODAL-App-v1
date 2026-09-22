@@ -20,7 +20,12 @@ import { loadMyAdministrationScope } from "@/modules/admin/server/administration
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
-import { buildNinjaLiveBrokerBalance, type NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
+import {
+  applyNinjaBrokerAccountAliases,
+  buildNinjaLiveBrokerBalance,
+  type NinjaBrokerAccountAlias,
+  type NinjaLiveBrokerBalance,
+} from "@/modules/ninja/domain/live-broker-balance";
 import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
 import type {
   AccountPhaseWithdrawal,
@@ -341,6 +346,7 @@ export default async function PrivateAppPage({
       { data: ninjaOperationProbeRows },
       { data: ninjaTransitionRows },
       { data: ninjaBrokerBalanceRows },
+      { data: ninjaBrokerAccountAliasRows },
       { data: historicalPurchaseRows },
       { data: historicalAccountRows },
       { data: historicalOperationEntryRows },
@@ -416,6 +422,9 @@ export default async function PrivateAppPage({
           .select("id, observed_at, balance_cents, source_accounts, source_event_id")
           .order("observed_at", { ascending: false })
           .limit(30),
+        supabase
+          .from("ninja_broker_account_aliases")
+          .select("connection_name,account_name,display_name"),
         supabase
           .from("purchases")
           .select("id, account_id, period_id, purchase_number, purchased_on, price_cents, funds_origin, wallet_id")
@@ -574,7 +583,14 @@ export default async function PrivateAppPage({
     );
     connectedNinjaBrokerAccountNames = connectedBrokerAccounts.map((account) => account.accountName);
     connectedNinjaPropAccountNames = connectedPropAccounts.map((account) => account.accountName);
-    liveNinjaBrokerBalance = buildNinjaLiveBrokerBalance(ninjaInventories);
+    liveNinjaBrokerBalance = applyNinjaBrokerAccountAliases(
+      buildNinjaLiveBrokerBalance(ninjaInventories),
+      (ninjaBrokerAccountAliasRows ?? []).map((alias): NinjaBrokerAccountAlias => ({
+        accountName: alias.account_name,
+        connectionName: alias.connection_name,
+        displayName: alias.display_name,
+      })),
+    );
     if (connectedNinjaAccounts.length > 0 && connectedBrokerAccounts.length === 0) {
       ninjaBrokerSourceNotice =
         "NinjaTrader está conectado, pero no informa ninguna cuenta broker. Los saldos automáticos se reanudarán cuando una cuenta broker vuelva a aparecer en Accounts.";
