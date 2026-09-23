@@ -162,6 +162,9 @@ type NinjaInventoryRpcRow = {
 type NinjaConnectorStatusRpcRow = {
   connector_id: string;
   connector_version: string;
+  identity_first_name: string | null;
+  identity_id: string | null;
+  identity_last_name: string | null;
   is_online: boolean;
   last_seen_at: string | null;
   paired_at: string;
@@ -240,6 +243,7 @@ export default async function PrivateAppPage({
   let connectedNinjaBrokerAccountNames: string[] = [];
   let connectedNinjaPropAccountNames: string[] = [];
   let ninjaConnector: NinjaConnectorStatus | null = null;
+  let ninjaConnectors: NinjaConnectorStatus[] = [];
   let ninjaTransitionAlerts: NinjaTransitionAlert[] = [];
   let incomingNinjaBalance: NinjaBrokerBalanceEvent | null = null;
   let ninjaBrokerBalanceHistory: NinjaBrokerBalanceHistoryItem[] = [];
@@ -271,15 +275,16 @@ export default async function PrivateAppPage({
       })),
     }));
 
-    const connectorRow = (ninjaConnectorRows?.[0] ?? null) as NinjaConnectorStatusRpcRow | null;
-    ninjaConnector = connectorRow ? {
+    ninjaConnectors = ((ninjaConnectorRows ?? []) as NinjaConnectorStatusRpcRow[]).map((connectorRow) => ({
       connectorId: connectorRow.connector_id,
       connectorVersion: connectorRow.connector_version,
+      identityId: connectorRow.identity_id,
       isOnline: connectorRow.is_online,
       lastSeenAt: connectorRow.last_seen_at,
       pairedAt: connectorRow.paired_at,
       status: connectorRow.status,
-    } : null;
+    }));
+    ninjaConnector = ninjaConnectors.find((connector) => connector.identityId === null) ?? null;
   }
 
   const connectorOnline = Boolean(ninjaConnector?.isOnline && ninjaConnector.status === "active");
@@ -924,14 +929,18 @@ export default async function PrivateAppPage({
       (identityAssignmentRows ?? []).map((assignment) => [assignment.account_id, assignment.identity_id]),
     );
     identityAccounts = accountHistory.map((account) => ({
+      balanceInCents: account.currentCashValueInCents,
       currentIdentityId: identityByAccountId.get(account.id) ?? null,
+      history: account.economicHistory ?? [],
       id: account.id,
       label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}`,
+      phase: account.currentNinjaPhase,
       payoutInCents: (historicalFundingWithdrawalRows ?? [])
         .filter((withdrawal) => withdrawal.account_id === account.id)
         .reduce((total, withdrawal) => total + Number(withdrawal.amount_cents), 0),
       resultInCents: account.economicHistory?.at(-1)?.accumulatedInCents ?? 0,
       state: account.state,
+      tradeCount: account.technicalTradeCount,
     }));
     identitySummaries = buildIdentitySummaries(
       (identityRows ?? []).map((identity): ManagedIdentity => ({
@@ -1455,6 +1464,7 @@ export default async function PrivateAppPage({
       {allowed && selection?.period && (
         <IdentitiesWorkspace
           accounts={identityAccounts}
+          connectors={ninjaConnectors.filter((connector) => connector.identityId !== null)}
           identities={identitySummaries}
           requests={identityRequests}
           workspaceId={selection.workspace.id}

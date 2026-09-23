@@ -30,7 +30,7 @@ function cents(value: number) {
 export function buildNinjaLiveBrokerBalance(
   inventories: readonly NinjaInventoryView[],
 ): NinjaLiveBrokerBalance | null {
-  const sources = inventories.flatMap((inventory) => inventory.accounts.flatMap((account) => {
+  const observedSources = inventories.flatMap((inventory) => inventory.accounts.flatMap((account) => {
     if (
       account.connectionStatus.toLowerCase() !== "connected" ||
       classifyNinjaAccount(account, inventory.observed_at).type !== "broker" ||
@@ -43,8 +43,16 @@ export function buildNinjaLiveBrokerBalance(
       balanceInCents: cents(account.cashValue),
       connectionName: account.connectionName,
       observedAt: inventory.observed_at,
+      providerName: account.providerName,
     }];
   }));
+  const freshestByAccount = new Map<string, (typeof observedSources)[number]>();
+  for (const source of observedSources) {
+    const key = `${source.providerName}\u0000${source.accountName}`;
+    const current = freshestByAccount.get(key);
+    if (!current || source.observedAt > current.observedAt) freshestByAccount.set(key, source);
+  }
+  const sources = [...freshestByAccount.values()];
 
   if (sources.length === 0) return null;
   return {

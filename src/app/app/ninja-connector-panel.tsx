@@ -8,21 +8,27 @@ import { NinjaConnectorMonitor } from "./ninja-connector-monitor";
 export type NinjaConnectorStatus = Readonly<{
   connectorId: string;
   connectorVersion: string;
+  identityId: string | null;
   isOnline: boolean;
   lastSeenAt: string | null;
   pairedAt: string;
   status: string;
 }>;
 
-type Props = Readonly<{ compact?: boolean; connector: NinjaConnectorStatus | null }>;
+type Props = Readonly<{
+  compact?: boolean;
+  connector: NinjaConnectorStatus | null;
+  targetIdentityId?: string | null;
+}>;
 const initialState: PairingCodeState = {};
 
 function isOnline(connector: NinjaConnectorStatus | null) {
   return Boolean(connector?.isOnline && connector.status === "active");
 }
 
-export function NinjaConnectorPanel({ compact = false, connector }: Props) {
-  const [state, action, pending] = useActionState(createNinjaPairingCode, initialState);
+export function NinjaConnectorPanel({ compact = false, connector, targetIdentityId = null }: Props) {
+  const pairingAction = createNinjaPairingCode.bind(null, targetIdentityId);
+  const [state, action, pending] = useActionState(pairingAction, initialState);
   const [copied, setCopied] = useState(false);
   const online = isOnline(connector);
 
@@ -69,9 +75,10 @@ export function NinjaConnectorPanel({ compact = false, connector }: Props) {
         </div>
       ) : null}
       {state.error ? <p className="purchase-message error" role="alert">{state.error}</p> : null}
-      {connector && !compact ? (
+      {connector ? (
         <form action={revokeNinjaConnector} className="ninja-revoke-form">
-          <button className="secondary-action" type="submit">Desvincular este conector</button>
+          <input name="connector_id" type="hidden" value={connector.connectorId} />
+          <button className="secondary-action" type="submit">Desvincular</button>
         </form>
       ) : null}
     </section>

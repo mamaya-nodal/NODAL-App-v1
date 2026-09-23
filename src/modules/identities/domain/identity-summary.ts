@@ -27,12 +27,25 @@ export type IdentityOnboardingRequest = Readonly<{
 }>;
 
 export type IdentityAccount = Readonly<{
+  balanceInCents: number | null;
   currentIdentityId: string | null;
+  history: readonly IdentityAccountHistoryRow[];
   id: string;
   label: string;
+  phase: string | null;
   payoutInCents: number;
   resultInCents: number;
   state: "closed" | "live" | "virgin";
+  tradeCount: number;
+}>;
+
+export type IdentityAccountHistoryRow = Readonly<{
+  accumulatedInCents: number;
+  brokerResultInCents: number | null;
+  concept: "Cobertura" | "Examen" | "Payout";
+  phase: string;
+  propResultInCents: number | null;
+  tradeNumber: number | null;
 }>;
 
 export type IdentitySummary = ManagedIdentity & Readonly<{

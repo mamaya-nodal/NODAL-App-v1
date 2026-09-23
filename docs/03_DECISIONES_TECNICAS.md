@@ -639,6 +639,19 @@ vigente sin aprobacion y evidencia suficiente.
   inventario recibido del conector autenticado del propio usuario.
 - **Estado:** Implementada el 2026-09-10.
 
+### APP-098 - Respaldo para órdenes del Panel Central
+
+- **Hallazgo:** Google Apps Script limita a 20 los disparadores por usuario y
+  proyecto. Al alcanzar ese límite, el disparador de edición del Panel Central
+  puede no estar disponible y una orden de creación queda pendiente.
+- **Decisión:** La tarea central existente también revisa y procesa, en orden,
+  hasta tres acciones pendientes del panel. Es un respaldo del disparador de
+  edición, no un camino paralelo que cree registros duplicados.
+- **Trazabilidad:** Cada acción conserva el mismo resultado, fecha de
+  aprovisionamiento y mecanismo de reanudación por enlace que el flujo normal.
+- **Estado:** Implementada y verificada con la creación de las planillas Real y
+  Práctica de David el 2026-09-10.
+
 ### APP-099 - Asignación manual de coberturas a cuentas sin telemetría prop
 
 - **Caso:** Una cobertura broker puede quedar sin cuentas compatibles cuando
@@ -652,3 +665,62 @@ vigente sin aprobacion y evidencia suficiente.
 - **Trazabilidad:** La cobertura, el control, las cuentas, el reparto, la
   reutilización y el cierre opcional quedan auditados e idempotentes.
 - **Estado:** Implementada el 2026-09-17 durante la prueba integral de Ivo.
+
+### APP-100 - Reconstrucción inicial como apertura resumida
+
+- **Decisión:** Un usuario nuevo elige entre iniciar desde cero o reconstruir
+  su situación vigente. La confirmación crea una única apertura auditable para
+  el período Real y sólo se admite antes de que exista actividad económica.
+- **Contabilidad:** La apertura conserva ubicación del dinero, capital neto,
+  payouts pendientes, resultado realizado anterior y flotante. No inventa
+  trades históricos ni los usa para calcular comisiones del período nuevo.
+- **Cuentas:** Las cuentas vivas y vírgenes previas se conservan como cantidades
+  y lotes de migración. Las cuentas cerradas anteriores son sólo una referencia
+  estadística y no se recrean en el inventario operativo.
+- **Trazabilidad:** El pantallazo confirmado es inmutable, pertenece al usuario
+  y período, y genera un evento de auditoría con todos los valores declarados.
+- **Visualización:** Inicio, Cuentas, Operaciones y Contabilidad consumen la
+  misma apertura; la diferencia de conciliación permanece visible y nunca se
+  convierte automáticamente en aporte o ganancia.
+- **Estado:** Aprobada por Producto e implementada el 2026-09-21.
+
+### APP-101 - Varias cuentas broker con nombre visible y saldo consolidado
+
+- **Detección:** Todas las cuentas broker conectadas y no aisladas conservan su
+  saldo individual; el saldo broker operativo y contable continúa siendo la
+  suma determinista de esas cuentas.
+- **Identificación:** El usuario puede asignar un nombre visible a cada cuenta
+  cuando existen dos o más. La conexión y el número originales permanecen
+  visibles y siguen siendo la identidad técnica utilizada por el conector.
+- **Contabilidad:** Renombrar una cuenta no crea movimientos, subcuentas
+  contables ni coberturas. Tampoco modifica conciliaciones existentes.
+- **Trazabilidad:** Los nombres quedan persistidos por usuario y cuenta técnica,
+  con actualización auditada. Sobreviven a una nueva vinculación del conector
+  siempre que Ninja informe la misma conexión y número de cuenta.
+- **Estado:** Implementada el 2026-09-22 antes de la prueba remota.
+
+### APP-102 - Conectores por identidad y atribución analítica
+
+- **Jerarquía:** Cada usuario NODAL conserva un conector principal y puede
+  vincular un conector independiente por identidad aprobada. Todos pertenecen
+  al mismo titular, pero cada instalación posee credenciales revocables y un
+  identificador técnico propio.
+- **Vinculación:** El código temporal se genera desde la ficha de la identidad.
+  Canjearlo reemplaza solamente el conector de ese mismo ámbito; nunca revoca
+  el conector principal ni los conectores de otras identidades.
+- **Atribución:** Una cuenta prop incorporada desde el conector de una identidad
+  queda asignada automáticamente a esa identidad. La asignación manual se
+  conserva como corrección auditable y no como camino principal.
+- **Contabilidad:** Identidad es una dimensión analítica. Compras, coberturas,
+  resultados, fees y payouts se registran una sola vez en la contabilidad del
+  usuario NODAL. El panel de Identidades filtra esos mismos hechos y no mantiene
+  un libro paralelo.
+- **Coberturas simultáneas:** Cada operación activa utiliza una única subcuenta
+  broker. Una subcuenta nunca participa en dos operaciones simultáneas; por lo
+  tanto, la capacidad concurrente máxima es la cantidad de subcuentas broker
+  disponibles.
+- **Saldo broker:** Si la misma cuenta broker es observada por más de un
+  conector, se toma la observación más reciente y se cuenta una sola vez.
+- **Interfaz:** La ficha de cada identidad muestra su conexión NinjaTrader,
+  resultado, payouts y un historial resumido y desplegable de sus cuentas.
+- **Estado:** Aprobada por Producto e implementada para pruebas el 2026-09-23.

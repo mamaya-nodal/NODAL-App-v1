@@ -60,6 +60,19 @@ describe("live Ninja broker balance", () => {
     });
   });
 
+  it("does not duplicate the same broker account observed by two connectors", () => {
+    const balance = buildNinjaLiveBrokerBalance([{
+      accounts: [account({ accountName: "1850465", cashValue: 5_000 })],
+      observed_at: "2026-09-22T12:30:00Z",
+    }, {
+      accounts: [account({ accountName: "1850465", cashValue: 5_125, connectionName: "Ninja remoto" })],
+      observed_at: "2026-09-22T12:33:40Z",
+    }]);
+
+    expect(balance?.balanceInCents).toBe(512_500);
+    expect(balance?.sourceAccounts).toHaveLength(1);
+  });
+
   it("adds aliases without changing account identity or totals", () => {
     const balance = buildNinjaLiveBrokerBalance([{
       accounts: [account({ accountName: "1850465", cashValue: 5_000 })],
