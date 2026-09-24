@@ -15,6 +15,14 @@ export type ManagedIdentity = Readonly<{
 
 export type IdentityRequestStatus = "accepted" | "rejected" | "sending" | "sent" | "submitted";
 
+export type IdentityConnectorInstallation = Readonly<{
+  createdAt: string;
+  expiresAt: string;
+  identityId: string;
+  sentAt: string | null;
+  status: "downloaded" | "failed" | "sending" | "sent";
+}>;
+
 export type IdentityOnboardingRequest = Readonly<{
   createdAt: string;
   documentReference: string | null;
@@ -50,6 +58,7 @@ export type IdentityAccountHistoryRow = Readonly<{
 
 export type IdentitySummary = ManagedIdentity & Readonly<{
   accounts: IdentityAccount[];
+  connectorInstallation: IdentityConnectorInstallation | null;
   payoutTotalInCents: number;
   resultTotalInCents: number;
 }>;
@@ -57,6 +66,7 @@ export type IdentitySummary = ManagedIdentity & Readonly<{
 export function buildIdentitySummaries(
   identities: readonly ManagedIdentity[],
   accounts: readonly IdentityAccount[],
+  connectorInstallations: readonly IdentityConnectorInstallation[] = [],
 ): IdentitySummary[] {
   return [...identities]
     .sort((left, right) =>
@@ -68,6 +78,9 @@ export function buildIdentitySummaries(
       return {
         ...identity,
         accounts: assigned,
+        connectorInstallation: connectorInstallations
+          .filter((installation) => installation.identityId === identity.id)
+          .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] ?? null,
         payoutTotalInCents: assigned.reduce((total, account) => total + account.payoutInCents, 0),
         resultTotalInCents: assigned.reduce((total, account) => total + account.resultInCents, 0),
       };

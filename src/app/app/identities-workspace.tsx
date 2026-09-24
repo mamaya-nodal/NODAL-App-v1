@@ -13,6 +13,7 @@ import {
   approveIdentityRequest,
   assignIdentityAccount,
   rejectIdentityRequest,
+  sendIdentityConnectorInstallation,
   sendIdentityOnboardingRequest,
   unassignIdentityAccount,
 } from "./identity-actions";
@@ -98,6 +99,8 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, requests
       <div className="identity-list">
         {identities.map((identity) => {
           const connector = connectors.find((candidate) => candidate.identityId === identity.id) ?? null;
+          const installation = identity.connectorInstallation;
+          const installationAvailable = installation !== null && installation.status !== "failed";
           const liveAccounts = identity.accounts.filter((account) => account.state !== "closed").length;
           const closedAccounts = identity.accounts.filter((account) => account.state === "closed").length;
           return <details className="identity-card" key={identity.id}>
@@ -118,9 +121,45 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, requests
               <div className="identity-connector-row">
                 <span>
                   <small>NinjaTrader</small>
-                  <strong>{connector?.isOnline ? "Conectado" : connector ? "Sin señal" : "Sin vincular"}</strong>
+                  <strong>{connector?.isOnline
+                    ? "Conectado"
+                    : connector
+                      ? "Sin señal"
+                      : installation?.status === "downloaded" && installationAvailable
+                        ? "Instalación descargada"
+                        : installationAvailable
+                          ? "Instalación enviada"
+                          : "Sin vincular"}</strong>
                 </span>
-                <NinjaConnectorPanel compact connector={connector} targetIdentityId={identity.id} />
+                <div className="identity-connector-actions">
+                  {!connector && !installationAvailable ? (
+                    <button
+                      className="primary-action"
+                      disabled={pending}
+                      onClick={() => run(() => sendIdentityConnectorInstallation(identity.id))}
+                      type="button"
+                    >
+                      {pending ? "Enviando…" : "Enviar instalación"}
+                    </button>
+                  ) : (
+                    <>
+                      <NinjaConnectorPanel
+                        compact
+                        connector={connector}
+                        pairingLabel="Generar código"
+                        targetIdentityId={identity.id}
+                      />
+                      <button
+                        className="identity-installation-resend"
+                        disabled={pending}
+                        onClick={() => run(() => sendIdentityConnectorInstallation(identity.id))}
+                        type="button"
+                      >
+                        Reenviar instalación
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="identity-subsection-title"><strong>Cuentas</strong><span>{identity.accounts.length}</span></div>

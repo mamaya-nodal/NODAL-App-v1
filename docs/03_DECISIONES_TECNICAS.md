@@ -749,3 +749,20 @@ vigente sin aprobacion y evidencia suficiente.
 - **Alta inicial:** Las cuentas todavía sin nombre permanecen directamente en
   modo de edición para evitar un paso adicional.
 - **Estado:** Implementada el 2026-09-24 durante la prueba de Alfred.
+
+### APP-105 - Instalación del conector para una identidad sin acceso NODAL
+
+- **Acceso:** La identidad no inicia sesión en Google ni recibe autorización
+  para entrar a NODAL. El envío parte de su ficha ya aprobada y usa el correo
+  que la propia persona declaró durante el onboarding.
+- **Entrega:** `Enviar instalación` crea un enlace individual que vence a las
+  24 horas. La descarga se sirve desde una ruta controlada; el ZIP deja de
+  estar expuesto mediante una dirección pública fija.
+- **Vinculación:** Descargar el instalador y generar el código son pasos
+  separados. Después del envío, el usuario NODAL genera el código temporal de
+  cinco minutos y lo comunica a quien instala el conector.
+- **Alcance:** El correo no incluye credenciales, contraseñas ni acceso a la
+  app. La instalación y la primera descarga quedan auditadas por identidad.
+- **Revocación:** Un nuevo envío reemplaza cualquier enlace temporal anterior
+  de esa identidad sin afectar su conector ya vinculado ni otros conectores.
+- **Estado:** Implementada para pruebas el 2026-09-24.

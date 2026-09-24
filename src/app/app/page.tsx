@@ -11,6 +11,7 @@ import { buildDetectedAccountEconomicHistory } from "@/modules/operations/domain
 import {
   buildIdentitySummaries,
   type IdentityAccount,
+  type IdentityConnectorInstallation,
   type IdentityOnboardingRequest,
   type IdentitySummary,
   type ManagedIdentity,
@@ -907,7 +908,12 @@ export default async function PrivateAppPage({
       phase: withdrawal.phase,
       walletId: withdrawal.wallet_id,
     }));
-    const [{ data: identityRows }, { data: identityAssignmentRows }, { data: identityRequestRows }] = await Promise.all([
+    const [
+      { data: identityRows },
+      { data: identityAssignmentRows },
+      { data: identityRequestRows },
+      { data: identityConnectorInstallationRows },
+    ] = await Promise.all([
       supabase
         .from("nodal_identities")
         .select("id,first_name,last_name,contact_email,onboarding_status,documentation_status,credentials_status,drive_folder_url")
@@ -923,6 +929,13 @@ export default async function PrivateAppPage({
         .from("identity_onboarding_requests")
         .select("id,recipient_email,status,first_name,last_name,document_reference,phone,created_at")
         .eq("workspace_id", selection.workspace.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("identity_connector_installations")
+        .select("identity_id,status,expires_at,sent_at,created_at")
+        .eq("workspace_id", selection.workspace.id)
+        .in("status", ["sending", "sent", "downloaded"])
+        .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false }),
     ]);
     const identityByAccountId = new Map(
@@ -954,6 +967,13 @@ export default async function PrivateAppPage({
         onboardingStatus: identity.onboarding_status,
       })),
       identityAccounts,
+      (identityConnectorInstallationRows ?? []).map((installation): IdentityConnectorInstallation => ({
+        createdAt: installation.created_at,
+        expiresAt: installation.expires_at,
+        identityId: installation.identity_id,
+        sentAt: installation.sent_at,
+        status: installation.status as IdentityConnectorInstallation["status"],
+      })),
     );
     identityRequests = (identityRequestRows ?? []).map((request) => ({
       createdAt: request.created_at,
@@ -1184,7 +1204,7 @@ export default async function PrivateAppPage({
           <details className="connector-recovery">
             <summary>Volver a vincular</summary>
             <div className="connector-recovery-panel">
-              <a className="connector-recovery-download" download href="/downloads/NODAL-Ninja-Connector.zip">
+              <a className="connector-recovery-download" download href="/api/downloads/ninja-connector">
                 Descargar conector
               </a>
               <NinjaConnectorPanel compact connector={ninjaConnector} />

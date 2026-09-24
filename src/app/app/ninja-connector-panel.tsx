@@ -19,6 +19,7 @@ type Props = Readonly<{
   compact?: boolean;
   connector: NinjaConnectorStatus | null;
   monitor?: boolean;
+  pairingLabel?: string;
   targetIdentityId?: string | null;
 }>;
 const initialState: PairingCodeState = {};
@@ -27,7 +28,7 @@ function isOnline(connector: NinjaConnectorStatus | null) {
   return Boolean(connector?.isOnline && connector.status === "active");
 }
 
-export function NinjaConnectorPanel({ compact = false, connector, monitor = false, targetIdentityId = null }: Props) {
+export function NinjaConnectorPanel({ compact = false, connector, monitor = false, pairingLabel, targetIdentityId = null }: Props) {
   const pairingAction = createNinjaPairingCode.bind(null, targetIdentityId);
   const [state, action, pending] = useActionState(pairingAction, initialState);
   const [copied, setCopied] = useState(false);
@@ -65,7 +66,7 @@ export function NinjaConnectorPanel({ compact = false, connector, monitor = fals
 
       <form action={action}>
         <button className={compact && connector ? "secondary-action" : "primary-action"} disabled={pending} type="submit">
-          {pending ? "Generando…" : connector ? compact ? "Reinstalar o cambiar vínculo" : "Generar un vínculo nuevo" : compact ? "Vincular NinjaTrader" : "Generar código de vinculación"}
+          {pending ? "Generando…" : pairingLabel ?? (connector ? compact ? "Reinstalar o cambiar vínculo" : "Generar un vínculo nuevo" : compact ? "Vincular NinjaTrader" : "Generar código de vinculación")}
         </button>
       </form>
 

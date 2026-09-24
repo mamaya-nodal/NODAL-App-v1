@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/api/downloads/ninja-connector": ["./private/downloads/NODAL-Ninja-Connector.zip"],
+    "/api/integrations/identity-connector/download": ["./private/downloads/NODAL-Ninja-Connector.zip"],
+  },
   poweredByHeader: false,
   async headers() {
     return [

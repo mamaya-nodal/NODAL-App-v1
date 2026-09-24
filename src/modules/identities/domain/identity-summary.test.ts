@@ -22,7 +22,17 @@ describe("buildIdentitySummaries", () => {
     ]);
 
     expect(summary.accounts.map((account) => account.id)).toEqual(["a", "b"]);
+    expect(summary.connectorInstallation).toBeNull();
     expect(summary.payoutTotalInCents).toBe(150_000);
     expect(summary.resultTotalInCents).toBe(15_000);
+  });
+
+  it("conserva solo el envio mas reciente del conector por identidad", () => {
+    const [summary] = buildIdentitySummaries(identities, [], [
+      { createdAt: "2026-09-23T10:00:00Z", expiresAt: "2026-09-24T10:00:00Z", identityId: "identity-1", sentAt: null, status: "failed" },
+      { createdAt: "2026-09-24T10:00:00Z", expiresAt: "2026-09-25T10:00:00Z", identityId: "identity-1", sentAt: "2026-09-24T10:01:00Z", status: "sent" },
+    ]);
+
+    expect(summary.connectorInstallation?.status).toBe("sent");
   });
 });
