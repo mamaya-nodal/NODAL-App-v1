@@ -12,7 +12,6 @@ import {
   buildIdentitySummaries,
   type IdentityAccount,
   type IdentityConnectorInstallation,
-  type IdentityOnboardingRequest,
   type IdentitySummary,
   type ManagedIdentity,
 } from "@/modules/identities/domain/identity-summary";
@@ -85,7 +84,6 @@ import {
 import { ProgressSummary, type WalletView } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
-import { buildIdentityReviewRevision } from "@/modules/identities/domain/identity-review-revision";
 import { AccountsOverview, type AccountOverviewAccount } from "./accounts-overview";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
 import { OpeningAccountReferences, OpeningOperationReference } from "./opening-snapshot-panels";
@@ -329,7 +327,6 @@ export default async function PrivateAppPage({
   let accountingPeriods: AccountingPeriodView[] = [];
   let economicTrace: EconomicTraceItem[] = [];
   let identityAccounts: IdentityAccount[] = [];
-  let identityRequests: IdentityOnboardingRequest[] = [];
   let identitySummaries: IdentitySummary[] = [];
   let openingSnapshot: PeriodOpeningRecord | null = null;
   let periodOpening: OperationalOpeningSnapshot = {
@@ -942,7 +939,6 @@ export default async function PrivateAppPage({
     const [
       { data: identityRows },
       { data: identityAssignmentRows },
-      { data: identityRequestRows },
       { data: identityConnectorInstallationRows },
     ] = await Promise.all([
       supabase
@@ -956,11 +952,6 @@ export default async function PrivateAppPage({
         .select("identity_id,account_id")
         .eq("workspace_id", selection.workspace.id)
         .is("unassigned_at", null),
-      supabase
-        .from("identity_onboarding_requests")
-        .select("id,recipient_email,status,first_name,last_name,document_reference,phone,created_at")
-        .eq("workspace_id", selection.workspace.id)
-        .order("created_at", { ascending: false }),
       supabase
         .from("identity_connector_installations")
         .select("identity_id,status,expires_at,sent_at,created_at")
@@ -1006,16 +997,6 @@ export default async function PrivateAppPage({
         status: installation.status as IdentityConnectorInstallation["status"],
       })),
     );
-    identityRequests = (identityRequestRows ?? []).map((request) => ({
-      createdAt: request.created_at,
-      documentReference: request.document_reference,
-      firstName: request.first_name,
-      id: request.id,
-      lastName: request.last_name,
-      phone: request.phone,
-      recipientEmail: request.recipient_email,
-      status: request.status,
-    }));
     const walletNamesById = new Map((walletRows ?? []).map((wallet) => [wallet.id, wallet.name]));
     economicTrace = [
       ...(dailyControlRows ?? []).flatMap((control): EconomicTraceItem[] =>
@@ -1226,20 +1207,16 @@ export default async function PrivateAppPage({
     });
   }
 
-  const pendingIdentityRequests = identityRequests.filter((request) => request.status === "submitted");
-  const identityReviewRevision = buildIdentityReviewRevision(identityRequests);
-
   return (
     <AppWorkspace
       administrationScope={administrationScope}
       authorized={allowed}
       avatarUrl={typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null}
       initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "accounts" : "home"}
-      pendingIdentityRequests={pendingIdentityRequests.length}
       userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
       username={typeof user.user_metadata?.username === "string" ? user.user_metadata.username : undefined}
     >
-      <NinjaConnectorMonitor identityReviewRevision={identityReviewRevision} inventoryRevision={ninjaInventoryRevision} online={connectorOnline} />
+      <NinjaConnectorMonitor inventoryRevision={ninjaInventoryRevision} online={connectorOnline} />
       {!connectorOnline ? (
         <div className="notice connector-offline-notice" role="status">
           <span>Conector sin señal. Estás viendo los últimos datos guardados.</span>
@@ -1530,7 +1507,6 @@ export default async function PrivateAppPage({
           accounts={identityAccounts}
           connectors={ninjaConnectors.filter((connector) => connector.identityId !== null)}
           identities={identitySummaries}
-          requests={identityRequests}
           workspaceId={selection.workspace.id}
         />
       )}

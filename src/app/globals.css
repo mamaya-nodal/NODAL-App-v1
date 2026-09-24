@@ -3904,25 +3904,16 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   animation: workspace-view-in .22s ease both;
 }
 
-/* Identidades: invitacion, aprobacion y asignacion sin ruido visual. */
+/* Identidades: alta directa, conectores y asignación sin ruido visual. */
 .identities-view { min-width: 0; color: var(--app-title); }
-.identity-invite-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin: 14px 0 22px; }
-.identity-invite-form input,
+.identity-create-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; margin: 14px 0 22px; }
+.identity-create-form input,
 .identity-assignment-form select { min-width: 0; min-height: 42px; padding: 9px 12px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-input); color: var(--app-title); }
 .identity-message { margin: -10px 0 18px; color: var(--app-accent); font-size: 12px; font-weight: 750; }
 .identity-section-title { display: flex; align-items: center; gap: 8px; margin: 20px 0 9px; }
 .identity-section-title h3 { margin: 0; font-size: 14px; }
 .identity-section-title span { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--app-soft); color: var(--app-subtle); font-size: 10px; font-weight: 800; }
-.identity-request,
 .identity-card { margin-bottom: 9px; overflow: hidden; border: 1px solid var(--app-border); border-radius: 14px; background: var(--app-panel); }
-.identity-request { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px; min-height: 62px; padding: 12px 15px; }
-.identity-request > div:first-child { display: grid; gap: 4px; }
-.identity-request strong { font-size: 13px; }
-.identity-request span { color: var(--app-subtle); font-size: 10px; }
-.identity-request-state { font-weight: 800; }
-.identity-request.submitted .identity-request-state { color: var(--app-accent); }
-.identity-request-actions { display: flex; gap: 8px; }
-.identity-request-actions button { min-height: 34px; }
 .identity-empty-row { margin: 0; padding: 20px 14px; border: 1px dashed var(--app-border); border-radius: 14px; color: var(--app-subtle); font-size: 11px; text-align: center; }
 .identity-card > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 18px; min-height: 62px; padding: 13px 15px; cursor: pointer; list-style: none; }
 .identity-card > summary::-webkit-details-marker { display: none; }
@@ -3970,9 +3961,7 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-assignment-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--app-border); }
 
 @media (max-width: 800px) {
-  .identity-request { grid-template-columns: minmax(0, 1fr) auto; }
-  .identity-request-actions { grid-column: 1 / -1; justify-content: flex-end; }
-  .identity-invite-form,
+  .identity-create-form,
   .identity-account-summary,
   .identity-assignment-form { grid-template-columns: 1fr; }
   .identity-card > summary { grid-template-columns: minmax(0, 1fr) auto auto; }

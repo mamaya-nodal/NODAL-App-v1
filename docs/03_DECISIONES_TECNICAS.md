@@ -851,3 +851,21 @@ vigente sin aprobacion y evidencia suficiente.
 - **Integridad:** Origen y destino deben ser billeteras activas distintas del
   mismo workspace; se valida saldo y se guarda atómicamente con auditoría.
 - **Estado:** Implementada para pruebas el 2026-09-24.
+
+### APP-112 - Alta directa de identidades
+
+- **Registro:** El usuario NODAL agrega una identidad desde su panel ingresando
+  únicamente nombre completo y correo. La identidad queda disponible de
+  inmediato, sin invitación, formulario externo ni aprobación posterior.
+- **Continuidad operativa:** Desde la identidad creada se conservan el envío e
+  instalación del conector, su atribución automática de cuentas, resultados,
+  payouts e historial resumido.
+- **Estado inicial:** El alta queda aprobada para operar y mantiene la
+  documentación y las credenciales operativas como pendientes. NODAL no
+  solicita ni almacena contraseñas.
+- **Migración:** Las identidades y solicitudes históricas permanecen intactas
+  en la base. El flujo anterior se retira de la interfaz, sin borrar ni
+  modificar datos ya cargados.
+- **Trazabilidad:** Cada alta directa registra usuario, workspace, fecha,
+  nombre y correo en auditoría.
+- **Estado:** Implementada para pruebas el 2026-09-24.

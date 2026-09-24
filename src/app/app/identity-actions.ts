@@ -5,6 +5,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { prepareDirectIdentity } from "@/modules/identities/domain/direct-identity";
 
 type ActionResult = Readonly<{ message: string; ok: boolean }>;
 
@@ -75,66 +76,33 @@ export async function sendIdentityConnectorInstallation(identityId: string): Pro
   return { ok: true, message: "Instalación enviada. El enlace vence en 24 horas." };
 }
 
-export async function sendIdentityOnboardingRequest(input: Readonly<{
+export async function createIdentityDirectly(input: Readonly<{
   email: string;
+  fullName: string;
   workspaceId: string;
 }>): Promise<ActionResult> {
-  const email = input.email.trim().toLowerCase();
-  if (!isUuid(input.workspaceId) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-    return { ok: false, message: "Ingresá un correo válido." };
+  const identity = prepareDirectIdentity(input);
+  if (!isUuid(input.workspaceId) || !identity) {
+    return { ok: false, message: "Ingresá nombre completo y un correo válido." };
   }
   const { supabase, user } = await authenticatedClient();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
-  const token = randomBytes(32).toString("hex");
-  const tokenHash = createHash("sha256").update(token).digest("hex");
-  const { data: requestId, error } = await supabase.rpc("create_identity_onboarding_request", {
-    target_email: email,
-    target_token_hash: tokenHash,
+  const { error } = await supabase.rpc("create_nodal_identity_direct", {
+    target_email: identity.email,
+    target_first_name: identity.firstName,
+    target_last_name: identity.lastName,
     target_workspace_id: input.workspaceId,
   });
-  if (error || !requestId) {
-    return { ok: false, message: error?.message.includes("already exists") ? "Ya existe una solicitud abierta para ese correo." : "No se pudo crear la solicitud." };
+  if (error) {
+    return {
+      ok: false,
+      message: error.message.includes("duplicate")
+        ? "Ya existe una identidad con ese correo."
+        : "No se pudo agregar la identidad.",
+    };
   }
-
-  const automationUrl = process.env.IDENTITY_ONBOARDING_AUTOMATION_URL ?? DEFAULT_IDENTITY_AUTOMATION_URL;
-  try {
-    const response = await fetch(automationUrl, {
-      body: JSON.stringify({ action: "send_invitation", requestId, token }),
-      cache: "no-store",
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    });
-    if (!response.ok) throw new Error(`Identity automation returned ${response.status}`);
-    const result = await response.json() as { ok?: boolean };
-    if (!result.ok) throw new Error("Identity automation rejected the invitation");
-  } catch (sendError) {
-    console.error("Identity invitation dispatch failed", sendError);
-    await supabase.rpc("cancel_identity_onboarding_request", { target_request_id: requestId });
-    return { ok: false, message: "No se pudo enviar el correo. Intentá nuevamente." };
-  }
-
   revalidatePath("/app");
-  return { ok: true, message: "Solicitud enviada." };
-}
-
-export async function approveIdentityRequest(requestId: string): Promise<ActionResult> {
-  if (!isUuid(requestId)) return { ok: false, message: "La solicitud no es válida." };
-  const { supabase, user } = await authenticatedClient();
-  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
-  const { error } = await supabase.rpc("approve_identity_onboarding_request", { target_request_id: requestId });
-  if (error) return { ok: false, message: "No se pudo aprobar la solicitud." };
-  revalidatePath("/app");
-  return { ok: true, message: "Identidad aprobada." };
-}
-
-export async function rejectIdentityRequest(requestId: string): Promise<ActionResult> {
-  if (!isUuid(requestId)) return { ok: false, message: "La solicitud no es válida." };
-  const { supabase, user } = await authenticatedClient();
-  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
-  const { error } = await supabase.rpc("reject_identity_onboarding_request", { target_request_id: requestId });
-  if (error) return { ok: false, message: "No se pudo rechazar la solicitud." };
-  revalidatePath("/app");
-  return { ok: true, message: "Solicitud rechazada." };
+  return { ok: true, message: "Identidad agregada." };
 }
 
 export async function assignIdentityAccount(identityId: string, accountId: string): Promise<ActionResult> {

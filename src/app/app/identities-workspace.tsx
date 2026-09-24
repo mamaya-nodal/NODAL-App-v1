@@ -1,20 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import type {
   IdentityAccount,
-  IdentityOnboardingRequest,
   IdentitySummary,
 } from "@/modules/identities/domain/identity-summary";
 
 import {
-  approveIdentityRequest,
   assignIdentityAccount,
-  rejectIdentityRequest,
+  createIdentityDirectly,
   sendIdentityConnectorInstallation,
-  sendIdentityOnboardingRequest,
   unassignIdentityAccount,
 } from "./identity-actions";
 import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
@@ -23,7 +20,6 @@ type Props = Readonly<{
   accounts: IdentityAccount[];
   connectors: NinjaConnectorStatus[];
   identities: IdentitySummary[];
-  requests: IdentityOnboardingRequest[];
   workspaceId: string;
 }>;
 
@@ -41,13 +37,13 @@ function accountState(account: IdentityAccount) {
   return "Activa";
 }
 
-export function IdentitiesWorkspace({ accounts, connectors, identities, requests, workspaceId }: Props) {
+export function IdentitiesWorkspace({ accounts, connectors, identities, workspaceId }: Props) {
   const router = useRouter();
+  const createFormRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const assignedIds = new Set(accounts.filter((account) => account.currentIdentityId).map((account) => account.id));
   const unassigned = accounts.filter((account) => !assignedIds.has(account.id));
-  const openRequests = requests.filter((request) => request.status === "sending" || request.status === "sent" || request.status === "submitted");
 
   function run(action: () => Promise<{ message: string; ok: boolean }>) {
     setMessage(null);
@@ -64,36 +60,20 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, requests
         <h2 id="identities-title">Identidades</h2>
       </div>
 
-      <form action={(formData) => run(() => sendIdentityOnboardingRequest({
-        email: String(formData.get("email") ?? ""),
-        workspaceId,
-      }))} className="identity-invite-form">
-        <input aria-label="Correo de la persona" autoComplete="email" inputMode="email" name="email" placeholder="correo@gmail.com" required type="email" />
-        <button className="primary-action" disabled={pending} type="submit">{pending ? "Enviando…" : "Enviar solicitud"}</button>
+      <form action={(formData) => run(async () => {
+        const result = await createIdentityDirectly({
+          email: String(formData.get("email") ?? ""),
+          fullName: String(formData.get("full_name") ?? ""),
+          workspaceId,
+        });
+        if (result.ok) createFormRef.current?.reset();
+        return result;
+      })} className="identity-create-form" ref={createFormRef}>
+        <input aria-label="Nombre completo" autoComplete="name" maxLength={200} name="full_name" placeholder="Nombre completo" required />
+        <input aria-label="Correo de la identidad" autoComplete="email" inputMode="email" maxLength={254} name="email" placeholder="correo@gmail.com" required type="email" />
+        <button className="primary-action" disabled={pending} type="submit">{pending ? "Agregando…" : "Agregar"}</button>
       </form>
       {message && <p aria-live="polite" className="identity-message">{message}</p>}
-
-      <div className="identity-section-title"><h3>Solicitudes</h3><span>{openRequests.length}</span></div>
-      <div className="identity-request-list">
-        {openRequests.map((request) => (
-          <article className={`identity-request ${request.status}`} key={request.id}>
-            <div>
-              <strong>{request.status === "submitted" ? `${request.firstName} ${request.lastName}` : request.recipientEmail}</strong>
-              {request.status === "submitted" && <span>{request.recipientEmail} · {request.phone}</span>}
-            </div>
-            <span className="identity-request-state">
-              {request.status === "submitted" ? "Para aprobar" : request.status === "sent" ? "Enviada" : "Enviando"}
-            </span>
-            {request.status === "submitted" && (
-              <div className="identity-request-actions">
-                <button className="secondary-action" disabled={pending} onClick={() => run(() => rejectIdentityRequest(request.id))} type="button">Rechazar</button>
-                <button className="primary-action" disabled={pending} onClick={() => run(() => approveIdentityRequest(request.id))} type="button">Aceptar</button>
-              </div>
-            )}
-          </article>
-        ))}
-        {openRequests.length === 0 && <p className="identity-empty-row">Sin solicitudes pendientes.</p>}
-      </div>
 
       <div className="identity-section-title"><h3>Identidades</h3><span>{identities.length}</span></div>
       <div className="identity-list">
