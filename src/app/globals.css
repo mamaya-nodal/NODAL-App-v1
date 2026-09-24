@@ -7249,14 +7249,20 @@ html[data-theme="day"] .accounting-history {
 .demo-review-list span,
 .demo-wallets strong { color: var(--app-copy); font-size: 10px; }
 .named-wallet-row { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 8px; padding: 12px 14px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-input); }
-.named-wallet-row form { min-width: 0; flex: 1; display: grid; gap: 6px; }
+.named-wallet-row form,
+.named-wallet-display { min-width: 0; flex: 1; display: grid; gap: 6px; }
 .named-wallet-row form > label,
+.named-wallet-display > span,
 .named-wallet-balance span { color: var(--app-subtle); font-size: 9px; font-weight: 750; }
-.named-wallet-row form > div { display: flex; align-items: center; gap: 8px; }
+.named-wallet-row form > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.named-wallet-display > div { display: flex; align-items: center; gap: 8px; }
+.named-wallet-display strong { min-width: 0; overflow: hidden; color: var(--app-title); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .named-wallet-row input { width: min(300px, 46vw); min-height: 38px; padding: 0 11px; border: 1px solid var(--app-border); border-radius: 9px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 11px; font-weight: 750; -webkit-text-fill-color: var(--app-title); }
 .named-wallet-row button,
 .wallet-create-inline button { min-height: 38px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--app-accent) 55%, var(--app-border)); border-radius: 9px; color: #13220e; background: linear-gradient(135deg, #cfff72, #8df04d); box-shadow: 0 5px 14px rgb(109 216 50 / 16%); font: inherit; font-size: 10px; font-weight: 850; cursor: pointer; }
 .named-wallet-row button:disabled { border-color: var(--app-border); color: var(--app-subtle); background: var(--app-panel); box-shadow: none; cursor: default; opacity: .78; }
+.named-wallet-row .wallet-edit-button,
+.named-wallet-row .wallet-edit-cancel { border-color: var(--app-border); color: var(--app-copy); background: transparent; box-shadow: none; }
 .named-wallet-row form > small { color: var(--app-positive); font-size: 9px; font-weight: 750; }
 .named-wallet-balance { min-width: 120px; display: flex; align-items: flex-end; flex-direction: column; gap: 5px; }
 .named-wallet-balance strong { color: var(--app-title); font-size: 13px; }
@@ -7436,6 +7442,7 @@ html[data-theme="day"] .demo-stage.live {
   .named-wallet-row,
   .payout-list-row { align-items: stretch; flex-direction: column; }
   .named-wallet-row form,
+  .named-wallet-display,
   .payout-collection-form { width: 100%; }
   .named-wallet-row input { width: 100%; }
   .payout-collection-form :is(select, input) { min-width: 0; width: 100%; }

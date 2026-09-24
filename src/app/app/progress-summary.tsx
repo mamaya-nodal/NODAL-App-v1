@@ -84,6 +84,8 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [walletDraftName, setWalletDraftName] = useState("");
+  const [walletEditingId, setWalletEditingId] = useState<string | null>(null);
   const [walletSavingId, setWalletSavingId] = useState<string | null>(null);
   const [walletFeedback, setWalletFeedback] = useState<Record<string, string>>({});
   const [walletNames, setWalletNames] = useState<Record<string, string>>(() =>
@@ -149,13 +151,20 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
 
   async function updateWalletName(event: FormEvent<HTMLFormElement>, walletId: string) {
     event.preventDefault();
-    const name = (walletNames[walletId] ?? "").trim();
+    const name = walletDraftName.trim();
     setWalletSavingId(walletId);
     setWalletFeedback((current) => ({ ...current, [walletId]: "" }));
     const result = await renameWallet({ name, walletId });
     setWalletSavingId(null);
+    if (result.ok) {
+      setWalletNames((current) => ({ ...current, [walletId]: name }));
+      setWalletFeedback((current) => ({ ...current, [walletId]: "" }));
+      setWalletDraftName("");
+      setWalletEditingId(null);
+      router.refresh();
+      return;
+    }
     setWalletFeedback((current) => ({ ...current, [walletId]: result.message }));
-    if (result.ok) router.refresh();
   }
 
   async function withdrawal(event: FormEvent<HTMLFormElement>) {
@@ -280,29 +289,55 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
         <div className="demo-wallets">
           {wallets.map((wallet) => (
             <div className="named-wallet-row" key={wallet.id}>
-              <form onSubmit={(event) => updateWalletName(event, wallet.id)}>
-                <label htmlFor={`wallet-name-${wallet.id}`}>Nombre de la billetera</label>
-                <div>
-                  <input
-                    aria-label={`Nombre de ${wallet.name}`}
-                    id={`wallet-name-${wallet.id}`}
-                    maxLength={80}
-                    name="name"
-                    onChange={(event) => setWalletNames((current) => ({
-                      ...current,
-                      [wallet.id]: event.target.value,
-                    }))}
-                    value={walletNames[wallet.id] ?? wallet.name}
-                  />
-                  <button
-                    disabled={walletSavingId === wallet.id || !(walletNames[wallet.id] ?? "").trim() || (walletNames[wallet.id] ?? "").trim() === wallet.name}
-                    type="submit"
-                  >
-                    {walletSavingId === wallet.id ? "Guardando…" : "Guardar nombre"}
-                  </button>
+              {walletEditingId === wallet.id ? (
+                <form onSubmit={(event) => updateWalletName(event, wallet.id)}>
+                  <label htmlFor={`wallet-name-${wallet.id}`}>Nombre de la billetera</label>
+                  <div>
+                    <input
+                      aria-label={`Nombre de ${wallet.name}`}
+                      autoFocus
+                      id={`wallet-name-${wallet.id}`}
+                      maxLength={80}
+                      name="name"
+                      onChange={(event) => setWalletDraftName(event.target.value)}
+                      value={walletDraftName}
+                    />
+                    <button
+                      className="wallet-edit-cancel"
+                      disabled={walletSavingId === wallet.id}
+                      onClick={() => {
+                        setWalletEditingId(null);
+                        setWalletDraftName("");
+                        setWalletFeedback((current) => ({ ...current, [wallet.id]: "" }));
+                      }}
+                      type="button"
+                    >Cancelar</button>
+                    <button
+                      disabled={walletSavingId === wallet.id || !walletDraftName.trim() || walletDraftName.trim() === (walletNames[wallet.id] ?? wallet.name)}
+                      type="submit"
+                    >
+                      {walletSavingId === wallet.id ? "Guardando…" : "Guardar"}
+                    </button>
+                  </div>
+                  {walletFeedback[wallet.id] && <small role="status">{walletFeedback[wallet.id]}</small>}
+                </form>
+              ) : (
+                <div className="named-wallet-display">
+                  <span>Nombre de la billetera</span>
+                  <div>
+                    <strong>{walletNames[wallet.id] ?? wallet.name}</strong>
+                    <button
+                      className="wallet-edit-button"
+                      onClick={() => {
+                        setWalletFeedback((current) => ({ ...current, [wallet.id]: "" }));
+                        setWalletDraftName(walletNames[wallet.id] ?? wallet.name);
+                        setWalletEditingId(wallet.id);
+                      }}
+                      type="button"
+                    >Editar nombre</button>
+                  </div>
                 </div>
-                {walletFeedback[wallet.id] && <small role="status">{walletFeedback[wallet.id]}</small>}
-              </form>
+              )}
               <div className="named-wallet-balance"><span>Saldo disponible</span><strong>{money(wallet.balanceInCents)}</strong></div>
             </div>
           ))}
