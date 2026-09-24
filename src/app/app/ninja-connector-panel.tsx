@@ -18,6 +18,7 @@ export type NinjaConnectorStatus = Readonly<{
 type Props = Readonly<{
   compact?: boolean;
   connector: NinjaConnectorStatus | null;
+  monitor?: boolean;
   targetIdentityId?: string | null;
 }>;
 const initialState: PairingCodeState = {};
@@ -26,7 +27,7 @@ function isOnline(connector: NinjaConnectorStatus | null) {
   return Boolean(connector?.isOnline && connector.status === "active");
 }
 
-export function NinjaConnectorPanel({ compact = false, connector, targetIdentityId = null }: Props) {
+export function NinjaConnectorPanel({ compact = false, connector, monitor = false, targetIdentityId = null }: Props) {
   const pairingAction = createNinjaPairingCode.bind(null, targetIdentityId);
   const [state, action, pending] = useActionState(pairingAction, initialState);
   const [copied, setCopied] = useState(false);
@@ -40,7 +41,7 @@ export function NinjaConnectorPanel({ compact = false, connector, targetIdentity
 
   return (
     <section className={`ninja-pairing-panel${compact ? " is-compact" : ""}`} aria-labelledby="ninja-pairing-title">
-      <NinjaConnectorMonitor linked={connector?.status === "active"} online={online} />
+      {monitor ? <NinjaConnectorMonitor linked={connector?.status === "active"} online={online} /> : null}
       <div className={`ninja-detections-heading${compact ? " visually-compact" : ""}`}>
         <div>
           <p className="status">CONEXIÓN CON NINJATRADER</p>

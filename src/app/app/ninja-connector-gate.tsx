@@ -59,7 +59,7 @@ export function NinjaConnectorGate({ administrationScope, connector, message }: 
           <a download href="/downloads/NODAL-Ninja-Connector.zip">Descargar conector</a>
           <span>Después generá el código y ejecutá el instalador en la PC de NinjaTrader.</span>
         </div>
-        <NinjaConnectorPanel compact connector={connector} />
+        <NinjaConnectorPanel compact connector={connector} monitor />
 
         <footer>
           <span>Conexión segura y de solo lectura</span>

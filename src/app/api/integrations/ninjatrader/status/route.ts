@@ -5,6 +5,7 @@ import {
   buildNinjaLiveBrokerBalance,
   type NinjaBrokerAccountAlias,
 } from "@/modules/ninja/domain/live-broker-balance";
+import { principalConnectorSignal } from "@/modules/ninja/domain/connector-status";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,11 @@ export async function GET() {
     displayName: alias.display_name,
   }));
   const connectorStatuses = (statusResult.data ?? []) as ConnectorStatusRow[];
+  const principalSignal = principalConnectorSignal(connectorStatuses.map((connector) => ({
+    identityId: connector.identity_id,
+    isOnline: connector.is_online,
+    status: connector.status,
+  })));
   return Response.json(
     {
       inventoryRevision: error
@@ -46,8 +52,8 @@ export async function GET() {
             buildNinjaLiveBrokerBalance(inventoryResult.data ?? []),
             aliases,
           ),
-      linked: !error && connectorStatuses.some((connector) => connector.status === "active" && connector.identity_id === null),
-      online: !error && connectorStatuses.some((connector) => Boolean(connector.is_online)),
+      linked: !error && principalSignal.linked,
+      online: !error && principalSignal.online,
     },
     { headers: { "Cache-Control": "no-store, max-age=0" }, status: error ? 503 : 200 },
   );

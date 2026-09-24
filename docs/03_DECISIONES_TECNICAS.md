@@ -724,3 +724,17 @@ vigente sin aprobacion y evidencia suficiente.
 - **Interfaz:** La ficha de cada identidad muestra su conexión NinjaTrader,
   resultado, payouts y un historial resumido y desplegable de sus cuentas.
 - **Estado:** Aprobada por Producto e implementada para pruebas el 2026-09-23.
+
+### APP-103 - Un solo monitor de conexión para el espacio del usuario
+
+- **Problema corregido:** Los paneles de cada identidad no deben iniciar su
+  propio monitor global. Comparar el conector principal con el estado local de
+  una identidad provocaba recargas completas cada cinco segundos.
+- **Regla:** El espacio cargado mantiene un único monitor global. La pantalla de
+  vinculación conserva un monitor propio solamente mientras el espacio todavía
+  está bloqueado y espera la primera señal.
+- **Alcance del estado:** Los indicadores globales `linked` y `online`
+  corresponden exclusivamente al conector principal. Los conectores de
+  identidades siguen formando parte del inventario y la atribución, pero no
+  pueden hacer aparecer al conector principal como conectado.
+- **Estado:** Implementada el 2026-09-24 tras la prueba remota de Alfred.
