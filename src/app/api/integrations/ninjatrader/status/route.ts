@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buildIdentityReviewRevision } from "@/modules/identities/domain/identity-review-revision";
 import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
 import {
   applyNinjaBrokerAccountAliases,
@@ -22,12 +23,16 @@ export async function GET() {
     return Response.json({ online: false }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 
-  const [statusResult, inventoryResult, aliasesResult] = await Promise.all([
+  const [statusResult, inventoryResult, aliasesResult, identityRequestsResult] = await Promise.all([
     supabase.rpc("get_current_user_ninja_connector_status"),
     supabase.rpc("get_current_user_ninja_inventory"),
     supabase
       .from("ninja_broker_account_aliases")
       .select("connection_name,account_name,display_name"),
+    supabase
+      .from("identity_onboarding_requests")
+      .select("id,status")
+      .eq("status", "submitted"),
   ]);
   const error = statusResult.error ?? inventoryResult.error;
   const aliases = (aliasesResult.data ?? []).map((alias): NinjaBrokerAccountAlias => ({
@@ -43,6 +48,9 @@ export async function GET() {
   })));
   return Response.json(
     {
+      identityReviewRevision: identityRequestsResult.error
+        ? null
+        : buildIdentityReviewRevision(identityRequestsResult.data ?? []),
       inventoryRevision: error
         ? null
         : buildNinjaInventoryRevision(inventoryResult.data ?? []),

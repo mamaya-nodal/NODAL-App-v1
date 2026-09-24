@@ -812,3 +812,15 @@ vigente sin aprobacion y evidencia suficiente.
   cobertura; mientras tanto se asignan manualmente después de deduplicar.
 - **Estado:** Implementada el 2026-09-24 tras detectar la doble observación de
   la cuenta broker 2018194 en la prueba de Alfred y Lupe.
+
+### APP-109 - Aviso automático de identidades pendientes de aprobación
+
+- **Detección:** El monitor liviano ya activo en la aplicación incluye una
+  revisión determinista de las solicitudes de identidad en estado `submitted`.
+- **Actualización:** Si una persona completa el formulario mientras el usuario
+  NODAL tiene la app abierta, la vista se recarga una sola vez conservando la
+  pestaña activa.
+- **Aviso:** La navegación muestra un contador junto a `Identidades` hasta que
+  las solicitudes recibidas sean aceptadas o rechazadas.
+- **Estado:** Implementada el 2026-09-24 después de confirmar que la respuesta
+  de Roberto llegó correctamente pero la pantalla de Alfred no se actualizó.

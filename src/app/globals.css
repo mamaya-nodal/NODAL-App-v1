@@ -4260,6 +4260,7 @@ html[data-theme="day"] .home-detail-card dl > div { border-color: #e3ebe5; }
     backdrop-filter: blur(16px);
   }
   .workspace-mobile-navigation a {
+    position: relative;
     flex: 1 0 62px;
     display: grid;
     place-items: center;
@@ -4270,6 +4271,14 @@ html[data-theme="day"] .home-detail-card dl > div { border-color: #e3ebe5; }
     font-weight: 700;
     text-align: center;
     text-decoration: none;
+  }
+  .workspace-mobile-navigation .workspace-nav-badge {
+    position: absolute;
+    top: 2px;
+    right: calc(50% - 22px);
+    min-width: 16px;
+    padding: 2px 5px;
+    font-size: 9px;
   }
   .workspace-mobile-navigation a span { color: inherit; font-size: 1rem; }
   .workspace-mobile-navigation a[aria-current="page"] { color: #93ff3b; }
@@ -4378,6 +4387,20 @@ body {
   width: 20px;
   height: 20px;
   color: var(--app-accent);
+}
+
+.workspace-nav-badge {
+  min-width: 20px;
+  margin-left: auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--app-accent);
+  color: #0b130d;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
 }
 
 html[data-theme="day"] .workspace-navigation a[aria-current="page"] {

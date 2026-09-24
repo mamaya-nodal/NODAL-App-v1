@@ -85,6 +85,7 @@ import {
 import { ProgressSummary, type WalletView } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
+import { buildIdentityReviewRevision } from "@/modules/identities/domain/identity-review-revision";
 import { AccountsOverview, type AccountOverviewAccount } from "./accounts-overview";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
 import { OpeningAccountReferences, OpeningOperationReference } from "./opening-snapshot-panels";
@@ -1213,16 +1214,20 @@ export default async function PrivateAppPage({
     });
   }
 
+  const pendingIdentityRequests = identityRequests.filter((request) => request.status === "submitted");
+  const identityReviewRevision = buildIdentityReviewRevision(identityRequests);
+
   return (
     <AppWorkspace
       administrationScope={administrationScope}
       authorized={allowed}
       avatarUrl={typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null}
       initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "accounts" : "home"}
+      pendingIdentityRequests={pendingIdentityRequests.length}
       userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
       username={typeof user.user_metadata?.username === "string" ? user.user_metadata.username : undefined}
     >
-      <NinjaConnectorMonitor inventoryRevision={ninjaInventoryRevision} online={connectorOnline} />
+      <NinjaConnectorMonitor identityReviewRevision={identityReviewRevision} inventoryRevision={ninjaInventoryRevision} online={connectorOnline} />
       {!connectorOnline ? (
         <div className="notice connector-offline-notice" role="status">
           <span>Conector sin señal. Estás viendo los últimos datos guardados.</span>

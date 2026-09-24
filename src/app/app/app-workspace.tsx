@@ -34,6 +34,7 @@ type Props = Readonly<{
   avatarUrl?: string | null;
   children: ReactNode;
   initialView?: View;
+  pendingIdentityRequests?: number;
   userLabel: string;
   username?: string;
 }>;
@@ -63,6 +64,7 @@ export function AppWorkspace({
   avatarUrl,
   children,
   initialView = "home",
+  pendingIdentityRequests = 0,
   userLabel,
   username,
 }: Props) {
@@ -114,6 +116,11 @@ export function AppWorkspace({
             >
               <WorkspaceIcon name={view.icon} />
               {view.label}
+              {view.value === "identities" && pendingIdentityRequests > 0 && (
+                <em className="workspace-nav-badge" title={`${pendingIdentityRequests} ${pendingIdentityRequests === 1 ? "solicitud para aprobar" : "solicitudes para aprobar"}`}>
+                  {pendingIdentityRequests}
+                </em>
+              )}
             </a>
           ))}
           {administration && (
@@ -155,6 +162,9 @@ export function AppWorkspace({
             >
               <WorkspaceIcon name={view.icon} />
               {view.label}
+              {view.value === "identities" && pendingIdentityRequests > 0 && (
+                <em className="workspace-nav-badge">{pendingIdentityRequests}</em>
+              )}
             </a>
           ))}
           {administration && (
