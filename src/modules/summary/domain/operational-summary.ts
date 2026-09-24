@@ -25,9 +25,10 @@ export type SummaryControl = Readonly<{
 
 export type WalletMovement = Readonly<{
   amountInCents: number;
+  destinationWalletId?: string | null;
   feeInCents?: number;
   id: string;
-  kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker";
+  kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker" | "wallet_to_wallet";
   occurredOn: string;
   observation: string | null;
   walletId?: string;
@@ -154,11 +155,12 @@ export function buildOperationalSummary(input: Readonly<{
   const personalWalletWithdrawal = sum(input.walletMovements.filter((movement) => movement.kind === "personal_withdrawal").map((movement) => movement.amountInCents));
   const brokerToWallet = sum(input.walletMovements.filter((movement) => movement.kind === "broker_to_wallet").map((movement) => movement.amountInCents - (movement.feeInCents ?? 0)));
   const walletToBroker = sum(input.walletMovements.filter((movement) => movement.kind === "wallet_to_broker").map((movement) => movement.amountInCents));
+  const walletToWalletFees = sum(input.walletMovements.filter((movement) => movement.kind === "wallet_to_wallet").map((movement) => movement.feeInCents ?? 0));
   const transferFees = sum(input.walletMovements.map((movement) => movement.feeInCents ?? 0))
     + sum(input.fundingWithdrawals.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.feeInCents ?? 0))
     + sum(orderedControls.map((control) => control.transferFeeInCents ?? 0));
   const capitalNetInCents = opening.capitalNetInCents + sum(input.accounts.filter((account) => account.fundsOrigin === "Aporte trader").map((account) => account.priceInCents)) + brokerContribution + externalWallet - brokerPersonalWithdrawal - personalWalletWithdrawal;
-  const walletBalanceInCents = opening.walletBalanceInCents + collectedNet + priorPendingCollection - generatedPurchases - legacyWalletToBroker + legacyBrokerToWallet - walletToBroker + brokerToWallet + externalWallet - personalWalletWithdrawal;
+  const walletBalanceInCents = opening.walletBalanceInCents + collectedNet + priorPendingCollection - generatedPurchases - legacyWalletToBroker + legacyBrokerToWallet - walletToBroker + brokerToWallet + externalWallet - personalWalletWithdrawal - walletToWalletFees;
   const periodResultInCents = brokerOperatingResult - totalPurchases + approved - transferFees;
   const accumulatedResultInCents = opening.accumulatedResultInCents + periodResultInCents;
   const fundingPendingInCents = Math.max(0, opening.fundingPendingInCents + approved - collected - priorPendingCollection);

@@ -839,3 +839,15 @@ vigente sin aprobacion y evidencia suficiente.
 - **Eliminación:** Antes de borrar se exige confirmación visual y se advierte
   que el conector no volverá a ofrecer esa cuenta para registrar.
 - **Estado:** Implementada para pruebas el 2026-09-24.
+
+### APP-111 - Transferencias internas entre billeteras
+
+- **Registro:** Se carga en un solo paso con billetera de origen, billetera de
+  destino, importe enviado, fee real, fecha y observación opcional.
+- **Saldos:** Debita el importe informado del origen y acredita `importe - fee`
+  en el destino.
+- **Contabilidad:** No es aporte externo ni retiro personal y no modifica el
+  capital neto. Sólo el fee reduce el saldo total y el resultado del período.
+- **Integridad:** Origen y destino deben ser billeteras activas distintas del
+  mismo workspace; se valida saldo y se guarda atómicamente con auditoría.
+- **Estado:** Implementada para pruebas el 2026-09-24.

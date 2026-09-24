@@ -114,6 +114,34 @@ describe("operational summary", () => {
     expect(summary.positionDifferenceInCents).toBe(0);
   });
 
+  it("traslada saldo entre billeteras sin alterar capital y registra sólo el fee como costo", () => {
+    const summary = buildOperationalSummary({
+      accounts: [], controls: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [],
+      opening: {
+        accumulatedResultInCents: 0,
+        brokerBalanceInCents: 0,
+        capitalNetInCents: 20_000,
+        fundingPendingInCents: 0,
+        walletBalanceInCents: 20_000,
+      },
+      walletMovements: [{
+        amountInCents: 20_000,
+        destinationWalletId: "destination",
+        feeInCents: 300,
+        id: "internal-transfer",
+        kind: "wallet_to_wallet",
+        occurredOn: "2026-09-24",
+        observation: null,
+        walletId: "source",
+      }],
+    });
+
+    expect(summary.capitalNetInCents).toBe(20_000);
+    expect(summary.walletBalanceInCents).toBe(19_700);
+    expect(summary.periodResultInCents).toBe(-300);
+    expect(summary.positionDifferenceInCents).toBe(0);
+  });
+
   it("ingresa un payout neto del fee y mantiene la conciliación", () => {
     const summary = buildOperationalSummary({
       accounts: [], controls: [], entries: [], phaseWithdrawals: [], walletMovements: [],

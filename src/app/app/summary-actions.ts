@@ -25,6 +25,27 @@ export async function createWalletMovement(input: Readonly<{ amount: string; dat
   revalidatePath("/app"); return { ok: true, message: "Movimiento de billetera guardado." };
 }
 
+export async function createWalletTransfer(input: Readonly<{ amount: string; date: string; destinationWalletId: string; fee: string; observation: string; periodId: string; sourceWalletId: string }>): Promise<Result> {
+  const cents = amount(input.amount);
+  const fee = input.fee.trim() ? amount(input.fee) : 0;
+  if (!uuid(input.periodId) || !uuid(input.sourceWalletId) || !uuid(input.destinationWalletId)
+    || input.sourceWalletId === input.destinationWalletId || !input.date || !cents || fee === null || fee >= cents) {
+    return { ok: false, message: "Revisá las billeteras, el importe y el fee." };
+  }
+  const { supabase, user } = await client(); if (!user) return { ok: false, message: "La sesión venció." };
+  const { error } = await supabase.rpc("create_nodal_wallet_transfer", {
+    target_amount_cents: cents,
+    target_destination_wallet_id: input.destinationWalletId,
+    target_fee_cents: fee,
+    target_observation: input.observation,
+    target_occurred_on: input.date,
+    target_period_id: input.periodId,
+    target_source_wallet_id: input.sourceWalletId,
+  });
+  if (error) return { ok: false, message: error.message.includes("insufficient") ? "La billetera de origen no tiene saldo suficiente." : "No se pudo guardar la transferencia entre billeteras." };
+  revalidatePath("/app"); return { ok: true, message: "Transferencia entre billeteras guardada." };
+}
+
 export async function createWallet(input: Readonly<{ date: string; name: string; openingBalance: string; periodId: string }>): Promise<Result> {
   const opening = input.openingBalance.trim() ? amount(input.openingBalance) : 0;
   if (!uuid(input.periodId) || !input.date || !input.name.trim() || opening === null) return { ok: false, message: "Revisá el nombre y el saldo inicial." };

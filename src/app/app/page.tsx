@@ -412,7 +412,7 @@ export default async function PrivateAppPage({
           .eq("period_id", selection.period.id),
         supabase
           .from("wallet_movements")
-          .select("id, wallet_id, occurred_on, kind, amount_cents, fee_cents, observation, created_at")
+          .select("id, wallet_id, destination_wallet_id, occurred_on, kind, amount_cents, fee_cents, observation, created_at")
           .eq("period_id", selection.period.id)
           .order("occurred_on", { ascending: false }),
         supabase
@@ -465,7 +465,7 @@ export default async function PrivateAppPage({
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("wallet_movements")
-          .select("id, period_id, wallet_id, occurred_on, kind, amount_cents, fee_cents, observation")
+          .select("id, period_id, wallet_id, destination_wallet_id, occurred_on, kind, amount_cents, fee_cents, observation")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("funding_withdrawals")
@@ -926,6 +926,7 @@ export default async function PrivateAppPage({
     );
     walletMovements = (walletMovementRows ?? []).map((movement) => ({
       amountInCents: Number(movement.amount_cents), id: movement.id,
+      destinationWalletId: movement.destination_wallet_id,
       kind: movement.kind as WalletMovement["kind"], occurredOn: movement.occurred_on,
       observation: movement.observation,
       feeInCents: Number(movement.fee_cents ?? 0),
@@ -1015,6 +1016,7 @@ export default async function PrivateAppPage({
       recipientEmail: request.recipient_email,
       status: request.status,
     }));
+    const walletNamesById = new Map((walletRows ?? []).map((wallet) => [wallet.id, wallet.name]));
     economicTrace = [
       ...(dailyControlRows ?? []).flatMap((control): EconomicTraceItem[] =>
         control.kind === "balance_update" || control.movement_cents === null ? [] : [{
@@ -1038,8 +1040,13 @@ export default async function PrivateAppPage({
               ? "Transferencia broker → billetera"
               : movement.kind === "wallet_to_broker"
                 ? "Transferencia billetera → broker"
-                : "Cobro pendiente anterior",
+                : movement.kind === "wallet_to_wallet"
+                  ? "Transferencia entre billeteras"
+                  : "Cobro pendiente anterior",
         source: "Manual",
+        status: movement.kind === "wallet_to_wallet"
+          ? `${walletNamesById.get(movement.wallet_id) ?? "Billetera"} → ${walletNamesById.get(movement.destination_wallet_id ?? "") ?? "Billetera"}`
+          : null,
       })),
       ...(fundingWithdrawalRows ?? []).flatMap((withdrawal): EconomicTraceItem[] => [{
         amountInCents: Number(withdrawal.amount_cents),
@@ -1116,6 +1123,7 @@ export default async function PrivateAppPage({
       })),
       walletMovements: (historicalWalletMovementRows ?? []).map((movement) => ({
         amountInCents: Number(movement.amount_cents),
+        destinationWalletId: movement.destination_wallet_id,
         id: movement.id,
         kind: movement.kind,
         feeInCents: Number(movement.fee_cents ?? 0),

@@ -12,6 +12,7 @@ import {
   createWallet,
   createFundingWithdrawal,
   createWalletMovement,
+  createWalletTransfer,
   renameWallet,
 } from "./summary-actions";
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
@@ -78,6 +79,7 @@ const labels = {
   personal_withdrawal: "Retiro personal desde billetera",
   broker_to_wallet: "Transferencia broker → billetera",
   wallet_to_broker: "Transferencia billetera → broker",
+  wallet_to_wallet: "Transferencia entre billeteras",
 } as const;
 
 export function ProgressSummary({ accounts, economicTrace = [], embedded = false, liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periods = [], summary, wallets }: Props) {
@@ -86,6 +88,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const [saving, setSaving] = useState(false);
   const [walletDraftName, setWalletDraftName] = useState("");
   const [walletEditingId, setWalletEditingId] = useState<string | null>(null);
+  const [movementWalletId, setMovementWalletId] = useState(wallets[0]?.id ?? "");
   const [walletSavingId, setWalletSavingId] = useState<string | null>(null);
   const [walletFeedback, setWalletFeedback] = useState<Record<string, string>>({});
   const [walletNames, setWalletNames] = useState<Record<string, string>>(() =>
@@ -116,15 +119,25 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setSaving(true);
-    const result = await createWalletMovement({
-      amount: String(form.get("amount") ?? ""),
-      date: String(form.get("date") ?? ""),
-      kind: String(form.get("kind") ?? ""),
-      observation: String(form.get("observation") ?? ""),
-      periodId,
-      walletId: String(form.get("wallet") ?? ""),
-      fee: String(form.get("fee") ?? ""),
-    });
+    const result = movementKind === "wallet_to_wallet"
+      ? await createWalletTransfer({
+        amount: String(form.get("amount") ?? ""),
+        date: String(form.get("date") ?? ""),
+        destinationWalletId: String(form.get("destination_wallet") ?? ""),
+        fee: String(form.get("fee") ?? ""),
+        observation: String(form.get("observation") ?? ""),
+        periodId,
+        sourceWalletId: String(form.get("wallet") ?? ""),
+      })
+      : await createWalletMovement({
+        amount: String(form.get("amount") ?? ""),
+        date: String(form.get("date") ?? ""),
+        kind: String(form.get("kind") ?? ""),
+        observation: String(form.get("observation") ?? ""),
+        periodId,
+        walletId: String(form.get("wallet") ?? ""),
+        fee: String(form.get("fee") ?? ""),
+      });
     setSaving(false);
     setMessage(result.message);
     if (result.ok) {
@@ -407,19 +420,25 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <strong>{summary.walletMovements.length}</strong>
           </summary>
           <form className="summary-form" onSubmit={wallet}>
-            <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required>
+            <select name="wallet" onChange={(event) => setMovementWalletId(event.target.value)} required value={movementWalletId}>
               <option disabled value="">Billetera</option>
               {wallets.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
             <input defaultValue={today()} name="date" required type="date" />
             <select name="kind" onChange={(event) => setMovementKind(event.target.value as keyof typeof labels)} value={movementKind}>
               {Object.entries(labels).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
+                <option disabled={value === "wallet_to_wallet" && wallets.length < 2} key={value} value={value}>{label}</option>
               ))}
             </select>
-            <input inputMode="decimal" name="amount" placeholder="Importe USD" required />
-            {(movementKind === "broker_to_wallet" || movementKind === "wallet_to_broker") && (
-              <input inputMode="decimal" min="0" name="fee" placeholder="Fee real USD (opcional)" />
+            {movementKind === "wallet_to_wallet" && (
+              <select defaultValue="" name="destination_wallet" required>
+                <option disabled value="">Billetera de destino</option>
+                {wallets.filter((item) => item.id !== movementWalletId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            )}
+            <input inputMode="decimal" name="amount" placeholder={movementKind === "wallet_to_wallet" ? "Importe debitado del origen USD" : "Importe USD"} required />
+            {(movementKind === "broker_to_wallet" || movementKind === "wallet_to_broker" || movementKind === "wallet_to_wallet") && (
+              <input inputMode="decimal" min="0" name="fee" placeholder={movementKind === "wallet_to_wallet" ? "Fee incluido en el débito USD" : "Fee real USD (opcional)"} />
             )}
             <input name="observation" placeholder="Observación (opcional)" />
             <button disabled={saving}>Guardar movimiento</button>
@@ -428,7 +447,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <div className="summary-list">
               {summary.walletMovements.map((movement) => (
                 <p key={movement.id}>
-                  <strong>{date(movement.occurredOn)}</strong> · {wallets.find((wallet) => wallet.id === movement.walletId)?.name ?? "Billetera"} · {labels[movement.kind as keyof typeof labels] ?? "Movimiento de billetera"} · {money(movement.amountInCents)}{(movement.feeInCents ?? 0) > 0 ? ` · Fee ${money(movement.feeInCents ?? 0)}` : ""}
+                  <strong>{date(movement.occurredOn)}</strong> · {wallets.find((wallet) => wallet.id === movement.walletId)?.name ?? "Billetera"}{movement.kind === "wallet_to_wallet" ? ` → ${wallets.find((wallet) => wallet.id === movement.destinationWalletId)?.name ?? "Billetera"}` : ""} · {labels[movement.kind as keyof typeof labels] ?? "Movimiento de billetera"} · {money(movement.amountInCents)}{(movement.feeInCents ?? 0) > 0 ? ` · Fee ${money(movement.feeInCents ?? 0)}` : ""}
                 </p>
               ))}
             </div>

@@ -52,6 +52,7 @@ export function buildPeriodOpening(input: Readonly<{
   const personalWallet = sum(wallet.filter((movement) => movement.kind === "personal_withdrawal").map((movement) => movement.amountInCents));
   const brokerWalletIn = sum(wallet.filter((movement) => movement.kind === "broker_to_wallet").map((movement) => movement.amountInCents - (movement.feeInCents ?? 0)));
   const brokerWalletOut = sum(wallet.filter((movement) => movement.kind === "wallet_to_broker").map((movement) => movement.amountInCents));
+  const walletToWalletFees = sum(wallet.filter((movement) => movement.kind === "wallet_to_wallet").map((movement) => movement.feeInCents ?? 0));
   const generatedPurchases = sum(purchases.filter((purchase) => purchase.fundsOrigin === "Saldo generado").map((purchase) => purchase.priceInCents));
   const contributedPurchases = sum(purchases.filter((purchase) => purchase.fundsOrigin === "Aporte trader").map((purchase) => purchase.priceInCents));
   const brokerContribution = sum(controls.filter((control) => control.kind === "deposit" && control.originDestination === "Aporte trader").map((control) => control.movementInCents ?? 0));
@@ -69,6 +70,6 @@ export function buildPeriodOpening(input: Readonly<{
     brokerBalanceInCents: latestPriorControls.at(-1)?.balanceAfterInCents ?? null,
     capitalNetInCents: contributedPurchases + brokerContribution + externalWallet - brokerPersonalWithdrawal - personalWallet,
     fundingPendingInCents: Math.max(0, approved - collected - priorPendingCollections),
-    walletBalanceInCents: collectedNet + priorPendingCollections - generatedPurchases - walletToBroker + brokerToWallet + brokerWalletIn - brokerWalletOut + externalWallet - personalWallet,
+    walletBalanceInCents: collectedNet + priorPendingCollections - generatedPurchases - walletToBroker + brokerToWallet + brokerWalletIn - brokerWalletOut + externalWallet - personalWallet - walletToWalletFees,
   };
 }

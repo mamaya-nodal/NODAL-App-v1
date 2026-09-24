@@ -50,7 +50,7 @@ export async function investigateAlert(input: Readonly<{
     supabase.from("daily_control_participants").select("daily_control_id, account_id, allocated_result_cents").eq("period_id", input.periodId),
     supabase.from("operation_entries").select("id, daily_control_id, account_id, operated_on, phase, participant_role, destination, magnitude_cents").eq("period_id", input.periodId),
     supabase.from("account_phase_withdrawals").select("account_id, phase, total_withdrawal_cents").eq("period_id", input.periodId),
-    supabase.from("wallet_movements").select("id, wallet_id, occurred_on, kind, amount_cents, fee_cents, observation").eq("period_id", input.periodId),
+    supabase.from("wallet_movements").select("id, wallet_id, destination_wallet_id, occurred_on, kind, amount_cents, fee_cents, observation").eq("period_id", input.periodId),
     supabase.from("funding_withdrawals").select("id, account_id, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents").eq("period_id", input.periodId).eq("is_active", true),
     supabase.rpc("list_nodal_period_activity", { target_period_id: input.periodId }),
   ]);
@@ -65,7 +65,7 @@ export async function investigateAlert(input: Readonly<{
     participantRole: entry.participant_role, phase: entry.phase,
   }));
   const phaseWithdrawals: AccountPhaseWithdrawal[] = (phaseWithdrawalsResult.data ?? []).flatMap((withdrawal) => withdrawal.phase === "Evaluacion" ? [] : [{ accountId: withdrawal.account_id, phase: withdrawal.phase as AccountPhaseWithdrawal["phase"], totalWithdrawalInCents: Number(withdrawal.total_withdrawal_cents) }]);
-  const walletMovements: WalletMovement[] = (walletResult.data ?? []).map((movement) => ({ id: movement.id, occurredOn: movement.occurred_on, kind: movement.kind as WalletMovement["kind"], amountInCents: Number(movement.amount_cents), feeInCents: Number(movement.fee_cents ?? 0), observation: movement.observation, walletId: movement.wallet_id }));
+  const walletMovements: WalletMovement[] = (walletResult.data ?? []).map((movement) => ({ id: movement.id, occurredOn: movement.occurred_on, kind: movement.kind as WalletMovement["kind"], amountInCents: Number(movement.amount_cents), destinationWalletId: movement.destination_wallet_id, feeInCents: Number(movement.fee_cents ?? 0), observation: movement.observation, walletId: movement.wallet_id }));
   const fundingWithdrawals: FundingWithdrawal[] = (fundingResult.data ?? []).map((withdrawal) => ({ id: withdrawal.id, accountId: withdrawal.account_id, approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, amountInCents: Number(withdrawal.amount_cents), feeInCents: Number(withdrawal.collection_fee_cents ?? 0), walletId: withdrawal.wallet_id }));
   const operationalSummary = buildOperationalSummary({
     accounts: (accountsResult.data ?? []).map((account) => { const purchase = purchases.get(account.id); return { id: account.id, state: account.state, stateOrigin: account.state_origin as AccountStateOrigin, priceInCents: Number(purchase?.price_cents ?? 0), fundsOrigin: purchase?.funds_origin === "Saldo generado" ? "Saldo generado" : "Aporte trader" }; }),

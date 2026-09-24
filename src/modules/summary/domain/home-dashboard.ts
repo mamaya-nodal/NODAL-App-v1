@@ -34,7 +34,7 @@ export type CapitalHistoryControl = Readonly<{
 
 export type CapitalHistoryWalletMovement = Readonly<{
   amountInCents: number;
-  kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection";
+  kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker" | "wallet_to_wallet";
   periodId: string;
 }>;
 
@@ -93,9 +93,11 @@ export function buildCapitalHistory(input: Readonly<{
       const walletCapital = sum(
         input.walletMovements
           .filter((movement) => movement.periodId === period.id)
-          .map((movement) => movement.kind === "personal_withdrawal"
-            ? -movement.amountInCents
-            : movement.amountInCents),
+          .map((movement) => {
+            if (movement.kind === "external_contribution") return movement.amountInCents;
+            if (movement.kind === "personal_withdrawal") return -movement.amountInCents;
+            return 0;
+          }),
       );
 
       accumulatedCapitalInCents += purchaseCapital + brokerCapital + walletCapital;
