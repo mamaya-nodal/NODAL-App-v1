@@ -1,4 +1,5 @@
 import type { DetectedNinjaAccount } from "@/modules/ninja/domain/account-classification";
+import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
 import { createDetectedPurchase } from "./purchase-actions";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
 
@@ -6,7 +7,8 @@ type Props = {
   accounts: readonly DetectedNinjaAccount[];
   companyIds: Readonly<Record<string, string>>;
   connectorId: string;
-  linkedAccountNames: ReadonlySet<string>;
+  excludedAccountKeys: ReadonlySet<string>;
+  registeredAccountKeys: ReadonlySet<string>;
   mode: string;
   online: boolean;
   period: string;
@@ -14,9 +16,12 @@ type Props = {
   wallets: ReadonlyArray<{ balanceInCents: number; id: string; name: string }>;
 };
 
-export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, linkedAccountNames, mode, online, period, periodId, wallets }: Props) {
+export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, excludedAccountKeys, registeredAccountKeys, mode, online, period, periodId, wallets }: Props) {
   const detectedPropAccounts = accounts.filter((account) => account.type === "prop");
-  const propAccounts = detectedPropAccounts.filter((account) => !linkedAccountNames.has(account.accountName));
+  const propAccounts = detectedPropAccounts.filter((account) => {
+    const key = ninjaAccountRegistrationKey(connectorId, account.connectionName, account.accountName);
+    return !registeredAccountKeys.has(key) && !excludedAccountKeys.has(key);
+  });
   return (
     <section className="ninja-detections" aria-labelledby="ninja-detections-title">
       <div className="ninja-detections-heading">

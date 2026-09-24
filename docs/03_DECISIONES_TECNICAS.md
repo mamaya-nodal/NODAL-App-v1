@@ -778,3 +778,19 @@ vigente sin aprobacion y evidencia suficiente.
 - **Contabilidad:** Mostrar la conexión es sólo trazabilidad operativa. No
   cambia la empresa, la identidad atribuida, los resultados ni los asientos.
 - **Estado:** Implementada el 2026-09-24 durante la prueba de Alfred y Lupe.
+
+### APP-107 - Eliminación controlada de registros de cuentas
+
+- **Alcance:** El titular puede eliminar desde la ficha una cuenta virgen o
+  cerrada que haya registrado por error, tanto si fue cargada manualmente como
+  si fue detectada por NinjaTrader.
+- **Protección contable:** La base rechaza la eliminación cuando la cuenta ya
+  tiene operaciones, coberturas, saldos manuales, retiros de fase o payouts. La
+  interfaz no es la autoridad final de esta validación.
+- **Trazabilidad:** Antes de eliminar se conserva en auditoría la cuenta, su
+  compra, sus vínculos Ninja y cualquier atribución de identidad. La compra se
+  revierte como parte de la corrección del alta errónea.
+- **Redetección:** Los identificadores técnicos de una cuenta detectada borrada
+  quedan excluidos por usuario, conector y conexión, evitando que un inventario
+  histórico la vuelva a ofrecer automáticamente como cuenta nueva.
+- **Estado:** Implementada para pruebas el 2026-09-24 a pedido de Alfred.

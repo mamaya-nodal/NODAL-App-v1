@@ -20,6 +20,7 @@ import { decideAccess } from "@/modules/access/domain/access-decision";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
+import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
 import {
   applyNinjaBrokerAccountAliases,
@@ -237,7 +238,8 @@ export default async function PrivateAppPage({
   const { purchase_result: purchaseResult, reset_result: resetResult, connector_result: connectorResult, transition_result: transitionResult } = await searchParams;
   let workspaceOptions: WorkspaceOption[] = [];
   let companies: Array<{ code: string; displayName: string; id: string }> = [];
-  let linkedNinjaAccountNames = new Set<string>();
+  let registeredNinjaAccountKeys = new Set<string>();
+  let excludedNinjaAccountKeys = new Set<string>();
   let ninjaNamesByAccountId = new Map<string, string>();
   let ninjaConnectionNamesByAccountId = new Map<string, string>();
   let ninjaPhasesByAccountId = new Map<string, "Evaluation" | "Funded" | "Live">();
@@ -349,6 +351,7 @@ export default async function PrivateAppPage({
       { data: walletMovementRows },
       { data: fundingWithdrawalRows },
       { data: ninjaLinkRows },
+      { data: ninjaAccountRegistrationExclusionRows },
       { data: ninjaInventoryRows },
       { data: ninjaOperationProbeRows },
       { data: ninjaTransitionRows },
@@ -419,8 +422,11 @@ export default async function PrivateAppPage({
           .order("approved_on", { ascending: false }),
         supabase
           .from("ninja_account_links")
-          .select("account_id, connection_name, external_account_name, phase, closed_at")
+          .select("account_id, connector_id, connection_name, external_account_name, phase, closed_at")
           .order("linked_at"),
+        supabase
+          .from("ninja_account_registration_exclusions")
+          .select("connector_id,connection_name,external_account_name"),
         supabase.rpc("get_current_user_ninja_inventory"),
         supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),
         supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
@@ -521,8 +527,19 @@ export default async function PrivateAppPage({
       displayName: company.display_name,
       id: company.id,
     }));
-    linkedNinjaAccountNames = new Set((ninjaLinkRows ?? []).filter((link) => link.closed_at === null).map((link) => link.external_account_name));
     const activeNinjaLinks = (ninjaLinkRows ?? []).filter((link) => link.closed_at === null);
+    const registeredNinjaAccountNames = new Set(activeNinjaLinks.map((link) => link.external_account_name));
+    registeredNinjaAccountKeys = new Set(activeNinjaLinks.flatMap((link) =>
+      link.connector_id
+        ? [ninjaAccountRegistrationKey(link.connector_id, link.connection_name, link.external_account_name)]
+        : [],
+    ));
+    excludedNinjaAccountKeys = new Set((ninjaAccountRegistrationExclusionRows ?? []).map((exclusion) =>
+      ninjaAccountRegistrationKey(exclusion.connector_id, exclusion.connection_name, exclusion.external_account_name),
+    ));
+    const excludedNinjaAccountNames = new Set(
+      (ninjaAccountRegistrationExclusionRows ?? []).map((exclusion) => exclusion.external_account_name),
+    );
     ninjaNamesByAccountId = new Map(activeNinjaLinks.map((link) => [link.account_id, link.external_account_name]));
     ninjaConnectionNamesByAccountId = new Map(
       (ninjaLinkRows ?? []).map((link) => [link.account_id, link.connection_name]),
@@ -606,7 +623,8 @@ export default async function PrivateAppPage({
         "NinjaTrader está conectado, pero no informa ninguna cuenta broker. Los saldos automáticos se reanudarán cuando una cuenta broker vuelva a aparecer en Accounts.";
     }
     ninjaTransitionAlerts = ((ninjaTransitionRows ?? []) as NinjaTransitionRpcRow[])
-      .filter((row) => !(row.event_type === "new_account" && row.to_account_name && linkedNinjaAccountNames.has(row.to_account_name)))
+      .filter((row) => !(row.event_type === "new_account" && row.to_account_name
+        && (registeredNinjaAccountNames.has(row.to_account_name) || excludedNinjaAccountNames.has(row.to_account_name))))
       .map((row) => ({
         automatic: row.automatic,
         connectionName: row.connection_name,
@@ -848,9 +866,11 @@ export default async function PrivateAppPage({
           phase: row.phase ?? "Funded", propResultInCents: null, tradeNumber: null });
       });
       return [{
-        canDelete: account.state === "virgin" && !ninjaNamesByAccountId.has(account.id) && !manualBalance
+        canDelete: (account.state === "virgin" || account.state === "closed")
+          && !manualBalance
           && !(historicalOperationEntryRows ?? []).some((entry) => entry.account_id === account.id)
           && !(historicalFundingWithdrawalRows ?? []).some((withdrawal) => withdrawal.account_id === account.id)
+          && !(historicalPhaseWithdrawalRows ?? []).some((withdrawal) => withdrawal.account_id === account.id)
           && !technicalMemberRows.some((member) => member.account_id === account.id),
         companyId: account.company_id,
         companyName: company.display_name,
@@ -1346,7 +1366,7 @@ export default async function PrivateAppPage({
               account.firstSeenAt ?? inventory.observed_at,
             ));
             const companyIds = Object.fromEntries(companies.flatMap((company) => [[company.code.toLowerCase(), company.id], [company.displayName.toLowerCase(), company.id]]));
-            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} key={inventory.connector_id} linkedAccountNames={linkedNinjaAccountNames} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} wallets={walletViews} />;
+            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} excludedAccountKeys={excludedNinjaAccountKeys} key={inventory.connector_id} registeredAccountKeys={registeredNinjaAccountKeys} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} wallets={walletViews} />;
           })}
 
           {openingSnapshot ? <OpeningAccountReferences opening={openingSnapshot} /> : null}

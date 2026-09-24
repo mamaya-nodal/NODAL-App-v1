@@ -158,13 +158,24 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
   redirect(safeContextUrl(mode, period, "created"));
 }
 
-export async function deleteManualAccount(accountId: string): Promise<Readonly<{ ok: boolean; message: string }>> {
+export async function deleteRegisteredAccount(accountId: string): Promise<Readonly<{ ok: boolean; message: string }>> {
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(accountId)) return { ok: false, message: "La cuenta no es válida." };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "La sesión venció." };
-  const { error } = await supabase.rpc("delete_nodal_manual_account", { target_account_id: accountId });
-  if (error) return { ok: false, message: error.message.includes("unused manual") ? "Solo puede eliminarse una cuenta manual virgen y sin actividad." : "No se pudo eliminar la cuenta." };
+  const { error } = await supabase.rpc("delete_nodal_registered_account", {
+    management_reason: "Registro de cuenta eliminado por el usuario antes de tener actividad",
+    target_account_id: accountId,
+  });
+  if (error) {
+    if (error.message.includes("registered_account_has_activity")) {
+      return { ok: false, message: "No puede eliminarse porque ya tiene operaciones, coberturas, saldos o payouts registrados." };
+    }
+    if (error.message.includes("registered_account_state_not_deletable")) {
+      return { ok: false, message: "Solo puede eliminarse una cuenta virgen o cerrada que no tenga actividad." };
+    }
+    return { ok: false, message: "No se pudo eliminar el registro de la cuenta." };
+  }
   revalidatePath("/app");
-  return { ok: true, message: "Cuenta manual eliminada." };
+  return { ok: true, message: "Registro eliminado." };
 }

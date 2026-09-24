@@ -13,7 +13,7 @@ import {
 } from "@/modules/operations/domain/operation-register";
 
 import type { RegisterAccount } from "./operation-register";
-import { deleteManualAccount } from "./purchase-actions";
+import { deleteRegisteredAccount } from "./purchase-actions";
 
 type AccountFilter = "active" | "all" | "closed" | "evaluation" | "funded";
 
@@ -141,14 +141,14 @@ function AccountCard({ item }: Readonly<{
       </div>
       {account.canDelete && (
         <div className="manual-account-delete">
-          <button aria-label="Eliminar cuenta manual" disabled={deleting} onClick={async () => {
-            if (!window.confirm("¿Eliminar esta cuenta manual? Solo se eliminará si nunca tuvo actividad.")) return;
+          <button aria-label="Eliminar registro de cuenta" disabled={deleting} onClick={async () => {
+            if (!window.confirm("¿Eliminar este registro? Solo se borrará si la cuenta no tiene operaciones, coberturas ni payouts. Esta acción no se puede deshacer.")) return;
             setDeleting(true);
-            const result = await deleteManualAccount(account.id);
+            const result = await deleteRegisteredAccount(account.id);
             setDeleting(false);
             setDeleteMessage(result.message);
             if (result.ok) router.refresh();
-          }} title="Eliminar cuenta manual" type="button"><span aria-hidden="true">×</span> Eliminar cuenta</button>
+          }} title="Eliminar registro" type="button"><span aria-hidden="true">×</span> Eliminar registro</button>
           {deleteMessage && <small>{deleteMessage}</small>}
         </div>
       )}
