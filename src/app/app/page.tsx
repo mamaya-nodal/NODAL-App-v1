@@ -239,6 +239,7 @@ export default async function PrivateAppPage({
   let companies: Array<{ code: string; displayName: string; id: string }> = [];
   let linkedNinjaAccountNames = new Set<string>();
   let ninjaNamesByAccountId = new Map<string, string>();
+  let ninjaConnectionNamesByAccountId = new Map<string, string>();
   let ninjaPhasesByAccountId = new Map<string, "Evaluation" | "Funded" | "Live">();
   let ninjaInventories: NinjaInventoryRpcRow[] = [];
   let connectedNinjaBrokerAccountNames: string[] = [];
@@ -523,6 +524,9 @@ export default async function PrivateAppPage({
     linkedNinjaAccountNames = new Set((ninjaLinkRows ?? []).filter((link) => link.closed_at === null).map((link) => link.external_account_name));
     const activeNinjaLinks = (ninjaLinkRows ?? []).filter((link) => link.closed_at === null);
     ninjaNamesByAccountId = new Map(activeNinjaLinks.map((link) => [link.account_id, link.external_account_name]));
+    ninjaConnectionNamesByAccountId = new Map(
+      (ninjaLinkRows ?? []).map((link) => [link.account_id, link.connection_name]),
+    );
     ninjaPhasesByAccountId = new Map(activeNinjaLinks.flatMap((link) =>
       link.phase === "Evaluation" || link.phase === "Funded" || link.phase === "Live"
         ? [[link.account_id, link.phase] as const]
@@ -858,6 +862,7 @@ export default async function PrivateAppPage({
         id: account.id,
         initialBalanceInCents: ninjaBalance?.initialInCents ?? manualBalance?.initialBalanceInCents ?? null,
         minimumNetLiquidationInCents: ninjaBalance?.minimumNetLiquidationInCents ?? null,
+        ninjaConnectionName: ninjaConnectionNamesByAccountId.get(account.id) ?? null,
         periodLabel: formatPeriodLabel(period.periodMonth),
         periodMonth: period.periodMonth,
         priceInCents: purchase ? Number(purchase.price_cents) : null,

@@ -29,6 +29,7 @@ export type AccountOverviewAccount = RegisterAccount & Readonly<{
   currentNinjaPhase: "Evaluation" | "Funded" | "Live" | null;
   initialBalanceInCents: number | null;
   minimumNetLiquidationInCents: number | null;
+  ninjaConnectionName: string | null;
   periodLabel: string;
   periodMonth: string;
   technicalTradeCount: number;
@@ -111,6 +112,7 @@ function AccountCard({ item }: Readonly<{
         <span className="demo-account-identity">
           <strong>{account.companyName}</strong>
           <small>{account.externalName ?? `Cuenta ${account.referenceNumber}`}</small>
+          {account.ninjaConnectionName && <small className="demo-account-connection">{account.ninjaConnectionName}</small>}
         </span>
         <span className={`demo-stage ${stage.toLowerCase()}`}>{stage}</span>
         <span className="demo-account-balance">

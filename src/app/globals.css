@@ -7065,6 +7065,7 @@ html[data-theme="day"] .accounting-history {
 .demo-account-identity { min-width: 0; display: grid; flex: 1 1 auto; gap: 4px; }
 .demo-account-identity strong { overflow: hidden; color: var(--app-title); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .demo-account-identity small { overflow: hidden; color: var(--app-subtle); font-size: 10px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.demo-account-identity .demo-account-connection { color: color-mix(in srgb, var(--app-accent) 58%, var(--app-subtle)); font-size: 8px; font-weight: 750; letter-spacing: .01em; }
 .demo-stage { min-width: 72px; padding: 6px 8px; border-radius: 8px; font-size: 9px; font-weight: 850; text-align: center; }
 .demo-stage.evaluation { color: #6ecbff; background: rgb(110 203 255 / 11%); }
 .demo-stage.funded { color: #ffae59; background: rgb(255 174 89 / 11%); }

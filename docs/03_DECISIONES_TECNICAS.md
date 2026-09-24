@@ -766,3 +766,15 @@ vigente sin aprobacion y evidencia suficiente.
 - **Revocación:** Un nuevo envío reemplaza cualquier enlace temporal anterior
   de esa identidad sin afectar su conector ya vinculado ni otros conectores.
 - **Estado:** Implementada para pruebas el 2026-09-24.
+
+### APP-106 - Conexión Ninja visible en cada cuenta registrada
+
+- **Identificación:** La ficha de una cuenta registrada conserva como nombre
+  principal la empresa y el identificador prop. Debajo muestra, en menor
+  jerarquía, el nombre de la conexión configurada en NinjaTrader.
+- **Persistencia:** El rótulo proviene de `ninja_account_links`; no se copia a
+  la cuenta ni crea un nuevo dato editable. También permanece visible cuando
+  la cuenta cierra, usando su último vínculo conocido.
+- **Contabilidad:** Mostrar la conexión es sólo trazabilidad operativa. No
+  cambia la empresa, la identidad atribuida, los resultados ni los asientos.
+- **Estado:** Implementada el 2026-09-24 durante la prueba de Alfred y Lupe.
