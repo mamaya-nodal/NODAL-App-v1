@@ -1457,6 +1457,7 @@ export default async function PrivateAppPage({
               .filter((account) => account.state !== "closed")
               .map((account) => ({
                 companyName: account.companyName,
+                connectionName: ninjaConnectionNamesByAccountId.get(account.id) ?? null,
                 id: account.id,
                 label: account.externalName ?? `Cuenta ${account.referenceNumber}`,
                 state: account.state,

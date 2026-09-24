@@ -52,6 +52,7 @@ type Props = Readonly<{
 
 export type ManualCoverageAccount = Readonly<{
   companyName: string;
+  connectionName: string | null;
   id: string;
   label: string;
   state: "closed" | "live" | "virgin";
@@ -162,7 +163,11 @@ function ManualCoverageAssignment({ accounts, batch }: Readonly<{
                 onChange={() => toggleAccount(account.id)}
                 type="checkbox"
               />
-              <span><strong>{account.label}</strong><small>{account.companyName} · {account.state === "closed" ? "Cerrada" : account.state === "live" ? "Activa" : "Virgen"}</small></span>
+              <span>
+                <strong>{account.label}</strong>
+                {account.connectionName && <small className="manual-coverage-connection">{account.connectionName}</small>}
+                <small>{account.companyName} · {account.state === "closed" ? "Cerrada" : account.state === "live" ? "Activa" : "Virgen"}</small>
+              </span>
             </label>
           ))}
         </div>

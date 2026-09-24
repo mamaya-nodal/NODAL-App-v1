@@ -7497,6 +7497,7 @@ html[data-theme="day"] .demo-stage.live {
 .manual-coverage-close > span { display: grid; gap: 2px; }
 .manual-coverage-account-list small,
 .manual-coverage-close small { color: var(--app-subtle); font-size: .62rem; }
+.manual-coverage-account-list .manual-coverage-connection { color: var(--app-copy); font-weight: 750; }
 .manual-coverage-summary { display: flex !important; flex-direction: row !important; align-items: center; justify-content: space-between; gap: 12px; }
 .manual-coverage-summary strong { color: var(--app-title); }
 .manual-coverage-close { align-items: flex-start; background: color-mix(in srgb, #ffb35c 8%, var(--app-panel)); }
