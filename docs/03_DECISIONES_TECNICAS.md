@@ -869,3 +869,19 @@ vigente sin aprobacion y evidencia suficiente.
 - **Trazabilidad:** Cada alta directa registra usuario, workspace, fecha,
   nombre y correo en auditoría.
 - **Estado:** Implementada para pruebas el 2026-09-24.
+
+### APP-113 - La detección inicial del broker no bloquea la reconstrucción
+
+- **Dato provisional:** El primer saldo broker que el conector registra como
+  aporte automático es una referencia técnica previa a la elección entre
+  comenzar de cero o reconstruir una situación existente.
+- **Apertura:** Ese único registro no oculta la configuración inicial. Al
+  confirmar el punto de partida se reemplaza atómicamente por la apertura y se
+  evita duplicar saldo broker o capital aportado.
+- **Bloqueo real:** Cualquier cuenta registrada, trade, movimiento de billetera,
+  payout u otro control diario continúa impidiendo una reconstrucción tardía.
+- **Continuidad:** Una apertura ya confirmada impide que futuras variaciones del
+  broker vuelvan a clasificarse como aporte inicial.
+- **Trazabilidad:** El reemplazo queda consignado en la auditoría de la apertura.
+- **Estado:** Implementada para pruebas el 2026-09-24 tras la reconexión de
+  Julián.

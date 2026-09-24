@@ -45,6 +45,7 @@ import {
   type HomePerformance,
 } from "@/modules/summary/domain/home-dashboard";
 import { buildPeriodOpening } from "@/modules/summary/domain/period-opening";
+import { canConfigurePeriodOpening } from "@/modules/summary/domain/opening-eligibility";
 import type { OperationalOpeningSnapshot } from "@/modules/summary/domain/operational-summary";
 import {
   operationalOpeningFromRecord,
@@ -329,6 +330,7 @@ export default async function PrivateAppPage({
   let identityAccounts: IdentityAccount[] = [];
   let identitySummaries: IdentitySummary[] = [];
   let openingSnapshot: PeriodOpeningRecord | null = null;
+  let openingSetupEligible = false;
   let periodOpening: OperationalOpeningSnapshot = {
     accumulatedResultInCents: 0,
     brokerBalanceInCents: null,
@@ -387,7 +389,7 @@ export default async function PrivateAppPage({
         supabase
           .from("daily_controls")
           .select(
-            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, allocation_reason, source, created_at, wallet_id, transfer_fee_cents",
+            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, allocation_reason, source, source_event_key, created_at, wallet_id, transfer_fee_cents",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
@@ -1205,6 +1207,20 @@ export default async function PrivateAppPage({
         periodId: movement.period_id,
       })),
     });
+    openingSetupEligible = canConfigurePeriodOpening({
+      accountCount: accountHistory.length,
+      dailyControls: (dailyControlRows ?? []).map((control) => ({
+        controlNumber: control.control_number,
+        kind: control.kind,
+        originDestination: control.origin_destination,
+        source: control.source,
+        sourceEventKey: control.source_event_key,
+      })),
+      fundingWithdrawalCount: fundingWithdrawals.length,
+      hasOpeningSnapshot: openingSnapshot !== null,
+      operationEntryCount: operationEntryHistory.length,
+      walletMovementCount: walletMovements.length,
+    });
   }
 
   return (
@@ -1297,14 +1313,7 @@ export default async function PrivateAppPage({
           dashboard={personalDashboard}
           liveBrokerBalance={liveNinjaBrokerBalance}
           ninjaOnline={connectorOnline}
-          openingSetupPreview={
-            openingSnapshot === null &&
-            accountHistory.length === 0 &&
-            dailyControls.length === 0 &&
-            operationEntryHistory.length === 0 &&
-            walletMovements.length === 0 &&
-            fundingWithdrawals.length === 0
-          }
+          openingSetupPreview={openingSetupEligible}
           openingSnapshot={openingSnapshot}
           performance={homePerformance}
           periodId={selection.period.id}

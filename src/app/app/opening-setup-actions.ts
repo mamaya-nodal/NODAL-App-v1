@@ -109,7 +109,7 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
   if (!liveBroker) {
     return { ok: false, message: "Conectá NinjaTrader para que NODAL tome el saldo broker antes de confirmar." };
   }
-  const { error } = await supabase.rpc("confirm_nodal_period_opening", {
+  const { error } = await supabase.rpc("confirm_nodal_period_opening_after_connector", {
     target_batches: batches,
     target_broker_balance_cents: liveBroker.balanceInCents,
     target_closed_accounts_reference: accounts.closed,
