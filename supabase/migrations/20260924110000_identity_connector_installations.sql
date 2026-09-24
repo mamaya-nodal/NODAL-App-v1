@@ -195,7 +195,7 @@ begin
   select installations.* into selected_installation
   from public.identity_connector_installations installations
   where installations.id = target_installation_id
-    and installations.status in ('sent', 'downloaded')
+    and installations.status in ('sending', 'sent', 'downloaded')
     and installations.expires_at > now()
     and installations.download_token_hash = encode(extensions.digest(target_token, 'sha256'), 'hex')
   for update;
