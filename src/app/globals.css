@@ -7676,6 +7676,15 @@ html[data-theme="day"] .manual-coverage-close { background: #ffffff; }
   font-weight: 700;
 }
 
+.broker-account-display-name {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  color: var(--app-title);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .broker-account-breakdown small,
 .broker-account-breakdown > p {
   margin: 0;
@@ -7702,6 +7711,12 @@ html[data-theme="day"] .manual-coverage-close { background: #ffffff; }
 }
 
 .broker-account-breakdown button:disabled { cursor: wait; opacity: 0.65; }
+
+.broker-account-breakdown button.is-edit {
+  border: 1px solid var(--app-border);
+  color: var(--app-copy);
+  background: transparent;
+}
 
 .broker-balance-history {
   margin-top: 10px;

@@ -738,3 +738,14 @@ vigente sin aprobacion y evidencia suficiente.
   identidades siguen formando parte del inventario y la atribución, pero no
   pueden hacer aparecer al conector principal como conectado.
 - **Estado:** Implementada el 2026-09-24 tras la prueba remota de Alfred.
+
+### APP-104 - Edición explícita de nombres de cuentas broker
+
+- **Lectura:** Un nombre broker ya guardado se presenta como texto, sin campo
+  de edición abierto, y ofrece la acción `Editar`.
+- **Edición:** `Editar` vuelve a mostrar el campo con el nombre vigente y cambia
+  la acción a `Guardar`. Un guardado exitoso regresa inmediatamente al modo de
+  lectura mientras la página actualiza el dato persistido.
+- **Alta inicial:** Las cuentas todavía sin nombre permanecen directamente en
+  modo de edición para evitar un paso adicional.
+- **Estado:** Implementada el 2026-09-24 durante la prueba de Alfred.
