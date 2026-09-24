@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   brokerAccountConflicts,
+  countBrokerContextProps,
   correlateAutomaticOperationBatches,
   type ClassifiedTechnicalOperation,
 } from "./automatic-operation-batch";
@@ -128,5 +129,28 @@ describe("automatic operation batches", () => {
     expect(batch.props.map((prop) => prop.allocatedBrokerResultInCents))
       .toEqual([13_985, 13_985, 13_985, 13_985, 13_985]);
     expect(batch.roundingDifferenceInCents).toBe(-1);
+  });
+
+  it("recognizes the connector that contains the opposite prop context without auto-matching different instruments", () => {
+    const props = Array.from({ length: 5 }, (_, index) => operation({
+      accountName: `TDFY${index + 1}`,
+      direction: "Long",
+      instruments: ["NQ DEC26"],
+      quantity: 2,
+      role: "prop",
+    }));
+    const broker = operation({
+      accountName: "2018194",
+      direction: "Short",
+      instruments: ["MNQ DEC26"],
+      quantity: 5,
+      role: "broker",
+    });
+
+    expect(countBrokerContextProps([...props, broker], broker)).toBe(5);
+    expect(correlateAutomaticOperationBatches([...props, broker])[0]).toMatchObject({
+      props: [],
+      status: "unmatched",
+    });
   });
 });

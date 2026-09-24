@@ -27,6 +27,19 @@ function sameSingleInstrument(left: NinjaTechnicalOperation, right: NinjaTechnic
     left.instruments[0] === right.instruments[0];
 }
 
+export function countBrokerContextProps(
+  operations: readonly ClassifiedTechnicalOperation[],
+  broker: ClassifiedTechnicalOperation,
+  openingToleranceMs = defaultOpeningToleranceMs,
+): number {
+  return operations.filter((operation) =>
+    operation.role === "prop" &&
+    operation.status === "closed" &&
+    Math.abs(Date.parse(operation.openedAt) - Date.parse(broker.openedAt)) <= openingToleranceMs &&
+    opposite(operation.direction, broker.direction),
+  ).length;
+}
+
 export function correlateAutomaticOperationBatches(
   operations: readonly ClassifiedTechnicalOperation[],
   openingToleranceMs = defaultOpeningToleranceMs,

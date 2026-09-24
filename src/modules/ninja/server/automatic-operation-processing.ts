@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { roundLikeSheets } from "@/modules/control-diario/domain/result-allocation";
-import { correlateAutomaticOperationBatches } from "../domain/automatic-operation-batch";
+import { correlateAutomaticOperationBatches, countBrokerContextProps } from "../domain/automatic-operation-batch";
 import { projectAutomaticAccounting, type AutomaticAccountingMember } from "../domain/automatic-accounting-projection";
 import { classifyNinjaAccount } from "../domain/account-classification";
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
@@ -238,25 +238,27 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       members: projectionMembers,
       technicalMemberCount: batch.props.length,
     });
-    const { data: stored, error } = await supabase.from("ninja_operation_batches").upsert({
-      accounting_blocking_reason: projection.reason,
-      accounting_company_id: projection.companyId,
-      accounting_mode: "shadow",
-      accounting_period_id: projection.periodId,
-      accounting_phase: projection.phase,
-      accounting_status: projection.status,
-      broker_result_cents: batch.brokerResultInCents,
-      broker_session_id: brokerSession.id,
-      connector_id: connectorId,
-      distributed_cents: batch.distributedInCents,
-      opened_at: batch.broker.openedAt,
-      operated_on: dateInBuenosAires(batch.broker.settledAt ?? batch.broker.openedAt),
-      rounding_difference_cents: batch.roundingDifferenceInCents,
-      settled_at: batch.broker.settledAt,
-      status: batch.status,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "connector_id,broker_session_id" }).select("id").single();
-    if (error || !stored) continue;
+    const { data: stored, error } = await supabase.rpc("upsert_nodal_deduplicated_operation_batch", {
+      target_accounting_blocking_reason: projection.reason,
+      target_accounting_company_id: projection.companyId,
+      target_accounting_period_id: projection.periodId,
+      target_accounting_phase: projection.phase,
+      target_accounting_status: projection.status,
+      target_broker_result_cents: batch.brokerResultInCents,
+      target_broker_session_id: brokerSession.id,
+      target_connector_id: connectorId,
+      target_context_prop_count: countBrokerContextProps(classified, batch.broker),
+      target_distributed_cents: batch.distributedInCents,
+      target_opened_at: batch.broker.openedAt,
+      target_operated_on: dateInBuenosAires(batch.broker.settledAt ?? batch.broker.openedAt),
+      target_proposed_prop_count: batch.props.length,
+      target_rounding_difference_cents: batch.roundingDifferenceInCents,
+      target_settled_at: batch.broker.settledAt,
+      target_status: batch.status,
+    }).single();
+    const storedBatch = stored as { accepted?: boolean; batch_id?: string } | null;
+    if (error || !storedBatch?.accepted || !storedBatch.batch_id) continue;
+    const storedBatchId = storedBatch.batch_id;
     if (batch.broker.closingBalance !== null) {
       await recordNinjaBrokerOperationBalance({
         accountName: batch.broker.accountName,
@@ -267,11 +269,11 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
         openingEventId: batch.broker.openingEventId,
       });
     }
-    await supabase.from("ninja_operation_batch_members").delete().eq("batch_id", stored.id);
+    await supabase.from("ninja_operation_batch_members").delete().eq("batch_id", storedBatchId);
     const members = [{
       account_id: null,
       allocated_broker_result_cents: null,
-      batch_id: stored.id,
+      batch_id: storedBatchId,
       role: "broker",
       session_id: brokerSession.id,
     }, ...batch.props.flatMap((prop) => {
@@ -279,7 +281,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       return session ? [{
         account_id: prop.accountId,
         allocated_broker_result_cents: prop.allocatedBrokerResultInCents,
-        batch_id: stored.id,
+        batch_id: storedBatchId,
         role: "prop",
         session_id: session.id,
       }] : [];
@@ -289,14 +291,14 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       persistedBatches += 1;
       if (projection.status === "shadow_ready" && projection.periodId && brokerClosingBalanceInCents !== null) {
         const { error: commitError } = await supabase.rpc("commit_ninja_automatic_operation_batch", {
-          target_batch_id: stored.id,
+          target_batch_id: storedBatchId,
         });
         if (!commitError) {
           expectedBalanceByPeriod.set(projection.periodId, brokerClosingBalanceInCents);
         } else {
           await supabase.from("ninja_operation_batches").update({
             accounting_blocking_reason: "El cierre quedó conciliado, pero no pudo registrarse automáticamente.",
-          }).eq("id", stored.id);
+          }).eq("id", storedBatchId);
         }
       }
     }

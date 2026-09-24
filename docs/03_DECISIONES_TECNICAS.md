@@ -794,3 +794,21 @@ vigente sin aprobacion y evidencia suficiente.
   quedan excluidos por usuario, conector y conexión, evitando que un inventario
   histórico la vuelva a ofrecer automáticamente como cuenta nueva.
 - **Estado:** Implementada para pruebas el 2026-09-24 a pedido de Alfred.
+
+### APP-108 - Una cobertura física aunque el broker aparezca en varios conectores
+
+- **Identidad económica:** Para un mismo titular, dos sesiones cerradas con el
+  mismo número de cuenta broker, apertura, instrumento, dirección, cantidad y
+  resultado representan una sola cobertura aunque lleguen desde el conector
+  principal y desde el conector de una identidad.
+- **Selección:** Se conserva la observación del conector que contiene el mayor
+  contexto de cuentas prop opuestas y contemporáneas. Un lote ya contabilizado
+  siempre tiene prioridad y nunca se reemplaza silenciosamente.
+- **Trazabilidad:** La telemetría duplicada no se borra. Se marca como excluida,
+  se retira únicamente su lote técnico pendiente y se registra la consolidación
+  en auditoría.
+- **Instrumentos:** Esta regla no autoriza a conciliar instrumentos diferentes.
+  NQ y MNQ permanecen separados hasta que Operaciones documente una relación de
+  cobertura; mientras tanto se asignan manualmente después de deduplicar.
+- **Estado:** Implementada el 2026-09-24 tras detectar la doble observación de
+  la cuenta broker 2018194 en la prueba de Alfred y Lupe.
