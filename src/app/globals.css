@@ -7136,10 +7136,28 @@ html[data-theme="day"] .accounting-history {
 .demo-account-detail span { color: var(--app-subtle); font-size: 9px; }
 .demo-account-detail strong { margin-top: 6px; color: var(--app-title); font-size: 11px; }
 
-.manual-account-delete { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 0 15px 15px; }
-.manual-account-delete button { min-height: 34px; padding: 0 12px; border: 1px solid color-mix(in srgb, #ff7d72 45%, var(--app-border)); border-radius: 9px; color: #ff7d72; background: transparent; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
-.manual-account-delete button:disabled { opacity: .55; cursor: wait; }
-.manual-account-delete small { color: var(--app-subtle); font-size: 9px; }
+.manual-account-management { display: grid; gap: 10px; padding: 0 15px 15px; }
+.manual-account-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.manual-account-actions button,
+.manual-account-edit-actions button,
+.manual-account-delete-confirm button { min-height: 34px; padding: 0 12px; border: 1px solid var(--app-border); border-radius: 9px; background: transparent; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
+.manual-account-actions .edit { color: var(--app-title); }
+.manual-account-actions .delete,
+.manual-account-delete-confirm .confirm-delete { border-color: color-mix(in srgb, #ff7d72 45%, var(--app-border)); color: #ff7d72; }
+.manual-account-edit,
+.manual-account-delete-confirm { padding: 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-input); }
+.manual-account-edit { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.manual-account-edit label { display: grid; gap: 6px; color: var(--app-subtle); font-size: 9px; font-weight: 750; }
+.manual-account-edit :is(input, select) { min-width: 0; min-height: 38px; padding: 0 10px; border: 1px solid var(--app-border); border-radius: 9px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 10px; }
+.manual-account-edit-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
+.manual-account-edit-actions .cancel,
+.manual-account-delete-confirm .cancel { color: var(--app-copy); }
+.manual-account-edit-actions .save { border-color: color-mix(in srgb, var(--app-accent) 55%, var(--app-border)); color: #10200f; background: var(--app-accent); }
+.manual-account-delete-confirm strong { color: var(--app-title); font-size: 12px; }
+.manual-account-delete-confirm p { max-width: 680px; margin: 7px 0 12px; color: var(--app-copy); font-size: 10px; line-height: 1.5; }
+.manual-account-delete-confirm > div { display: flex; justify-content: flex-end; gap: 8px; }
+.manual-account-management button:disabled { opacity: .55; cursor: wait; }
+.manual-account-message { color: var(--app-subtle); font-size: 9px; text-align: right; }
 .account-economic-history { margin: 0 15px 15px; border: 1px solid var(--app-border); border-radius: 11px; overflow-x: auto; }
 .account-economic-history-head,
 .account-economic-history-row { min-width: 660px; display: grid; grid-template-columns: 70px 90px repeat(3, minmax(112px, 1fr)) 100px; align-items: center; gap: 8px; padding: 11px 13px; }
@@ -7414,6 +7432,7 @@ html[data-theme="day"] .demo-stage.live {
   .demo-account-result { display: none; }
   .demo-account-balance { width: auto; }
   .demo-account-detail { grid-template-columns: 1fr 1fr; }
+  .manual-account-edit { grid-template-columns: 1fr; }
   .named-wallet-row,
   .payout-list-row { align-items: stretch; flex-direction: column; }
   .named-wallet-row form,

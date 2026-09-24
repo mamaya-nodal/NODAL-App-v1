@@ -824,3 +824,18 @@ vigente sin aprobacion y evidencia suficiente.
   las solicitudes recibidas sean aceptadas o rechazadas.
 - **Estado:** Implementada el 2026-09-24 después de confirmar que la respuesta
   de Roberto llegó correctamente pero la pantalla de Alfred no se actualizó.
+
+### APP-110 - Corrección de compras antes de la primera operación
+
+- **Edición:** Una cuenta sin actividad puede corregir el costo, el origen de
+  fondos y, cuando corresponda, la billetera debitada.
+- **Contabilidad:** El cambio se aplica sobre la compra original; por lo tanto,
+  capital aportado y saldo de billetera se recalculan sin crear movimientos
+  compensatorios artificiales. Se valida saldo suficiente y se auditan los
+  valores anterior y nuevo.
+- **Bloqueo:** La edición y la eliminación se bloquean si existe cualquier
+  operación, cobertura, saldo manual o payout, incluso si la operación técnica
+  todavía no fue conciliada.
+- **Eliminación:** Antes de borrar se exige confirmación visual y se advierte
+  que el conector no volverá a ofrecer esa cuenta para registrar.
+- **Estado:** Implementada para pruebas el 2026-09-24.

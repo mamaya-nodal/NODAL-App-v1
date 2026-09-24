@@ -866,13 +866,16 @@ export default async function PrivateAppPage({
         economicHistory.push({ accumulatedInCents: accumulated, brokerResultInCents: null, concept: "Payout",
           phase: row.phase ?? "Funded", propResultInCents: null, tradeNumber: null });
       });
+      const hasRecordedActivity = Boolean(manualBalance)
+        || (ninjaBalance?.technicalTradeCount ?? 0) > 0
+        || (historicalOperationEntryRows ?? []).some((entry) => entry.account_id === account.id)
+        || (historicalFundingWithdrawalRows ?? []).some((withdrawal) => withdrawal.account_id === account.id)
+        || (historicalPhaseWithdrawalRows ?? []).some((withdrawal) => withdrawal.account_id === account.id)
+        || technicalMemberRows.some((member) => member.account_id === account.id);
       return [{
         canDelete: (account.state === "virgin" || account.state === "closed")
-          && !manualBalance
-          && !(historicalOperationEntryRows ?? []).some((entry) => entry.account_id === account.id)
-          && !(historicalFundingWithdrawalRows ?? []).some((withdrawal) => withdrawal.account_id === account.id)
-          && !(historicalPhaseWithdrawalRows ?? []).some((withdrawal) => withdrawal.account_id === account.id)
-          && !technicalMemberRows.some((member) => member.account_id === account.id),
+          && !hasRecordedActivity,
+        canEditPurchase: Boolean(purchase) && !hasRecordedActivity,
         companyId: account.company_id,
         companyName: company.display_name,
         currentCashValueInCents: ninjaBalance?.currentInCents ?? manualBalance?.cashValueInCents ?? null,
@@ -888,6 +891,7 @@ export default async function PrivateAppPage({
         periodMonth: period.periodMonth,
         priceInCents: purchase ? Number(purchase.price_cents) : null,
         purchaseNumber: purchase?.purchase_number ?? null,
+        purchaseWalletId: purchase?.wallet_id ?? null,
         purchasedOn: purchase?.purchased_on ?? null,
         referenceNumber: account.reference_number,
         state: account.state as AccountView["state"],
@@ -1379,6 +1383,7 @@ export default async function PrivateAppPage({
           <AccountsOverview
             accounts={accountHistory}
             entries={operationEntryHistory}
+            wallets={walletViews}
             withdrawals={phaseWithdrawalHistory}
           />
 

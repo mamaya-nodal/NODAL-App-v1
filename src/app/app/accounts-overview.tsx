@@ -13,18 +13,26 @@ import {
 } from "@/modules/operations/domain/operation-register";
 
 import type { RegisterAccount } from "./operation-register";
-import { deleteRegisteredAccount } from "./purchase-actions";
+import { deleteRegisteredAccount, updateRegisteredAccountPurchase } from "./purchase-actions";
 
 type AccountFilter = "active" | "all" | "closed" | "evaluation" | "funded";
 
 type Props = Readonly<{
   accounts: AccountOverviewAccount[];
   entries: OperationRegisterEntry[];
+  wallets: PurchaseWalletOption[];
   withdrawals: AccountPhaseWithdrawal[];
+}>;
+
+type PurchaseWalletOption = Readonly<{
+  balanceInCents: number;
+  id: string;
+  name: string;
 }>;
 
 export type AccountOverviewAccount = RegisterAccount & Readonly<{
   canDelete?: boolean;
+  canEditPurchase?: boolean;
   currentCashValueInCents: number | null;
   currentNinjaPhase: "Evaluation" | "Funded" | "Live" | null;
   initialBalanceInCents: number | null;
@@ -32,6 +40,7 @@ export type AccountOverviewAccount = RegisterAccount & Readonly<{
   ninjaConnectionName: string | null;
   periodLabel: string;
   periodMonth: string;
+  purchaseWalletId: string | null;
   technicalTradeCount: number;
   economicHistory?: AccountEconomicHistoryRow[];
 }>;
@@ -98,13 +107,20 @@ function presentation(
   };
 }
 
-function AccountCard({ item }: Readonly<{
+function AccountCard({ item, wallets }: Readonly<{
   item: AccountPresentation;
+  wallets: readonly PurchaseWalletOption[];
 }>) {
   const router = useRouter();
-  const [deleting, setDeleting] = useState(false);
-  const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
   const { account, resultInCents, stage, trades } = item;
+  const [actionMode, setActionMode] = useState<"delete" | "edit" | null>(null);
+  const [fundsOrigin, setFundsOrigin] = useState<"Aporte trader" | "Saldo generado">(
+    account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
+  );
+  const [price, setPrice] = useState(String((account.priceInCents ?? 0) / 100));
+  const [walletId, setWalletId] = useState(account.purchaseWalletId ?? "");
+  const [working, setWorking] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const state = account.state === "closed" ? "Cerrada" : account.state === "virgin" ? "Virgen" : "Activa";
   return (
     <details className="demo-account-card">
@@ -139,17 +155,92 @@ function AccountCard({ item }: Readonly<{
         <div><span>Variación prop</span><strong>{account.initialBalanceInCents === null || account.currentCashValueInCents === null ? "—" : money(account.currentCashValueInCents - account.initialBalanceInCents)}</strong></div>
         <div><span>Resultado contable</span><strong>{resultInCents === null ? account.state === "closed" ? "Pendiente" : "—" : money(resultInCents)}</strong></div>
       </div>
-      {account.canDelete && (
-        <div className="manual-account-delete">
-          <button aria-label="Eliminar registro de cuenta" disabled={deleting} onClick={async () => {
-            if (!window.confirm("¿Eliminar este registro? Solo se borrará si la cuenta no tiene operaciones, coberturas ni payouts. Esta acción no se puede deshacer.")) return;
-            setDeleting(true);
-            const result = await deleteRegisteredAccount(account.id);
-            setDeleting(false);
-            setDeleteMessage(result.message);
-            if (result.ok) router.refresh();
-          }} title="Eliminar registro" type="button"><span aria-hidden="true">×</span> Eliminar registro</button>
-          {deleteMessage && <small>{deleteMessage}</small>}
+      {(account.canEditPurchase || account.canDelete) && (
+        <div className="manual-account-management">
+          {actionMode === null && (
+            <div className="manual-account-actions">
+              {account.canEditPurchase && (
+                <button className="edit" onClick={() => {
+                  setFundsOrigin(account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader");
+                  setPrice(String((account.priceInCents ?? 0) / 100));
+                  setWalletId(account.purchaseWalletId ?? "");
+                  setActionMessage(null);
+                  setActionMode("edit");
+                }} type="button">Editar registro</button>
+              )}
+              {account.canDelete && (
+                <button className="delete" onClick={() => {
+                  setActionMessage(null);
+                  setActionMode("delete");
+                }} type="button"><span aria-hidden="true">×</span> Eliminar registro</button>
+              )}
+            </div>
+          )}
+
+          {actionMode === "edit" && (
+            <form className="manual-account-edit" onSubmit={async (event) => {
+              event.preventDefault();
+              if (working) return;
+              setWorking(true);
+              setActionMessage(null);
+              const result = await updateRegisteredAccountPurchase({
+                accountId: account.id,
+                fundsOrigin,
+                price,
+                walletId: walletId || null,
+              });
+              setWorking(false);
+              setActionMessage(result.message);
+              if (result.ok) {
+                setActionMode(null);
+                router.refresh();
+              }
+            }}>
+              <label>Costo (USD)
+                <input min="0" onChange={(event) => setPrice(event.target.value)} required step="0.01" type="number" value={price} />
+              </label>
+              <label>Origen de fondos
+                <select onChange={(event) => setFundsOrigin(event.target.value as typeof fundsOrigin)} value={fundsOrigin}>
+                  <option value="Aporte trader">Aporte nuevo del trader</option>
+                  <option disabled={wallets.length === 0} value="Saldo generado">Desde una billetera</option>
+                </select>
+              </label>
+              {fundsOrigin === "Saldo generado" && (
+                <label>Billetera
+                  <select onChange={(event) => setWalletId(event.target.value)} required value={walletId}>
+                    <option disabled value="">Elegí una billetera</option>
+                    {wallets.map((wallet) => (
+                      <option key={wallet.id} value={wallet.id}>{wallet.name} · disponible {money(wallet.balanceInCents)}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <div className="manual-account-edit-actions">
+                <button className="cancel" disabled={working} onClick={() => setActionMode(null)} type="button">Cancelar</button>
+                <button className="save" disabled={working} type="submit">{working ? "Guardando…" : "Guardar cambios"}</button>
+              </div>
+            </form>
+          )}
+
+          {actionMode === "delete" && (
+            <div aria-labelledby={`delete-account-${account.id}`} aria-modal="true" className="manual-account-delete-confirm" role="alertdialog">
+              <strong id={`delete-account-${account.id}`}>¿Eliminar este registro?</strong>
+              <p>La cuenta desaparecerá de la app y el conector no volverá a detectarla ni ofrecerla para registrar.</p>
+              <div>
+                <button className="cancel" disabled={working} onClick={() => setActionMode(null)} type="button">Cancelar</button>
+                <button className="confirm-delete" disabled={working} onClick={async () => {
+                  setWorking(true);
+                  setActionMessage(null);
+                  const result = await deleteRegisteredAccount(account.id);
+                  setWorking(false);
+                  setActionMessage(result.message);
+                  if (result.ok) router.refresh();
+                }} type="button">{working ? "Eliminando…" : "Eliminar definitivamente"}</button>
+              </div>
+            </div>
+          )}
+
+          {actionMessage && <small className="manual-account-message">{actionMessage}</small>}
         </div>
       )}
       {(account.economicHistory?.length ?? 0) > 0 && (
@@ -166,7 +257,7 @@ function AccountCard({ item }: Readonly<{
   );
 }
 
-export function AccountsOverview({ accounts, entries, withdrawals }: Props) {
+export function AccountsOverview({ accounts, entries, wallets, withdrawals }: Props) {
   const [filter, setFilter] = useState<AccountFilter>("all");
   const [closedLimit, setClosedLimit] = useState(8);
   const items = useMemo(
@@ -227,7 +318,7 @@ export function AccountsOverview({ accounts, entries, withdrawals }: Props) {
         <div className="demo-account-group">
           <div className="demo-group-title"><h3>En curso</h3><span>{active.length}</span></div>
           <div className="demo-account-list">
-            {active.map((item) => <AccountCard item={item} key={item.account.id} />)}
+            {active.map((item) => <AccountCard item={item} key={item.account.id} wallets={wallets} />)}
           </div>
         </div>
       )}
@@ -236,7 +327,7 @@ export function AccountsOverview({ accounts, entries, withdrawals }: Props) {
         <div className="demo-account-group">
           <div className="demo-group-title"><h3>Sin operar</h3><span>{virgin.length}</span></div>
           <div className="demo-account-list">
-            {virgin.map((item) => <AccountCard item={item} key={item.account.id} />)}
+            {virgin.map((item) => <AccountCard item={item} key={item.account.id} wallets={wallets} />)}
           </div>
         </div>
       )}
@@ -245,7 +336,7 @@ export function AccountsOverview({ accounts, entries, withdrawals }: Props) {
         <details className="demo-closed-group" open={filter === "closed"}>
           <summary><span>Cuentas cerradas</span><strong>{closed.length} · {closedPeriodCount} {closedPeriodCount === 1 ? "período" : "períodos"}</strong><i aria-hidden="true" /></summary>
           <div className="demo-account-list">
-            {closed.slice(0, closedLimit).map((item) => <AccountCard item={item} key={item.account.id} />)}
+            {closed.slice(0, closedLimit).map((item) => <AccountCard item={item} key={item.account.id} wallets={wallets} />)}
           </div>
           {closedLimit < closed.length && (
             <button className="demo-more" onClick={() => setClosedLimit((limit) => limit + 8)} type="button">

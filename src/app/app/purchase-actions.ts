@@ -5,9 +5,12 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import {
+  isPurchaseFundsOrigin,
   parsePurchasePriceToCents,
   validatePurchaseDraft,
 } from "@/modules/purchases/domain/purchase-rules";
+
+type ActionResult = Readonly<{ ok: boolean; message: string }>;
 
 function formText(formData: FormData, name: string): string {
   const value = formData.get(name);
@@ -158,7 +161,55 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
   redirect(safeContextUrl(mode, period, "created"));
 }
 
-export async function deleteRegisteredAccount(accountId: string): Promise<Readonly<{ ok: boolean; message: string }>> {
+export async function updateRegisteredAccountPurchase(input: Readonly<{
+  accountId: string;
+  fundsOrigin: string;
+  price: string;
+  walletId: string | null;
+}>): Promise<ActionResult> {
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(input.accountId)) {
+    return { ok: false, message: "La cuenta no es válida." };
+  }
+  let priceCents: number;
+  try {
+    priceCents = parsePurchasePriceToCents(input.price);
+  } catch {
+    return { ok: false, message: "Ingresá un costo válido con hasta dos decimales." };
+  }
+  if (!isPurchaseFundsOrigin(input.fundsOrigin)) {
+    return { ok: false, message: "Elegí un origen de fondos válido." };
+  }
+  const walletId = input.fundsOrigin === "Saldo generado" ? input.walletId : null;
+  if (input.fundsOrigin === "Saldo generado" && !walletId) {
+    return { ok: false, message: "Elegí la billetera utilizada para la compra." };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "La sesión venció." };
+  const { error } = await supabase.rpc("update_nodal_unused_account_purchase", {
+    target_account_id: input.accountId,
+    target_funds_origin: input.fundsOrigin,
+    target_price_cents: priceCents,
+    target_wallet_id: walletId,
+  });
+  if (error) {
+    if (error.message.includes("unused_account_purchase_has_activity")) {
+      return { ok: false, message: "Ya no puede modificarse porque la cuenta registra actividad." };
+    }
+    if (error.message.includes("unused_account_purchase_wallet_insufficient")) {
+      return { ok: false, message: "La billetera elegida no tiene saldo suficiente." };
+    }
+    if (error.message.includes("wallet_required") || error.message.includes("wallet_not_available")) {
+      return { ok: false, message: "Elegí una billetera disponible." };
+    }
+    return { ok: false, message: "No se pudo modificar el registro de la cuenta." };
+  }
+  revalidatePath("/app");
+  return { ok: true, message: "Registro actualizado." };
+}
+
+export async function deleteRegisteredAccount(accountId: string): Promise<ActionResult> {
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(accountId)) return { ok: false, message: "La cuenta no es válida." };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
