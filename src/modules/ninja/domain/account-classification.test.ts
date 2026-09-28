@@ -51,6 +51,9 @@ describe("classifyNinjaAccount", () => {
 
   it("separa simuladores y rechaza coincidencias parciales", () => {
     expect(classifyNinjaAccount(account("Sim101"), "2026-08-26T12:00:00Z").type).toBe("simulator");
+    expect(classifyNinjaAccount(account("Simbroker", "En Vivo"), "2026-09-28T12:00:00Z").type).toBe("simulator");
+    expect(classifyNinjaAccount(account("Sim202"), "2026-09-28T12:00:00Z").type).toBe("simulator");
+    expect(classifyNinjaAccount(account("SimpleAccount"), "2026-09-28T12:00:00Z").type).toBe("unknown");
     expect(classifyNinjaAccount(account("LFE-NO-CONFIRMADA"), "2026-08-26T12:00:00Z").type).toBe("unknown");
     expect(classifyNinjaAccount(account("FFFUNDEDABCDEF"), "2026-08-26T12:00:00Z").type).toBe("unknown");
     expect(classifyNinjaAccount(account("FTMO-157754"), "2026-08-26T12:00:00Z").type).toBe("unknown");

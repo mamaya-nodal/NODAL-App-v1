@@ -64,7 +64,7 @@ export function classifyNinjaAccount(account: NinjaAccountSnapshot, firstSeenAt:
   const name = account.accountName.trim().toUpperCase();
   const common = { accountName: account.accountName, connectionName: account.connectionName, firstSeenAt, suggestedPurchaseDate: dateInBuenosAires(firstSeenAt) };
 
-  if (name === "SIM101" || account.connectionName.toLowerCase().includes("simulated"))
+  if (/^SIM(?:\d+|BROKER)$/.test(name) || account.connectionName.toLowerCase().includes("simulated"))
     return { ...common, accountSizeInCents: null, company: null, companyCode: null, phase: null, product: null, type: "simulator" };
 
   const rule = PROP_ACCOUNT_RULES.find((candidate) => candidate.pattern.test(name));

@@ -47,6 +47,14 @@ function isOpenPosition(row: NinjaTelemetryRow) {
     && row.payload.marketPosition !== "Flat";
 }
 
+function isExplicitClosingExecution(row: NinjaTelemetryRow) {
+  if (row.event_type !== "execution") return false;
+  const action = typeof row.payload.orderAction === "string"
+    ? row.payload.orderAction.toLowerCase()
+    : "";
+  return action === "sell" || action === "buytocover";
+}
+
 type WorkingOperation = {
   accountName: string;
   closingBalance: number | null;
@@ -118,6 +126,7 @@ export function buildNinjaTechnicalOperations(
       previousBalance = settledCashValue(row) ?? previousBalance ?? numeric(row.payload.cashValue);
       continue;
     }
+    if (!current && isExplicitClosingExecution(row)) continue;
     if (!current && row.event_type !== "execution" && !isOpenPosition(row)) continue;
 
     if (!current) {

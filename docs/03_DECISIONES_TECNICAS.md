@@ -885,3 +885,31 @@ vigente sin aprobacion y evidencia suficiente.
 - **Trazabilidad:** El reemplazo queda consignado en la auditoría de la apertura.
 - **Estado:** Implementada para pruebas el 2026-09-24 tras la reconexión de
   Julián.
+
+### APP-114 - Simuladores y re-registro de cuentas quemadas
+
+- **Simuladores:** Los nombres técnicos `Sim` seguidos por números y el nombre
+  observado `Simbroker` se clasifican como simulación aunque la conexión tenga
+  otro nombre. No integran saldo broker, compras ni cobertura.
+- **Quema visible:** Una cuenta cerrada por quema que todavía aparece en el
+  inventario de Ninja permanece reconocida como la misma vida ya registrada y
+  no vuelve a ofrecerse como compra.
+- **Reset real:** El mismo nombre externo sólo puede volver a registrarse cuando
+  el motor haya observado primero su desaparición y luego un evento `reset` o
+  `reset_after_burn` verificable. Una vez registrada la nueva vida, vuelve a
+  quedar bloqueada contra duplicados.
+- **Estado:** Implementada para pruebas el 2026-09-28 a partir del caso real de
+  Mauricio con cinco cuentas Lucid, una broker y dos cuentas SIM visibles en
+  NinjaTrader.
+
+### APP-115 - Una ejecución explícita de cierre no inicia una operación técnica
+
+- **Cierre:** `Sell` y `BuyToCover` sólo cierran posiciones; si llegan después
+  del evento plano y fuera de la ventana reconstruida, no pueden abrir otra
+  operación.
+- **Reproceso:** Se retiran las sesiones abiertas artificiales que sólo
+  contenían esos eventos tardíos.
+- **Compatibilidad:** Las acciones de apertura (`Buy` y `SellShort`) y las
+  ejecuciones antiguas sin acción declarada conservan el comportamiento previo.
+- **Estado:** Implementada para pruebas el 2026-09-28 a partir de los eventos
+  tardíos observados durante la operación de Mauricio.

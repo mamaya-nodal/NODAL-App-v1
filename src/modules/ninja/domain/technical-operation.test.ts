@@ -100,6 +100,15 @@ describe("Ninja technical operations", () => {
     expect(operations[0].status).toBe("open");
   });
 
+  it("no inventa una operación nueva con una ejecución de cierre recibida después del saldo plano", () => {
+    const operations = buildNinjaTechnicalOperations([
+      row(1, "balance", "2026-09-28T15:07:20.000Z", { cashValue: 47_964.5, netLiquidation: 47_964.5 }),
+      row(2, "execution", "2026-09-28T15:07:20.165Z", { orderAction: "BuyToCover" }, "NQ DEC26"),
+    ], new Date("2026-09-28T15:07:40.000Z"));
+
+    expect(operations).toEqual([]);
+  });
+
   it("procesa cinco cuentas simultáneas como cinco operaciones independientes", () => {
     const accountNames = ["TFY035", "TFY036", "TFY037", "TFY038", "TFY039"];
     const operations = accountNames.flatMap((accountName, index) => buildNinjaTechnicalOperations([

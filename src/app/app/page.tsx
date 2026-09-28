@@ -19,6 +19,7 @@ import { decideAccess } from "@/modules/access/domain/access-decision";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
+import { registeredNinjaAccountKeys as resolveRegisteredNinjaAccountKeys } from "@/modules/ninja/domain/account-registration-eligibility";
 import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
 import {
@@ -355,6 +356,7 @@ export default async function PrivateAppPage({
       { data: ninjaInventoryRows },
       { data: ninjaOperationProbeRows },
       { data: ninjaTransitionRows },
+      { data: ninjaRegistrationTransitionRows },
       { data: ninjaBrokerBalanceRows },
       { data: ninjaBrokerAccountAliasRows },
       { data: historicalPurchaseRows },
@@ -422,7 +424,7 @@ export default async function PrivateAppPage({
           .order("approved_on", { ascending: false }),
         supabase
           .from("ninja_account_links")
-          .select("account_id, connector_id, connection_name, external_account_name, phase, closed_at")
+          .select("account_id, connector_id, connection_name, external_account_name, phase, closed_at, linked_at")
           .order("linked_at"),
         supabase
           .from("ninja_account_registration_exclusions")
@@ -430,6 +432,11 @@ export default async function PrivateAppPage({
         supabase.rpc("get_current_user_ninja_inventory"),
         supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),
         supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
+        supabase
+          .from("ninja_account_change_events")
+          .select("connector_id,occurred_at,connection_name,event_type,resolution_status,to_account_name")
+          .order("occurred_at", { ascending: false })
+          .limit(500),
         supabase
           .from("ninja_broker_balance_events")
           .select("id, observed_at, balance_cents, source_accounts, source_event_id")
@@ -529,11 +536,22 @@ export default async function PrivateAppPage({
     }));
     const activeNinjaLinks = (ninjaLinkRows ?? []).filter((link) => link.closed_at === null);
     const registeredNinjaAccountNames = new Set(activeNinjaLinks.map((link) => link.external_account_name));
-    registeredNinjaAccountKeys = new Set(activeNinjaLinks.flatMap((link) =>
-      link.connector_id
-        ? [ninjaAccountRegistrationKey(link.connector_id, link.connection_name, link.external_account_name)]
-        : [],
-    ));
+    registeredNinjaAccountKeys = resolveRegisteredNinjaAccountKeys(
+      (ninjaLinkRows ?? []).map((link) => ({
+        accountName: link.external_account_name,
+        connectionName: link.connection_name,
+        connectorId: link.connector_id,
+        linkedAt: link.linked_at,
+      })),
+      (ninjaRegistrationTransitionRows ?? []).map((transition) => ({
+        connectorId: transition.connector_id,
+        connectionName: transition.connection_name,
+        eventType: transition.event_type,
+        occurredAt: transition.occurred_at,
+        resolutionStatus: transition.resolution_status,
+        toAccountName: transition.to_account_name,
+      })),
+    );
     excludedNinjaAccountKeys = new Set((ninjaAccountRegistrationExclusionRows ?? []).map((exclusion) =>
       ninjaAccountRegistrationKey(exclusion.connector_id, exclusion.connection_name, exclusion.external_account_name),
     ));

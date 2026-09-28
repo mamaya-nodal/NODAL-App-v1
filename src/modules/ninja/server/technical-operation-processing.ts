@@ -139,7 +139,15 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
       ? baselineAccount.cashValue
       : null;
     const operations = buildNinjaTechnicalOperations(rows, new Date(), baselineBalance);
-    if (!operations.length) return 0;
+    if (!operations.length) {
+      const staleIds = unsettled
+        .filter((session) => session.status !== "closed")
+        .map((session) => session.id);
+      if (staleIds.length > 0) {
+        await supabase.from("ninja_operation_probe_sessions").delete().in("id", staleIds);
+      }
+      return 0;
+    }
 
     const { error: upsertError } = await supabase
       .from("ninja_operation_probe_sessions")
