@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { roundLikeSheets } from "@/modules/control-diario/domain/result-allocation";
 import { correlateAutomaticOperationBatches, countBrokerContextProps } from "../domain/automatic-operation-batch";
@@ -20,6 +20,55 @@ function accountingPhase(detectedPhase: "Evaluation" | "Funded" | "Live" | null,
   return latestPhase && latestPhase !== "Evaluacion" ? latestPhase : null;
 }
 
+async function usesAggregateBrokerBalance(
+  supabase: SupabaseClient,
+  connectorId: string,
+) {
+  const { data: connector } = await supabase
+    .from("ninja_connectors")
+    .select("owner_user_id")
+    .eq("id", connectorId)
+    .maybeSingle();
+  if (!connector?.owner_user_id) return false;
+
+  const { data: ownerConnectors } = await supabase
+    .from("ninja_connectors")
+    .select("id")
+    .eq("owner_user_id", connector.owner_user_id)
+    .eq("status", "active");
+  const connectorIds = (ownerConnectors ?? []).map((candidate) => candidate.id);
+  if (connectorIds.length === 0) return false;
+
+  const { data: snapshots } = await supabase
+    .from("ninja_inventory_snapshots")
+    .select("connector_id,accounts,observed_at")
+    .in("connector_id", connectorIds)
+    .order("observed_at", { ascending: false })
+    .limit(100);
+  const latestConnectorSnapshots = new Map<string, { accounts: NinjaAccountSnapshot[]; observedAt: string }>();
+  for (const snapshot of snapshots ?? []) {
+    if (!latestConnectorSnapshots.has(snapshot.connector_id)) {
+      latestConnectorSnapshots.set(snapshot.connector_id, {
+        accounts: snapshot.accounts as NinjaAccountSnapshot[],
+        observedAt: snapshot.observed_at,
+      });
+    }
+  }
+
+  const brokerAccounts = new Set<string>();
+  for (const snapshot of latestConnectorSnapshots.values()) {
+    for (const account of snapshot.accounts) {
+      if (
+        account.connectionStatus.toLowerCase() === "connected" &&
+        classifyNinjaAccount(account, snapshot.observedAt).type === "broker"
+      ) {
+        brokerAccounts.add(`${account.providerName}\u0000${account.accountName}`);
+      }
+    }
+  }
+  return brokerAccounts.size > 1;
+}
+
 export async function persistAutomaticOperationBatches(connectorId: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -27,6 +76,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
   const supabase = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+  const aggregateBrokerBalance = await usesAggregateBrokerBalance(supabase, connectorId);
 
   const [{ data: sessions, error: sessionsError }, { data: links, error: linksError }, { data: inventory }] = await Promise.all([
     supabase.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,execution_count,instruments,direction,quantity").eq("connector_id", connectorId).is("excluded_at", null).order("opened_at").order("id"),
@@ -134,7 +184,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       return value;
     }
     if (currentControl) {
-      const value = currentControl.sync_issue_reason && currentControl.received_balance_cents !== null
+      const value = !aggregateBrokerBalance && currentControl.sync_issue_reason && currentControl.received_balance_cents !== null
         ? Number(currentControl.received_balance_cents)
         : Number(currentControl.balance_after_cents);
       expectedBalanceByPeriod.set(periodId, value);
@@ -153,7 +203,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       const { data: priorControl } = await supabase.from("daily_controls").select("balance_after_cents,received_balance_cents,sync_issue_reason")
         .eq("period_id", prior.id).order("control_number", { ascending: false }).limit(1).maybeSingle();
       if (priorControl) {
-        const value = priorControl.sync_issue_reason && priorControl.received_balance_cents !== null
+        const value = !aggregateBrokerBalance && priorControl.sync_issue_reason && priorControl.received_balance_cents !== null
           ? Number(priorControl.received_balance_cents)
           : Number(priorControl.balance_after_cents);
         expectedBalanceByPeriod.set(periodId, value);
@@ -231,6 +281,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     const brokerClosingBalanceInCents = batch.broker.closingBalance === null ? null : roundLikeSheets(batch.broker.closingBalance * 100);
     const projection = projectAutomaticAccounting({
       batchStatus: batch.status,
+      brokerBalanceScope: aggregateBrokerBalance ? "aggregate" : "single",
       brokerClosingBalanceInCents,
       brokerOpeningBalanceInCents,
       brokerResultInCents: batch.brokerResultInCents,
@@ -259,6 +310,9 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     const storedBatch = stored as { accepted?: boolean; batch_id?: string } | null;
     if (error || !storedBatch?.accepted || !storedBatch.batch_id) continue;
     const storedBatchId = storedBatch.batch_id;
+    await supabase.from("ninja_operation_batches").update({
+      broker_balance_scope: aggregateBrokerBalance ? "aggregate" : "single",
+    }).eq("id", storedBatchId);
     if (batch.broker.closingBalance !== null) {
       await recordNinjaBrokerOperationBalance({
         accountName: batch.broker.accountName,
@@ -294,7 +348,12 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
           target_batch_id: storedBatchId,
         });
         if (!commitError) {
-          expectedBalanceByPeriod.set(projection.periodId, brokerClosingBalanceInCents);
+          expectedBalanceByPeriod.set(
+            projection.periodId,
+            aggregateBrokerBalance && expectedOpeningBalanceInCents !== null
+              ? expectedOpeningBalanceInCents + batch.brokerResultInCents
+              : brokerClosingBalanceInCents,
+          );
         } else {
           await supabase.from("ninja_operation_batches").update({
             accounting_blocking_reason: "El cierre quedó conciliado, pero no pudo registrarse automáticamente.",

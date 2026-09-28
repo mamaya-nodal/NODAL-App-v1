@@ -55,6 +55,32 @@ describe("automatic accounting projection", () => {
     })).toMatchObject({ reason: "Las cuentas pertenecen a empresas distintas", status: "blocked" });
   });
 
+  it("aplica el resultado de una subcuenta sobre el saldo broker agregado", () => {
+    expect(projectAutomaticAccounting({
+      batchStatus: "ready",
+      brokerBalanceScope: "aggregate",
+      brokerClosingBalanceInCents: 5_486_822,
+      brokerOpeningBalanceInCents: 5_698_618,
+      brokerResultInCents: -211_796,
+      expectedOpeningBalanceInCents: 6_256_617,
+      members: [member("account-1", -105_898), member("account-2", -105_898)],
+      technicalMemberCount: 2,
+    })).toMatchObject({ reason: null, status: "shadow_ready" });
+  });
+
+  it("sigue exigiendo que la subcuenta reconcilie su propio resultado", () => {
+    expect(projectAutomaticAccounting({
+      batchStatus: "ready",
+      brokerBalanceScope: "aggregate",
+      brokerClosingBalanceInCents: 5_486_800,
+      brokerOpeningBalanceInCents: 5_698_618,
+      brokerResultInCents: -211_796,
+      expectedOpeningBalanceInCents: 6_256_617,
+      members: [member("account-1", -105_898), member("account-2", -105_898)],
+      technicalMemberCount: 2,
+    })).toMatchObject({ reason: "El resultado broker no coincide con sus saldos", status: "blocked" });
+  });
+
   it("espera las cuentas técnicas que todavía no fueron registradas", () => {
     expect(projectAutomaticAccounting({
       batchStatus: "ready",

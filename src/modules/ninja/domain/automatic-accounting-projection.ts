@@ -17,6 +17,7 @@ export type AutomaticAccountingProjection = Readonly<{
 
 type Input = Readonly<{
   batchStatus: "conflict" | "ready" | "unmatched";
+  brokerBalanceScope?: "aggregate" | "single";
   brokerClosingBalanceInCents: number | null;
   brokerOpeningBalanceInCents: number | null;
   brokerResultInCents: number;
@@ -62,7 +63,10 @@ export function projectAutomaticAccounting(input: Input): AutomaticAccountingPro
   if (input.expectedOpeningBalanceInCents === null) {
     return { ...identified, reason: "Falta registrar el depósito inicial del broker", status: "blocked" };
   }
-  if (input.brokerOpeningBalanceInCents !== input.expectedOpeningBalanceInCents) {
+  if (
+    input.brokerBalanceScope !== "aggregate" &&
+    input.brokerOpeningBalanceInCents !== input.expectedOpeningBalanceInCents
+  ) {
     return { ...identified, reason: "El saldo inicial no coincide con el último saldo contable", status: "blocked" };
   }
   if (input.brokerClosingBalanceInCents - input.brokerOpeningBalanceInCents !== input.brokerResultInCents) {

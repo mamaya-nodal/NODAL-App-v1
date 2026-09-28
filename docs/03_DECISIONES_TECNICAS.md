@@ -915,3 +915,20 @@ vigente sin aprobacion y evidencia suficiente.
   ejecuciones antiguas sin acción declarada conservan el comportamiento previo.
 - **Estado:** Implementada para pruebas el 2026-09-28 a partir de los eventos
   tardíos observados durante la operación de Mauricio.
+
+### APP-116 - Coberturas por subcuenta y señal operativa vigente
+
+- **Saldo broker:** Cuando un usuario mantiene más de una subcuenta broker, los
+  saldos inicial y final validan el resultado de esa subcuenta, pero dicho
+  resultado se aplica una sola vez sobre el saldo broker total.
+- **Asignación:** Una segunda cobertura accidental puede conservar las cuentas
+  prop reales que participaron. No se crea una cuenta ficticia, no se duplica
+  la compra y no se altera el conteo de cuentas.
+- **Trazabilidad:** El control diario identifica que el movimiento provino de
+  una subcuenta y conserva sus saldos técnicos en la auditoría.
+- **Señal:** Una sesión abierta sólo se muestra como operación activa mientras
+  su conector continúe enviando señal. Si la señal se interrumpe, el registro
+  técnico se conserva para una eventual recuperación, pero no sigue sumando
+  horas ni aparece como una posición vigente.
+- **Estado:** Implementada para pruebas el 2026-09-28 a partir del caso de
+  Alfred con dos subcuentas broker sobre una misma operación prop.
