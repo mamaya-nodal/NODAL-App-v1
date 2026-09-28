@@ -21,10 +21,18 @@ function opposite(left: NinjaTechnicalOperation["direction"], right: NinjaTechni
   return (left === "Long" && right === "Short") || (left === "Short" && right === "Long");
 }
 
-function sameSingleInstrument(left: NinjaTechnicalOperation, right: NinjaTechnicalOperation) {
+function normalizedInstrumentForCoverage(instrument: string) {
+  const normalized = instrument.trim().toUpperCase().replace(/\s+/g, " ");
+  const [root, ...contract] = normalized.split(" ");
+  const normalizedRoot = root === "NQ" || root === "MNQ" ? "NQ" : root;
+  return [normalizedRoot, ...contract].join(" ");
+}
+
+function compatibleSingleInstrument(left: NinjaTechnicalOperation, right: NinjaTechnicalOperation) {
   return left.instruments.length === 1 &&
     right.instruments.length === 1 &&
-    left.instruments[0] === right.instruments[0];
+    normalizedInstrumentForCoverage(left.instruments[0]) ===
+      normalizedInstrumentForCoverage(right.instruments[0]);
 }
 
 export function countBrokerContextProps(
@@ -56,7 +64,7 @@ export function correlateAutomaticOperationBatches(
         !usedProps.has(index) &&
         Math.abs(Date.parse(operation.openedAt) - Date.parse(broker.openedAt)) <= openingToleranceMs &&
         opposite(operation.direction, broker.direction) &&
-        sameSingleInstrument(operation, broker),
+        compatibleSingleInstrument(operation, broker),
       );
     const result = broker.result === null ? null : roundLikeSheets(broker.result * 100);
     const conflict = broker.instruments.length !== 1 || broker.direction === null || broker.quantity <= 0;

@@ -82,7 +82,7 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
     } else {
       const { data: latestClosed } = await supabase
         .from("ninja_operation_probe_sessions")
-        .select("last_event_at")
+        .select("opened_at")
         .eq("connector_id", connectorId)
         .eq("connection_name", account.connection_name)
         .eq("account_name", account.account_name)
@@ -90,7 +90,9 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
         .order("last_event_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      startAt = latestClosed?.last_event_at ?? new Date(Date.now() - 12 * 60 * 60_000).toISOString();
+      startAt = latestClosed?.opened_at
+        ? new Date(Date.parse(latestClosed.opened_at) - 5 * 60_000).toISOString()
+        : new Date(Date.now() - 12 * 60 * 60_000).toISOString();
     }
 
     const data: Array<Record<string, unknown>> = [];

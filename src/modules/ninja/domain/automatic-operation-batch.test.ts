@@ -131,7 +131,7 @@ describe("automatic operation batches", () => {
     expect(batch.roundingDifferenceInCents).toBe(-1);
   });
 
-  it("recognizes the connector that contains the opposite prop context without auto-matching different instruments", () => {
+  it("matches NQ prop legs with an MNQ broker hedge for the same contract", () => {
     const props = Array.from({ length: 5 }, (_, index) => operation({
       accountName: `TDFY${index + 1}`,
       direction: "Long",
@@ -149,6 +149,52 @@ describe("automatic operation batches", () => {
 
     expect(countBrokerContextProps([...props, broker], broker)).toBe(5);
     expect(correlateAutomaticOperationBatches([...props, broker])[0]).toMatchObject({
+      props: expect.arrayContaining(props.map((prop) => expect.objectContaining({
+        accountName: prop.accountName,
+      }))),
+      status: "ready",
+    });
+  });
+
+  it("does not match NQ and MNQ when the contract differs", () => {
+    const prop = operation({
+      accountName: "LUCID1",
+      direction: "Long",
+      instruments: ["NQ DEC26"],
+      quantity: 1,
+      role: "prop",
+    });
+    const broker = operation({
+      accountName: "Broker principal",
+      direction: "Short",
+      instruments: ["MNQ MAR27"],
+      quantity: 1,
+      role: "broker",
+    });
+
+    expect(correlateAutomaticOperationBatches([prop, broker])[0]).toMatchObject({
+      props: [],
+      status: "unmatched",
+    });
+  });
+
+  it("does not infer equivalences for other micro and mini instruments", () => {
+    const prop = operation({
+      accountName: "LUCID1",
+      direction: "Long",
+      instruments: ["ES DEC26"],
+      quantity: 1,
+      role: "prop",
+    });
+    const broker = operation({
+      accountName: "Broker principal",
+      direction: "Short",
+      instruments: ["MES DEC26"],
+      quantity: 1,
+      role: "broker",
+    });
+
+    expect(correlateAutomaticOperationBatches([prop, broker])[0]).toMatchObject({
       props: [],
       status: "unmatched",
     });
