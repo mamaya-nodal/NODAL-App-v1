@@ -15,7 +15,9 @@ export type AutomaticOperationBatch = Readonly<{
   status: "conflict" | "ready" | "unmatched";
 }>;
 
-const defaultOpeningToleranceMs = 2_500;
+// El copiador puede informar la apertura prop algunos segundos después que la
+// cobertura aun cuando pertenecen al mismo disparo operativo.
+const defaultOpeningToleranceMs = 10_000;
 
 function opposite(left: NinjaTechnicalOperation["direction"], right: NinjaTechnicalOperation["direction"]) {
   return (left === "Long" && right === "Short") || (left === "Short" && right === "Long");

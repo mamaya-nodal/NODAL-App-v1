@@ -136,6 +136,7 @@ describe("automatic operation batches", () => {
       accountName: `TDFY${index + 1}`,
       direction: "Long",
       instruments: ["NQ DEC26"],
+      openedAt: "2026-09-08T14:00:08.000Z",
       quantity: 2,
       role: "prop",
     }));
@@ -168,6 +169,29 @@ describe("automatic operation batches", () => {
       accountName: "Broker principal",
       direction: "Short",
       instruments: ["MNQ MAR27"],
+      quantity: 1,
+      role: "broker",
+    });
+
+    expect(correlateAutomaticOperationBatches([prop, broker])[0]).toMatchObject({
+      props: [],
+      status: "unmatched",
+    });
+  });
+
+  it("does not match operations opened more than ten seconds apart", () => {
+    const prop = operation({
+      accountName: "LUCID1",
+      direction: "Long",
+      instruments: ["NQ DEC26"],
+      openedAt: "2026-09-08T14:00:12.000Z",
+      quantity: 1,
+      role: "prop",
+    });
+    const broker = operation({
+      accountName: "Broker principal",
+      direction: "Short",
+      instruments: ["MNQ DEC26"],
       quantity: 1,
       role: "broker",
     });

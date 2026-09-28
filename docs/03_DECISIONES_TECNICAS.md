@@ -809,7 +809,8 @@ vigente sin aprobacion y evidencia suficiente.
   en auditoría.
 - **Instrumentos:** La confirmación operativa del 28/09/2026 autoriza la
   equivalencia exclusiva `NQ` (prop) ↔ `MNQ` (broker) para conciliación
-  automática, siempre que coincidan apertura, sentido opuesto y vencimiento.
+  automática, siempre que la apertura ocurra dentro de una ventana de diez
+  segundos, tengan sentido opuesto y coincida el vencimiento.
   No se infieren equivalencias para otros pares de instrumentos.
 - **Estado:** Implementada el 2026-09-24 tras detectar la doble observación de
   la cuenta broker 2018194 en la prueba de Alfred y Lupe.
