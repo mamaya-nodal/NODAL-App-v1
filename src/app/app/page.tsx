@@ -6,6 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { createClient } from "@/lib/supabase/server";
+import { readWithRetry, reportReadFailure } from "@/lib/supabase/read-with-retry";
+import { ConnectionRecovery } from "./connection-recovery";
 import { buildManualAccountEconomicHistory } from "@/modules/operations/domain/manual-account-economic-history";
 import { buildDetectedAccountEconomicHistory } from "@/modules/operations/domain/detected-account-economic-history";
 import {
@@ -209,17 +211,28 @@ export default async function PrivateAppPage({
   const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+    error: authenticationError,
+  } = await readWithRetry(() => supabase.auth.getUser());
+
+  if (authenticationError && authenticationError.name !== "AuthSessionMissingError") {
+    reportReadFailure("authentication", authenticationError);
+    return <ConnectionRecovery subject="access" />;
+  }
 
   if (!user) {
     redirect("/");
   }
 
-  const { data: nodalUser } = await supabase
+  const { data: nodalUser, error: accessError } = await readWithRetry(() => supabase
     .from("nodal_users")
     .select("id, email, display_name, access_state, access_role")
     .eq("id", user.id)
-    .maybeSingle();
+    .maybeSingle());
+
+  if (accessError) {
+    reportReadFailure("authorization", accessError);
+    return <ConnectionRecovery subject="access" />;
+  }
 
   const decision = decideAccess(
     user.id,
@@ -263,13 +276,18 @@ export default async function PrivateAppPage({
   }>();
 
   if (allowed) {
-    const [{ data: workspaces }, { data: ninjaConnectorRows }] = await Promise.all([
-      supabase
+    const [{ data: workspaces, error: workspaceError }, { data: ninjaConnectorRows, error: connectorError }] = await Promise.all([
+      readWithRetry(() => supabase
         .from("workspaces")
         .select("id, modality, periods(id, period_month)")
-        .order("modality"),
-      supabase.rpc("get_current_user_ninja_connector_status"),
+        .order("modality")),
+      readWithRetry(() => supabase.rpc("get_current_user_ninja_connector_status")),
     ]);
+
+    if (workspaceError || connectorError) {
+      reportReadFailure(workspaceError ? "workspaces" : "connector", (workspaceError ?? connectorError)!);
+      return <ConnectionRecovery subject="connector" />;
+    }
 
     workspaceOptions = (workspaces ?? []).map((workspace) => ({
       id: workspace.id,

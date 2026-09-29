@@ -936,3 +936,21 @@ vigente sin aprobacion y evidencia suficiente.
   segundos de diferencia entre las aperturas informadas.
 - **Estado:** Implementada para pruebas el 2026-09-28 a partir del caso de
   Alfred con dos subcuentas broker sobre una misma operación prop.
+
+### APP-117 - Fallas de lectura separadas del estado de acceso y vinculación
+
+- **Fecha:** 2026-09-29.
+- **Hallazgo confirmado:** La página descartaba los errores al leer `nodal_users`
+  y el estado del conector; una lectura fallida podía mostrar acceso pendiente
+  o vinculación inicial aunque los registros siguieran activos.
+- **Evidencia:** Mauricio y Alfred conservaban autorización y conectores
+  principales activos. La causa exacta de las respuestas fallidas originales
+  no quedó capturada; no se atribuye como hecho al incidente general de JWT.
+- **Implementación:** Comprobar el error antes de interpretar los datos, realizar
+  hasta tres intentos de lecturas transitorias y ofrecer recuperación explícita.
+  Los reintentos no se aplican a escrituras económicas. El monitor responde 503
+  ante lecturas fallidas sin publicar un estado falso de desvinculación.
+- **Diagnóstico:** Registrar alcance y código del error sin secretos ni datos
+  personales. La ruta de salud incluye la revisión del despliegue.
+- **Validación:** Pruebas de recuperación de JWT/red, agotamiento de reintentos,
+  permisos denegados y ausencia real de conector; typecheck, lint y build.

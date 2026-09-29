@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { readWithRetry, reportReadFailure } from "@/lib/supabase/read-with-retry";
 import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
 import {
   applyNinjaBrokerAccountAliases,
@@ -17,19 +18,27 @@ type ConnectorStatusRow = Readonly<{
 
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await readWithRetry(() => supabase.auth.getUser());
+  if (authError && authError.name !== "AuthSessionMissingError") {
+    reportReadFailure("status-authentication", authError);
+    return Response.json({ error: "No pudimos verificar la sesión" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
   if (!user) {
     return Response.json({ online: false }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 
   const [statusResult, inventoryResult, aliasesResult] = await Promise.all([
-    supabase.rpc("get_current_user_ninja_connector_status"),
-    supabase.rpc("get_current_user_ninja_inventory"),
+    readWithRetry(() => supabase.rpc("get_current_user_ninja_connector_status")),
+    readWithRetry(() => supabase.rpc("get_current_user_ninja_inventory")),
     supabase
       .from("ninja_broker_account_aliases")
       .select("connection_name,account_name,display_name"),
   ]);
-  const error = statusResult.error ?? inventoryResult.error;
+  const error = statusResult.error ?? inventoryResult.error ?? aliasesResult.error;
+  if (error) {
+    reportReadFailure("connector-status", error);
+    return Response.json({ error: "No pudimos consultar la conexión" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
   const aliases = (aliasesResult.data ?? []).map((alias): NinjaBrokerAccountAlias => ({
     accountName: alias.account_name,
     connectionName: alias.connection_name,
