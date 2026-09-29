@@ -1,16 +1,6 @@
 -- La misma operación broker puede llegar con unos segundos de diferencia entre conectores.
 -- Se amplía la ventana conservadora de deduplicación a cinco segundos.
 
--- Una misma cuenta broker puede estar visible en el Ninja principal y en uno
--- o más Ninjas de identidades. La cobertura física se registra una sola vez.
-
-alter table public.ninja_operation_batches
-  add column if not exists context_prop_count integer not null default 0
-    check (context_prop_count >= 0);
-
-comment on column public.ninja_operation_batches.context_prop_count is
-  'Cantidad de sesiones prop opuestas y contemporáneas observadas en el mismo conector; sólo decide cuál observación broker duplicada se conserva.';
-
 create or replace function public.upsert_nodal_deduplicated_operation_batch(
   target_connector_id uuid,
   target_broker_session_id bigint,
