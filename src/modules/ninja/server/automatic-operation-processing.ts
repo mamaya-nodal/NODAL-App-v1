@@ -289,7 +289,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       members: projectionMembers,
       technicalMemberCount: batch.props.length,
     });
-    const { data: stored, error } = await supabase.rpc("upsert_nodal_deduplicated_operation_batch_v2", {
+    const { data: stored, error } = await supabase.rpc("upsert_nodal_deduplicated_operation_batch", {
       target_accounting_blocking_reason: projection.reason,
       target_accounting_company_id: projection.companyId,
       target_accounting_period_id: projection.periodId,
