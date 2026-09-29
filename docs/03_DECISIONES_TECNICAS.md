@@ -1001,3 +1001,37 @@ vigente sin aprobacion y evidencia suficiente.
   configuración no cambiara; la activación requiere compilar en NinjaTrader.
   Ivo, Julián, Alfred y cada identidad deben actualizar su instalación con el
   ZIP nuevo, sin generar códigos ni resetear su cuenta.
+
+### APP-119 - Primera vuelta y confirmación de trades broker sin cobertura
+
+- **Fecha:** 2026-09-29. Solicitud expresa de Mauricio tras identificar el
+  resultado USD 11,60 como trade broker independiente y el siguiente USD 510,60
+  como cobertura de la primera operación funded de su cuenta 1.
+- **Etapa:** una transición confirmada evaluación → funded del mismo registro
+  determina Primera vuelta, aunque la última entrada sea de evaluación. Se
+  consulta la etapa a la fecha de apertura; no se reetiquetan trades anteriores
+  ni se usa una etapa futura. Una funded importada sin historia confirmada
+  conserva la revisión, porque no demuestra por sí sola qué vuelta atraviesa.
+- **Confirmación explícita:** un lote sin prop puede ofrecer “Registrar sin
+  cobertura”, incluso sin cuentas abiertas. El servidor exige titular activo,
+  cierre estable, importe vigente, ausencia de prop/asignaciones y continuidad
+  contable. No crea cuentas ficticias ni aportes. Guarda fuente, fecha, período,
+  sesión, confirmación y auditoría; cero participantes y cero entradas prop.
+- **Contabilidad:** el resultado independiente integra el saldo y resultado
+  general. Se separa explícitamente en la conciliación de ganancias de cuentas;
+  no altera capital, identidades, payouts ni la base vigente de comisión sobre
+  cuentas cerradas. No se redefine la política comercial de comisiones.
+- **Integridad:** confirmación idempotente y bloqueo por sesión/subcuenta/período;
+  el reproceso no puede sobrescribir lotes confirmados ni sus participantes.
+  Los duplicados observados por otros conectores se rechazan. Un movimiento
+  anterior a registros ya asentados requiere corrección histórica controlada.
+- **Correcciones:** corregir un saldo anterior conserva el resultado confirmado
+  del trade independiente; no lo redistribuye entre props. Cambiar ese resultado
+  técnico no se ofrece en el editor general de saldos.
+- **Validación remota:** migración y regresión de las dos operaciones de Mauricio
+  probadas en una transacción revertida. Se verificó el registro idempotente de
+  USD 11,60 sin participantes prop, el saldo posterior y la cobertura funded de
+  USD 510,60 con saldo final USD 5.355,02. Migración `20260929190000` aplicada
+  y registrada en Supabase. Ambas operaciones reales permanecen pendientes
+  hasta que Mauricio confirme la primera en la app.
+- **Sin cambios de conector:** no requiere reinstalar ni revincular NinjaTrader.

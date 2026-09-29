@@ -409,7 +409,7 @@ export default async function PrivateAppPage({
         supabase
           .from("daily_controls")
           .select(
-            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, allocation_reason, source, source_event_key, created_at, wallet_id, transfer_fee_cents",
+            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, allocation_reason, source, source_event_key, created_at, wallet_id, transfer_fee_cents",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
@@ -749,6 +749,7 @@ export default async function PrivateAppPage({
       participantsByControlId.set(participant.daily_control_id, current);
     }
     dailyControls = (dailyControlRows ?? []).map((control) => ({
+      isUncovered: control.is_uncovered,
       allocationReason: control.allocation_reason,
       balanceInCents: Number(control.balance_after_cents),
       controlId: control.id,
@@ -1179,6 +1180,7 @@ export default async function PrivateAppPage({
         stateOrigin: account.stateOrigin,
       })),
       controls: (dailyControlRows ?? []).map((control) => ({
+        isUncovered: control.is_uncovered,
         balanceAfterInCents: Number(control.balance_after_cents), controlNumber: control.control_number,
         kind: control.kind, movementInCents: control.movement_cents === null ? null : Number(control.movement_cents),
         operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),

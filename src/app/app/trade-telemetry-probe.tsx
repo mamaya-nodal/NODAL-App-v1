@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { buildNinjaOperationProbe, type NinjaTelemetryRow } from "@/modules/ninja/domain/operation-probe";
 import { assignManualAccountsToCoverage } from "./coverage-assignment-actions";
+import { confirmUncoveredTrade } from "./uncovered-trade-actions";
 
 type TechnicalOperationRow = Readonly<{
   account_name: string;
@@ -192,6 +193,30 @@ function ManualCoverageAssignment({ accounts, batch }: Readonly<{
   );
 }
 
+function UncoveredTradeConfirmation({ batch }: Readonly<{ batch: AutomaticBatchRow }>) {
+  const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+  const [feedback, setFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+  const [pending, startTransition] = useTransition();
+  return <section className="manual-coverage-assignment">
+    {!expanded && !feedback?.ok && <button type="button" className="manual-coverage-toggle" onClick={() => setExpanded(true)}>Registrar sin cobertura</button>}
+    {expanded && !feedback?.ok && <div className="manual-coverage-panel">
+      <p>¿Confirmás que este trade de {formatMoney(Number(batch.broker_result_cents) / 100)} se hizo sin cuentas prop? Se registrará sólo en tu resultado general.</p>
+      <button type="button" className="manual-coverage-submit" disabled={pending} onClick={() => startTransition(async () => {
+        try {
+          const result = await confirmUncoveredTrade({ batchId: batch.id, resultInCents: Number(batch.broker_result_cents), confirmed: true });
+          setFeedback(result);
+          if (result.ok) router.refresh();
+        } catch {
+          setFeedback({ ok: false, message: "No se pudo comprobar el registro. Actualizá la página antes de reintentar." });
+        }
+      })}>{pending ? "Registrando…" : "Confirmar"}</button>
+      <button type="button" className="manual-coverage-toggle" disabled={pending} onClick={() => { setExpanded(false); setFeedback(null); }}>Cancelar</button>
+    </div>}
+    {feedback && <p role="status" className={`manual-coverage-feedback ${feedback.ok ? "success" : "error"}`}>{feedback.message}</p>}
+  </section>;
+}
+
 function latestOpenPosition(events: NinjaTelemetryRow[], connectionName: string, accountName: string) {
   const latest = new Map<string, NinjaTelemetryRow>();
   for (const event of events) {
@@ -279,14 +304,14 @@ export function TradeTelemetryProbe({
         <details className="demo-operation-disclosure automatic-batch-status" open={batches.some((batch) => batch.accounting_status === "blocked") || undefined}>
           <summary>
             <span>Automatización</span>
-            <strong>{batches.filter((batch) => batch.accounting_status === "shadow_ready").length} conciliadas</strong>
+            <strong>{batches.filter((batch) => batch.accounting_status === "committed").length} conciliadas</strong>
             <i aria-hidden="true" />
           </summary>
           <div className="automatic-batch-list">
-            {batches.slice(0, 8).map((batch) => (
+            {[...batches].sort((a, b) => Number(b.accounting_status === "blocked") - Number(a.accounting_status === "blocked")).map((batch) => (
               <article className={batch.accounting_status === "blocked" ? "blocked" : ""} key={batch.id}>
                 <div>
-                  <strong>{batch.company_name ?? "Cobertura sin asignar"}</strong>
+                  <strong>{batch.company_name ?? (batch.accounting_status === "committed" && batch.prop_accounts.length === 0 ? "Trade sin cobertura" : "Cobertura sin asignar")}</strong>
                   <span>{batch.prop_accounts.length} {batch.prop_accounts.length === 1 ? "cuenta" : "cuentas"}{batch.phase ? ` · ${batch.phase}` : ""}</span>
                 </div>
                 <div>
@@ -297,6 +322,9 @@ export function TradeTelemetryProbe({
                 </div>
                 {batch.accounting_status === "blocked" && batch.correlation_status === "unmatched" && manualAccounts.length > 0 && (
                   <ManualCoverageAssignment accounts={manualAccounts} batch={batch} />
+                )}
+                {batch.accounting_status === "blocked" && batch.correlation_status === "unmatched" && batch.prop_accounts.length === 0 && (
+                  <UncoveredTradeConfirmation batch={batch} />
                 )}
               </article>
             ))}

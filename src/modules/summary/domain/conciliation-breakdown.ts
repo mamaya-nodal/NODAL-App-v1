@@ -38,6 +38,7 @@ export function buildConciliationBreakdown(summary: OperationalSummary): Concili
       differenceInCents: summary.realizedReconciliationDifferenceInCents,
       reconstructed: [
         { href: "#operaciones", label: "Resultado del período", valueInCents: summary.periodResultInCents },
+        ...(summary.uncoveredBrokerResultInCents ? [{ href: "#operaciones" as const, label: "Menos resultado broker sin cobertura", valueInCents: -summary.uncoveredBrokerResultInCents }] : []),
         { href: "#operaciones", label: "Flotante de cuentas vivas", valueInCents: summary.floatingInCents },
         { href: "#operaciones", label: "Precio de cuentas vírgenes", valueInCents: summary.virginPriceInCents },
       ],

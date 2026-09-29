@@ -1,4 +1,6 @@
 export type HistoricalControl = Readonly<{
+  isUncovered?: boolean;
+  operatingResultInCents?: number | null;
   balanceAfterInCents: number;
   hasCustomAllocation?: boolean;
   id: string;
@@ -29,6 +31,9 @@ export function recalculateAfterBalanceCorrection(
   if (targetIndex < 0 || controls[targetIndex].kind !== "balance_update") {
     throw new Error("Solo puede corregirse un nuevo saldo existente.");
   }
+  if (controls[targetIndex].isUncovered) {
+    throw new Error("El resultado confirmado sin cobertura conserva el importe recibido de NinjaTrader.");
+  }
 
   let previousBalance: number | null = null;
 
@@ -46,6 +51,13 @@ export function recalculateAfterBalanceCorrection(
         throw new Error("La corrección dejaría un retiro por encima del saldo disponible.");
       }
       balanceAfterInCents = previousBalance - (control.movementInCents ?? 0);
+    } else if (control.isUncovered) {
+      if (previousBalance === null || !Number.isSafeInteger(control.operatingResultInCents) || control.participantCount !== 0) {
+        throw new Error("El trade sin cobertura no conserva un resultado válido.");
+      }
+      operatingResultInCents = control.operatingResultInCents!;
+      balanceAfterInCents = previousBalance + operatingResultInCents;
+      assertCents(balanceAfterInCents, "El saldo posterior");
     } else {
       if (previousBalance === null) {
         throw new Error("Un nuevo saldo requiere un saldo anterior.");

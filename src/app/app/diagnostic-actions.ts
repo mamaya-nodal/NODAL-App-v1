@@ -46,7 +46,7 @@ export async function investigateAlert(input: Readonly<{
     supabase.from("companies").select("id, display_name"),
     supabase.from("accounts").select("id, company_id, reference_number, state, state_origin").eq("period_id", input.periodId),
     supabase.from("purchases").select("account_id, price_cents, funds_origin").eq("period_id", input.periodId),
-    supabase.from("daily_controls").select("id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, phase, transfer_fee_cents").eq("period_id", input.periodId).order("control_number"),
+    supabase.from("daily_controls").select("id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, phase, transfer_fee_cents").eq("period_id", input.periodId).order("control_number"),
     supabase.from("daily_control_participants").select("daily_control_id, account_id, allocated_result_cents").eq("period_id", input.periodId),
     supabase.from("operation_entries").select("id, daily_control_id, account_id, operated_on, phase, participant_role, destination, magnitude_cents").eq("period_id", input.periodId),
     supabase.from("account_phase_withdrawals").select("account_id, phase, total_withdrawal_cents").eq("period_id", input.periodId),
@@ -69,7 +69,7 @@ export async function investigateAlert(input: Readonly<{
   const fundingWithdrawals: FundingWithdrawal[] = (fundingResult.data ?? []).map((withdrawal) => ({ id: withdrawal.id, accountId: withdrawal.account_id, approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, amountInCents: Number(withdrawal.amount_cents), feeInCents: Number(withdrawal.collection_fee_cents ?? 0), walletId: withdrawal.wallet_id }));
   const operationalSummary = buildOperationalSummary({
     accounts: (accountsResult.data ?? []).map((account) => { const purchase = purchases.get(account.id); return { id: account.id, state: account.state, stateOrigin: account.state_origin as AccountStateOrigin, priceInCents: Number(purchase?.price_cents ?? 0), fundsOrigin: purchase?.funds_origin === "Saldo generado" ? "Saldo generado" : "Aporte trader" }; }),
-    controls: (controlsResult.data ?? []).map((control) => ({ balanceAfterInCents: Number(control.balance_after_cents), controlNumber: control.control_number, kind: control.kind, movementInCents: control.movement_cents === null ? null : Number(control.movement_cents), operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents), originDestination: control.origin_destination, transferFeeInCents: Number(control.transfer_fee_cents ?? 0) })),
+    controls: (controlsResult.data ?? []).map((control) => ({ isUncovered: control.is_uncovered, balanceAfterInCents: Number(control.balance_after_cents), controlNumber: control.control_number, kind: control.kind, movementInCents: control.movement_cents === null ? null : Number(control.movement_cents), operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents), originDestination: control.origin_destination, transferFeeInCents: Number(control.transfer_fee_cents ?? 0) })),
     entries, fundingWithdrawals, phaseWithdrawals, walletMovements,
   });
   const alertCode = input.alertCode as SummaryAlert["code"];

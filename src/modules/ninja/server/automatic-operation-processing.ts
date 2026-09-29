@@ -5,6 +5,7 @@ import { correlateAutomaticOperationBatches, countBrokerContextProps } from "../
 import { projectAutomaticAccounting, type AutomaticAccountingMember } from "../domain/automatic-accounting-projection";
 import { classifyNinjaAccount } from "../domain/account-classification";
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
+import { resolveNinjaAccountingPhase } from "../domain/accounting-phase";
 import { recordNinjaBrokerOperationBalance } from "./broker-balance-processing";
 
 type AccountingPhase = AutomaticAccountingMember["phase"];
@@ -13,11 +14,6 @@ function dateInBuenosAires(value: string) {
   return new Intl.DateTimeFormat("en-CA", {
     day: "2-digit", month: "2-digit", timeZone: "America/Argentina/Buenos_Aires", year: "numeric",
   }).format(new Date(value));
-}
-
-function accountingPhase(detectedPhase: "Evaluation" | "Funded" | "Live" | null, latestPhase: AccountingPhase): AccountingPhase {
-  if (detectedPhase === "Evaluation") return "Evaluacion";
-  return latestPhase && latestPhase !== "Evaluacion" ? latestPhase : null;
 }
 
 async function usesAggregateBrokerBalance(
@@ -80,7 +76,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
 
   const [{ data: sessions, error: sessionsError }, { data: links, error: linksError }, { data: inventory }] = await Promise.all([
     supabase.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,execution_count,instruments,direction,quantity").eq("connector_id", connectorId).is("excluded_at", null).order("opened_at").order("id"),
-    supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at").eq("connector_id", connectorId),
+    supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at,phase,closure_reason").eq("connector_id", connectorId),
     supabase.from("ninja_inventory_snapshots").select("accounts,observed_at").eq("connector_id", connectorId).order("observed_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (sessionsError || linksError || !sessions?.length) return { persistedBatches: 0 };
@@ -143,19 +139,22 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
   const batches = correlateAutomaticOperationBatches(classified)
     .sort((left, right) => left.broker.openedAt.localeCompare(right.broker.openedAt));
   const accountIds = [...new Set(classified.flatMap((operation) => operation.accountId ? [operation.accountId] : []))];
-  const [{ data: accountRows }, { data: entryRows }] = await Promise.all([
+  const [{ data: accountRows, error: accountError }, { data: entryRows, error: entryError }] = await Promise.all([
     accountIds.length
       ? supabase.from("accounts").select("id,period_id,company_id").in("id", accountIds)
-      : Promise.resolve({ data: [] }),
+      : Promise.resolve({ data: [], error: null }),
     accountIds.length
-      ? supabase.from("operation_entries").select("account_id,phase,operated_on,created_at").in("account_id", accountIds).order("operated_on", { ascending: false }).order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] }),
+      ? supabase.from("operation_entries").select("account_id,phase,operated_on,created_at,daily_control_id").in("account_id", accountIds).order("operated_on", { ascending: false }).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
   ]);
+  if (accountError || entryError) return { persistedBatches: 0 };
   const accountsById = new Map((accountRows ?? []).map((account) => [account.id, account]));
-  const latestPhaseByAccountId = new Map<string, AccountingPhase>();
-  for (const entry of entryRows ?? []) {
-    if (!latestPhaseByAccountId.has(entry.account_id)) latestPhaseByAccountId.set(entry.account_id, entry.phase as AccountingPhase);
-  }
+  const controlIds = [...new Set((entryRows ?? []).map((entry) => entry.daily_control_id))];
+  const { data: timedBatches, error: timingError } = controlIds.length
+    ? await supabase.from("ninja_operation_batches").select("daily_control_id,opened_at").in("daily_control_id", controlIds)
+    : { data: [], error: null };
+  if (timingError) return { persistedBatches: 0 };
+  const controlTimes = new Map((timedBatches ?? []).map((batch) => [batch.daily_control_id, batch.opened_at]));
   const expectedBalanceByPeriod = new Map<string, number | null>();
   const loadExpectedBalance = async (periodId: string, openedAt: string) => {
     if (expectedBalanceByPeriod.has(periodId)) return expectedBalanceByPeriod.get(periodId) ?? null;
@@ -269,7 +268,21 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
         allocatedBrokerResultInCents: prop.allocatedBrokerResultInCents,
         companyId: account.company_id,
         periodId: account.period_id,
-        phase: accountingPhase(detectedPhase, latestPhaseByAccountId.get(prop.accountId) ?? null),
+        phase: resolveNinjaAccountingPhase({
+          detectedPhase,
+          openedAt: session.opened_at,
+          // Only a confirmed transition of this same logical account proves its first funded round.
+          fundedStartedAt: (links ?? []).filter((link) =>
+            link.account_id === prop.accountId && link.closure_reason === "phase_transition" && link.closed_at &&
+            (links ?? []).some((funded) => funded.account_id === prop.accountId && funded.phase === "Funded" &&
+              funded.external_account_name === session.account_name &&
+              Math.abs(Date.parse(funded.first_seen_at) - Date.parse(link.closed_at!)) <= 5_000),
+          ).map((link) => link.closed_at!).sort()[0] ?? null,
+          entries: (entryRows ?? []).filter((entry) => entry.account_id === prop.accountId).map((entry) => ({
+            phase: entry.phase as AccountingPhase,
+            occurredAt: controlTimes.get(entry.daily_control_id) ?? entry.created_at,
+          })),
+        }),
       }];
     });
     const uniquePeriod = new Set(projectionMembers.map((member) => member.periodId));
@@ -312,7 +325,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     const storedBatchId = storedBatch.batch_id;
     await supabase.from("ninja_operation_batches").update({
       broker_balance_scope: aggregateBrokerBalance ? "aggregate" : "single",
-    }).eq("id", storedBatchId);
+    }).eq("id", storedBatchId).neq("accounting_status", "committed");
     if (batch.broker.closingBalance !== null) {
       await recordNinjaBrokerOperationBalance({
         accountName: batch.broker.accountName,
@@ -323,7 +336,6 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
         openingEventId: batch.broker.openingEventId,
       });
     }
-    await supabase.from("ninja_operation_batch_members").delete().eq("batch_id", storedBatchId);
     const members = [{
       account_id: null,
       allocated_broker_result_cents: null,
@@ -340,8 +352,11 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
         session_id: session.id,
       }] : [];
     })];
-    const { error: memberError } = await supabase.from("ninja_operation_batch_members").insert(members);
-    if (!memberError) {
+    const { data: replaced, error: memberError } = await supabase.rpc("replace_pending_ninja_batch_members", {
+      target_batch_id: storedBatchId,
+      target_members: members,
+    });
+    if (!memberError && replaced) {
       persistedBatches += 1;
       if (projection.status === "shadow_ready" && projection.periodId && brokerClosingBalanceInCents !== null) {
         const { error: commitError } = await supabase.rpc("commit_ninja_automatic_operation_batch", {
@@ -357,7 +372,7 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
         } else {
           await supabase.from("ninja_operation_batches").update({
             accounting_blocking_reason: "El cierre quedó conciliado, pero no pudo registrarse automáticamente.",
-          }).eq("id", storedBatchId);
+          }).eq("id", storedBatchId).neq("accounting_status", "committed");
         }
       }
     }

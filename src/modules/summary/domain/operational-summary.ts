@@ -14,6 +14,7 @@ export type SummaryAccount = Readonly<{
 }>;
 
 export type SummaryControl = Readonly<{
+  isUncovered?: boolean;
   balanceAfterInCents: number;
   controlNumber: number;
   kind: "deposit" | "withdrawal" | "balance_update";
@@ -57,6 +58,7 @@ export type OperationalOpeningSnapshot = Readonly<{
 }>;
 
 export type OperationalSummary = Readonly<{
+  uncoveredBrokerResultInCents?: number;
   accountStates: Readonly<{ virgin: number; live: number; closed: number }>;
   accumulatedResultInCents: number;
   brokerBalanceInCents: number | null;
@@ -141,6 +143,7 @@ export function buildOperationalSummary(input: Readonly<{
   const orderedControls = [...input.controls].sort((left, right) => left.controlNumber - right.controlNumber);
   const brokerBalanceInCents = orderedControls.at(-1)?.balanceAfterInCents ?? opening.brokerBalanceInCents;
   const brokerOperatingResult = sum(orderedControls.map((control) => control.operatingResultInCents ?? 0));
+  const uncoveredBrokerResultInCents = sum(orderedControls.filter((control) => control.isUncovered).map((control) => control.operatingResultInCents ?? 0));
   const totalPurchases = sum(input.accounts.map((account) => account.priceInCents));
   const approved = sum(input.fundingWithdrawals.map((withdrawal) => withdrawal.amountInCents));
   const collected = sum(input.fundingWithdrawals.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.amountInCents));
@@ -169,6 +172,7 @@ export function buildOperationalSummary(input: Readonly<{
   const commission = calculateDeskCommission(realizedGainInCents);
   return {
     accountStates: states,
+    uncoveredBrokerResultInCents,
     accumulatedResultInCents,
     brokerBalanceInCents,
     capitalNetInCents,
@@ -184,7 +188,7 @@ export function buildOperationalSummary(input: Readonly<{
     positionExpectedInCents,
     positionObservableInCents,
     realizedGainInCents,
-    realizedReconciliationDifferenceInCents: realizedGainInCents - (periodResultInCents + floatingInCents + virginPriceInCents)
+    realizedReconciliationDifferenceInCents: realizedGainInCents - (periodResultInCents - uncoveredBrokerResultInCents + floatingInCents + virginPriceInCents)
       + (opening.gainReconciliationBaselineInCents ?? 0),
     traderGainInCents: Math.max(realizedGainInCents, 0) - commission.amountInCents,
     virginPriceInCents,

@@ -3,6 +3,22 @@ import { describe, expect, it } from "vitest";
 import { recalculateAfterBalanceCorrection } from "./historical-correction";
 
 describe("corrección histórica de saldo", () => {
+  it("conserva el resultado independiente al corregir un saldo anterior", () => {
+    const result = recalculateAfterBalanceCorrection([
+      { balanceAfterInCents: 500000, id: "opening", kind: "deposit", movementInCents: 500000, participantCount: 0 },
+      { balanceAfterInCents: 483282, id: "covered", kind: "balance_update", movementInCents: null, participantCount: 1 },
+      { balanceAfterInCents: 484442, id: "standalone", kind: "balance_update", movementInCents: null, participantCount: 0, isUncovered: true, operatingResultInCents: 1160 },
+      { balanceAfterInCents: 535502, id: "next", kind: "balance_update", movementInCents: null, participantCount: 1 },
+    ], "covered", 483382);
+    expect(result[2]).toMatchObject({ balanceBeforeInCents: 483382, balanceAfterInCents: 484542, operatingResultInCents: 1160 });
+    expect(result[3].operatingResultInCents).toBe(50960);
+  });
+  it("no permite cambiar el importe recibido de un trade sin cobertura por corrección de saldo", () => {
+    expect(() => recalculateAfterBalanceCorrection([
+      { balanceAfterInCents: 10000, id: "opening", kind: "deposit", movementInCents: 10000, participantCount: 0 },
+      { balanceAfterInCents: 11160, id: "standalone", kind: "balance_update", movementInCents: null, participantCount: 0, isUncovered: true, operatingResultInCents: 1160 },
+    ], "standalone", 11200)).toThrow("conserva el importe");
+  });
   it("recalcula el saldo corregido y el resultado del siguiente saldo absoluto", () => {
     const result = recalculateAfterBalanceCorrection([
       { balanceAfterInCents: 500_000, id: "deposit", kind: "deposit", movementInCents: 500_000, participantCount: 0 },

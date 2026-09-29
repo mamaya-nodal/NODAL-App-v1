@@ -48,6 +48,7 @@ import { BrokerAccountBreakdown } from "./broker-account-breakdown";
 type EntryKind = DailyBalanceEntry["kind"];
 
 type PreviewRow = {
+  isUncovered?: boolean;
   allocationReason: string | null;
   balanceInCents: number;
   controlId: string;
@@ -565,6 +566,8 @@ export function DailyControlPreview({
       );
       const preview = recalculateAfterBalanceCorrection(
         rows.map((row) => ({
+          isUncovered: row.isUncovered,
+          operatingResultInCents: row.operatingResultInCents,
           balanceAfterInCents: row.balanceInCents,
           hasCustomAllocation: Boolean(row.allocationReason),
           id: row.controlId,
@@ -1047,7 +1050,7 @@ export function DailyControlPreview({
             <article className="preview-row" key={row.id}>
               <div>
                 <p className="purchase-reference">
-                  {entryLabels[row.kind]} · {formatMoney(row.valueInCents)}
+                  {row.isUncovered ? "Trade sin cobertura" : entryLabels[row.kind]} · {formatMoney(row.valueInCents)}
                 </p>
                 <p className="purchase-meta">
                   Saldo posterior: {formatMoney(row.balanceInCents)}
@@ -1060,7 +1063,7 @@ export function DailyControlPreview({
                     ? "No corresponde"
                     : formatMoney(row.operatingResultInCents)}
                 </strong>
-                {row.kind === "balance_update" && (
+                {row.kind === "balance_update" && !row.isUncovered && (
                   <button
                     className="history-edit-action"
                     disabled={isSaving}

@@ -40,7 +40,7 @@ export async function loadPeriodSummaries(
   const [accountsResult, purchasesResult, controlsResult, entriesResult, withdrawalsResult, walletResult, fundingResult, openingResult] = await Promise.all([
     readAll(supabase.from("accounts").select("id, period_id, state, state_origin").in("period_id", periodIds).order("id")),
     readAll(supabase.from("purchases").select("account_id, period_id, price_cents, funds_origin").in("period_id", periodIds).order("id")),
-    readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, transfer_fee_cents").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, transfer_fee_cents").in("period_id", periodIds).order("id")),
     readAll(supabase.from("operation_entries").select("id, period_id, account_id, operated_on, phase, participant_role, destination, magnitude_cents").in("period_id", periodIds).order("id")),
     readAll(supabase.from("account_phase_withdrawals").select("period_id, account_id, phase, total_withdrawal_cents").in("period_id", periodIds).order("id")),
     readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, destination_wallet_id, occurred_on, kind, amount_cents, fee_cents, observation").in("period_id", periodIds).order("id")),
@@ -156,6 +156,7 @@ export async function loadPeriodSummaries(
           };
         }),
         controls: controlsForPeriod.map((control) => ({
+          isUncovered: control.is_uncovered,
           balanceAfterInCents: Number(control.balance_after_cents),
           controlNumber: control.control_number,
           kind: control.kind,
