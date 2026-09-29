@@ -930,5 +930,9 @@ vigente sin aprobacion y evidencia suficiente.
   su conector continúe enviando señal. Si la señal se interrumpe, el registro
   técnico se conserva para una eventual recuperación, pero no sigue sumando
   horas ni aparece como una posición vigente.
+- **Duplicados entre conectores:** La misma cobertura física puede ser
+  observada desde varios Ninja. Se consolida cuando coinciden subcuenta,
+  instrumento, dirección, cantidad y resultado, admitiendo hasta cinco
+  segundos de diferencia entre las aperturas informadas.
 - **Estado:** Implementada para pruebas el 2026-09-28 a partir del caso de
   Alfred con dos subcuentas broker sobre una misma operación prop.
