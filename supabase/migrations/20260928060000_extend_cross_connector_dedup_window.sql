@@ -1,7 +1,7 @@
 -- La misma operación broker puede llegar con unos segundos de diferencia entre conectores.
 -- Se amplía la ventana conservadora de deduplicación a cinco segundos.
 
-create or replace function public.upsert_nodal_deduplicated_operation_batch(
+create function public.upsert_nodal_deduplicated_operation_batch_v2(
   target_connector_id uuid,
   target_broker_session_id bigint,
   target_status text,
@@ -254,16 +254,16 @@ begin
 end;
 $$;
 
-revoke all on function public.upsert_nodal_deduplicated_operation_batch(
+revoke all on function public.upsert_nodal_deduplicated_operation_batch_v2(
   uuid,bigint,text,bigint,bigint,bigint,timestamptz,timestamptz,text,text,
   uuid,uuid,public.operation_phase,date,integer,integer
 ) from public, anon, authenticated;
-grant execute on function public.upsert_nodal_deduplicated_operation_batch(
+grant execute on function public.upsert_nodal_deduplicated_operation_batch_v2(
   uuid,bigint,text,bigint,bigint,bigint,timestamptz,timestamptz,text,text,
   uuid,uuid,public.operation_phase,date,integer,integer
 ) to service_role;
 
-comment on function public.upsert_nodal_deduplicated_operation_batch(
+comment on function public.upsert_nodal_deduplicated_operation_batch_v2(
   uuid,bigint,text,bigint,bigint,bigint,timestamptz,timestamptz,text,text,
   uuid,uuid,public.operation_phase,date,integer,integer
 ) is 'Consolida observaciones de una misma operación broker entre conectores del mismo titular antes de persistir la cobertura.';
