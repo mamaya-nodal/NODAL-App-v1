@@ -6,7 +6,7 @@ import { rememberLocalNinjaSnapshot } from "@/modules/ninja/server/local-snapsho
 import { persistNinjaSnapshot } from "@/modules/ninja/server/snapshot-persistence";
 import { processNinjaTransitions } from "@/modules/ninja/server/transition-processing";
 import { ensureNinjaBrokerBalanceBaseline } from "@/modules/ninja/server/broker-balance-processing";
-import { authenticateNinjaConnector, bearerToken } from "@/modules/ninja/server/connector-auth";
+import { requireNinjaConnector } from "@/modules/ninja/server/connector-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,10 +21,8 @@ function response(body: object, status: number) {
 }
 
 export async function POST(request: Request) {
-  const connector = await authenticateNinjaConnector(bearerToken(request));
-  if (!connector) {
-    return response({ error: "El conector no está autorizado." }, 401);
-  }
+  const connector = await requireNinjaConnector(request);
+  if (connector instanceof Response) return connector;
 
   if (!request.headers.get("content-type")?.includes("application/json")) {
     return response({ error: "El formato recibido no es válido." }, 415);
@@ -71,13 +69,13 @@ export async function POST(request: Request) {
 
   return response(
     {
-      accepted: true,
+      accepted: persistence.persisted,
       persisted: persistence.persisted,
       persistenceReason: persistence.persisted ? undefined : persistence.reason,
       summary,
       brokerBaseline,
       transitions,
     },
-    202,
+    persistence.persisted ? 202 : 503,
   );
 }

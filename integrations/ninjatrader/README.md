@@ -5,6 +5,18 @@ y saldos disponibles en NinjaTrader y los envía a NODAL. La versión 0.4 tambi�
 registra ejecuciones y cambios de posición para validar el inicio y cierre de
 una operatoria. No puede crear, modificar ni cerrar operaciones.
 
+## Actualización 0.5 sin desvincular
+
+Para una instalación existente, ejecutar `ACTUALIZAR-NODAL.cmd` y compilar
+`NodalNinjaConnector` en NinjaTrader. No se pide código ni se reemplaza la
+configuración o la cola cifrada. Se guarda respaldo del código anterior.
+
+La versión 0.5 conserva las credenciales ante respuestas fallidas, incluso
+un rechazo: sólo una nueva vinculación explícita las reemplaza. Distingue
+renovación pendiente y autorización rechazada en NinjaScript Output.
+La configuración se reemplaza atómicamente, con respaldo, después de cifrarla.
+Las desconexiones de red no borran cuentas, operaciones ni credenciales.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.
@@ -17,7 +29,9 @@ una operatoria. No puede crear, modificar ni cerrar operaciones.
 
 Después de vincularse, el conector continúa enviando aunque el alumno cierre la
 web o salga de su sesión de Google. La credencial puede renovarse y revocarse
-desde NODAL, y solo se admite un conector activo por alumno.
+desde NODAL. Se admite un conector activo por usuario y por identidad aprobada.
+Una nueva vinculación rota las credenciales y conserva el identificador lógico
+y todo su historial dentro del mismo usuario e identidad.
 
 ## Estado y seguridad
 

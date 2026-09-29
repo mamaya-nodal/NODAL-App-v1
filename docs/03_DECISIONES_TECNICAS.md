@@ -954,3 +954,50 @@ vigente sin aprobacion y evidencia suficiente.
   personales. La ruta de salud incluye la revisión del despliegue.
 - **Validación:** Pruebas de recuperación de JWT/red, agotamiento de reintentos,
   permisos denegados y ausencia real de conector; typecheck, lint y build.
+
+### APP-118 - Credenciales recuperables y continuidad al revincular Ninja
+
+- **Fecha:** 2026-09-29. Corrección técnica; no modifica reglas contables.
+- **Hallazgos comprobados:** el cliente 0.4 ejecutaba `ClearAuthorization`
+  ante cualquier renovación fallida; el servidor convertía errores de base en
+  401; una nueva vinculación creaba otro conector y dejaba el historial bajo el
+  anterior. No se confirmó la causa del primer fallo remoto del 28/09.
+- **Servidor:** distingue fallas de infraestructura (503, reintento) de una
+  credencial efectivamente rechazada (401). Un inventario no persistido no se
+  confirma como recibido. La telemetría no degrada la versión a 0.4.
+- **Renovación recuperable:** conserva el secreto de renovación durante su
+  vigencia original de 90 días, sin extenderla. Sólo rota el acceso corto; la
+  repetición después de perder una respuesta sigue siendo posible. Vincular
+  explícitamente rota ambos secretos y revocar impide usarlos. Los secretos
+  siguen cifrados con DPAPI localmente y sólo sus hashes se guardan en servidor.
+- **Cliente 0.5:** nunca borra automáticamente las credenciales por un fallo;
+  diferencia renovación pendiente y rechazo confirmado. Guarda configuración
+  mediante reemplazo atómico con respaldo. `ACTUALIZAR-NODAL.cmd` actualiza
+  sólo el código, conservando configuración y cola, y exige compilar en Ninja.
+- **Identificación estable:** `redeem_ninja_pairing_code` reutiliza el conector
+  activo o el último revocado exclusivamente del mismo titular e identidad.
+  Serializa por titular, revalida aprobación de identidad y conserva enlaces,
+  vidas, cierres, exclusiones, snapshots y operaciones. Rota las credenciales
+  sin reactivar las anteriores ni conceder nuevos permisos a clientes web.
+- **Reparación del incidente:** el archivo acotado en
+  `supabase/repairs/20260929_connector_continuity.sql` consolidó el historial
+  anterior bajo el conector vigente de Mauricio. Recuperó ocho vínculos de
+  siete cuentas; conservó los IDs de sesiones/lotes, snapshots y telemetría.
+  Los eventos técnicos duplicados no se borran. Respalda los estados anterior
+  y nuevo y los IDs movidos en `audit_events`. No modifica compras, importes,
+  controles ni entradas contables. Las reglas normales vuelven a procesar los
+  datos recibidos una vez recuperado el contexto.
+- **Validación remota:** ensayo completo con `BEGIN/ROLLBACK` y luego aplicación
+  transaccional. Confirmados siete registros distintos, ocho vínculos, cero
+  cuentas Lucid visibles sin correspondencia y un evento de auditoría. La
+  migración `20260929160000` quedó registrada en el historial de Supabase.
+- **Pruebas:** renovación repetida, vencimiento original conservado, fallas de
+  red/base, rechazo auténtico, inventario no guardado; regresión SQL de tres
+  revinculaciones activas/revocadas, aislamiento, preservación de vínculos y
+  rechazo de secretos anteriores/códigos consumidos. C# 0.5 compilado contra las
+  librerías instaladas de NinjaTrader 8, además de tests TypeScript y build web.
+- **Despliegue del cliente:** la web no actualiza automáticamente el AddOn de
+  otras PCs. En la PC local se copió 0.5 y se verificó que el hash de la
+  configuración no cambiara; la activación requiere compilar en NinjaTrader.
+  Ivo, Julián, Alfred y cada identidad deben actualizar su instalación con el
+  ZIP nuevo, sin generar códigos ni resetear su cuenta.

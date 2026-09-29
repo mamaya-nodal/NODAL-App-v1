@@ -1,16 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { authenticateNinjaConnector, persistNinjaSnapshot, processNinjaTransitions } = vi.hoisted(() => ({
-  authenticateNinjaConnector: vi.fn(),
+const { requireNinjaConnector, persistNinjaSnapshot, processNinjaTransitions } = vi.hoisted(() => ({
+  requireNinjaConnector: vi.fn(),
   persistNinjaSnapshot: vi.fn(),
   processNinjaTransitions: vi.fn(),
 }));
 
 vi.mock("@/modules/ninja/server/connector-auth", () => ({
-  authenticateNinjaConnector,
-  bearerToken(request: Request) {
-    return request.headers.get("authorization")?.replace(/^Bearer\s+/, "") ?? null;
-  },
+  requireNinjaConnector,
 }));
 vi.mock("@/modules/ninja/server/snapshot-persistence", () => ({ persistNinjaSnapshot }));
 vi.mock("@/modules/ninja/server/transition-processing", () => ({ processNinjaTransitions }));
@@ -38,7 +35,7 @@ const payload = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  authenticateNinjaConnector.mockResolvedValue({ connectorId: "connector-1", ownerUserId: "user-1" });
+  requireNinjaConnector.mockResolvedValue({ connectorId: "connector-1", ownerUserId: "user-1" });
   persistNinjaSnapshot.mockResolvedValue({ persisted: true });
   processNinjaTransitions.mockResolvedValue({ detectedChanges: 1, processed: true });
 });
@@ -57,7 +54,7 @@ describe("POST /api/integrations/ninjatrader/ingest", () => {
     const result = await POST(request);
 
     expect(result.status).toBe(202);
-    expect(authenticateNinjaConnector).toHaveBeenCalledWith("access-token");
+    expect(requireNinjaConnector).toHaveBeenCalledWith(request);
     expect(persistNinjaSnapshot).toHaveBeenCalledWith("connector-1", payload);
     expect(processNinjaTransitions).toHaveBeenCalledWith("connector-1", payload);
     await expect(result.json()).resolves.toMatchObject({
@@ -69,7 +66,7 @@ describe("POST /api/integrations/ninjatrader/ingest", () => {
   });
 
   it("rejects a request without a valid connector session", async () => {
-    authenticateNinjaConnector.mockResolvedValue(null);
+    requireNinjaConnector.mockResolvedValue(new Response(null, { status: 401 }));
     const request = new Request("http://localhost/api/integrations/ninjatrader/ingest", {
       body: JSON.stringify(payload),
       headers: { "content-type": "application/json" },
@@ -77,5 +74,15 @@ describe("POST /api/integrations/ninjatrader/ingest", () => {
     });
 
     expect((await POST(request)).status).toBe(401);
+  });
+
+  it("does not acknowledge inventory that was not saved", async () => {
+    persistNinjaSnapshot.mockResolvedValue({ persisted: false, reason: "storage_error" });
+    const result = await POST(new Request("http://localhost/api/integrations/ninjatrader/ingest", {
+      method: "POST", body: JSON.stringify(payload), headers: { "content-type": "application/json" },
+    }));
+    expect(result.status).toBe(503);
+    expect(await result.json()).toMatchObject({ accepted: false, persisted: false });
+    expect(processNinjaTransitions).not.toHaveBeenCalled();
   });
 });

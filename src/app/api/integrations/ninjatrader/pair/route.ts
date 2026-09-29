@@ -1,4 +1,4 @@
-import { pairNinjaConnector } from "@/modules/ninja/server/connector-auth";
+import { pairNinjaConnector, connectorServiceUnavailableResponse } from "@/modules/ninja/server/connector-auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,8 +27,12 @@ export async function POST(request: Request) {
     return response({ error: "Datos incompletos." }, 422);
   }
 
-  const session = await pairNinjaConnector(values.code, values.connectorVersion);
-  return session
-    ? response(session, 201)
-    : response({ error: "El código es inválido, venció o ya fue utilizado." }, 401);
+  try {
+    const session = await pairNinjaConnector(values.code, values.connectorVersion);
+    return session
+      ? response(session, 201)
+      : response({ error: "El código es inválido, venció o ya fue utilizado." }, 401);
+  } catch {
+    return connectorServiceUnavailableResponse();
+  }
 }

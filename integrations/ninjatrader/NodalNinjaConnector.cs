@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.4
+// NODAL Ninja Connector v0.5
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -23,7 +23,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 {
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.4";
+		private const string ConnectorVersion = "0.5";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
@@ -72,7 +72,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			else if (State == State.Terminated)
 			{
 				terminated = true;
-				heartbeatTimer?.Dispose();
+				if (heartbeatTimer != null) heartbeatTimer.Dispose();
 				heartbeatTimer = null;
 				Account.AccountStatusUpdate -= OnAccountStatusUpdate;
 				foreach (Account account in subscribedAccounts.ToList())
@@ -267,7 +267,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 		private void QueueTelemetryFlush()
 		{
 			if (terminated) return;
-			Task.Run(FlushTelemetryAsync);
+			Task.Run((Func<Task>)FlushTelemetryAsync);
 		}
 
 		private async Task FlushTelemetryAsync()
@@ -456,8 +456,11 @@ namespace NinjaTrader.NinjaScript.AddOns
 					using (HttpResponseMessage response = await PostAsync("/api/integrations/ninjatrader/refresh", "{}", settings.RefreshToken))
 					{
 						if (response.IsSuccessStatusCode && await ApplySessionAsync(response)) return true;
+						Write(response.StatusCode == HttpStatusCode.Unauthorized
+							? "AUTORIZACION_RECHAZADA|La sesión venció o fue revocada. Los registros y la configuración se conservan."
+							: "RENOVACION_PENDIENTE|NODAL no confirmó la renovación. Se reintentará conservando la vinculación. HTTP=" + (int)response.StatusCode);
+						return false;
 					}
-					settings.ClearAuthorization();
 				}
 
 				if (!settings.HasPairingCode)
@@ -677,20 +680,11 @@ namespace NinjaTrader.NinjaScript.AddOns
 				Save();
 			}
 
-			public void ClearAuthorization()
-			{
-				AccessToken = string.Empty;
-				AccessExpiresAtUtc = DateTime.MinValue;
-				RefreshToken = string.Empty;
-				RefreshExpiresAtUtc = DateTime.MinValue;
-				ConnectorId = string.Empty;
-				Save();
-			}
-
 			private void Save()
 			{
 				Directory.CreateDirectory(Path.GetDirectoryName(path));
-				File.WriteAllLines(path, new[] {
+				// Encrypt the entire replacement before touching the valid file.
+				string[] lines = new[] {
 					"BaseUrl=" + (BaseUrl ?? string.Empty),
 					"PairingCode=" + (PairingCode ?? string.Empty),
 					"ConnectorId=" + (ConnectorId ?? string.Empty),
@@ -698,7 +692,15 @@ namespace NinjaTrader.NinjaScript.AddOns
 					"AccessExpiresAtUtc=" + AccessExpiresAtUtc.ToString("O", CultureInfo.InvariantCulture),
 					"RefreshTokenProtected=" + Protect(RefreshToken),
 					"RefreshExpiresAtUtc=" + RefreshExpiresAtUtc.ToString("O", CultureInfo.InvariantCulture)
-				});
+				};
+				string temporaryPath = path + ".tmp." + Guid.NewGuid().ToString("N");
+				try
+				{
+					File.WriteAllLines(temporaryPath, lines);
+					if (File.Exists(path)) File.Replace(temporaryPath, path, path + ".bak");
+					else File.Move(temporaryPath, path);
+				}
+				finally { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); }
 			}
 
 			private static string Protect(string value)

@@ -1,5 +1,5 @@
 import { isNinjaTradeTelemetryBatch } from "@/modules/ninja/domain/trade-telemetry";
-import { authenticateNinjaConnector, bearerToken, rememberNinjaConnectorVersion } from "@/modules/ninja/server/connector-auth";
+import { requireNinjaConnector } from "@/modules/ninja/server/connector-auth";
 import { persistNinjaTradeTelemetry } from "@/modules/ninja/server/telemetry-persistence";
 import { refreshNinjaTechnicalOperations } from "@/modules/ninja/server/technical-operation-processing";
 import { createClient } from "@/lib/supabase/server";
@@ -28,8 +28,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const connector = await authenticateNinjaConnector(bearerToken(request));
-  if (!connector) return response({ error: "El conector no está autorizado." }, 401);
+  const connector = await requireNinjaConnector(request);
+  if (connector instanceof Response) return connector;
   if (!request.headers.get("content-type")?.includes("application/json")) {
     return response({ error: "El formato recibido no es válido." }, 415);
   }
@@ -52,12 +52,8 @@ export async function POST(request: Request) {
     return response({ error: "La telemetría no cumple el formato esperado." }, 422);
   }
 
-  const [persistence] = await Promise.all([
-    persistNinjaTradeTelemetry(connector.connectorId, payload),
-    // La telemetría de operaciones nació con la versión 0.4. Esto también
-    // corrige instalaciones actualizadas antes de que el latido informara versión.
-    rememberNinjaConnectorVersion(connector.connectorId, "0.4"),
-  ]);
+  // The actual version is supplied at pairing/heartbeat, not inferred here.
+  const persistence = await persistNinjaTradeTelemetry(connector.connectorId, payload);
   if (persistence.persisted && persistence.acceptedEvents > 0) {
     await refreshNinjaTechnicalOperations(connector.connectorId);
   }
