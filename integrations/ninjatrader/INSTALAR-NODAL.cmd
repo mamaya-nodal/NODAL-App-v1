@@ -1,5 +1,6 @@
 @echo off
 setlocal
+chcp 65001 >nul
 title Instalador del conector NODAL
 
 powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0NODAL-Ninja-Connector-setup.ps1"

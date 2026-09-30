@@ -1204,3 +1204,17 @@ vigente sin aprobacion y evidencia suficiente.
 - **Broker:** el número de subcuenta y la presencia en Ninja no prueban titularidad. El titular debe confirmar una vez cada subcuenta antes de que su saldo o cobertura afecten su contabilidad. Las subcuentas ajenas o no confirmadas quedan fuera de la suma y en revisión.
 - **Implementación:** el instalador 0.6 detecta una configuración existente y conserva sus credenciales. El código adicional autoriza un destino nuevo sin reemplazar el vínculo físico. La ingesta resuelve cada evento por la vigencia del semáforo y mantiene las cuentas ya adjudicadas en su conector contable. Las subcuentas broker nuevas quedan en una bandeja de confirmación y no afectan saldos hasta que el titular pulse `Es mía`.
 - **Despliegue y validación:** la migración `20260930190000` quedó aplicada y registrada en Supabase. Se verificaron 12 destinos, 12 rutas vigentes, 41 props preservadas, 26 subcuentas broker preservadas y cero conectores activos sin ruta. Typecheck, lint sin errores, 335 pruebas y build de producción completaron correctamente.
+
+### APP-124 - Alta simétrica de destinos desde una instalación existente
+
+- **Fecha:** 2026-09-30. Corrección del instalador 0.6; no modifica reglas
+  contables, historial ni permisos.
+- **Decisión:** el primer destino se incorpora con `INSTALAR-NODAL`. Para
+  sumar otro destino sobre la misma instalación se usa `ACTUALIZAR-NODAL`, que
+  actualiza el complemento y solicita un código opcional. El código puede
+  corresponder a una app propia o a una identidad y el orden es indistinto.
+- **Continuidad:** pegar otro código no sustituye el destino anterior, no rota
+  el conector físico y no borra configuración, cola ni historia. Presionar
+  `ENTER` sin código mantiene el uso anterior de actualización solamente.
+- **Interfaz:** después de generar un código, la app indica explícitamente si
+  debe pegarse en `INSTALAR-NODAL` o en `ACTUALIZAR-NODAL`.

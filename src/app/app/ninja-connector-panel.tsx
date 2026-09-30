@@ -72,7 +72,12 @@ export function NinjaConnectorPanel({ compact = false, connector, monitor = fals
 
       {state.code ? (
         <div className="ninja-pairing-code" role="status">
-          <div><small>Pegalo en el instalador · válido 5 minutos</small><strong>{state.code}</strong></div>
+          <div>
+            <small>
+              Primera vinculación: INSTALAR-NODAL · Si esta PC ya tiene el conector: ACTUALIZAR-NODAL · válido 5 minutos
+            </small>
+            <strong>{state.code}</strong>
+          </div>
           <button className="secondary-action" onClick={copyCode} type="button">{copied ? "Copiado" : "Copiar código"}</button>
         </div>
       ) : null}

@@ -5,11 +5,18 @@ y saldos disponibles en NinjaTrader y los envía a NODAL. La versión 0.4 tambi�
 registra ejecuciones y cambios de posición para validar el inicio y cierre de
 una operatoria. No puede crear, modificar ni cerrar operaciones.
 
-## Actualización 0.5 sin desvincular
+## Actualizar o agregar otro vínculo
 
 Para una instalación existente, ejecutar `ACTUALIZAR-NODAL.cmd` y compilar
-`NodalNinjaConnector` en NinjaTrader. No se pide código ni se reemplaza la
-configuración o la cola cifrada. Se guarda respaldo del código anterior.
+`NodalNinjaConnector` en NinjaTrader. El comando actualiza los archivos y luego
+permite pegar opcionalmente otro código. Si se pega un código, agrega ese destino
+sin sustituir los vínculos anteriores; si se presiona `ENTER`, solamente actualiza.
+La configuración, el historial y la cola cifrada se conservan en ambos casos.
+
+El procedimiento es el mismo en cualquier orden: una instalación que comenzó
+como identidad puede sumar una app propia, y una instalación que comenzó como
+app propia puede sumar una identidad. El código generado determina el destino;
+el instalador no necesita preguntar qué clase de vínculo es.
 
 La versión 0.5 conserva las credenciales ante respuestas fallidas, incluso
 un rechazo: sólo una nueva vinculación explícita las reemplaza. Distingue
