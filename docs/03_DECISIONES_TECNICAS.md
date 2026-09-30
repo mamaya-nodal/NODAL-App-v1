@@ -1,5 +1,12 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-126 - Margen visual del favicon
+
+- **Fecha:** 2026-09-30. Ajuste solicitado tras revisar el icono en navegador.
+- **Resolución:** el símbolo conserva el recurso oficial, pero se presenta al
+  81% del ancho del lienzo cuadrado con transparencia alrededor para equilibrar
+  su tamaño junto a otros favicons.
+
 ### APP-125 - Marca oficial en animación y favicon
 
 - **Fecha:** 2026-09-30. Ajuste visual solicitado por Mauricio.
