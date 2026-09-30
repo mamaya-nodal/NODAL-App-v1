@@ -373,6 +373,7 @@ async function renderPrivateAppPage({
   let economicTrace: EconomicTraceItem[] = [];
   let identityAccounts: IdentityAccount[] = [];
   let identitySummaries: IdentitySummary[] = [];
+  let identitySignalStates: Record<string, boolean> = {};
   let openingSnapshot: PeriodOpeningRecord | null = null;
   let openingSetupEligible = false;
   let periodOpening: OperationalOpeningSnapshot = {
@@ -1004,6 +1005,7 @@ async function renderPrivateAppPage({
       { data: identityRows },
       { data: identityAssignmentRows },
       { data: identityConnectorInstallationRows },
+      { data: identitySignalRows },
     ] = await Promise.all([
       supabase
         .from("nodal_identities")
@@ -1023,7 +1025,11 @@ async function renderPrivateAppPage({
         .in("status", ["sending", "sent", "downloaded"])
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false }),
+      supabase
+        .from("ninja_identity_signal_controls")
+        .select("identity_id,is_enabled"),
     ]);
+    identitySignalStates = Object.fromEntries((identitySignalRows ?? []).map((row) => [row.identity_id, row.is_enabled]));
     const identityByAccountId = new Map(
       (identityAssignmentRows ?? []).map((assignment) => [assignment.account_id, assignment.identity_id]),
     );
@@ -1581,6 +1587,7 @@ async function renderPrivateAppPage({
           accounts={identityAccounts}
           connectors={ninjaConnectors.filter((connector) => connector.identityId !== null)}
           identities={identitySummaries}
+          signalStates={identitySignalStates}
           workspaceId={selection.workspace.id}
         />
       )}

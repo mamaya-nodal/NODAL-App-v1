@@ -12,6 +12,7 @@ import {
   assignIdentityAccount,
   createIdentityDirectly,
   sendIdentityConnectorInstallation,
+  setIdentitySignal,
   unassignIdentityAccount,
 } from "./identity-actions";
 import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
@@ -20,6 +21,7 @@ type Props = Readonly<{
   accounts: IdentityAccount[];
   connectors: NinjaConnectorStatus[];
   identities: IdentitySummary[];
+  signalStates: Readonly<Record<string, boolean>>;
   workspaceId: string;
 }>;
 
@@ -37,7 +39,7 @@ function accountState(account: IdentityAccount) {
   return "Activa";
 }
 
-export function IdentitiesWorkspace({ accounts, connectors, identities, workspaceId }: Props) {
+export function IdentitiesWorkspace({ accounts, connectors, identities, signalStates, workspaceId }: Props) {
   const router = useRouter();
   const createFormRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
@@ -85,6 +87,7 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, workspac
           const connector = connectors.find((candidate) => candidate.identityId === identity.id) ?? null;
           const installation = identity.connectorInstallation;
           const installationAvailable = installation !== null && installation.status !== "failed";
+          const signalEnabled = signalStates[identity.id] ?? true;
           const liveAccounts = identity.accounts.filter((account) => account.state !== "closed").length;
           const closedAccounts = identity.accounts.filter((account) => account.state === "closed").length;
           return <details className="identity-card" key={identity.id}>
@@ -131,6 +134,13 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, workspac
                       {pending ? "Enviando…" : installationAvailable ? "Reenviar instalación" : "Enviar instalación"}
                     </button>
                 </div>
+              </div>
+
+              <div className="identity-signal-row">
+                <span><strong>Recepción de operaciones</strong><small>{signalEnabled ? "Activa" : "Pausada"}</small></span>
+                <button aria-pressed={signalEnabled} className={`identity-signal-toggle${signalEnabled ? " is-on" : ""}`} disabled={pending || identity.onboardingStatus !== "approved"} onClick={() => run(() => setIdentitySignal(identity.id, !signalEnabled))} type="button">
+                  {signalEnabled ? "Apagar" : "Encender"}
+                </button>
               </div>
 
               <div className="identity-subsection-title"><strong>Cuentas</strong><span>{identity.accounts.length}</span></div>

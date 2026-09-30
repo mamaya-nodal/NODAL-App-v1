@@ -1,3 +1,8 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useSyncExternalStore, useTransition } from "react";
+
 import type { DetectedNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
 import { createDetectedPurchase } from "./purchase-actions";
@@ -16,19 +21,60 @@ type Props = {
   wallets: ReadonlyArray<{ balanceInCents: number; id: string; name: string }>;
 };
 
+const omissionsChangedEvent = "nodal:ninja-omissions-changed";
+
+function subscribeToOmissions(callback: () => void) {
+  window.addEventListener(omissionsChangedEvent, callback);
+  return () => window.removeEventListener(omissionsChangedEvent, callback);
+}
+
+function readOmissions(key: string) {
+  try { return window.sessionStorage.getItem(key) ?? "[]"; } catch { return "[]"; }
+}
+
+function parseOmissions(value: string): ReadonlySet<string> {
+  try {
+    const keys: unknown = JSON.parse(value);
+    return new Set(Array.isArray(keys) ? keys.filter((key): key is string => typeof key === "string") : []);
+  } catch { return new Set(); }
+}
+
 export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, excludedAccountKeys, registeredAccountKeys, mode, online, period, periodId, wallets }: Props) {
+  const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
+  const omissionStorageKey = `nodal:omitted-ninja-accounts:${connectorId}`;
+  const omittedKeys = parseOmissions(useSyncExternalStore(subscribeToOmissions, () => readOmissions(omissionStorageKey), () => "[]"));
   const detectedPropAccounts = accounts.filter((account) => account.type === "prop");
   const propAccounts = detectedPropAccounts.filter((account) => {
     const key = ninjaAccountRegistrationKey(connectorId, account.connectionName, account.accountName);
-    return !registeredAccountKeys.has(key) && !excludedAccountKeys.has(key);
+    return !registeredAccountKeys.has(key) && !excludedAccountKeys.has(key) && !omittedKeys.has(key);
   });
+
+  function refreshAccounts() {
+    try { window.sessionStorage.removeItem(omissionStorageKey); } catch { /* Sin almacenamiento, no hay omisiones guardadas. */ }
+    window.dispatchEvent(new Event(omissionsChangedEvent));
+    startRefresh(() => router.refresh());
+  }
+
+  function omitAccount(account: DetectedNinjaAccount) {
+    const key = ninjaAccountRegistrationKey(connectorId, account.connectionName, account.accountName);
+    const next = new Set([...omittedKeys, key]);
+    try { window.sessionStorage.setItem(omissionStorageKey, JSON.stringify([...next])); } catch { return; }
+    window.dispatchEvent(new Event(omissionsChangedEvent));
+  }
+
   return (
     <section className="ninja-detections" aria-labelledby="ninja-detections-title">
       <div className="ninja-detections-heading">
         <h3 id="ninja-detections-title">NinjaTrader</h3>
-        <span className={`ninja-live-badge${online ? "" : " offline"}`}>
-          {online ? "Conectado" : "Sin señal"}
-        </span>
+        <div className="ninja-detections-controls">
+          <button className="secondary-action" disabled={refreshing} onClick={refreshAccounts} title="Volver a mostrar cuentas omitidas y actualizar el listado" type="button">
+            {refreshing ? "Actualizando…" : "Actualizar"}
+          </button>
+          <span className={`ninja-live-badge${online ? "" : " offline"}`}>
+            {online ? "Conectado" : "Sin señal"}
+          </span>
+        </div>
       </div>
       {propAccounts.length === 0 ? <p className="ninja-empty">Sin cuentas nuevas</p> : null}
       {propAccounts.length > 0 ? (
@@ -48,7 +94,13 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, exclu
               <label>Precio de compra (USD)<input inputMode="decimal" min="0" name="price" placeholder="Completar" required step="0.01" type="number" /></label>
               <PurchasePaymentFields wallets={[...wallets]} />
             </div>
-            <div className="ninja-detected-footer"><p className="ninja-detected-note">Primera detección: {account.suggestedPurchaseDate}</p><button className="primary-action" disabled={!companyIds[account.companyCode?.toLowerCase() ?? ""]} type="submit">Registrar cuenta</button></div>
+            <div className="ninja-detected-footer">
+              <p className="ninja-detected-note">Primera detección: {account.suggestedPurchaseDate}</p>
+              <div className="ninja-detected-actions">
+                <button className="secondary-action" onClick={() => omitAccount(account)} type="button">Omitir</button>
+                <button className="primary-action" disabled={!companyIds[account.companyCode?.toLowerCase() ?? ""]} type="submit">Registrar cuenta</button>
+              </div>
+            </div>
           </form>
         ))}</div>
       ) : null}

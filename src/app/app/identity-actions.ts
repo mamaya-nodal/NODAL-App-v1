@@ -131,3 +131,23 @@ export async function unassignIdentityAccount(identityId: string, accountId: str
   revalidatePath("/app");
   return { ok: true, message: "Asignación retirada con trazabilidad." };
 }
+
+export async function setIdentitySignal(identityId: string, enabled: boolean): Promise<ActionResult> {
+  if (!isUuid(identityId)) return { ok: false, message: "La identidad no es válida." };
+  const { supabase, user } = await authenticatedClient();
+  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  const { error } = await supabase.rpc("set_ninja_identity_signal", {
+    target_enabled: enabled,
+    target_identity_id: identityId,
+  });
+  if (error) {
+    return {
+      ok: false,
+      message: error.message.includes("operation in progress")
+        ? "Esperá a que cierre la operación antes de cambiar la recepción."
+        : "No se pudo cambiar la recepción de esta identidad.",
+    };
+  }
+  revalidatePath("/app");
+  return { ok: true, message: enabled ? "Recepción activada." : "Recepción pausada." };
+}

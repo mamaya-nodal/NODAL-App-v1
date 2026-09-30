@@ -5,7 +5,7 @@ import type { IdentitySummary } from "@/modules/identities/domain/identity-summa
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("./identity-actions", () => ({ assignIdentityAccount: vi.fn(), createIdentityDirectly: vi.fn(),
-  sendIdentityConnectorInstallation: vi.fn(), unassignIdentityAccount: vi.fn() }));
+  sendIdentityConnectorInstallation: vi.fn(), unassignIdentityAccount: vi.fn(), setIdentitySignal: vi.fn() }));
 vi.mock("./ninja-connector-panel", () => ({ NinjaConnectorPanel: ({ pairingLabel }: { pairingLabel: string }) =>
   createElement("button", {}, pairingLabel) }));
 import { IdentitiesWorkspace } from "./identities-workspace";
@@ -14,7 +14,7 @@ const identity: IdentitySummary = { id: "identity", firstName: "Test", lastName:
   onboardingStatus: "approved", credentialsStatus: "pending", documentationStatus: "pending", driveFolderUrl: null,
   accounts: [], connectorInstallation: null, resultTotalInCents: 0, payoutTotalInCents: 0 };
 function render(value = identity) {
-  return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], connectors: [], identities: [value], workspaceId: "workspace" }));
+  return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], connectors: [], identities: [value], signalStates: {}, workspaceId: "workspace" }));
 }
 describe("identity pairing is independent of email delivery", () => {
   it("offers a code after unlinking without requiring another email", () => {
