@@ -370,7 +370,7 @@ h1 {
 }
 .nodal-loading-card h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.5rem); text-align: center; }
 .nodal-loading-mark { position: relative; display: grid; width: 58px; height: 58px; place-items: center; color: var(--brand); }
-.nodal-loading-mark svg { z-index: 1; width: 36px; height: 36px; fill: currentColor; }
+.nodal-loading-mark img { z-index: 1; display: block; width: 48px; height: 40px; object-fit: contain; }
 .nodal-loading-mark::before {
   position: absolute;
   inset: 1px;

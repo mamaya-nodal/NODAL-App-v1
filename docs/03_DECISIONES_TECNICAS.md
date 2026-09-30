@@ -1,5 +1,14 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-125 - Marca oficial en animación y favicon
+
+- **Fecha:** 2026-09-30. Ajuste visual solicitado por Mauricio.
+- **Resolución:** reemplaza el monograma genérico de carga por el símbolo
+  oficial de NODAL, conservando transparencia y animación. El mismo recurso se
+  publica como icono de la aplicación para que aparezca en la pestaña del
+  navegador.
+- **Alcance:** cambio visual; no modifica autenticación, datos ni operación.
+
 ### APP-124 - Escala diaria en el gráfico de Inicio y carga animada
 
 - **Fecha:** 2026-09-30. Ajuste de experiencia solicitado durante pruebas.
