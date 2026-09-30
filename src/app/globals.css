@@ -8093,3 +8093,15 @@ html[data-theme="day"] .manual-coverage-close { background: #ffffff; }
   .preview-account-detail { grid-template-columns: 1fr; }
   .admin-user-preview-banner { align-items: flex-start; flex-direction: column; }
 }
+
+/* APP-127: las tarjetas de Operaciones descansan sobre el fondo común de la app. */
+.nodal-workspace #operaciones,
+.nodal-workspace #operaciones > .daily-preview-panel {
+  background: transparent;
+  box-shadow: none;
+}
+
+.nodal-workspace #operaciones > .daily-preview-panel {
+  border: 0;
+  border-radius: 0;
+}

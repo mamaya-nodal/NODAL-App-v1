@@ -1,5 +1,13 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-127 - Fondo unificado en Operaciones
+
+- **Fecha:** 2026-09-30. Ajuste visual solicitado al comparar Operaciones con
+  Cuentas.
+- **Resolución:** la sección y el contenedor exterior de Control Diario quedan
+  transparentes en ambos temas. Las tarjetas, sus bordes y sus fondos internos
+  conservan su diseño actual.
+
 ### APP-126 - Margen visual del favicon
 
 - **Fecha:** 2026-09-30. Ajuste solicitado tras revisar el icono en navegador.
