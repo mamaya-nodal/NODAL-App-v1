@@ -1082,8 +1082,14 @@ vigente sin aprobacion y evidencia suficiente.
   límite visual y no dejan una pantalla vacía.
 - **Región de ejecución:** durante el incidente de latencia de Supabase del
   30/09, Vercel atendía las funciones desde `iad1`, dentro de la zona afectada.
-  La aplicación fija una única región `gru1`, disponible también en el plan
-  Hobby, para evitar esa ruta y acercar la ejecución a los usuarios argentinos.
+  La primera mitigación en `gru1` siguió alcanzando el proyecto por una ruta
+  degradada; una lectura mínima demoró 63,9 segundos. La aplicación fija una
+  única región `sfo1`, disponible también en el plan Hobby, para probar una
+  entrada occidental que no dependa del PoP oriental afectado.
+- **Salud verificable:** `/api/health?database=1` realiza una lectura protegida
+  sin devolver filas ni datos personales, la interrumpe a los ocho segundos y
+  publica únicamente disponibilidad y latencia. El chequeo básico continúa sin
+  tocar la base.
 - **Alcance:** no se inventan resultados parciales ni se reemplazan errores por
   colecciones vacías. El límite sólo decide qué interfaz ve el usuario; las
   escrituras económicas continúan fuera de los reintentos automáticos.
