@@ -3,6 +3,11 @@ export type HomeDailyResult = Readonly<{
   resultInCents: number | null;
 }>;
 
+export type HomeDailyHistoryPoint = Readonly<{
+  operatedOn: string;
+  resultInCents: number;
+}>;
+
 export type HomePerformance = Readonly<{
   averageInCents: number | null;
   bestInCents: number | null;
@@ -32,6 +37,16 @@ export type CapitalHistoryControl = Readonly<{
   periodId: string;
 }>;
 
+export function buildHomeDailyHistory(results: readonly HomeDailyResult[]): HomeDailyHistoryPoint[] {
+  const byDay = new Map<string, number>();
+  for (const result of results) {
+    if (result.resultInCents === null) continue;
+    byDay.set(result.operatedOn, (byDay.get(result.operatedOn) ?? 0) + result.resultInCents);
+  }
+  return [...byDay].sort(([left], [right]) => left.localeCompare(right))
+    .map(([operatedOn, resultInCents]) => ({ operatedOn, resultInCents }));
+}
+
 export type CapitalHistoryWalletMovement = Readonly<{
   amountInCents: number;
   kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker" | "wallet_to_wallet";
@@ -43,13 +58,7 @@ function sum(values: number[]) {
 }
 
 export function buildHomePerformance(results: HomeDailyResult[]): HomePerformance {
-  const byDay = new Map<string, number>();
-  for (const result of results) {
-    if (result.resultInCents === null) continue;
-    byDay.set(result.operatedOn, (byDay.get(result.operatedOn) ?? 0) + result.resultInCents);
-  }
-
-  const dailyTotals = [...byDay.values()];
+  const dailyTotals = buildHomeDailyHistory(results).map((point) => point.resultInCents);
   if (dailyTotals.length === 0) {
     return { averageInCents: null, bestInCents: null, worstInCents: null };
   }

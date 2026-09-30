@@ -44,6 +44,7 @@ import {
 } from "@/modules/summary/domain/operational-summary";
 import {
   buildCapitalHistory,
+  buildHomeDailyHistory,
   buildHomePerformance,
   type CapitalHistoryPoint,
   type HomePerformance,
@@ -366,6 +367,7 @@ async function renderPrivateAppPage({
   });
   let capitalHistory: CapitalHistoryPoint[] = [];
   let homePerformance: HomePerformance = buildHomePerformance([]);
+  let homeDailyHistory = buildHomeDailyHistory([]);
   let personalDashboard: PersonalDashboardData | undefined;
   let accountingPeriods: AccountingPeriodView[] = [];
   let economicTrace: EconomicTraceItem[] = [];
@@ -1241,12 +1243,14 @@ async function renderPrivateAppPage({
           summary,
         }] : [];
       });
-    homePerformance = buildHomePerformance((dailyControlRows ?? []).map((control) => ({
+    const homeDailyResults = (dailyControlRows ?? []).map((control) => ({
       operatedOn: control.operated_on,
       resultInCents: control.operating_result_cents === null
         ? null
         : Number(control.operating_result_cents),
-    })));
+    }));
+    homePerformance = buildHomePerformance(homeDailyResults);
+    homeDailyHistory = buildHomeDailyHistory(homeDailyResults);
     capitalHistory = buildCapitalHistory({
       periods: selection.workspace.periods
         .filter((workspacePeriod) => workspacePeriod.periodMonth <= selection.period!.periodMonth),
@@ -1371,6 +1375,7 @@ async function renderPrivateAppPage({
         <HomeOverview
           capitalHistory={capitalHistory}
           dashboard={personalDashboard}
+          dailyHistory={homeDailyHistory}
           liveBrokerBalance={liveNinjaBrokerBalance}
           ninjaOnline={connectorOnline}
           openingSetupPreview={openingSetupEligible}

@@ -1,5 +1,20 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-124 - Escala diaria en el gráfico de Inicio y carga animada
+
+- **Fecha:** 2026-09-30. Ajuste de experiencia solicitado durante pruebas.
+- **Gráfico:** Inicio permite alternar entre Mes y Día. La escala diaria agrega
+  los resultados confirmados de Control Diario por fecha operativa; no interpola
+  días ni fabrica valores. La escala mensual mantiene la serie y métricas
+  existentes. Un único dato se dibuja como barra para que siga siendo visible,
+  y la línea de cero representa correctamente valores negativos.
+- **Carga:** la pantalla privada incorpora una animación de marca en bucle con
+  indicador de progreso, respetando la preferencia de movimiento reducido del
+  sistema.
+- **Límite:** la escala mensual necesita más de un período para mostrar una
+  tendencia; la escala diaria permite inspeccionar los resultados disponibles
+  dentro del período actual.
+
 ### APP-123 - Revinculación de identidades independiente del correo
 
 - **Fecha:** 2026-09-30. Caso confirmado de Natalia, identidad de Alfred.

@@ -358,6 +358,50 @@ h1 {
   font-size: clamp(2.1rem, 7vw, 3.4rem);
 }
 
+.recovery-page.nodal-loading-page { width: 100%; max-width: none; margin: 0; padding: 24px; }
+.nodal-loading-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  width: min(560px, 100%);
+  padding: 44px 36px 34px;
+  overflow: hidden;
+}
+.nodal-loading-card h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.5rem); text-align: center; }
+.nodal-loading-mark { position: relative; display: grid; width: 58px; height: 58px; place-items: center; color: var(--brand); }
+.nodal-loading-mark svg { z-index: 1; width: 36px; height: 36px; fill: currentColor; }
+.nodal-loading-mark::before {
+  position: absolute;
+  inset: 1px;
+  border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent);
+  border-radius: 50%;
+  content: "";
+  animation: nodal-load-pulse 2s ease-out infinite;
+}
+.nodal-loading-mark i {
+  position: absolute;
+  z-index: 2;
+  top: 3px;
+  left: 27px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand);
+  transform-origin: 2px 26px;
+  animation: nodal-load-orbit 2.4s linear infinite;
+}
+.nodal-loading-mark i:nth-of-type(2) { opacity: .62; animation-delay: -.8s; }
+.nodal-loading-mark i:nth-of-type(3) { opacity: .32; animation-delay: -1.6s; }
+.nodal-loading-track { width: min(210px, 70%); height: 3px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--brand) 15%, var(--line)); }
+.nodal-loading-track i { display: block; width: 38%; height: 100%; border-radius: inherit; background: var(--brand); animation: nodal-load-progress 1.35s ease-in-out infinite; }
+@keyframes nodal-load-orbit { to { transform: rotate(360deg); } }
+@keyframes nodal-load-pulse { 0% { opacity: .7; transform: scale(.72); } 85%, 100% { opacity: 0; transform: scale(1.16); } }
+@keyframes nodal-load-progress { 0% { transform: translateX(-110%); } 100% { transform: translateX(370%); } }
+@media (prefers-reduced-motion: reduce) {
+  .nodal-loading-mark::before, .nodal-loading-mark i, .nodal-loading-track i { animation-duration: 6s; }
+}
+
 .recovery-actions {
   display: flex;
   flex-wrap: wrap;
@@ -6156,6 +6200,7 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 .home-chart-axis { stroke: var(--app-border); stroke-width: 1; }
 .home-chart-area { fill: url(#home-capital-fill); }
 .home-chart-line { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
+.home-chart-single-bar { fill: color-mix(in srgb, currentColor 22%, transparent); stroke: currentColor; stroke-width: 2; }
 .home-capital-chart circle { fill: var(--app-panel); stroke: currentColor; stroke-width: 3; cursor: help; transition: r 120ms ease; }
 .home-capital-chart circle:hover,
 .home-capital-chart circle:focus { r: 7px; outline: none; }

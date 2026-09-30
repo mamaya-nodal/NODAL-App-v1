@@ -11,6 +11,7 @@ import {
   payoutDashboardSummary,
   type PersonalDashboardData,
 } from "@/modules/summary/domain/personal-dashboard";
+import type { HomeDailyHistoryPoint } from "@/modules/summary/domain/home-dashboard";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
 import type { PeriodOpeningRecord } from "@/modules/summary/domain/opening-snapshot";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
@@ -21,6 +22,7 @@ import { OpeningSnapshotHome } from "./opening-snapshot-panels";
 type HomeOverviewProps = Readonly<{
   capitalHistory: CapitalHistoryPoint[];
   dashboard?: PersonalDashboardData;
+  dailyHistory?: HomeDailyHistoryPoint[];
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
   ninjaOnline?: boolean;
   openingSetupPreview?: boolean;
@@ -32,7 +34,7 @@ type HomeOverviewProps = Readonly<{
 }>;
 
 type ChartMetric = "billing" | "earnings";
-type ChartPoint = Readonly<{ periodMonth: string; valueInCents: number }>;
+type ChartPoint = Readonly<{ label: string; valueInCents: number }>;
 
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat("es-AR", {
@@ -56,6 +58,11 @@ function formatMonth(periodMonth: string) {
     .replace(".", "");
 }
 
+function formatDay(day: string) {
+  return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short", timeZone: "UTC" })
+    .format(new Date(`${day.slice(0, 10)}T00:00:00Z`)).replace(".", "");
+}
+
 function chartGeometry(history: ChartPoint[]) {
   const width = 720;
   const height = 250;
@@ -64,8 +71,9 @@ function chartGeometry(history: ChartPoint[]) {
   const top = 20;
   const bottom = 34;
   const values = history.map((point) => point.valueInCents);
-  const minimum = values.length ? Math.min(...values, 0) : 0;
-  const maximum = values.length ? Math.max(...values, 0) : 1;
+  const flatZero = values.length > 0 && values.every((value) => value === 0);
+  const minimum = flatZero ? -1 : values.length ? Math.min(...values, 0) : 0;
+  const maximum = flatZero ? 1 : values.length ? Math.max(...values, 0) : 1;
   const span = Math.max(maximum - minimum, 1);
   const x = (index: number) => history.length <= 1
     ? width / 2
@@ -75,7 +83,7 @@ function chartGeometry(history: ChartPoint[]) {
   const line = points
     .map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
     .join(" ");
-  const baseline = height - bottom;
+  const baseline = y(0);
   const area = points.length
     ? `${line} L${points.at(-1)!.x.toFixed(1)} ${baseline} L${points[0].x.toFixed(1)} ${baseline} Z`
     : "";
@@ -87,8 +95,9 @@ function EarningsItem({ label, valueInCents }: Readonly<{ label: string; valueIn
   return <div><span>{label}</span><strong>{formatMoney(valueInCents)}</strong></div>;
 }
 
-export function HomeOverview({ capitalHistory, dashboard, liveBrokerBalance = null, ninjaOnline = false, openingSetupPreview = false, openingSnapshot = null, performance, periodId, periodLabel, summary }: HomeOverviewProps) {
+export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liveBrokerBalance = null, ninjaOnline = false, openingSetupPreview = false, openingSnapshot = null, performance, periodId, periodLabel, summary }: HomeOverviewProps) {
   const [chartMetric, setChartMetric] = useState<ChartMetric>(dashboard ? "earnings" : "billing");
+  const [chartScale, setChartScale] = useState<"day" | "month">("month");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
   const [liveOnline, setLiveOnline] = useState(ninjaOnline);
   const earnings = dashboard?.earnings ?? buildPeriodEarnings({ ownOperationsInCents: summary.traderGainInCents });
@@ -97,14 +106,18 @@ export function HomeOverview({ capitalHistory, dashboard, liveBrokerBalance = nu
   const history = dashboard?.history ?? [];
   const chartHistory = dashboard
     ? history.map((point) => ({
-        periodMonth: point.periodMonth,
+        label: formatMonth(point.periodMonth),
         valueInCents: chartMetric === "earnings" ? point.earningsInCents : point.billingInCents,
       }))
-    : capitalHistory.map((point) => ({ periodMonth: point.periodMonth, valueInCents: point.capitalInCents }));
-  const chart = chartGeometry(chartHistory);
-  const chartTitle = dashboard
+    : capitalHistory.map((point) => ({ label: formatMonth(point.periodMonth), valueInCents: point.capitalInCents }));
+  const visibleChartHistory = chartScale === "day"
+    ? dailyHistory.map((point) => ({ label: formatDay(point.operatedOn), valueInCents: point.resultInCents }))
+    : chartHistory;
+  const chart = chartGeometry(visibleChartHistory);
+  const monthChartTitle = dashboard
     ? chartMetric === "earnings" ? "Ganancias por período" : "Facturación por período"
     : "Capital histórico acumulado";
+  const chartTitle = chartScale === "day" ? "Resultado por día" : monthChartTitle;
   const capabilities = dashboard?.capabilities;
   const hasCapabilities = Boolean(capabilities?.managedDesk || capabilities?.referredDesks || capabilities?.identities);
 
@@ -203,16 +216,20 @@ export function HomeOverview({ capitalHistory, dashboard, liveBrokerBalance = nu
         <div className="home-chart-heading">
           <h2>{chartTitle}</h2>
           <div className="home-chart-actions">
-            {dashboard && <div aria-label="Métrica del gráfico" className="home-chart-switch">
+            <div aria-label="Escala del gráfico" className="home-chart-switch">
+              <button aria-pressed={chartScale === "month"} onClick={() => setChartScale("month")} type="button">Mes</button>
+              <button aria-pressed={chartScale === "day"} onClick={() => setChartScale("day")} type="button">Día</button>
+            </div>
+            {dashboard && chartScale === "month" && <div aria-label="Métrica del gráfico" className="home-chart-switch">
               <button aria-pressed={chartMetric === "earnings"} onClick={() => setChartMetric("earnings")} type="button">Ganancias</button>
               <button aria-pressed={chartMetric === "billing"} onClick={() => setChartMetric("billing")} type="button">Facturación</button>
             </div>}
-            {chartHistory.length > 0 && <strong>{formatMoney(chartHistory.at(-1)!.valueInCents)}</strong>}
+            {visibleChartHistory.length > 0 && <strong>{formatMoney(visibleChartHistory.at(-1)!.valueInCents)}</strong>}
           </div>
         </div>
 
-        {chartHistory.length > 0 ? (
-          <svg viewBox="0 0 720 250" role="img" aria-label={`${chartTitle} mes a mes`}>
+        {visibleChartHistory.length > 0 ? (
+          <svg viewBox="0 0 720 250" role="img" aria-label={chartTitle}>
             <defs>
               <linearGradient id="home-capital-fill" x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
@@ -220,19 +237,30 @@ export function HomeOverview({ capitalHistory, dashboard, liveBrokerBalance = nu
               </linearGradient>
             </defs>
             <line className="home-chart-axis" x1="18" x2="702" y1={chart.baseline} y2={chart.baseline} />
+          {chart.points.length === 1 ? (
+            <rect
+              className="home-chart-single-bar"
+              height={Math.max(Math.abs(chart.baseline - chart.points[0].y), 3)}
+              rx="6"
+              width="36"
+              x={chart.points[0].x - 18}
+              y={Math.min(chart.baseline, chart.points[0].y) - (chart.baseline === chart.points[0].y ? 1.5 : 0)}
+            />
+          ) : <>
             <path className="home-chart-area" d={chart.area} />
             <path className="home-chart-line" d={chart.line} />
+          </>}
             {chart.points.map((point, index) => (
-              <g key={point.periodMonth}>
+              <g key={`${visibleChartHistory[index].label}-${index}`}>
                 <circle cx={point.x} cy={point.y} r={index === chart.points.length - 1 ? 5 : 3.5} tabIndex={0}>
-                  <title>{`${formatMonth(point.periodMonth)}: ${formatMoney(point.valueInCents)}`}</title>
+                  <title>{`${visibleChartHistory[index].label}: ${formatMoney(point.valueInCents)}`}</title>
                 </circle>
-                <text x={point.x} y="241" textAnchor="middle">{formatMonth(point.periodMonth)}</text>
+                <text x={point.x} y="241" textAnchor="middle">{visibleChartHistory[index].label}</text>
               </g>
             ))}
           </svg>
         ) : (
-          <div className="home-chart-empty">Sin historial disponible</div>
+          <div className="home-chart-empty">{chartScale === "day" ? "Sin resultados operativos en este período" : "Sin historial disponible"}</div>
         )}
       </article>
 
