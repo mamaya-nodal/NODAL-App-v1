@@ -8095,13 +8095,12 @@ html[data-theme="day"] .manual-coverage-close { background: #ffffff; }
 }
 
 /* APP-127: las tarjetas de Operaciones descansan sobre el fondo común de la app. */
-.nodal-workspace #operaciones,
-.nodal-workspace #operaciones > .daily-preview-panel {
+.nodal-workspace #operaciones {
   background: transparent;
   box-shadow: none;
 }
 
-.nodal-workspace #operaciones > .daily-preview-panel {
-  border: 0;
-  border-radius: 0;
+html[data-theme="day"] .nodal-workspace .real-telemetry-overview {
+  background: transparent;
+  box-shadow: none;
 }

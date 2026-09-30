@@ -4,9 +4,12 @@
 
 - **Fecha:** 2026-09-30. Ajuste visual solicitado al comparar Operaciones con
   Cuentas.
-- **Resolución:** la sección y el contenedor exterior de Control Diario quedan
-  transparentes en ambos temas. Las tarjetas, sus bordes y sus fondos internos
-  conservan su diseño actual.
+- **Hallazgo:** el panel blanco era el resumen `real-telemetry-overview`; una
+  regla de tema claro le asignaba `background-color` con mayor especificidad y
+  anulaba la transparencia general.
+- **Resolución:** el resumen de telemetría queda transparente en tema claro y
+  la sección Operaciones no agrega un fondo. Las tarjetas internas conservan
+  sus bordes y fondos actuales.
 
 ### APP-126 - Margen visual del favicon
 
