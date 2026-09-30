@@ -3,9 +3,9 @@
 ### APP-126 - Margen visual del favicon
 
 - **Fecha:** 2026-09-30. Ajuste solicitado tras revisar el icono en navegador.
-- **Resolución:** el símbolo conserva el recurso oficial, pero se presenta al
-  81% del ancho del lienzo cuadrado con transparencia alrededor para equilibrar
-  su tamaño junto a otros favicons.
+- **Resolución:** usa un PNG cuadrado con el símbolo oficial al 81% del ancho y
+  margen transparente. Evita un SVG que referenciaba otro PNG externamente y no
+  se renderizaba como favicon en Chrome.
 
 ### APP-125 - Marca oficial en animación y favicon
 
