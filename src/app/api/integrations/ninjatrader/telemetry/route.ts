@@ -3,6 +3,7 @@ import { requireNinjaConnector } from "@/modules/ninja/server/connector-auth";
 import { persistNinjaTradeTelemetry } from "@/modules/ninja/server/telemetry-persistence";
 import { refreshNinjaTechnicalOperations } from "@/modules/ninja/server/technical-operation-processing";
 import { createClient } from "@/lib/supabase/server";
+import { routeNinjaTelemetry } from "@/modules/ninja/server/intake-routing";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -53,14 +54,18 @@ export async function POST(request: Request) {
   }
 
   // The actual version is supplied at pairing/heartbeat, not inferred here.
-  const persistence = await persistNinjaTradeTelemetry(connector.connectorId, payload);
-  if (persistence.persisted && persistence.acceptedEvents > 0) {
-    await refreshNinjaTechnicalOperations(connector.connectorId);
-  }
+  const routed = await routeNinjaTelemetry(connector.connectorId, payload);
+  if (routed === null) return response({ error: "No se pudo resolver el destino de la señal." }, 503);
+  const results = await Promise.all(routed.map(async ({ batch, destinationConnectorId }) => {
+    const persistence = await persistNinjaTradeTelemetry(destinationConnectorId, batch);
+    if (persistence.persisted && persistence.acceptedEvents > 0) await refreshNinjaTechnicalOperations(destinationConnectorId);
+    return persistence;
+  }));
+  const persisted = results.every((result) => result.persisted);
   return response({
-    accepted: persistence.persisted,
-    acceptedEvents: persistence.acceptedEvents,
+    accepted: persisted,
+    acceptedEvents: results.reduce((sum, result) => sum + result.acceptedEvents, 0),
     batchId: payload.batchId,
-    persistenceReason: persistence.persisted ? undefined : persistence.reason,
-  }, persistence.persisted ? 202 : 503);
+    destinations: routed.length,
+  }, persisted ? 202 : 503);
 }

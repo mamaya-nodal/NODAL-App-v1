@@ -56,12 +56,19 @@ New-Item -ItemType Directory -Force -Path $connectorDirectory | Out-Null
 New-Item -ItemType Directory -Force -Path $addOnDirectory | Out-Null
 if (Test-Path -LiteralPath $connectorConfigPath) {
   Copy-Item -LiteralPath $connectorConfigPath -Destination ($connectorConfigPath + ".before-pairing.bak") -Force
+  $existingLines = Get-Content -LiteralPath $connectorConfigPath
+  $keptLines = @($existingLines | Where-Object { $_ -notmatch '^(BaseUrl|PairingCode)=' })
+  @(
+    "BaseUrl=$normalizedBaseUrl"
+    "PairingCode=$normalizedCode"
+  ) + $keptLines | Set-Content -LiteralPath $connectorConfigPath -Encoding utf8
+} else {
+  @(
+    "BaseUrl=$normalizedBaseUrl"
+    "PairingCode=$normalizedCode"
+  ) | Set-Content -LiteralPath $connectorConfigPath -Encoding utf8
 }
-@(
-  "BaseUrl=$normalizedBaseUrl"
-  "PairingCode=$normalizedCode"
-) | Set-Content -LiteralPath $connectorConfigPath -Encoding utf8
 
 Copy-Item -LiteralPath $connectorSourcePath -Destination $installedConnectorPath -Force
 
-Write-Output "Conector instalado para NODAL App. Ahora compilá NodalNinjaConnector en NinjaTrader; el código se canjeará una sola vez."
+Write-Output "Conector preparado para NODAL App. Si ya estaba instalado, sus vínculos e historial se conservaron. Ahora compilá NodalNinjaConnector en NinjaTrader; el código se canjeará una sola vez."

@@ -15,7 +15,7 @@ describe("Ninja account registration inbox", () => {
         connectionName: "Ninja", firstSeenAt: "2026-09-30T12:00:00Z", phase: "Evaluation", product: "Flex",
         suggestedPurchaseDate: "2026-09-30", type: "prop" }],
       companyIds: { lucid: "company-id" }, connectorId: "connector-id", excludedAccountKeys: new Set<string>(),
-      registeredAccountKeys: new Set<string>(), mode: "real", online: true, period: "2026-09-01", periodId: "period-id", wallets: [],
+      registeredAccountKeys: new Set<string>(), mode: "real", online: true, pendingBrokerAccounts: [], period: "2026-09-01", periodId: "period-id", wallets: [],
     }));
     expect(html).toContain("Actualizar");
     expect(html).toContain("Omitir");

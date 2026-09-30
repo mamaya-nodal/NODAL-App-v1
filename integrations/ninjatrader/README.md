@@ -17,6 +17,12 @@ renovación pendiente y autorización rechazada en NinjaScript Output.
 La configuración se reemplaza atómicamente, con respaldo, después de cifrarla.
 Las desconexiones de red no borran cuentas, operaciones ni credenciales.
 
+La versión 0.6 permite usar la misma instalación con más de un espacio NODAL.
+Al ejecutar `INSTALAR-NODAL.cmd` con un código adicional, conserva la sesión
+existente y agrega el destino. El titular enciende o pausa cada identidad desde
+su app; el servidor fecha cada cambio y evita duplicar el mismo evento entre
+contabilidades. Las props ya registradas permanecen en su contabilidad original.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.
@@ -29,7 +35,8 @@ Las desconexiones de red no borran cuentas, operaciones ni credenciales.
 
 Después de vincularse, el conector continúa enviando aunque el alumno cierre la
 web o salga de su sesión de Google. La credencial puede renovarse y revocarse
-desde NODAL. Se admite un conector activo por usuario y por identidad aprobada.
+desde NODAL. Se admite un destino por usuario y por identidad aprobada dentro
+de una misma instalación.
 Una nueva vinculación rota las credenciales y conserva el identificador lógico
 y todo su historial dentro del mismo usuario e identidad.
 

@@ -88,6 +88,7 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, signalSt
           const installation = identity.connectorInstallation;
           const installationAvailable = installation !== null && installation.status !== "failed";
           const signalEnabled = signalStates[identity.id] ?? true;
+          const signalAvailable = connector !== null;
           const liveAccounts = identity.accounts.filter((account) => account.state !== "closed").length;
           const closedAccounts = identity.accounts.filter((account) => account.state === "closed").length;
           return <details className="identity-card" key={identity.id}>
@@ -137,8 +138,8 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, signalSt
               </div>
 
               <div className="identity-signal-row">
-                <span><strong>Recepción de operaciones</strong><small>{signalEnabled ? "Activa" : "Pausada"}</small></span>
-                <button aria-pressed={signalEnabled} className={`identity-signal-toggle${signalEnabled ? " is-on" : ""}`} disabled={pending || identity.onboardingStatus !== "approved"} onClick={() => run(() => setIdentitySignal(identity.id, !signalEnabled))} type="button">
+                <span><strong>Recepción de operaciones</strong><small>{signalAvailable ? signalEnabled ? "Activa" : "Pausada" : "Sin conector"}</small></span>
+                <button aria-pressed={signalAvailable && signalEnabled} className={`identity-signal-toggle${signalAvailable && signalEnabled ? " is-on" : ""}`} disabled={pending || identity.onboardingStatus !== "approved" || !signalAvailable} onClick={() => run(() => setIdentitySignal(identity.id, !signalEnabled))} type="button">
                   {signalEnabled ? "Apagar" : "Encender"}
                 </button>
               </div>

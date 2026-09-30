@@ -10,6 +10,7 @@ export type SnapshotPersistenceResult =
 export async function persistNinjaSnapshot(
   connectorId: string,
   snapshot: NinjaInventorySnapshot,
+  physicalConnectorId = connectorId,
 ): Promise<SnapshotPersistenceResult> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -25,6 +26,7 @@ export async function persistNinjaSnapshot(
     event_id: snapshot.eventId,
     machine_id: null,
     observed_at: snapshot.observedAt,
+    physical_connector_id: physicalConnectorId,
   }, { onConflict: "event_id", ignoreDuplicates: true });
 
   if (error) return { persisted: false, reason: "storage_error" };

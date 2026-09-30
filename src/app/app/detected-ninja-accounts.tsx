@@ -5,7 +5,7 @@ import { useSyncExternalStore, useTransition } from "react";
 
 import type { DetectedNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
-import { createDetectedPurchase } from "./purchase-actions";
+import { claimDetectedBrokerAccount, createDetectedPurchase } from "./purchase-actions";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
 
 type Props = {
@@ -16,6 +16,7 @@ type Props = {
   registeredAccountKeys: ReadonlySet<string>;
   mode: string;
   online: boolean;
+  pendingBrokerAccounts: ReadonlyArray<{ accountName: string; connectionName: string; physicalConnectorId: string }>;
   period: string;
   periodId: string;
   wallets: ReadonlyArray<{ balanceInCents: number; id: string; name: string }>;
@@ -39,7 +40,7 @@ function parseOmissions(value: string): ReadonlySet<string> {
   } catch { return new Set(); }
 }
 
-export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, excludedAccountKeys, registeredAccountKeys, mode, online, period, periodId, wallets }: Props) {
+export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, excludedAccountKeys, registeredAccountKeys, mode, online, pendingBrokerAccounts, period, periodId, wallets }: Props) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const omissionStorageKey = `nodal:omitted-ninja-accounts:${connectorId}`;
@@ -104,6 +105,16 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, exclu
           </form>
         ))}</div>
       ) : null}
+      {pendingBrokerAccounts.length > 0 ? <div className="ninja-broker-claims">
+        <p>Confirmá únicamente las subcuentas broker que pertenecen a esta contabilidad.</p>
+        {pendingBrokerAccounts.map((account) => <form action={claimDetectedBrokerAccount} className="ninja-broker-claim" key={`${account.physicalConnectorId}-${account.connectionName}-${account.accountName}`}>
+          <input name="physical_connector_id" type="hidden" value={account.physicalConnectorId} />
+          <input name="connection_name" type="hidden" value={account.connectionName} />
+          <input name="account_name" type="hidden" value={account.accountName} />
+          <span><strong>{account.accountName}</strong><small>{account.connectionName}</small></span>
+          <button className="secondary-action" type="submit">Es mía</button>
+        </form>)}
+      </div> : null}
     </section>
   );
 }

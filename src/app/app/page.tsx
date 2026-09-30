@@ -374,6 +374,7 @@ async function renderPrivateAppPage({
   let identityAccounts: IdentityAccount[] = [];
   let identitySummaries: IdentitySummary[] = [];
   let identitySignalStates: Record<string, boolean> = {};
+  let unclaimedBrokerAccounts: Array<{ accountName: string; connectionName: string; physicalConnectorId: string; proposedDestinationConnectorId: string }> = [];
   let openingSnapshot: PeriodOpeningRecord | null = null;
   let openingSetupEligible = false;
   let periodOpening: OperationalOpeningSnapshot = {
@@ -403,6 +404,7 @@ async function renderPrivateAppPage({
       { data: ninjaRegistrationTransitionRows },
       { data: ninjaBrokerBalanceRows },
       { data: ninjaBrokerAccountAliasRows },
+      { data: unclaimedBrokerRows },
       { data: historicalPurchaseRows },
       { data: historicalAccountRows },
       { data: historicalOperationEntryRows },
@@ -489,6 +491,9 @@ async function renderPrivateAppPage({
         supabase
           .from("ninja_broker_account_aliases")
           .select("connection_name,account_name,display_name"),
+        supabase
+          .from("ninja_unclaimed_broker_accounts")
+          .select("physical_connector_id,connection_name,account_name,proposed_destination_connector_id"),
         supabase
           .from("purchases")
           .select("id, account_id, period_id, purchase_number, purchased_on, price_cents, funds_origin, wallet_id")
@@ -654,6 +659,13 @@ async function renderPrivateAppPage({
         technicalTradeCount: sessions.length,
       }] as const];
     }));
+    unclaimedBrokerAccounts = (unclaimedBrokerRows ?? []).flatMap((row) =>
+      row.proposed_destination_connector_id ? [{
+        accountName: row.account_name,
+        connectionName: row.connection_name,
+        physicalConnectorId: row.physical_connector_id,
+        proposedDestinationConnectorId: row.proposed_destination_connector_id,
+      }] : []);
     ninjaInventoryRevision = buildNinjaInventoryRevision(ninjaInventories);
     const connectedNinjaAccounts = ninjaInventories.flatMap((inventory) =>
       inventory.accounts.filter(
@@ -1440,7 +1452,7 @@ async function renderPrivateAppPage({
               account.firstSeenAt ?? inventory.observed_at,
             ));
             const companyIds = Object.fromEntries(companies.flatMap((company) => [[company.code.toLowerCase(), company.id], [company.displayName.toLowerCase(), company.id]]));
-            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} excludedAccountKeys={excludedNinjaAccountKeys} key={inventory.connector_id} registeredAccountKeys={registeredNinjaAccountKeys} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} wallets={walletViews} />;
+            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} excludedAccountKeys={excludedNinjaAccountKeys} key={inventory.connector_id} registeredAccountKeys={registeredNinjaAccountKeys} mode={selection.workspace.modality} online={connectorOnline} pendingBrokerAccounts={unclaimedBrokerAccounts.filter((account) => account.proposedDestinationConnectorId === inventory.connector_id)} period={selection.period!.periodMonth} periodId={selection.period!.id} wallets={walletViews} />;
           })}
 
           {openingSnapshot ? <OpeningAccountReferences opening={openingSnapshot} /> : null}

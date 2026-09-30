@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.5
+// NODAL Ninja Connector v0.6
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -23,7 +23,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 {
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.5";
+		private const string ConnectorVersion = "0.6";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
@@ -446,16 +446,18 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		private async Task<bool> EnsureAuthorizationAsync()
 		{
-			if (settings.HasFreshAccess) return true;
+			if (settings.HasFreshAccess && !settings.HasPairingCode) return true;
 			await authorizationLock.WaitAsync();
 			try
 			{
-				if (settings.HasFreshAccess) return true;
+				if (settings.HasFreshAccess)
+					return settings.HasPairingCode ? await LinkAdditionalDestinationAsync() : true;
 				if (settings.HasRefresh)
 				{
 					using (HttpResponseMessage response = await PostAsync("/api/integrations/ninjatrader/refresh", "{}", settings.RefreshToken))
 					{
-						if (response.IsSuccessStatusCode && await ApplySessionAsync(response)) return true;
+						if (response.IsSuccessStatusCode && await ApplySessionAsync(response, false))
+							return settings.HasPairingCode ? await LinkAdditionalDestinationAsync() : true;
 						Write(response.StatusCode == HttpStatusCode.Unauthorized
 							? "AUTORIZACION_RECHAZADA|La sesión venció o fue revocada. Los registros y la configuración se conservan."
 							: "RENOVACION_PENDIENTE|NODAL no confirmó la renovación. Se reintentará conservando la vinculación. HTTP=" + (int)response.StatusCode);
@@ -472,7 +474,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 				string payload = "{\"code\":\"" + Escape(settings.PairingCode) + "\",\"connectorVersion\":\"" + ConnectorVersion + "\"}";
 				using (HttpResponseMessage response = await PostAsync("/api/integrations/ninjatrader/pair", payload, null))
 				{
-					if (!response.IsSuccessStatusCode || !await ApplySessionAsync(response))
+					if (!response.IsSuccessStatusCode || !await ApplySessionAsync(response, true))
 					{
 						Write("VINCULACION_RECHAZADA|El código venció o ya fue utilizado.");
 						return false;
@@ -493,7 +495,23 @@ namespace NinjaTrader.NinjaScript.AddOns
 			}
 		}
 
-		private async Task<bool> ApplySessionAsync(HttpResponseMessage response)
+		private async Task<bool> LinkAdditionalDestinationAsync()
+		{
+			string payload = "{\"code\":\"" + Escape(settings.PairingCode) + "\"}";
+			using (HttpResponseMessage response = await PostAsync("/api/integrations/ninjatrader/link", payload, settings.AccessToken))
+			{
+				if (!response.IsSuccessStatusCode)
+				{
+					Write("VINCULO_ADICIONAL_RECHAZADO|El código venció, ya fue utilizado o el destino ya está vinculado.");
+					return false;
+				}
+			}
+			settings.ClearPairingCode();
+			Write("VINCULO_ADICIONAL_OK|La instalación conserva sus vínculos y el destino se controla desde NODAL.");
+			return true;
+		}
+
+		private async Task<bool> ApplySessionAsync(HttpResponseMessage response, bool clearPairingCode)
 		{
 			string json = await response.Content.ReadAsStringAsync();
 			string connectorId = JsonString(json, "connectorId");
@@ -509,7 +527,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 				|| !DateTime.TryParse(refreshExpiresAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out refreshExpiration))
 				return false;
 
-			settings.ApplySession(connectorId, accessToken, accessExpiration.ToUniversalTime(), refreshToken, refreshExpiration.ToUniversalTime());
+			settings.ApplySession(connectorId, accessToken, accessExpiration.ToUniversalTime(), refreshToken, refreshExpiration.ToUniversalTime(), clearPairingCode);
 			return true;
 		}
 
@@ -662,14 +680,14 @@ namespace NinjaTrader.NinjaScript.AddOns
 				return result;
 			}
 
-			public void ApplySession(string connectorId, string accessToken, DateTime accessExpiresAtUtc, string refreshToken, DateTime refreshExpiresAtUtc)
+			public void ApplySession(string connectorId, string accessToken, DateTime accessExpiresAtUtc, string refreshToken, DateTime refreshExpiresAtUtc, bool clearPairingCode)
 			{
 				ConnectorId = connectorId;
 				AccessToken = accessToken;
 				AccessExpiresAtUtc = accessExpiresAtUtc;
 				RefreshToken = refreshToken;
 				RefreshExpiresAtUtc = refreshExpiresAtUtc;
-				PairingCode = string.Empty;
+				if (clearPairingCode) PairingCode = string.Empty;
 				Save();
 			}
 
@@ -677,6 +695,12 @@ namespace NinjaTrader.NinjaScript.AddOns
 			{
 				AccessToken = string.Empty;
 				AccessExpiresAtUtc = DateTime.MinValue;
+				Save();
+			}
+
+			public void ClearPairingCode()
+			{
+				PairingCode = string.Empty;
 				Save();
 			}
 

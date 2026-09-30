@@ -134,6 +134,21 @@ export async function authenticateNinjaConnector(accessToken: string | null): Pr
     : null;
 }
 
+export async function linkNinjaConnectorDestination(connectorId: string, code: string): Promise<boolean> {
+  const normalizedCode = normalizePairingCode(code);
+  if (normalizedCode.length !== 8) return false;
+  const supabase = serviceClient();
+  if (!supabase) throw new ConnectorServiceUnavailable();
+  const { data, error } = await supabase.rpc("link_ninja_connector_destination", {
+    target_code_hash: hashConnectorSecret(normalizedCode),
+    target_physical_connector_id: connectorId,
+  });
+  if (error && !(error.code === "P0001" && ["Pairing code is invalid or expired", "Destination is already linked"].includes(error.message))) {
+    storageFailure("link-destination", error);
+  }
+  return !error && Array.isArray(data) && data.length > 0;
+}
+
 export async function requireNinjaConnector(request: Request): Promise<AuthenticatedConnector | Response> {
   try {
     const connector = await authenticateNinjaConnector(bearerToken(request));

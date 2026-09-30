@@ -697,6 +697,11 @@ h1 {
 .ninja-pairing-code strong { margin-top: 3px; color: var(--ink); font-size: clamp(1.35rem, 4vw, 2rem); letter-spacing: .16em; }
 .ninja-detections-heading, .ninja-account-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .ninja-detections-controls, .ninja-detected-actions { display: flex; align-items: center; gap: 8px; }
+.ninja-broker-claims { display: grid; gap: 8px; margin-top: 14px; }
+.ninja-broker-claims > p { margin: 0; color: var(--muted); font-size: .8rem; }
+.ninja-broker-claim { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 14px; }
+.ninja-broker-claim span { display: grid; gap: 2px; }
+.ninja-broker-claim small { color: var(--muted); }
 .ninja-detections-heading h3, .manual-purchase-heading h3 { margin: 4px 0 0; }
 .ninja-live-badge, .ninja-phase { padding: 8px 12px; border-radius: 999px; background: color-mix(in srgb, var(--brand) 22%, transparent); color: var(--brand); font-weight: 800; }
 .ninja-live-badge.is-offline { background: color-mix(in srgb, var(--muted) 20%, transparent); color: var(--muted); }

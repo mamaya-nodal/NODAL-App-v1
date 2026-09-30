@@ -7,6 +7,7 @@ import { persistNinjaSnapshot } from "@/modules/ninja/server/snapshot-persistenc
 import { processNinjaTransitions } from "@/modules/ninja/server/transition-processing";
 import { ensureNinjaBrokerBalanceBaseline } from "@/modules/ninja/server/broker-balance-processing";
 import { requireNinjaConnector } from "@/modules/ninja/server/connector-auth";
+import { routeNinjaInventory } from "@/modules/ninja/server/intake-routing";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -49,19 +50,19 @@ export async function POST(request: Request) {
   }
 
   const summary = getNinjaSnapshotSummary(payload);
-  if (process.env.NEXT_PUBLIC_APP_ENV === "local") {
-    rememberLocalNinjaSnapshot(connector.connectorId, payload);
-  }
-  const persistence = await persistNinjaSnapshot(connector.connectorId, payload);
-  const [transitions, brokerBaseline] = persistence.persisted
-    ? await Promise.all([
-        processNinjaTransitions(connector.connectorId, payload),
-        ensureNinjaBrokerBalanceBaseline(connector.connectorId, payload),
-      ])
-    : [
-        { detectedChanges: 0, processed: false, reason: persistence.reason },
-        { created: false, processed: false, reason: persistence.reason },
-      ];
+  const routed = await routeNinjaInventory(connector.connectorId, payload);
+  if (routed === null) return response({ error: "No se pudo resolver el destino de la señal." }, 503);
+  const results = await Promise.all(routed.map(async ({ destinationConnectorId, snapshot }) => {
+    if (process.env.NEXT_PUBLIC_APP_ENV === "local") rememberLocalNinjaSnapshot(destinationConnectorId, snapshot);
+    const persistence = await persistNinjaSnapshot(destinationConnectorId, snapshot, connector.connectorId);
+    if (!persistence.persisted) return { persistence };
+    const [transitions, brokerBaseline] = await Promise.all([
+      processNinjaTransitions(destinationConnectorId, snapshot),
+      ensureNinjaBrokerBalanceBaseline(destinationConnectorId, snapshot),
+    ]);
+    return { brokerBaseline, persistence, transitions };
+  }));
+  const accepted = results.every((result) => result.persistence.persisted);
 
   // El inventario técnico se conserva para detección y revisión. Este receptor
   // no crea por sí solo compras ni movimientos económicos.
@@ -69,13 +70,12 @@ export async function POST(request: Request) {
 
   return response(
     {
-      accepted: persistence.persisted,
-      persisted: persistence.persisted,
-      persistenceReason: persistence.persisted ? undefined : persistence.reason,
+      accepted,
+      destinations: routed.length,
+      persisted: accepted,
       summary,
-      brokerBaseline,
-      transitions,
+      results,
     },
-    persistence.persisted ? 202 : 503,
+    accepted ? 202 : 503,
   );
 }

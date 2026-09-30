@@ -96,6 +96,21 @@ export async function createPurchase(formData: FormData): Promise<never> {
   redirect(safeContextUrl(mode, period, "created"));
 }
 
+export async function claimDetectedBrokerAccount(formData: FormData) {
+  const physicalConnectorId = formText(formData, "physical_connector_id");
+  const connectionName = formText(formData, "connection_name");
+  const accountName = formText(formData, "account_name");
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.rpc("claim_ninja_broker_account", {
+    target_account_name: accountName,
+    target_connection_name: connectionName,
+    target_physical_connector_id: physicalConnectorId,
+  });
+  revalidatePath("/app");
+}
+
 export async function createDetectedPurchase(formData: FormData): Promise<never> {
   const mode = formText(formData, "mode");
   const period = formText(formData, "period");

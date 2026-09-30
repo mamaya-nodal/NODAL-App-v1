@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireNinjaConnector, persistNinjaSnapshot, processNinjaTransitions } = vi.hoisted(() => ({
+const { ensureNinjaBrokerBalanceBaseline, requireNinjaConnector, persistNinjaSnapshot, processNinjaTransitions, routeNinjaInventory } = vi.hoisted(() => ({
+  ensureNinjaBrokerBalanceBaseline: vi.fn(),
   requireNinjaConnector: vi.fn(),
   persistNinjaSnapshot: vi.fn(),
   processNinjaTransitions: vi.fn(),
+  routeNinjaInventory: vi.fn(),
 }));
 
 vi.mock("@/modules/ninja/server/connector-auth", () => ({
@@ -11,6 +13,8 @@ vi.mock("@/modules/ninja/server/connector-auth", () => ({
 }));
 vi.mock("@/modules/ninja/server/snapshot-persistence", () => ({ persistNinjaSnapshot }));
 vi.mock("@/modules/ninja/server/transition-processing", () => ({ processNinjaTransitions }));
+vi.mock("@/modules/ninja/server/broker-balance-processing", () => ({ ensureNinjaBrokerBalanceBaseline }));
+vi.mock("@/modules/ninja/server/intake-routing", () => ({ routeNinjaInventory }));
 
 import { POST } from "./route";
 
@@ -38,6 +42,8 @@ beforeEach(() => {
   requireNinjaConnector.mockResolvedValue({ connectorId: "connector-1", ownerUserId: "user-1" });
   persistNinjaSnapshot.mockResolvedValue({ persisted: true });
   processNinjaTransitions.mockResolvedValue({ detectedChanges: 1, processed: true });
+  ensureNinjaBrokerBalanceBaseline.mockResolvedValue({ created: false, processed: true });
+  routeNinjaInventory.mockResolvedValue([{ destinationConnectorId: "connector-1", snapshot: payload }]);
 });
 
 describe("POST /api/integrations/ninjatrader/ingest", () => {
@@ -55,13 +61,13 @@ describe("POST /api/integrations/ninjatrader/ingest", () => {
 
     expect(result.status).toBe(202);
     expect(requireNinjaConnector).toHaveBeenCalledWith(request);
-    expect(persistNinjaSnapshot).toHaveBeenCalledWith("connector-1", payload);
+    expect(persistNinjaSnapshot).toHaveBeenCalledWith("connector-1", payload, "connector-1");
     expect(processNinjaTransitions).toHaveBeenCalledWith("connector-1", payload);
     await expect(result.json()).resolves.toMatchObject({
       accepted: true,
       persisted: true,
       summary: { accountCount: 1 },
-      transitions: { detectedChanges: 1, processed: true },
+      destinations: 1,
     });
   });
 
