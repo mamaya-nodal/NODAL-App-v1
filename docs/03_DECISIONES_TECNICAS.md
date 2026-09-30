@@ -932,7 +932,7 @@ vigente sin aprobacion y evidencia suficiente.
   horas ni aparece como una posición vigente.
 - **Duplicados entre conectores:** La misma cobertura física puede ser
   observada desde varios Ninja. Se consolida cuando coinciden subcuenta,
-  instrumento, dirección, cantidad y resultado, admitiendo hasta cinco
+  instrumento, dirección, cantidad y resultado, admitiendo hasta quince
   segundos de diferencia entre las aperturas informadas.
 - **Estado:** Implementada para pruebas el 2026-09-28 a partir del caso de
   Alfred con dos subcuentas broker sobre una misma operación prop.
@@ -1035,3 +1035,36 @@ vigente sin aprobacion y evidencia suficiente.
   y registrada en Supabase. Ambas operaciones reales permanecen pendientes
   hasta que Mauricio confirme la primera en la app.
 - **Sin cambios de conector:** no requiere reinstalar ni revincular NinjaTrader.
+
+### APP-120 - Continuidad de Alfred y observaciones broker demoradas
+
+- **Fecha:** 2026-09-30. Corrección de datos y endurecimiento técnico; no cambia
+  reglas contables ni operativas.
+- **Hallazgo confirmado:** la revinculación anterior a APP-118 creó conectores
+  distintos para el mismo titular e identidad. Los vínculos, exclusiones y el
+  historial quedaron repartidos entre conectores revocados y activos. En Nati,
+  cinco cuentas externas ya registradas se volvieron a crear como cuentas
+  económicas nuevas, duplicando compras y referencias.
+- **Operaciones del 29/09:** se preservan dos conciliaciones independientes de
+  `-US$ 545,74`: Nati con la subcuenta `2018194` y Lupe con la subcuenta
+  `1584435`. La conciliación de Roberto por `-US$ 175,04` fue creada una sola
+  vez; antes de la confirmación manual no existía un control para ese cierre.
+- **Falso pendiente:** la cobertura `1584435` también fue observada desde el
+  Ninja de Nati con 6,56 segundos de demora. No tenía control contable ni
+  cuentas prop asignadas. Se la excluye como segunda observación de la
+  conciliación de Lupe, conservando el registro técnico y la auditoría.
+- **Prevención:** la deduplicación entre conectores conserva la coincidencia
+  exacta de subcuenta, instrumento, dirección, cantidad y resultado, y amplía
+  la tolerancia temporal de cinco a quince segundos. La migración
+  `20260930120000` quedó aplicada en Supabase y verificada en las tres rutas de
+  comparación de la función activa. `20260930121000` aplica la misma ventana a
+  la confirmación manual para impedir registrar el espejo como trade sin
+  cobertura.
+- **Reparación:** `supabase/repairs/20260930_alfred_connector_continuity.sql`
+  reúne historial y vínculos bajo los conectores activos, fusiona la actividad
+  de las cinco copias de Nati con las cuentas originales y conserva las compras
+  originales del 28/09. Registra el estado previo completo en `audit_events`.
+- **Seguridad:** el script exige titular, identidad y estados exactos, bloquea
+  si cambiaron los conectores o aparecieron referencias inesperadas, y valida
+  al final 25 cuentas reales, 25 vínculos recuperados y los controles 19, 20 y
+  21 sin alterar sus importes.
