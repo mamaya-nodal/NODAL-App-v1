@@ -149,6 +149,19 @@ export async function bootstrapNinjaBrokerBalance(
   const supabase = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+  // A physical installation with additional accounting destinations is only
+  // an authentication/transport endpoint. Its latest persisted snapshot may
+  // belong to a route that is no longer active, so rebuilding a balance here
+  // would recreate that stale balance in the physical connector's owner. The
+  // routed ingest path establishes baselines on the actual destinations.
+  const { data: destinations, error: destinationsError } = await supabase
+    .from("ninja_connector_destinations")
+    .select("destination_connector_id")
+    .eq("physical_connector_id", connectorId);
+  if (destinationsError) return { created: false, processed: false, reason: "storage_error" };
+  if (destinations?.some((row) => row.destination_connector_id !== connectorId)) {
+    return { created: false, processed: true };
+  }
   const { data: latest, error: snapshotError } = await supabase
     .from("ninja_inventory_snapshots")
     .select("event_id, observed_at, accounts")

@@ -1218,3 +1218,26 @@ vigente sin aprobacion y evidencia suficiente.
   `ENTER` sin código mantiene el uso anterior de actualización solamente.
 - **Interfaz:** después de generar un código, la app indica explícitamente si
   debe pegarse en `INSTALAR-NODAL` o en `ACTUALIZAR-NODAL`.
+
+### APP-125 - Reasignación de broker personal y arranque contable limpio
+
+- **Fecha:** 2026-09-30. Reparación puntual con prevención general.
+- **Hallazgo:** la subcuenta broker `2167219` de Sebastián fue observada por el
+  vínculo de identidad de Alfred antes de que existiera el destino personal.
+  Cinco cierres quedaron como lotes técnicos bloqueados en Alfred; ninguno
+  tenía control diario ni asiento contable confirmado.
+- **Decisión contable:** no se reconstruye ese historial en la app nueva de
+  Sebastián. Las cinco sesiones se conservan excluidas para auditoría, se
+  retiran de las acciones pendientes de Alfred y no generan registros
+  económicos. Sebastián inicia desde cero usando el último saldo observado.
+- **Titularidad:** `En Vivo / 2167219` queda fijada al destino personal de
+  Sebastián. Las señales futuras de esa subcuenta no pueden contabilizarse en
+  Alfred aunque compartan la misma instalación física.
+- **Prevención:** el heartbeat deja de reconstruir saldos desde la captura
+  histórica del conector físico cuando la instalación tiene destinos
+  adicionales. En ese modelo, sólo la ingesta ya enrutada puede crear o
+  actualizar el saldo del destino contable real. Los conectores tradicionales
+  de un único destino conservan su recuperación anterior.
+- **Trazabilidad:** la reparación se registra en `audit_events` y queda
+  reproducible en
+  `supabase/repairs/20260930_sebastian_personal_broker_reassignment.sql`.
