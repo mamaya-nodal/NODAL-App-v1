@@ -48,9 +48,13 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, workspac
   function run(action: () => Promise<{ message: string; ok: boolean }>) {
     setMessage(null);
     startTransition(async () => {
-      const result = await action();
-      setMessage(result.message);
-      if (result.ok) router.refresh();
+      try {
+        const result = await action();
+        setMessage(result.message);
+        if (result.ok) router.refresh();
+      } catch {
+        setMessage("No se pudo completar la acción. Volvé a intentarlo.");
+      }
     });
   }
 
@@ -112,33 +116,20 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, workspac
                           : "Sin vincular"}</strong>
                 </span>
                 <div className="identity-connector-actions">
-                  {!connector && !installationAvailable ? (
+                  {identity.onboardingStatus === "approved" && <NinjaConnectorPanel
+                    compact
+                    connector={connector}
+                    pairingLabel="Generar código"
+                    targetIdentityId={identity.id}
+                  />}
                     <button
-                      className="primary-action"
+                      className="identity-installation-resend"
                       disabled={pending}
                       onClick={() => run(() => sendIdentityConnectorInstallation(identity.id))}
                       type="button"
                     >
-                      {pending ? "Enviando…" : "Enviar instalación"}
+                      {pending ? "Enviando…" : installationAvailable ? "Reenviar instalación" : "Enviar instalación"}
                     </button>
-                  ) : (
-                    <>
-                      <NinjaConnectorPanel
-                        compact
-                        connector={connector}
-                        pairingLabel="Generar código"
-                        targetIdentityId={identity.id}
-                      />
-                      <button
-                        className="identity-installation-resend"
-                        disabled={pending}
-                        onClick={() => run(() => sendIdentityConnectorInstallation(identity.id))}
-                        type="button"
-                      >
-                        Reenviar instalación
-                      </button>
-                    </>
-                  )}
                 </div>
               </div>
 

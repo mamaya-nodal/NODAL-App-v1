@@ -1,5 +1,25 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-123 - Revinculación de identidades independiente del correo
+
+- **Fecha:** 2026-09-30. Caso confirmado de Natalia, identidad de Alfred.
+- **Causa:** una instalación vencida en estado `sent` seguía ocupando el índice
+  único de envío abierto. La función sólo reemplazaba envíos aún vigentes y no
+  podía crear el siguiente. Al desvincular, la UI ocultaba además la generación
+  de código porque no encontraba conector activo ni instalación vigente.
+- **Corrección:** la función reemplaza envíos previos bajo el bloqueo de la
+  identidad sin filtrar por vencimiento. Conserva sus filas y la auditoría.
+  Las identidades aprobadas siempre ofrecen Generar código, independientemente
+  del correo; enviar/re-enviar la instalación es una acción separada.
+- **Seguridad:** no cambia aprobación, permisos, duración del código ni canje.
+  La revinculación conserva el conector histórico según APP-118. No se borran
+  cuentas, operaciones o identidades. Los errores de red del panel son visibles.
+- **Verificación:** regresión SQL con envío vencido y reenvío consecutivo dentro
+  de una transacción revertida sin enviar correos; seis regresiones de interfaz
+  (sin envío y estados sending/sent/downloaded/failed, identidad inactiva).
+  La falta de señal inicial no se atribuye a este error: el conector revocado
+  reportaba 0.4 y requiere comprobar la señal después de revincular el actualizado.
+
 ### APP-122 - Trades anteriores a la primera observación de la cuenta
 
 - **Fecha:** 2026-09-30. Corrección técnica solicitada por Mauricio.
