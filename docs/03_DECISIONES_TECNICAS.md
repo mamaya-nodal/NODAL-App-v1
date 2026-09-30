@@ -1068,3 +1068,20 @@ vigente sin aprobacion y evidencia suficiente.
   si cambiaron los conectores o aparecieron referencias inesperadas, y valida
   al final 25 cuentas reales, 25 vínculos recuperados y los controles 19, 20 y
   21 sin alterar sus importes.
+
+### APP-121 - Carga privada acotada y recuperación visible
+
+- **Fecha:** 2026-09-30. Corrección de disponibilidad; no modifica datos,
+  conciliaciones, permisos ni vínculos de NinjaTrader.
+- **Hallazgo:** `/app` esperaba varias rondas de lecturas antes de renderizar.
+  Una consulta remota que no terminaba dejaba al navegador en carga indefinida,
+  sin distinguir ese caso de una cuenta deshabilitada.
+- **Decisión:** la carga completa dispone de veinte segundos. Si no concluye,
+  muestra una recuperación explícita que permite reintentar y aclara que los
+  registros y vínculos se conservan. Los fallos de render tienen su propio
+  límite visual y no dejan una pantalla vacía.
+- **Alcance:** no se inventan resultados parciales ni se reemplazan errores por
+  colecciones vacías. El límite sólo decide qué interfaz ve el usuario; las
+  escrituras económicas continúan fuera de los reintentos automáticos.
+- **Validación:** prueba determinista del resultado normal y del vencimiento,
+  además de typecheck, lint, suite completa y build de producción.

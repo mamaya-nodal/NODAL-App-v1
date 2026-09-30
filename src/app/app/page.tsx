@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
+import { resolveWithDeadline } from "@/lib/async/resolve-with-deadline";
 import { createClient } from "@/lib/supabase/server";
 import { readWithRetry, reportReadFailure } from "@/lib/supabase/read-with-retry";
 import { ConnectionRecovery } from "./connection-recovery";
@@ -205,7 +206,7 @@ type NinjaOperationProbeRpcRow = {
   status: "closed" | "open" | "settling";
 };
 
-export default async function PrivateAppPage({
+async function renderPrivateAppPage({
   searchParams,
 }: PrivateAppPageProps) {
   const supabase = await createClient();
@@ -1565,5 +1566,13 @@ export default async function PrivateAppPage({
       )}
 
     </AppWorkspace>
+  );
+}
+
+export default function PrivateAppPage(props: PrivateAppPageProps) {
+  return resolveWithDeadline(
+    renderPrivateAppPage(props),
+    20_000,
+    () => <ConnectionRecovery subject="data" />,
   );
 }
