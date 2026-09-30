@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { persistAutomaticOperationBatches } from "@/modules/ninja/server/automatic-operation-processing";
 
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -102,6 +104,7 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
   const fundsOrigin = formText(formData, "funds_origin");
   const walletId = formText(formData, "wallet_id") || null;
   const purchasedOn = formText(formData, "purchased_on");
+  const connectorId = formText(formData, "connector_id");
   const firstSeenAt = formText(formData, "first_seen_at");
   let priceCents: number;
 
@@ -137,7 +140,7 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
     target_external_account_name: formText(formData, "external_account_name"),
     target_first_seen_at: firstSeenAt,
     target_funds_origin: fundsOrigin,
-    target_connector_id: formText(formData, "connector_id"),
+    target_connector_id: connectorId,
     target_period_id: periodId,
     target_price_cents: priceCents,
     target_purchased_on: purchasedOn,
@@ -157,6 +160,15 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
     redirect(safeContextUrl(mode, period, result));
   }
 
+  // The purchase RPC already verified connector ownership. Revisit stored trades
+  // even when Ninja is no longer sending and the browser was closed during trading.
+  after(async () => {
+    try {
+      await persistAutomaticOperationBatches(connectorId);
+    } catch {
+      console.warn("Ninja post-registration reconciliation deferred");
+    }
+  });
   revalidatePath("/app");
   redirect(safeContextUrl(mode, period, "created"));
 }

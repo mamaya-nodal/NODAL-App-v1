@@ -35,7 +35,7 @@ export function projectAutomaticAccounting(input: Input): AutomaticAccountingPro
     const missing = Math.max(input.technicalMemberCount - input.members.length, 0);
     return {
       ...base,
-      reason: `Falta registrar ${missing} de las ${input.technicalMemberCount} cuentas prop de la operación`,
+      reason: `No se pudo vincular ${missing} de las ${input.technicalMemberCount} cuentas prop. Revisá su registro.`,
       status: "blocked",
     };
   }

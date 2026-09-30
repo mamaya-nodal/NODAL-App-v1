@@ -1,5 +1,33 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-122 - Trades anteriores a la primera observación de la cuenta
+
+- **Fecha:** 2026-09-30. Corrección técnica solicitada por Mauricio.
+- **Hallazgo:** el horario de primera detección se trataba como inicio de vida
+  económico. Un trade anterior, recibido durante una recuperación de conexión,
+  quedaba sin cuenta aunque la compra ya estuviera registrada.
+- **Resolución:** conserva la resolución temporal habitual; para un trade anterior
+  a la detección permite únicamente el vínculo inicial inequívoco del mismo
+  conector, conexión y cuenta externa, comprado antes o el día del trade en el
+  mismo mes operativo. No extrapola vidas de reset/transición ni elige entre
+  vínculos múltiples. Conserva fechas y compras; no borra ni recrea registros.
+- **Reproceso:** registrar la compra dispara una revisión posterior a la respuesta.
+  Telemetría y heartbeat continúan procesando en servidor sin navegador abierto.
+  Se agrega revisión de cuentas y reintento autorizado por titular para bloqueos
+  correlacionados. El reintento se limita a la sesión elegida, conserva los saldos
+  anteriores en orden operativo y no modifica lotes ya contabilizados.
+- **Mensaje:** una asociación faltante no se presenta como prueba de que falta
+  comprar o registrar la cuenta. Se mantienen las validaciones de saldo, fase,
+  período, deduplicación y confirmación transaccional existentes.
+- **Límite:** no reconstruye ejecuciones que Ninja nunca transmitió. El conector
+  existente persiste una cola y reintenta, pero tiene límite de 8 MiB y conserva
+  sólo las últimas 5000 líneas al superarlo; no equivale a retención ilimitada.
+  Esta corrección no requiere reinstalar ni revincular el conector.
+- **Validación:** regresiones de detección tardía, fechas Buenos Aires, compras,
+  cierres, vidas múltiples, resets, permisos, simulación sin escritura e
+  idempotencia del reintento. Caso real: cobertura -16064 centavos y cuenta
+  terminada en 0010, sin modificar la fecha de primera detección.
+
 ## Confirmadas
 
 | ID | Decision | Estado |

@@ -92,7 +92,7 @@ describe("automatic accounting projection", () => {
       technicalMemberCount: 5,
     })).toMatchObject({
       accountCount: 2,
-      reason: "Falta registrar 3 de las 5 cuentas prop de la operación",
+      reason: "No se pudo vincular 3 de las 5 cuentas prop. Revisá su registro.",
       status: "blocked",
     });
   });

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { buildNinjaOperationProbe, type NinjaTelemetryRow } from "@/modules/ninja/domain/operation-probe";
 import { assignManualAccountsToCoverage } from "./coverage-assignment-actions";
 import { confirmUncoveredTrade } from "./uncovered-trade-actions";
+import { retryCoverageReconciliation } from "./reconcile-coverage-actions";
 
 type TechnicalOperationRow = Readonly<{
   account_name: string;
@@ -66,6 +67,25 @@ const labels = {
   uncertain: "Revisar",
   waiting: "Sin actividad",
 } as const;
+
+function CoverageRecovery({ batchId }: { batchId: string }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [feedback, setFeedback] = useState<{ ok: boolean; message: string } | null>(null);
+  return <section className="manual-coverage-assignment">
+    <a className="manual-coverage-toggle" href="#cuentas">Revisar cuentas</a>
+    <button type="button" className="manual-coverage-toggle" disabled={pending} onClick={() => startTransition(async () => {
+      try {
+        const result = await retryCoverageReconciliation(batchId);
+        setFeedback(result);
+        if (result.ok) router.refresh();
+      } catch {
+        setFeedback({ ok: false, message: "No se pudo conectar. Volvé a intentarlo." });
+      }
+    })}>{pending ? "Revisando…" : "Reintentar conciliación"}</button>
+    {feedback && <p role="status" className={`manual-coverage-feedback ${feedback.ok ? "success" : "error"}`}>{feedback.message}</p>}
+  </section>;
+}
 
 function formatMoney(value: number | null) {
   return value === null ? "—" : new Intl.NumberFormat("es-AR", { currency: "USD", style: "currency" }).format(value);
@@ -325,6 +345,9 @@ export function TradeTelemetryProbe({
                 )}
                 {batch.accounting_status === "blocked" && batch.correlation_status === "unmatched" && batch.prop_accounts.length === 0 && (
                   <UncoveredTradeConfirmation batch={batch} />
+                )}
+                {batch.accounting_status === "blocked" && batch.correlation_status !== "unmatched" && (
+                  <CoverageRecovery batchId={batch.id} />
                 )}
               </article>
             ))}

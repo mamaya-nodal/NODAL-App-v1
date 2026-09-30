@@ -7,6 +7,7 @@ import { classifyNinjaAccount } from "../domain/account-classification";
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
 import { resolveNinjaAccountingPhase } from "../domain/accounting-phase";
 import { recordNinjaBrokerOperationBalance } from "./broker-balance-processing";
+import { resolveSessionAccountLink } from "../domain/session-account-link";
 
 type AccountingPhase = AutomaticAccountingMember["phase"];
 
@@ -65,7 +66,9 @@ async function usesAggregateBrokerBalance(
   return brokerAccounts.size > 1;
 }
 
-export async function persistAutomaticOperationBatches(connectorId: string) {
+export async function persistAutomaticOperationBatches(connectorId: string, targetBrokerSessionId?: number, dryRun = false) {
+  const previews: Array<{ brokerSessionId: number; brokerResultInCents: number;
+    projection: ReturnType<typeof projectAutomaticAccounting>; members: AutomaticAccountingMember[] }> = [];
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return { persistedBatches: 0 };
@@ -76,10 +79,17 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
 
   const [{ data: sessions, error: sessionsError }, { data: links, error: linksError }, { data: inventory }] = await Promise.all([
     supabase.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,execution_count,instruments,direction,quantity").eq("connector_id", connectorId).is("excluded_at", null).order("opened_at").order("id"),
-    supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at,phase,closure_reason").eq("connector_id", connectorId),
+    supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at,phase,closure_reason,life_id").eq("connector_id", connectorId),
     supabase.from("ninja_inventory_snapshots").select("accounts,observed_at").eq("connector_id", connectorId).order("observed_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (sessionsError || linksError || !sessions?.length) return { persistedBatches: 0 };
+  const linkedIds = [...new Set((links ?? []).map((link) => link.account_id))];
+  const [purchasesResult, changesResult] = await Promise.all([
+    linkedIds.length ? supabase.from("purchases").select("account_id,purchased_on").in("account_id", linkedIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from("ninja_account_change_events").select("connection_name,to_account_name,event_type,from_account_name,from_life_id,to_life_id").eq("connector_id", connectorId),
+  ]);
+  if (purchasesResult.error || changesResult.error) throw new Error("No se pudo verificar la historia de las cuentas.");
 
   const inventoryClassifications = new Map<string, ReturnType<typeof classifyNinjaAccount>>();
   for (const account of (inventory?.accounts ?? []) as NinjaAccountSnapshot[]) {
@@ -89,14 +99,9 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
     );
   }
 
-  const linkForSession = (session: (typeof sessions)[number]) => (links ?? [])
-    .filter((link) =>
-      link.connection_name === session.connection_name &&
-      link.external_account_name === session.account_name &&
-      link.first_seen_at <= session.opened_at &&
-      (link.closed_at === null || link.closed_at >= session.opened_at),
-    )
-    .sort((left, right) => right.first_seen_at.localeCompare(left.first_seen_at))[0] ?? null;
+  const linkForSession = (session: (typeof sessions)[number]) => resolveSessionAccountLink(
+    session, links ?? [], purchasesResult.data ?? [], changesResult.data ?? [],
+  );
 
   const classified = sessions.flatMap((session) => {
     const key = `${session.connection_name}\u0000${session.account_name}`;
@@ -245,6 +250,9 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       }
       continue;
     }
+    // Keep preceding committed balances in operational order, even when their
+    // accounting rows were created later or only one pending batch is retried.
+    if (targetBrokerSessionId !== undefined && Number(brokerSession.id) !== targetBrokerSessionId) continue;
     const projectionMembers = batch.props.flatMap((prop): AutomaticAccountingMember[] => {
       if (!prop.accountId) return [];
       const account = accountsById.get(prop.accountId);
@@ -302,6 +310,11 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       members: projectionMembers,
       technicalMemberCount: batch.props.length,
     });
+    if (dryRun) {
+      previews.push({ brokerSessionId: Number(brokerSession.id), brokerResultInCents: batch.brokerResultInCents,
+        projection, members: projectionMembers });
+      continue;
+    }
     const { data: stored, error } = await supabase.rpc("upsert_nodal_deduplicated_operation_batch", {
       target_accounting_blocking_reason: projection.reason,
       target_accounting_company_id: projection.companyId,
@@ -377,5 +390,5 @@ export async function persistAutomaticOperationBatches(connectorId: string) {
       }
     }
   }
-  return { persistedBatches };
+  return { persistedBatches, previews };
 }
