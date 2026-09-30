@@ -1080,6 +1080,10 @@ vigente sin aprobacion y evidencia suficiente.
   muestra una recuperación explícita que permite reintentar y aclara que los
   registros y vínculos se conservan. Los fallos de render tienen su propio
   límite visual y no dejan una pantalla vacía.
+- **Región de ejecución:** durante el incidente de latencia de Supabase del
+  30/09, Vercel atendía las funciones desde `iad1`, dentro de la zona afectada.
+  La aplicación fija una única región `gru1`, disponible también en el plan
+  Hobby, para evitar esa ruta y acercar la ejecución a los usuarios argentinos.
 - **Alcance:** no se inventan resultados parciales ni se reemplazan errores por
   colecciones vacías. El límite sólo decide qué interfaz ve el usuario; las
   escrituras económicas continúan fuera de los reintentos automáticos.
