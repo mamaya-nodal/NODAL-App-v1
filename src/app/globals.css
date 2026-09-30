@@ -8101,6 +8101,6 @@ html[data-theme="day"] .manual-coverage-close { background: #ffffff; }
 }
 
 html[data-theme="day"] .nodal-workspace .real-telemetry-overview {
-  background: transparent;
-  box-shadow: none;
+  background: transparent !important;
+  box-shadow: none !important;
 }

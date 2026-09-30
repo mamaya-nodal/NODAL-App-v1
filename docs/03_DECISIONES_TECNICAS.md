@@ -8,8 +8,9 @@
   regla de tema claro le asignaba `background-color` con mayor especificidad y
   anulaba la transparencia general.
 - **Resolución:** el resumen de telemetría queda transparente en tema claro y
-  la sección Operaciones no agrega un fondo. Las tarjetas internas conservan
-  sus bordes y fondos actuales.
+  la sección Operaciones no agrega un fondo. La regla explícita prevalece sobre
+  el fondo blanco del tema claro. Las tarjetas internas conservan sus bordes y
+  fondos actuales.
 
 ### APP-126 - Margen visual del favicon
 
