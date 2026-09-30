@@ -1076,10 +1076,16 @@ vigente sin aprobacion y evidencia suficiente.
 - **Hallazgo:** `/app` esperaba varias rondas de lecturas antes de renderizar.
   Una consulta remota que no terminaba dejaba al navegador en carga indefinida,
   sin distinguir ese caso de una cuenta deshabilitada.
-- **Decisión:** la carga completa dispone de veinte segundos. Si no concluye,
+- **Decisión:** la carga normal dispone de noventa segundos durante la
+  degradación confirmada. Si no concluye,
   muestra una recuperación explícita que permite reintentar y aclara que los
   registros y vínculos se conservan. Los fallos de render tienen su propio
   límite visual y no dejan una pantalla vacía.
+- **Reducción de esperas:** la ruta privada verifica el JWT mediante
+  `getClaims`, como recomienda Supabase para proteger páginas, evitando una
+  consulta redundante a Auth. Reutiliza el usuario ya verificado en permisos y
+  dashboard, y comienza en paralelo la comisión, el resumen histórico y el
+  dashboard personal mientras carga el resto de la pantalla.
 - **Región de ejecución:** durante el incidente de latencia de Supabase del
   30/09, Vercel atendía las funciones desde `iad1`, dentro de la zona afectada.
   La primera mitigación en `gru1` siguió alcanzando el proyecto por una ruta

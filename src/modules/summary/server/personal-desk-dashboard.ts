@@ -37,10 +37,14 @@ function privilegedClient() {
   });
 }
 
-export async function loadPersonalDeskDashboard(selectedMonth: string) {
-  const session = await createClient();
-  const { data: { user } } = await session.auth.getUser();
-  if (!user) return null;
+export async function loadPersonalDeskDashboard(selectedMonth: string, verifiedUserId?: string) {
+  let userId = verifiedUserId;
+  if (!userId) {
+    const session = await createClient();
+    const { data: { user } } = await session.auth.getUser();
+    userId = user?.id;
+  }
+  if (!userId) return null;
 
   const service = privilegedClient();
   const [profileRows, workspaceRows, deskRows, deskTermRows, userTermRows] = await Promise.all([
@@ -58,7 +62,7 @@ export async function loadPersonalDeskDashboard(selectedMonth: string) {
   const desks = (deskRows.data ?? []) as Desk[];
   const deskTerms = (deskTermRows.data ?? []) as DeskTerms[];
   const userTerms = (userTermRows.data ?? []) as UserTerms[];
-  const personalWorkspace = workspaces.find((workspace) => workspace.owner_user_id === user.id);
+  const personalWorkspace = workspaces.find((workspace) => workspace.owner_user_id === userId);
   const months = [...new Set((personalWorkspace?.periods ?? [])
     .filter((period) => period.period_month <= selectedMonth)
     .map((period) => period.period_month))]
@@ -106,6 +110,6 @@ export async function loadPersonalDeskDashboard(selectedMonth: string) {
   return buildPersonalDeskDashboard({
     currentMonth: selectedMonth,
     snapshots,
-    userId: user.id,
+    userId,
   });
 }

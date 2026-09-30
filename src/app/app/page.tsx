@@ -211,23 +211,28 @@ async function renderPrivateAppPage({
 }: PrivateAppPageProps) {
   const supabase = await createClient();
   const {
-    data: { user },
+    data: claimsData,
     error: authenticationError,
-  } = await readWithRetry(() => supabase.auth.getUser());
+  } = await readWithRetry(() => supabase.auth.getClaims());
 
   if (authenticationError && authenticationError.name !== "AuthSessionMissingError") {
     reportReadFailure("authentication", authenticationError);
     return <ConnectionRecovery subject="access" />;
   }
 
-  if (!user) {
+  const userId = claimsData?.claims.sub;
+  const userEmail = typeof claimsData?.claims.email === "string"
+    ? claimsData.claims.email
+    : null;
+
+  if (!userId) {
     redirect("/");
   }
 
   const { data: nodalUser, error: accessError } = await readWithRetry(() => supabase
     .from("nodal_users")
     .select("id, email, display_name, access_state, access_role")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle());
 
   if (accessError) {
@@ -236,7 +241,7 @@ async function renderPrivateAppPage({
   }
 
   const decision = decideAccess(
-    user.id,
+    userId,
     nodalUser
       ? { id: nodalUser.id, accessState: nodalUser.access_state }
       : null,
@@ -244,13 +249,13 @@ async function renderPrivateAppPage({
   const allowed = decision === "allowed";
 
   if (!allowed) {
-    return <AccessPendingGate email={nodalUser?.email || user.email || "Cuenta de Google"} />;
+    return <AccessPendingGate email={nodalUser?.email || userEmail || "Cuenta de Google"} />;
   }
 
-  const administrationScope = allowed
-    ? await loadMyAdministrationScope()
-    : { kind: "none" as const };
-  const { purchase_result: purchaseResult, reset_result: resetResult, connector_result: connectorResult, transition_result: transitionResult } = await searchParams;
+  const administrationScopePromise = allowed
+    ? loadMyAdministrationScope(userId, supabase)
+    : Promise.resolve({ kind: "none" as const });
+  const searchParamsPromise = searchParams;
   let workspaceOptions: WorkspaceOption[] = [];
   let companies: Array<{ code: string; displayName: string; id: string }> = [];
   let registeredNinjaAccountKeys = new Set<string>();
@@ -312,6 +317,8 @@ async function renderPrivateAppPage({
   }
 
   const connectorOnline = Boolean(ninjaConnector?.isOnline && ninjaConnector.status === "active");
+  const administrationScope = await administrationScopePromise;
+  const { purchase_result: purchaseResult, reset_result: resetResult, connector_result: connectorResult, transition_result: transitionResult } = await searchParamsPromise;
 
   if (allowed && (!ninjaConnector || ninjaConnector.status !== "active")) {
     return (
@@ -328,6 +335,21 @@ async function renderPrivateAppPage({
     "real",
     undefined,
   );
+  const currentPeriod = selection?.period;
+  const individualCommissionPromise = currentPeriod
+    ? loadIndividualCommission(userId, currentPeriod.periodMonth)
+    : Promise.resolve(null);
+  const personalDashboardPromise = currentPeriod
+    ? loadPersonalDeskDashboard(currentPeriod.periodMonth, userId)
+    : Promise.resolve(null);
+  const accountingPeriodSummariesPromise = currentPeriod && selection
+    ? loadPeriodSummaries(
+        supabase,
+        selection.workspace.periods
+          .filter((workspacePeriod) => workspacePeriod.periodMonth <= currentPeriod.periodMonth)
+          .map((workspacePeriod) => workspacePeriod.id),
+      )
+    : Promise.resolve(new Map());
   let purchases: PurchaseView[] = [];
   let accountOptions: AccountView[] = [];
   let accountHistory: AccountOverviewAccount[] = [];
@@ -1190,8 +1212,13 @@ async function renderPrivateAppPage({
       })),
       entries: operationEntries, fundingWithdrawals, opening: periodOpening, phaseWithdrawals, walletMovements,
     });
-    operationalSummary = applyIndividualCommission(operationalSummary, await loadIndividualCommission(user.id, selection.period.periodMonth));
-    personalDashboard = await loadPersonalDeskDashboard(selection.period.periodMonth) ?? {
+    const [individualCommission, loadedPersonalDashboard, loadedAccountingPeriods] = await Promise.all([
+      individualCommissionPromise,
+      personalDashboardPromise,
+      accountingPeriodSummariesPromise,
+    ]);
+    operationalSummary = applyIndividualCommission(operationalSummary, individualCommission);
+    personalDashboard = loadedPersonalDashboard ?? {
       billingInCents: operationalSummary.realizedGainInCents,
       earnings: buildPeriodEarnings({
         ownOperationsInCents: operationalSummary.traderGainInCents,
@@ -1202,12 +1229,6 @@ async function renderPrivateAppPage({
         periodMonth: selection.period.periodMonth,
       }],
     };
-    const loadedAccountingPeriods = await loadPeriodSummaries(
-      supabase,
-      selection.workspace.periods
-        .filter((workspacePeriod) => workspacePeriod.periodMonth <= selection.period!.periodMonth)
-        .map((workspacePeriod) => workspacePeriod.id),
-    );
     accountingPeriods = selection.workspace.periods
       .filter((workspacePeriod) => workspacePeriod.periodMonth <= selection.period!.periodMonth)
       .sort((left, right) => right.periodMonth.localeCompare(left.periodMonth))
@@ -1266,10 +1287,10 @@ async function renderPrivateAppPage({
     <AppWorkspace
       administrationScope={administrationScope}
       authorized={allowed}
-      avatarUrl={typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null}
+      avatarUrl={typeof claimsData?.claims.user_metadata?.avatar_url === "string" ? claimsData.claims.user_metadata.avatar_url : null}
       initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "accounts" : "home"}
-      userLabel={nodalUser?.display_name || nodalUser?.email || user.email || "Alumno"}
-      username={typeof user.user_metadata?.username === "string" ? user.user_metadata.username : undefined}
+      userLabel={nodalUser?.display_name || nodalUser?.email || userEmail || "Alumno"}
+      username={typeof claimsData?.claims.user_metadata?.username === "string" ? claimsData.claims.user_metadata.username : undefined}
     >
       <NinjaConnectorMonitor inventoryRevision={ninjaInventoryRevision} online={connectorOnline} />
       {!connectorOnline ? (
@@ -1572,7 +1593,7 @@ async function renderPrivateAppPage({
 export default function PrivateAppPage(props: PrivateAppPageProps) {
   return resolveWithDeadline(
     renderPrivateAppPage(props),
-    20_000,
+    90_000,
     () => <ConnectionRecovery subject="data" />,
   );
 }
