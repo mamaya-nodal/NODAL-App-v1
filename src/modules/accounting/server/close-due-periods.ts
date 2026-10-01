@@ -59,7 +59,7 @@ export async function closeDueAccountingPeriods(
       failed.push({ message: "No se pudo reconstruir el resumen de cierre.", periodId });
       continue;
     }
-    const { error: closeError } = await supabase.rpc("close_nodal_accounting_period", {
+    const { error: closeError } = await supabase.rpc("close_nodal_accounting_period_as_service", {
       target_has_observations: periodHasObservations(loaded.summary),
       target_period_id: periodId,
       target_reason: "Cierre contable automático",
