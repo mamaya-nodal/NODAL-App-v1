@@ -303,6 +303,7 @@ export function TradeTelemetryProbe({
   const propNames = new Set(propAccountNames);
   const brokerNames = new Set(brokerAccountNames);
   const activeProbes = visibleProbes.filter((probe) => probe.status === "open" || probe.status === "settling");
+  const closedProbes = visibleProbes.filter((probe) => !activeProbes.includes(probe));
   const activeProps = activeProbes.filter((probe) => propNames.has(probe.accountName));
   const activeBroker = activeProbes.filter((probe) => brokerNames.has(probe.accountName));
   const otherActive = activeProbes.filter((probe) => !propNames.has(probe.accountName) && !brokerNames.has(probe.accountName));
@@ -354,7 +355,7 @@ export function TradeTelemetryProbe({
         </article>
       )}
       {automationBatches.length > 0 && (
-        <details className="demo-operation-disclosure automatic-batch-status" open={automationBatches.some((batch) => batch.accounting_status === "blocked") || undefined}>
+        <details className="demo-operation-disclosure automatic-batch-status operations-disclosure-card" open={automationBatches.some((batch) => batch.accounting_status === "blocked") || undefined}>
           <summary>
             <span>Automatización</span>
             <strong>{automationBatches.filter((batch) => batch.accounting_status === "committed").length} conciliadas</strong>
@@ -428,6 +429,43 @@ export function TradeTelemetryProbe({
           </div>
         </details>
       )}
+      {closedProbes.length > 0 && (
+        <details className="telemetry-technical-details telemetry-closed-diagnostics operations-disclosure-card">
+          <summary>Datos técnicos recientes</summary>
+          <div className="telemetry-probe-grid">
+          {closedProbes.map((probe) => {
+            const operation = operations.find((candidate) =>
+              candidate.connection_name === probe.connectionName && candidate.account_name === probe.accountName,
+            );
+            return <article key={`${probe.connectionName}-${probe.accountName}`}>
+              <div><strong>{probe.accountName}</strong><small>{probe.connectionName}</small></div>
+              <span className={`telemetry-state ${probe.status}`}>{labels[probe.status]}</span>
+              {operation ? <div className="telemetry-operation-record">
+                <div>
+                  <span>Última operación</span>
+                  <strong className={(moneyNumber(operation.result) ?? 0) >= 0 ? "positive" : "negative"}>
+                    {formatMoney(moneyNumber(operation.result))}
+                  </strong>
+                </div>
+                <p>{formatMoney(moneyNumber(operation.opening_balance))} → {formatMoney(moneyNumber(operation.closing_balance))}</p>
+                <small>
+                  {formatTime(operation.opened_at)} · {operation.execution_count} ejec. · {operation.status === "closed" ? "Cerrada" : operation.status === "open" ? "Abierta" : "Estabilizando"}
+                </small>
+              </div> : null}
+              <details className="telemetry-technical-details">
+                <summary>Datos de NinjaTrader</summary>
+                <dl>
+                  <div><dt>Posiciones</dt><dd>{probe.openPositions}</dd></div>
+                  <div><dt>Ejecuciones</dt><dd>{probe.executionCount}</dd></div>
+                  <div><dt>Cash Value</dt><dd>{formatMoney(probe.cashValue)}</dd></div>
+                  <div><dt>Net Liq.</dt><dd>{formatMoney(probe.netLiquidation)}</dd></div>
+                </dl>
+              </details>
+            </article>;
+          })}
+        </div>
+        </details>
+      )}
       {activeProbes.length === 0 ? <p className="telemetry-empty">Sin operaciones activas.</p> : (
         <>
           {activeGroups.map((group) => (
@@ -461,7 +499,7 @@ export function TradeTelemetryProbe({
         <div className="demo-history real-operation-history">
           <div className="demo-group-title"><h3>Historial</h3><span>{[...reconciliationMonths.values()].reduce((total, month) => total + month.length, 0)}</span></div>
           {[...reconciliationMonths.entries()].sort(([left], [right]) => right.localeCompare(left)).map(([month, monthBatches], monthIndex) => (
-            <details className="demo-period-history" key={month} open={monthIndex === 0}>
+            <details className="demo-period-history operations-disclosure-card" key={month} open={monthIndex === 0}>
               <summary>
                 <span>{monthLabel(`${month}-01T12:00:00Z`)}</span>
                 <small>{monthBatches.length} conciliaciones</small>
@@ -489,44 +527,6 @@ export function TradeTelemetryProbe({
             </details>
           ))}
         </div>
-      )}
-
-      {visibleProbes.some((probe) => !activeProbes.includes(probe)) && (
-        <details className="telemetry-technical-details telemetry-closed-diagnostics">
-          <summary>Datos técnicos recientes</summary>
-          <div className="telemetry-probe-grid">
-          {visibleProbes.filter((probe) => !activeProbes.includes(probe)).map((probe) => {
-            const operation = operations.find((candidate) =>
-              candidate.connection_name === probe.connectionName && candidate.account_name === probe.accountName,
-            );
-            return <article key={`${probe.connectionName}-${probe.accountName}`}>
-              <div><strong>{probe.accountName}</strong><small>{probe.connectionName}</small></div>
-              <span className={`telemetry-state ${probe.status}`}>{labels[probe.status]}</span>
-              {operation ? <div className="telemetry-operation-record">
-                <div>
-                  <span>Última operación</span>
-                  <strong className={(moneyNumber(operation.result) ?? 0) >= 0 ? "positive" : "negative"}>
-                    {formatMoney(moneyNumber(operation.result))}
-                  </strong>
-                </div>
-                <p>{formatMoney(moneyNumber(operation.opening_balance))} → {formatMoney(moneyNumber(operation.closing_balance))}</p>
-                <small>
-                  {formatTime(operation.opened_at)} · {operation.execution_count} ejec. · {operation.status === "closed" ? "Cerrada" : operation.status === "open" ? "Abierta" : "Estabilizando"}
-                </small>
-              </div> : null}
-              <details className="telemetry-technical-details">
-                <summary>Datos de NinjaTrader</summary>
-                <dl>
-                  <div><dt>Posiciones</dt><dd>{probe.openPositions}</dd></div>
-                  <div><dt>Ejecuciones</dt><dd>{probe.executionCount}</dd></div>
-                  <div><dt>Cash Value</dt><dd>{formatMoney(probe.cashValue)}</dd></div>
-                  <div><dt>Net Liq.</dt><dd>{formatMoney(probe.netLiquidation)}</dd></div>
-                </dl>
-              </details>
-            </article>;
-          })}
-        </div>
-        </details>
       )}
     </section>
   );

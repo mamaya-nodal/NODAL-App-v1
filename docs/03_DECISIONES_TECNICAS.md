@@ -1,5 +1,15 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-131 - Orden y jerarquía uniforme en Operaciones
+
+- **Fecha:** 2026-10-01. Reorganización visual solicitada por el usuario.
+- **Orden:** después de los indicadores se presentan `Automatización`, `Datos
+  técnicos recientes`, las operaciones actuales y finalmente `Historial`.
+- **Encabezados:** las tarjetas desplegables principales comparten altura,
+  relleno, tipografía, tamaño, peso y tratamiento de los signos `+` y `−`.
+- **Alcance:** el cambio no altera el contenido, la detección de operaciones,
+  las conciliaciones ni el período conservado en el historial.
+
 ### APP-130 - Tarjeta plegable para datos técnicos recientes
 
 - **Fecha:** 2026-10-01. Ajuste visual solicitado en Operaciones.
