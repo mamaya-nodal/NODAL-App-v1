@@ -1,5 +1,14 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-130 - Tarjeta plegable para datos técnicos recientes
+
+- **Fecha:** 2026-10-01. Ajuste visual solicitado en Operaciones.
+- **Decisión:** `Datos técnicos recientes` conserva su comportamiento plegado,
+  pero su encabezado pasa a presentarse como una tarjeta completa con fondo,
+  borde y altura coherentes con las demás secciones. Al desplegarla, las
+  tarjetas técnicas permanecen dentro del mismo contenedor.
+- **Alcance:** no cambia telemetría, conciliaciones ni datos contables.
+
 ### APP-129 - Asignación contextual dentro de cada conciliación
 
 - **Fecha:** 2026-10-01. Simplificación de la vista Operaciones solicitada por

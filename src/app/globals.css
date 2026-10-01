@@ -7536,8 +7536,37 @@ html[data-theme="day"] .demo-stage.live {
 .real-live-group { min-width: 0; }
 .real-telemetry-overview .demo-operation-grid strong.negative { color: #ff7d72; }
 .real-operation-history { margin-bottom: 18px; }
-.telemetry-closed-diagnostics { margin: 14px 0; }
-.telemetry-closed-diagnostics > .telemetry-probe-grid { padding-bottom: 2px; }
+.nodal-workspace .telemetry-closed-diagnostics {
+  margin: 14px 0 18px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-panel) 90%, var(--app-bg));
+}
+
+.nodal-workspace .telemetry-closed-diagnostics > summary {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 16px;
+  color: var(--app-title);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.nodal-workspace .telemetry-closed-diagnostics > summary::after {
+  margin-left: auto;
+}
+
+.nodal-workspace .telemetry-closed-diagnostics[open] > summary {
+  border-bottom: 1px solid var(--app-border);
+}
+
+.nodal-workspace .telemetry-closed-diagnostics > .telemetry-probe-grid {
+  margin-top: 0;
+  padding: 14px;
+}
 
 .automatic-batch-status { margin: 12px 0 18px; }
 .automatic-batch-list { display: grid; gap: 8px; padding: 0 10px 10px; }
