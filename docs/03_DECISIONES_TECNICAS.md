@@ -1241,3 +1241,16 @@ vigente sin aprobacion y evidencia suficiente.
 - **Trazabilidad:** la reparación se registra en `audit_events` y queda
   reproducible en
   `supabase/repairs/20260930_sebastian_personal_broker_reassignment.sql`.
+
+### APP-126 - Acceso visible al Admin Master en la app principal
+
+- **Fecha:** 2026-10-01. Habilitación administrativa solicitada por el titular.
+- **Alcance:** el acceso principal de Mauricio Amaya conserva su app, sus
+  cuentas y su contabilidad personal, y suma el alcance `master` en el servidor.
+  No se crea una segunda app ni se trasladan datos entre usuarios.
+- **Interfaz:** la navegación lateral y móvil muestran la orejeta
+  `Admin Master` únicamente cuando `get_my_administration_scope` devuelve
+  `master`. La pantalla de conexión también conserva ese acceso.
+- **Seguridad:** la visibilidad no concede permisos por sí sola. `/app/admin`,
+  sus consultas y sus acciones continúan exigiendo usuario activo con rol
+  `admin` en el servidor. El cambio de rol queda registrado en `audit_events`.

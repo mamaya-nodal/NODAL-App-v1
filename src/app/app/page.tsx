@@ -1366,7 +1366,7 @@ async function renderPrivateAppPage({
             <a href="#contabilidad">Contabilidad</a>
             <a href="#identidades">Identidades</a>
             {nodalUser?.access_role === "admin" && (
-              <Link href="/app/admin">Administración</Link>
+              <Link href="/app/admin">Admin Master</Link>
             )}
             <form action="/auth/logout" className="logout-form" method="post">
               <button type="submit">Cerrar sesión</button>

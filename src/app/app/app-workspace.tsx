@@ -93,7 +93,7 @@ export function AppWorkspace({
   }
 
   const administration = administrationScope.kind === "master"
-    ? { href: "/app/admin", label: "Administración" }
+    ? { href: "/app/admin", label: "Admin Master" }
     : administrationScope.kind === "desk"
       ? { href: "/app/mi-mesa", label: "Mi mesa" }
       : null;
@@ -158,7 +158,7 @@ export function AppWorkspace({
             </a>
           ))}
           {administration && (
-            <Link href={administration.href}><WorkspaceIcon name="admin" />{administrationScope.kind === "desk" ? "Mi mesa" : "Admin"}</Link>
+            <Link href={administration.href}><WorkspaceIcon name="admin" />{administration.label}</Link>
           )}
         </nav>
       </div>

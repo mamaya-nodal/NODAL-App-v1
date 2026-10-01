@@ -15,7 +15,7 @@ type Props = Readonly<{
 
 export function NinjaConnectorGate({ administrationScope, connector, message }: Props) {
   const administration = administrationScope.kind === "master"
-    ? { href: "/app/admin", label: "Administración" }
+    ? { href: "/app/admin", label: "Admin Master" }
     : administrationScope.kind === "desk"
       ? { href: "/app/mi-mesa", label: "Mi mesa" }
       : null;
