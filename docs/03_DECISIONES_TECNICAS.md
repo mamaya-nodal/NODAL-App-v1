@@ -1313,3 +1313,64 @@ vigente sin aprobacion y evidencia suficiente.
 - **Seguridad:** la visibilidad no concede permisos por sí sola. `/app/admin`,
   sus consultas y sus acciones continúan exigiendo usuario activo con rol
   `admin` en el servidor. El cambio de rol queda registrado en `audit_events`.
+
+### APP-127 - Calendario contable NODAL y rectificación de períodos cerrados
+
+- **Fecha:** 2026-10-01. Decisión funcional confirmada; todavía no implementada.
+  Debe sincronizarse con la documentación propietaria de Contabilidad antes de
+  reemplazar el comportamiento mensual vigente.
+- **Calendario:** el período identificado con un mes comienza el primer lunes de
+  ese mes, aunque sea feriado. El período anterior termina el viernes inmediato
+  anterior a las 19:00, hora de Buenos Aires. En ese momento la aplicación
+  realiza el cierre y cambia el contexto visible al período siguiente.
+- **Ejemplo 2026:** septiembre termina el viernes 2 de octubre a las 19:00;
+  octubre opera desde el lunes 5 y termina el viernes 30 de octubre a las 19:00;
+  noviembre comienza el lunes 2.
+- **Inmutabilidad:** un período cerrado no admite altas, ediciones ni borrados
+  económicos por los flujos ordinarios del usuario, del conector ni del
+  administrador. Su cierre conserva una fotografía versionada y auditable.
+- **Rectificación:** un error posterior se trata mediante `Rectificar cierre`,
+  como acción excepcional de Admin Master. Conserva el cierre original, motivo,
+  responsable, fecha, evidencia, valores anterior y corregido, y genera una
+  nueva versión del cierre sin reescribir silenciosamente la anterior.
+- **Efecto posterior:** la diferencia se incorpora al período vigente como
+  `Ajuste de período anterior`, separada de su resultado operativo y de su
+  comisión. Si modifica la comisión definitiva del período rectificado, la
+  diferencia de comisión también se registra de forma explícita.
+- **Reconocimiento por cuenta:** el cierre reconoce como resultado realizado
+  únicamente el resultado completo de las cuentas que hayan cerrado dentro del
+  período. Una cuenta que inició en períodos anteriores aporta todo su recorrido
+  económico al período en el que finalmente cierra; no se reparte su resultado
+  entre meses.
+- **Continuidad de cuentas:** las cuentas vírgenes y vivas no se cierran ni se
+  duplican al cambiar de período. Conservan una identidad permanente y pasan
+  íntegramente al período siguiente con compra original, origen de fondos,
+  titular o identidad, empresa, fase, estado, vínculos NinjaTrader, entradas,
+  retiros y flotante acumulado. El flotante final por cuenta es su flotante
+  inicial en el período siguiente y no constituye por sí mismo resultado
+  realizado ni comisión.
+- **Corte operativo:** no se diseña un caso de órdenes ejecutadas después de las
+  19:00 del viernes de cierre porque el mercado se encuentra cerrado. El cambio
+  de contexto contable ocurre a esa hora. La recepción técnica demorada de datos
+  anteriores al corte continúa siendo una cuestión de integridad y auditoría,
+  no una nueva operación posterior al cierre.
+- **Comisión de usuario NODAL:** el porcentaje es individual. Se fija desde
+  Admin Master al dar de alta al usuario NODAL y solamente puede modificarse
+  desde ese panel. Durante el período el importe calculado es dinámico; al
+  cierre se guardan como definitivos el porcentaje aplicable, la base, el
+  importe de comisión y el resultado del usuario. Un cambio posterior de
+  porcentaje no recalcula cierres anteriores.
+- **Vigencia del porcentaje:** cada período utiliza un único porcentaje para
+  todo su resultado realizado. Si Admin Master lo modifica mientras el período
+  permanece abierto, la nueva tasa recalcula íntegramente la comisión total de
+  ese período, incluidas las cuentas que hubieran cerrado antes del cambio. Una
+  vez cerrado, el porcentaje y la comisión quedan congelados. Habitualmente el
+  cambio se realizará después del cierre anterior y antes de la apertura
+  operativa del siguiente período, por lo que regirá para todo el período nuevo.
+- **Identidades:** sus porcentajes de comisión serán independientes y podrán
+  administrarse desde el panel del usuario NODAL habilitado para tener
+  identidades. La regla, permisos, vigencia y efecto contable se definirán más
+  adelante; no se infieren en esta decisión.
+- **Alcance pendiente:** todavía deben confirmarse el tratamiento de eventos
+  recibidos con demora, conciliaciones pendientes al corte y la aplicación del
+  cierre en el espacio Práctica.
