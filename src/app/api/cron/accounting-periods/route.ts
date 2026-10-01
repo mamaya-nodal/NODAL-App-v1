@@ -26,6 +26,9 @@ export async function GET(request: Request) {
       auth: { autoRefreshToken: false, persistSession: false },
     });
     const outcome = await closeDueAccountingPeriods(supabase);
+    if (outcome.failed.length > 0) {
+      console.error("Accounting period close failures", outcome.failed);
+    }
     return NextResponse.json(outcome, { status: outcome.failed.length > 0 ? 207 : 200 });
   } catch (error) {
     return NextResponse.json({
