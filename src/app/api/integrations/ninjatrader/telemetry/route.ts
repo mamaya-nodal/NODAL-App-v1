@@ -21,7 +21,7 @@ export async function GET() {
   const [eventsResult, operationsResult, batchesResult] = await Promise.all([
     supabase.rpc("get_current_user_ninja_trade_telemetry", { target_limit: 200 }),
     supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 20 }),
-    supabase.rpc("get_current_user_ninja_operation_batches", { target_limit: 30 }),
+    supabase.rpc("get_current_user_ninja_reconciliation_details", { target_limit: 500 }),
   ]);
   return eventsResult.error || operationsResult.error || batchesResult.error
     ? response({ error: "No se pudo consultar la prueba." }, 503)

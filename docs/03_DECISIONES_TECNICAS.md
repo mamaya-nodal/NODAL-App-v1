@@ -1,5 +1,25 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-128 - Conciliación completa como unidad visual en Operaciones
+
+- **Fecha:** 2026-10-01. Reorganización solicitada para que Automatización no
+  dependa del Historial para comprender una cobertura.
+- **Decisión:** cada tarjeta de Automatización representa un lote de
+  conciliación completo. Al abrirla identifica la subcuenta broker, todas las
+  cuentas prop aparejadas, conexión, instrumentos, dirección, cantidad,
+  apertura, cierre, duración, resultado prop y cobertura asignada.
+- **Historial:** deja de presentar sesiones técnicas aisladas como si fueran
+  operaciones independientes. Agrupa las conciliaciones completas y conserva
+  solamente el mes calendario actual y el anterior en la vista del usuario.
+  Los datos técnicos y la trazabilidad subyacente no se eliminan.
+- **Contabilidad:** el cambio es de lectura y organización. Usa el lote y sus
+  miembros ya persistidos; no recalcula resultados, no reasigna cuentas y no
+  crea controles diarios.
+- **Seguridad:** la nueva lectura está filtrada en servidor por el titular del
+  conector activo y mantiene la separación entre autenticación y autorización.
+- **Reversión:** checkpoint Git
+  `checkpoint-before-operations-reconciliation-redesign-2026-10-01`.
+
 ### APP-127 - Fondo unificado en Operaciones
 
 - **Fecha:** 2026-09-30. Ajuste visual solicitado al comparar Operaciones con

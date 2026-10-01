@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { buildNinjaOperationProbe, type NinjaTelemetryRow } from "@/modules/ninja/domain/operation-probe";
+import {
+  currentAndPreviousMonthKeys,
+  reconciliationPairLabel,
+  reconciliationPosition,
+} from "@/modules/ninja/domain/reconciliation-view";
 import { assignManualAccountsToCoverage } from "./coverage-assignment-actions";
 import { confirmUncoveredTrade } from "./uncovered-trade-actions";
 import { retryCoverageReconciliation } from "./reconcile-coverage-actions";
@@ -24,22 +29,34 @@ type TechnicalOperationRow = Readonly<{
   status: "closed" | "open" | "settling";
 }>;
 
+type ReconciliationParticipant = Readonly<{
+  account_id: string | null;
+  account_name: string;
+  allocated_broker_result_in_cents?: number | string | null;
+  connection_name: string;
+  direction: string | null;
+  instruments: string[];
+  opened_at: string;
+  quantity: number;
+  result: number | string | null;
+  session_id: number;
+  settled_at: string | null;
+}>;
+
 type AutomaticBatchRow = Readonly<{
   accounting_mode: "active" | "shadow";
   accounting_status: "blocked" | "committed" | "shadow_ready";
   blocking_reason: string | null;
+  broker: ReconciliationParticipant | null;
   broker_result_cents: number | string;
   company_name: string | null;
   correlation_status: "conflict" | "ready" | "unmatched";
+  daily_control_id: string | null;
   id: string;
   opened_at: string;
   operated_on: string | null;
   phase: string | null;
-  prop_accounts: Array<{
-    accountId: string;
-    accountName: string;
-    allocatedBrokerResultInCents: number;
-  }>;
+  prop_accounts: ReconciliationParticipant[];
   rounding_difference_cents: number | string;
   settled_at: string | null;
 }>;
@@ -101,6 +118,15 @@ function formatTime(value: string) {
   return new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(value));
 }
 
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+  }).format(new Date(value));
+}
+
 function monthLabel(value: string) {
   return new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric" }).format(new Date(value));
 }
@@ -109,6 +135,10 @@ function duration(openedAt: string, closedAt: string | null) {
   const seconds = Math.max(0, Math.floor((Date.parse(closedAt ?? new Date().toISOString()) - Date.parse(openedAt)) / 1000));
   const minutes = Math.floor(seconds / 60);
   return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function phaseLabel(phase: string | null) {
+  return phase === "Evaluacion" || phase === "Evaluation" ? "Evaluación" : phase ?? "Fase pendiente";
 }
 
 function ManualCoverageAssignment({ accounts, batch }: Readonly<{
@@ -278,11 +308,14 @@ export function TradeTelemetryProbe({
   const otherActive = activeProbes.filter((probe) => !propNames.has(probe.accountName) && !brokerNames.has(probe.accountName));
   const brokerFloating = activeBroker.reduce((total, probe) =>
     total + (probe.netLiquidation !== null && probe.cashValue !== null ? probe.netLiquidation - probe.cashValue : 0), 0);
-  const operationMonths = new Map<string, TechnicalOperationRow[]>();
-  for (const operation of operations.filter((candidate) => candidate.status === "closed")) {
-    const key = operation.opened_at.slice(0, 7);
-    operationMonths.set(key, [...(operationMonths.get(key) ?? []), operation]);
+  const historyMonthKeys = new Set(currentAndPreviousMonthKeys(new Date()));
+  const reconciliationMonths = new Map<string, AutomaticBatchRow[]>();
+  for (const batch of batches.filter((candidate) =>
+    candidate.settled_at !== null && historyMonthKeys.has(candidate.opened_at.slice(0, 7)))) {
+    const key = batch.opened_at.slice(0, 7);
+    reconciliationMonths.set(key, [...(reconciliationMonths.get(key) ?? []), batch]);
   }
+  const automationBatches = batches.slice(0, 30);
   const activeGroups = [
     activeProps.length > 0 ? { label: "Cuentas prop", probes: activeProps } : null,
     activeBroker.length > 0 ? { label: "Cobertura", probes: activeBroker } : null,
@@ -320,37 +353,78 @@ export function TradeTelemetryProbe({
           <p><span>Cobertura</span><b>{activeBroker.map((probe) => probe.accountName).join(", ")}</b></p>
         </article>
       )}
-      {batches.length > 0 && (
-        <details className="demo-operation-disclosure automatic-batch-status" open={batches.some((batch) => batch.accounting_status === "blocked") || undefined}>
+      {automationBatches.length > 0 && (
+        <details className="demo-operation-disclosure automatic-batch-status" open={automationBatches.some((batch) => batch.accounting_status === "blocked") || undefined}>
           <summary>
             <span>Automatización</span>
-            <strong>{batches.filter((batch) => batch.accounting_status === "committed").length} conciliadas</strong>
+            <strong>{automationBatches.filter((batch) => batch.accounting_status === "committed").length} conciliadas</strong>
             <i aria-hidden="true" />
           </summary>
           <div className="automatic-batch-list">
-            {[...batches].sort((a, b) => Number(b.accounting_status === "blocked") - Number(a.accounting_status === "blocked")).map((batch) => (
-              <article className={batch.accounting_status === "blocked" ? "blocked" : ""} key={batch.id}>
-                <div>
-                  <strong>{batch.company_name ?? (batch.accounting_status === "committed" && batch.prop_accounts.length === 0 ? "Trade sin cobertura" : "Cobertura sin asignar")}</strong>
-                  <span>{batch.prop_accounts.length} {batch.prop_accounts.length === 1 ? "cuenta" : "cuentas"}{batch.phase ? ` · ${batch.phase}` : ""}</span>
-                </div>
-                <div>
-                  <strong>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
-                  <span className={batch.accounting_status === "blocked" ? "blocked" : "ready"}>
-                    {batch.accounting_status === "blocked" ? batch.blocking_reason ?? "Revisar" : "Conciliada"}
-                  </span>
-                </div>
-                {batch.accounting_status === "blocked" && batch.correlation_status === "unmatched" && manualAccounts.length > 0 && (
-                  <ManualCoverageAssignment accounts={manualAccounts} batch={batch} />
-                )}
-                {batch.accounting_status === "blocked" && batch.correlation_status === "unmatched" && batch.prop_accounts.length === 0 && (
-                  <UncoveredTradeConfirmation batch={batch} />
-                )}
-                {batch.accounting_status === "blocked" && batch.correlation_status !== "unmatched" && (
-                  <CoverageRecovery batchId={batch.id} />
-                )}
-              </article>
-            ))}
+            {[...automationBatches]
+              .sort((a, b) => Number(b.accounting_status === "blocked") - Number(a.accounting_status === "blocked"))
+              .map((batch) => {
+                const title = batch.company_name ?? (batch.accounting_status === "committed" && batch.prop_accounts.length === 0
+                  ? "Trade sin cobertura"
+                  : "Cobertura sin asignar");
+                return (
+                  <details className={`automatic-batch-card${batch.accounting_status === "blocked" ? " blocked" : ""}`} key={batch.id}>
+                    <summary>
+                      <div>
+                        <strong>{title}</strong>
+                        <span>{batch.prop_accounts.length} {batch.prop_accounts.length === 1 ? "cuenta" : "cuentas"}{batch.phase ? ` · ${phaseLabel(batch.phase)}` : ""}</span>
+                      </div>
+                      <div>
+                        <strong className={(moneyNumber(batch.broker_result_cents) ?? 0) < 0 ? "negative" : ""}>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
+                        <span className={batch.accounting_status === "blocked" ? "blocked" : "ready"}>
+                          {batch.accounting_status === "blocked" ? batch.blocking_reason ?? "Revisar" : "Conciliada"}
+                        </span>
+                      </div>
+                      <i aria-hidden="true" />
+                    </summary>
+                    <div className="automatic-batch-detail">
+                      <div className="reconciliation-timing">
+                        <span><b>Apertura</b>{formatDateTime(batch.opened_at)}</span>
+                        <span><b>Cierre</b>{batch.settled_at ? formatDateTime(batch.settled_at) : "Pendiente"}</span>
+                        <span><b>Duración</b>{duration(batch.opened_at, batch.settled_at)}</span>
+                      </div>
+                      <div className="reconciliation-pair">
+                        <section className="reconciliation-side broker-side">
+                          <header><span>Cobertura broker</span><strong>{batch.broker?.account_name ?? "Sin identificar"}</strong></header>
+                          <small>{batch.broker?.connection_name ?? "Conexión no disponible"}</small>
+                          <dl>
+                            <div><dt>Posición</dt><dd>{batch.broker ? reconciliationPosition(batch.broker.direction, batch.broker.quantity, batch.broker.instruments) : "—"}</dd></div>
+                            <div><dt>Resultado</dt><dd className={(moneyNumber(batch.broker?.result ?? null) ?? 0) < 0 ? "negative" : ""}>{formatMoney(moneyNumber(batch.broker?.result ?? null))}</dd></div>
+                          </dl>
+                        </section>
+                        <i aria-hidden="true">↔</i>
+                        <section className="reconciliation-side prop-side">
+                          <header><span>{batch.prop_accounts.length === 1 ? "Cuenta prop" : "Cuentas prop"}</span><strong>{batch.prop_accounts.length || "—"}</strong></header>
+                          {batch.prop_accounts.length === 0 ? <p>Sin cuentas prop asignadas.</p> : batch.prop_accounts.map((account) => (
+                            <div className="reconciliation-prop" key={account.session_id}>
+                              <div><strong>{account.account_name}</strong><small>{account.connection_name}</small></div>
+                              <dl>
+                                <div><dt>Posición</dt><dd>{reconciliationPosition(account.direction, account.quantity, account.instruments)}</dd></div>
+                                <div><dt>Resultado prop</dt><dd className={(moneyNumber(account.result) ?? 0) < 0 ? "negative" : ""}>{formatMoney(moneyNumber(account.result))}</dd></div>
+                                <div><dt>Cobertura asignada</dt><dd className={(moneyNumber(account.allocated_broker_result_in_cents ?? null) ?? 0) < 0 ? "negative" : ""}>{formatMoney((moneyNumber(account.allocated_broker_result_in_cents ?? null) ?? 0) / 100)}</dd></div>
+                              </dl>
+                            </div>
+                          ))}
+                        </section>
+                      </div>
+                      {batch.accounting_status === "blocked" && batch.correlation_status === "unmatched" && manualAccounts.length > 0 && (
+                        <ManualCoverageAssignment accounts={manualAccounts} batch={batch} />
+                      )}
+                      {batch.accounting_status === "blocked" && batch.correlation_status === "unmatched" && batch.prop_accounts.length === 0 && (
+                        <UncoveredTradeConfirmation batch={batch} />
+                      )}
+                      {batch.accounting_status === "blocked" && batch.correlation_status !== "unmatched" && (
+                        <CoverageRecovery batchId={batch.id} />
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
           </div>
         </details>
       )}
@@ -383,32 +457,31 @@ export function TradeTelemetryProbe({
         </>
       )}
 
-      {operationMonths.size > 0 && (
+      {reconciliationMonths.size > 0 && (
         <div className="demo-history real-operation-history">
-          <div className="demo-group-title"><h3>Historial</h3><span>{operations.filter((operation) => operation.status === "closed").length}</span></div>
-          {[...operationMonths.entries()].sort(([left], [right]) => right.localeCompare(left)).map(([month, monthOperations], monthIndex) => (
+          <div className="demo-group-title"><h3>Historial</h3><span>{[...reconciliationMonths.values()].reduce((total, month) => total + month.length, 0)}</span></div>
+          {[...reconciliationMonths.entries()].sort(([left], [right]) => right.localeCompare(left)).map(([month, monthBatches], monthIndex) => (
             <details className="demo-period-history" key={month} open={monthIndex === 0}>
               <summary>
                 <span>{monthLabel(`${month}-01T12:00:00Z`)}</span>
-                <small>{monthOperations.length} operaciones</small>
-                <strong>{formatMoney(monthOperations.reduce((total, operation) => total + (moneyNumber(operation.result) ?? 0), 0))}</strong>
+                <small>{monthBatches.length} conciliaciones</small>
+                <strong>{formatMoney(monthBatches.reduce((total, batch) => total + (moneyNumber(batch.broker_result_cents) ?? 0), 0) / 100)}</strong>
                 <i aria-hidden="true" />
               </summary>
               <div>
-                {monthOperations.map((operation, index) => (
-                  <details className="demo-history-day" key={operation.id} open={monthIndex === 0 && index === 0}>
+                {monthBatches.map((batch, index) => (
+                  <details className="demo-history-day" key={batch.id} open={monthIndex === 0 && index === 0}>
                     <summary>
-                      <span>{formatTime(operation.opened_at)}</span>
-                      <small>{operation.account_name}</small>
-                      <strong className={(moneyNumber(operation.result) ?? 0) < 0 ? "negative" : ""}>{formatMoney(moneyNumber(operation.result))}</strong>
+                      <span>{formatTime(batch.opened_at)}</span>
+                      <small>{reconciliationPairLabel(batch.broker?.account_name ?? null, batch.prop_accounts.map((account) => account.account_name))}</small>
+                      <strong className={(moneyNumber(batch.broker_result_cents) ?? 0) < 0 ? "negative" : ""}>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
                       <i aria-hidden="true" />
                     </summary>
                     <div>
-                      <p>
-                        <span>{operation.account_name}</span>
-                        <small>{operation.instruments.join(" + ") || "Sin instrumento"}</small>
-                        <strong>{duration(operation.opened_at, operation.settled_at)}</strong>
-                      </p>
+                      <p><span>{batch.company_name ?? "Sin empresa"} · {phaseLabel(batch.phase)}</span><small>{batch.broker ? reconciliationPosition(batch.broker.direction, batch.broker.quantity, batch.broker.instruments) : "Sin cobertura identificada"}</small><strong>{duration(batch.opened_at, batch.settled_at)}</strong></p>
+                      {batch.prop_accounts.map((account) => (
+                        <p key={account.session_id}><span>{account.account_name}</span><small>{reconciliationPosition(account.direction, account.quantity, account.instruments)}</small><strong>{formatMoney(moneyNumber(account.result))}</strong></p>
+                      ))}
                     </div>
                   </details>
                 ))}
