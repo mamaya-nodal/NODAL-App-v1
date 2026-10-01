@@ -10,6 +10,7 @@ import { loadIndividualCommission } from '@/modules/summary/server/individual-co
 import type { AccountPhaseWithdrawal } from "@/modules/operations/domain/account-phase-results";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 import { operationalOpeningFromRecord, type PeriodOpeningRecord } from "@/modules/summary/domain/opening-snapshot";
+import { applyPriorPeriodAdjustments } from "@/modules/accounting/domain/prior-period-adjustments";
 
 type Supabase = Awaited<
   ReturnType<typeof import("@/lib/supabase/server").createClient>
@@ -37,7 +38,7 @@ export async function loadPeriodSummaries(
   }
   if (periodIds.length === 0) return result;
 
-  const [accountsResult, controlsResult, walletResult, fundingResult, openingResult, carryoversResult, closuresResult] = await Promise.all([
+  const [accountsResult, controlsResult, walletResult, fundingResult, openingResult, carryoversResult, closuresResult, rectificationsResult] = await Promise.all([
     readAll(supabase.from("accounts").select("id, period_id, state, state_origin").in("period_id", periodIds).order("id")),
     readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, transfer_fee_cents").in("period_id", periodIds).order("id")),
     readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, destination_wallet_id, occurred_on, kind, amount_cents, fee_cents, observation").in("period_id", periodIds).order("id")),
@@ -45,6 +46,7 @@ export async function loadPeriodSummaries(
     readAll(supabase.from("period_opening_snapshots").select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference").in("period_id", periodIds).order("id")),
     readAll(supabase.from("account_period_carryovers").select("to_period_id,account_id,lifetime_result_cents").in("to_period_id", periodIds).order("id")),
     readAll(supabase.from("period_closure_versions").select("period_id,version,summary_data").in("period_id", periodIds).order("version", { ascending: false })),
+    readAll(supabase.from("period_rectifications").select("adjustment_period_id,result_adjustment_cents,commission_adjustment_cents").in("adjustment_period_id", periodIds).order("created_at")),
   ]);
 
   const accounts = accountsResult.data ?? [];
@@ -54,7 +56,8 @@ export async function loadPeriodSummaries(
   const openings = openingResult.data ?? [];
   const carryovers = carryoversResult.data ?? [];
   const closures = closuresResult.data ?? [];
-  const failed=[accountsResult,controlsResult,walletResult,fundingResult,openingResult,carryoversResult,closuresResult].find(r=>r.error);
+  const rectifications = rectificationsResult.data ?? [];
+  const failed=[accountsResult,controlsResult,walletResult,fundingResult,openingResult,carryoversResult,closuresResult,rectificationsResult].find(r=>r.error);
   if(failed)throw new Error('No se pudieron verificar los importes del período.');
   const accountIds = accounts.map((account) => account.id);
   const [purchasesResult, entriesResult, withdrawalsResult] = accountIds.length > 0
@@ -184,36 +187,42 @@ export async function loadPeriodSummaries(
       gainReconciliationBaselineInCents:
         (baseOpening?.gainReconciliationBaselineInCents ?? 0) - carriedResult,
     };
+    const summary = applyPriorPeriodAdjustments(applyIndividualCommission(buildOperationalSummary({
+      accounts: accountsForPeriod.map((account) => {
+        const purchase = purchasesByAccount.get(account.id);
+        return {
+          fundsOrigin: purchase?.funds_origin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
+          id: account.id,
+          priceInCents: Number(purchase?.price_cents ?? 0),
+          purchaseBelongsToPeriod: purchase?.period_id === periodId,
+          state: account.state,
+          stateOrigin: account.state_origin,
+        };
+      }),
+      controls: controlsForPeriod.map((control) => ({
+        isUncovered: control.is_uncovered,
+        balanceAfterInCents: Number(control.balance_after_cents),
+        controlNumber: control.control_number,
+        kind: control.kind,
+        movementInCents: control.movement_cents === null ? null : Number(control.movement_cents),
+        operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),
+        originDestination: control.origin_destination,
+        transferFeeInCents: Number(control.transfer_fee_cents ?? 0),
+      })),
+      entries: entriesForPeriod,
+      fundingWithdrawals: fundingForPeriod,
+      opening,
+      phaseWithdrawals: phaseWithdrawalsForPeriod,
+      walletMovements: walletForPeriod,
+    }),agreements.get(periodId)??null), rectifications
+      .filter((rectification) => rectification.adjustment_period_id === periodId)
+      .reduce((adjustments, rectification) => ({
+        commissionInCents: adjustments.commissionInCents + Number(rectification.commission_adjustment_cents),
+        resultInCents: adjustments.resultInCents + Number(rectification.result_adjustment_cents),
+      }), { commissionInCents: 0, resultInCents: 0 }));
     result.set(periodId, {
       lastOperatedOn: operatingDates.at(-1) ?? null,
-      summary: applyIndividualCommission(buildOperationalSummary({
-        accounts: accountsForPeriod.map((account) => {
-          const purchase = purchasesByAccount.get(account.id);
-          return {
-            fundsOrigin: purchase?.funds_origin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
-            id: account.id,
-            priceInCents: Number(purchase?.price_cents ?? 0),
-            purchaseBelongsToPeriod: purchase?.period_id === periodId,
-            state: account.state,
-            stateOrigin: account.state_origin,
-          };
-        }),
-        controls: controlsForPeriod.map((control) => ({
-          isUncovered: control.is_uncovered,
-          balanceAfterInCents: Number(control.balance_after_cents),
-          controlNumber: control.control_number,
-          kind: control.kind,
-          movementInCents: control.movement_cents === null ? null : Number(control.movement_cents),
-          operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),
-          originDestination: control.origin_destination,
-          transferFeeInCents: Number(control.transfer_fee_cents ?? 0),
-        })),
-        entries: entriesForPeriod,
-        fundingWithdrawals: fundingForPeriod,
-        opening,
-        phaseWithdrawals: phaseWithdrawalsForPeriod,
-        walletMovements: walletForPeriod,
-      }),agreements.get(periodId)??null),
+      summary,
     });
   }
   return result;

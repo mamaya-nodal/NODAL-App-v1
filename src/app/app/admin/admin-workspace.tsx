@@ -22,12 +22,17 @@ export function AdminWorkspace({ children, scope = "master", userLabel }: Props)
   const pathname = usePathname();
   const panelHref = scope === "desk" ? "/app/mi-mesa" : "/app/admin";
   const panelLabel = scope === "desk" ? "Mi mesa" : "Vista general";
-  const scopedNavigation = [{ href: panelHref, icon: "summary" as WorkspaceIconName, label: panelLabel }];
+  const scopedNavigation = [
+    { href: panelHref, icon: "summary" as WorkspaceIconName, label: panelLabel },
+    ...(scope === "master" ? [{ href: "/app/admin/periods", icon: "daily" as WorkspaceIconName, label: "Cierres" }] : []),
+  ];
   const isActive = (href: string) => pathname === href;
   const activeLabel = pathname.startsWith("/app/admin/users")
     ? "Usuarios"
     : pathname.startsWith("/app/admin/ninja")
       ? "Conectores Ninja"
+      : pathname.startsWith("/app/admin/periods")
+        ? "Cierres contables"
       : pathname === panelHref
         ? panelLabel
         : "Ficha del usuario";

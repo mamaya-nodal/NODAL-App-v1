@@ -76,6 +76,8 @@ export type OperationalSummary = Readonly<{
   positionDifferenceInCents: number;
   positionExpectedInCents: number;
   positionObservableInCents: number;
+  priorPeriodCommissionAdjustmentInCents?: number;
+  priorPeriodResultAdjustmentInCents?: number;
   realizedGainInCents: number;
   realizedReconciliationDifferenceInCents: number;
   traderGainInCents: number;

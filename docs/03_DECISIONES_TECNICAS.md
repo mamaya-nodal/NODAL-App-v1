@@ -1351,9 +1351,11 @@ vigente sin aprobacion y evidencia suficiente.
   realizado ni comisión.
 - **Corte operativo:** no se diseña un caso de órdenes ejecutadas después de las
   19:00 del viernes de cierre porque el mercado se encuentra cerrado. El cambio
-  de contexto contable ocurre a esa hora. La recepción técnica demorada de datos
-  anteriores al corte continúa siendo una cuestión de integridad y auditoría,
-  no una nueva operación posterior al cierre.
+  de contexto contable ocurre a esa hora. Si excepcionalmente el conector
+  entrega una operación después de ejecutado el cierre, la cuenta ya trasladada
+  determina el período abierto siguiente: se conserva la fecha técnica real,
+  pero el registro contable pertenece íntegramente al nuevo período. No se
+  reabre ni se rectifica automáticamente el período anterior.
 - **Comisión de usuario NODAL:** el porcentaje es individual. Se fija desde
   Admin Master al dar de alta al usuario NODAL y solamente puede modificarse
   desde ese panel. Durante el período el importe calculado es dinámico; al
@@ -1381,5 +1383,26 @@ vigente sin aprobacion y evidencia suficiente.
   se ejecute entre las 19:00 y las 20:00. El corte contable guardado continúa
   siendo las 19:00 y la base impide cerrar antes; la demora técnica no modifica
   el período al que pertenece cada registro ni exige cambiar de plan.
-- **Alcance pendiente:** todavía deben confirmarse el tratamiento de eventos
-  recibidos con demora y las conciliaciones pendientes al corte.
+- **Conciliaciones al corte:** una diferencia no impide el cierre. El período se
+  congela como `closed_with_observations`, conserva ambas diferencias y Admin
+  Master debe resolverla con explicación y evidencia o rectificar sus importes.
+  La resolución no borra el estado observado original.
+- **Control operativo:** cada ejecución automática o manual conserva inicio,
+  fin, origen, cantidad de períodos vencidos, cierres completados y fallas. Admin
+  Master puede consultar el estado y reintentar períodos vencidos sin duplicar
+  cierres ya realizados.
+
+### APP-128 - Informes descargables de cierre
+
+- **Fecha:** 2026-10-01. Alcance funcional confirmado; implementación pendiente.
+- **Formato:** el informe descargable será exclusivamente PDF.
+- **Usuario NODAL:** podrá descargar su informe individual de cada cierre.
+- **Administrador de mesa:** tendrá un cierre consolidado de su mesa y el
+  desglose autorizado por usuario e identidad.
+- **Admin Master:** tendrá un informe global consolidado, además del acceso a
+  los informes de mesa e individuales.
+- **Fuente:** los informes se generarán desde fotografías versionadas del cierre,
+  nunca recalculando silenciosamente un período histórico con datos vigentes.
+- **Pendiente previo:** ampliar la fotografía de cierre con detalle congelado por
+  cuenta e identidad y definir la comisión propia de las identidades antes de
+  construir sus importes definitivos.

@@ -1,5 +1,4 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { dateBelongsToPeriodSchedule } from "@/modules/accounting/domain/period-calendar";
 
 import { roundLikeSheets } from "@/modules/control-diario/domain/result-allocation";
 import { correlateAutomaticOperationBatches, countBrokerContextProps } from "../domain/automatic-operation-batch";
@@ -155,11 +154,6 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
   ]);
   if (accountError || entryError) return { persistedBatches: 0 };
   const accountsById = new Map((accountRows ?? []).map((account) => [account.id, account]));
-  const periodIds = [...new Set((accountRows ?? []).map((account) => account.period_id))];
-  const { data: periodRows } = periodIds.length
-    ? await supabase.from("periods").select("id,operational_start_on,scheduled_close_at").in("id", periodIds)
-    : { data: [] };
-  const periodScheduleById = new Map((periodRows ?? []).map((period) => [period.id, period]));
   const controlIds = [...new Set((entryRows ?? []).map((entry) => entry.daily_control_id))];
   const { data: timedBatches, error: timingError } = controlIds.length
     ? await supabase.from("ninja_operation_batches").select("daily_control_id,opened_at").in("daily_control_id", controlIds)
@@ -317,19 +311,10 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       technicalMemberCount: batch.props.length,
     });
     const operatedOn = dateInBuenosAires(batch.broker.settledAt ?? batch.broker.openedAt);
-    const selectedSchedule = projectionPeriodId ? periodScheduleById.get(projectionPeriodId) : null;
-    const projection = baseProjection.status === "shadow_ready" && selectedSchedule
-      && !dateBelongsToPeriodSchedule(
-        operatedOn,
-        selectedSchedule.operational_start_on,
-        selectedSchedule.scheduled_close_at,
-      )
-      ? {
-          ...baseProjection,
-          reason: "La operación llegó después del cierre del período al que corresponde. Requiere revisión.",
-          status: "blocked" as const,
-        }
-      : baseProjection;
+    // La cuenta viva ya fue trasladada de forma atómica al período abierto.
+    // Si una ejecución técnica llega después del cierre, conserva su fecha real
+    // pero se registra contablemente en ese período vigente.
+    const projection = baseProjection;
     if (dryRun) {
       previews.push({ brokerSessionId: Number(brokerSession.id), brokerResultInCents: batch.brokerResultInCents,
         projection, members: projectionMembers });

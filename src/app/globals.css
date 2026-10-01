@@ -8246,3 +8246,23 @@ html[data-theme="day"] .nodal-workspace .real-telemetry-overview {
   background: transparent !important;
   box-shadow: none !important;
 }
+
+.prior-period-adjustment {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-accent-soft) 48%, transparent);
+}
+.prior-period-adjustment > div { display: flex; justify-content: space-between; gap: 12px; }
+.prior-period-adjustment span,
+.prior-period-adjustment small { color: var(--app-subtle); font-size: 11px; }
+.prior-period-adjustment strong { color: var(--app-title); font-size: 12px; }
+.prior-period-adjustment small { grid-column: 1 / -1; }
+@media (max-width: 560px) {
+  .prior-period-adjustment { grid-template-columns: 1fr; }
+  .prior-period-adjustment small { grid-column: auto; }
+}

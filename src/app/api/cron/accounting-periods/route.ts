@@ -1,7 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
-import { closeDueAccountingPeriods } from "@/modules/accounting/server/close-due-periods";
+import { createServiceClient } from "@/lib/supabase/service";
+import { runAccountingPeriodClose } from "@/modules/accounting/server/run-period-close";
 
 export const runtime = "nodejs";
 
@@ -15,17 +15,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) {
-    return NextResponse.json({ error: "Configuración del cierre incompleta." }, { status: 503 });
-  }
-
   try {
-    const supabase = createClient(url, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-    const outcome = await closeDueAccountingPeriods(supabase);
+    const outcome = await runAccountingPeriodClose(createServiceClient(), "scheduled");
     if (outcome.failed.length > 0) {
       console.error("Accounting period close failures", outcome.failed);
     }

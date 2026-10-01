@@ -243,6 +243,15 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
         <article><span>Ganancia del usuario</span><strong>{money(summary.traderGainInCents)}</strong></article>
       </div>
 
+      {((summary.priorPeriodResultAdjustmentInCents ?? 0) !== 0
+        || (summary.priorPeriodCommissionAdjustmentInCents ?? 0) !== 0) && (
+        <div className="prior-period-adjustment" role="note">
+          <div><span>Ajuste de período anterior</span><strong>{money(summary.priorPeriodResultAdjustmentInCents ?? 0)}</strong></div>
+          <div><span>Ajuste de comisión anterior</span><strong>{money(summary.priorPeriodCommissionAdjustmentInCents ?? 0)}</strong></div>
+          <small>Rectificación aprobada por Admin Master. Se muestra separada del resultado operativo actual.</small>
+        </div>
+      )}
+
       {periods.length > 0 && (
         <>
           <div className="demo-periods-heading"><h3>Períodos</h3><span>{periods.length}</span></div>
