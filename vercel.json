@@ -1,4 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/accounting-periods",
+      "schedule": "0 22 * * *"
+    }
+  ],
   "regions": ["sfo1"]
 }

@@ -111,17 +111,6 @@ function singleValue(value: string | string[] | undefined) {
   return typeof value === "string" ? value : undefined;
 }
 
-function currentMonthInBuenosAires(): string {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    month: "2-digit",
-    timeZone: "America/Argentina/Buenos_Aires",
-    year: "numeric",
-  }).formatToParts(new Date());
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  return `${year}-${month}-01`;
-}
-
 const purchaseMessages: Record<string, string> = {
   already_created: "Esa cuenta de Ninja ya estaba vinculada. No se creó una compra duplicada.",
   created: "Compra confirmada. La cuenta quedó creada como Cuenta virgen.",
@@ -286,7 +275,7 @@ async function renderPrivateAppPage({
     const [{ data: workspaces, error: workspaceError }, { data: ninjaConnectorRows, error: connectorError }] = await Promise.all([
       readWithRetry(() => supabase
         .from("workspaces")
-        .select("id, modality, periods(id, period_month)")
+        .select("id, modality, periods(id, period_month, lifecycle_status, operational_start_on, scheduled_close_at)")
         .order("modality")),
       readWithRetry(() => supabase.rpc("get_current_user_ninja_connector_status")),
     ]);
@@ -301,7 +290,10 @@ async function renderPrivateAppPage({
       modality: workspace.modality,
       periods: workspace.periods.map((workspacePeriod) => ({
         id: workspacePeriod.id,
+        lifecycleStatus: workspacePeriod.lifecycle_status,
+        operationalStartOn: workspacePeriod.operational_start_on,
         periodMonth: workspacePeriod.period_month,
+        scheduledCloseAt: workspacePeriod.scheduled_close_at,
       })),
     }));
 
@@ -392,8 +384,6 @@ async function renderPrivateAppPage({
       { data: purchaseRows },
       { data: dailyControlRows },
       { data: dailyControlParticipantRows },
-      { data: operationEntryRows },
-      { data: phaseWithdrawalRows },
       { data: walletMovementRows },
       { data: fundingWithdrawalRows },
       { data: ninjaLinkRows },
@@ -416,6 +406,7 @@ async function renderPrivateAppPage({
       { data: openingSnapshotRows },
       { data: openingBatchRows },
       { data: openingWalletRows },
+      { data: carryoverRows },
     ] =
       await Promise.all([
         supabase
@@ -444,18 +435,6 @@ async function renderPrivateAppPage({
         supabase
           .from("daily_control_participants")
           .select("daily_control_id, account_id, role, allocated_result_cents")
-          .eq("period_id", selection.period.id),
-        supabase
-          .from("operation_entries")
-          .select(
-            "id, daily_control_id, account_id, operated_on, phase, participant_role, destination, magnitude_cents, created_at",
-          )
-          .eq("period_id", selection.period.id)
-          .order("operated_on", { ascending: false })
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("account_phase_withdrawals")
-          .select("account_id, phase, total_withdrawal_cents")
           .eq("period_id", selection.period.id),
         supabase
           .from("wallet_movements")
@@ -543,6 +522,10 @@ async function renderPrivateAppPage({
         supabase
           .from("period_opening_wallets")
           .select("opening_snapshot_id,wallet_id,balance_cents,nodal_wallets(name)"),
+        supabase
+          .from("account_period_carryovers")
+          .select("account_id,lifetime_result_cents")
+          .eq("to_period_id", selection.period.id),
       ]);
     walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
       const { data } = await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id });
@@ -731,7 +714,7 @@ async function renderPrivateAppPage({
       (companyRows ?? []).map((company) => [company.id, company]),
     );
     const purchasesByAccountId = new Map(
-      (purchaseRows ?? []).map((purchase) => [purchase.account_id, purchase]),
+      (historicalPurchaseRows ?? []).map((purchase) => [purchase.account_id, purchase]),
     );
     accountOptions = (accountRows ?? []).flatMap((account) => {
       const company = companiesById.get(account.company_id);
@@ -811,7 +794,7 @@ async function renderPrivateAppPage({
     const registerAccountsById = new Map(
       accountOptions.map((account) => [account.id, account]),
     );
-    operationEntries = (operationEntryRows ?? []).flatMap((entry) => {
+    operationEntries = (historicalOperationEntryRows ?? []).flatMap((entry) => {
       const account = registerAccountsById.get(entry.account_id);
       if (!account) return [];
       return [
@@ -830,7 +813,8 @@ async function renderPrivateAppPage({
         },
       ];
     });
-    phaseWithdrawals = (phaseWithdrawalRows ?? []).flatMap((withdrawal) => {
+    phaseWithdrawals = (historicalPhaseWithdrawalRows ?? []).flatMap((withdrawal) => {
+      if (!registerAccountsById.has(withdrawal.account_id)) return [];
       if (withdrawal.phase === "Evaluacion") return [];
       return [{
         accountId: withdrawal.account_id,
@@ -1216,10 +1200,21 @@ async function renderPrivateAppPage({
       fundingPendingInCents: total.fundingPendingInCents + snapshot.fundingPendingInCents,
       walletBalanceInCents: total.walletBalanceInCents + snapshot.walletBalanceInCents,
     }), historicalOpening);
+    periodOpening = {
+      ...periodOpening,
+      gainReconciliationBaselineInCents:
+        (periodOpening.gainReconciliationBaselineInCents ?? 0)
+        - (carryoverRows ?? []).reduce(
+          (total, carryover) => total + Number(carryover.lifetime_result_cents),
+          0,
+        ),
+    };
     operationalSummary = buildOperationalSummary({
       accounts: accountOptions.map((account) => ({
         fundsOrigin: account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
         id: account.id, priceInCents: account.priceInCents ?? 0, state: account.state,
+        purchaseBelongsToPeriod:
+          purchasesByAccountId.get(account.id)?.period_id === selection.period!.id,
         stateOrigin: account.stateOrigin,
       })),
       controls: (dailyControlRows ?? []).map((control) => ({
@@ -1466,7 +1461,7 @@ async function renderPrivateAppPage({
 
           <details className="accounting-exception">
             <summary>Registrar manualmente</summary>
-            {selection.period.periodMonth === currentMonthInBuenosAires() ? (
+            {selection.period.lifecycleStatus === "open" ? (
               <form action={createPurchase} className="purchase-form">
               <input name="mode" type="hidden" value={selection.workspace.modality} />
               <input name="period" type="hidden" value={selection.period.periodMonth} />

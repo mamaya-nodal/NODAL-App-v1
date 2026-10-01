@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { dateBelongsToPeriodSchedule } from "@/modules/accounting/domain/period-calendar";
 
 import { roundLikeSheets } from "@/modules/control-diario/domain/result-allocation";
 import { correlateAutomaticOperationBatches, countBrokerContextProps } from "../domain/automatic-operation-batch";
@@ -154,6 +155,11 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
   ]);
   if (accountError || entryError) return { persistedBatches: 0 };
   const accountsById = new Map((accountRows ?? []).map((account) => [account.id, account]));
+  const periodIds = [...new Set((accountRows ?? []).map((account) => account.period_id))];
+  const { data: periodRows } = periodIds.length
+    ? await supabase.from("periods").select("id,operational_start_on,scheduled_close_at").in("id", periodIds)
+    : { data: [] };
+  const periodScheduleById = new Map((periodRows ?? []).map((period) => [period.id, period]));
   const controlIds = [...new Set((entryRows ?? []).map((entry) => entry.daily_control_id))];
   const { data: timedBatches, error: timingError } = controlIds.length
     ? await supabase.from("ninja_operation_batches").select("daily_control_id,opened_at").in("daily_control_id", controlIds)
@@ -300,7 +306,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       : null;
     const brokerOpeningBalanceInCents = batch.broker.openingBalance === null ? null : roundLikeSheets(batch.broker.openingBalance * 100);
     const brokerClosingBalanceInCents = batch.broker.closingBalance === null ? null : roundLikeSheets(batch.broker.closingBalance * 100);
-    const projection = projectAutomaticAccounting({
+    const baseProjection = projectAutomaticAccounting({
       batchStatus: batch.status,
       brokerBalanceScope: aggregateBrokerBalance ? "aggregate" : "single",
       brokerClosingBalanceInCents,
@@ -310,6 +316,20 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       members: projectionMembers,
       technicalMemberCount: batch.props.length,
     });
+    const operatedOn = dateInBuenosAires(batch.broker.settledAt ?? batch.broker.openedAt);
+    const selectedSchedule = projectionPeriodId ? periodScheduleById.get(projectionPeriodId) : null;
+    const projection = baseProjection.status === "shadow_ready" && selectedSchedule
+      && !dateBelongsToPeriodSchedule(
+        operatedOn,
+        selectedSchedule.operational_start_on,
+        selectedSchedule.scheduled_close_at,
+      )
+      ? {
+          ...baseProjection,
+          reason: "La operación llegó después del cierre del período al que corresponde. Requiere revisión.",
+          status: "blocked" as const,
+        }
+      : baseProjection;
     if (dryRun) {
       previews.push({ brokerSessionId: Number(brokerSession.id), brokerResultInCents: batch.brokerResultInCents,
         projection, members: projectionMembers });
@@ -327,7 +347,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       target_context_prop_count: countBrokerContextProps(classified, batch.broker),
       target_distributed_cents: batch.distributedInCents,
       target_opened_at: batch.broker.openedAt,
-      target_operated_on: dateInBuenosAires(batch.broker.settledAt ?? batch.broker.openedAt),
+      target_operated_on: operatedOn,
       target_proposed_prop_count: batch.props.length,
       target_rounding_difference_cents: batch.roundingDifferenceInCents,
       target_settled_at: batch.broker.settledAt,

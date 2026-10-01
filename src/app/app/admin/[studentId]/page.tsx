@@ -40,7 +40,7 @@ export default async function StudentAdminDetail({ params, searchParams }: Props
   const [{ data: workspace }, ninjaSupervision] = await Promise.all([
     supabase
       .from("workspaces")
-      .select("id,periods(id,period_month)")
+      .select("id,periods(id,period_month,lifecycle_status)")
       .eq("owner_user_id", student.id)
       .eq("modality", modality)
       .maybeSingle(),
@@ -50,6 +50,8 @@ export default async function StudentAdminDetail({ params, searchParams }: Props
 
   const selectedPeriod = workspace?.periods.find(
     (item) => item.period_month === one(query.period),
+  ) ?? workspace?.periods.find(
+    (item) => item.lifecycle_status === "open",
   ) ?? [...(workspace?.periods ?? [])].sort(
     (left, right) => right.period_month.localeCompare(left.period_month),
   )[0];

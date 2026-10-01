@@ -4,6 +4,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { accountingPeriodMonthAt } from "@/modules/accounting/domain/period-calendar";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
 
 import {
@@ -32,14 +33,6 @@ type WorkspaceRow = Readonly<{
   owner_user_id: string;
   periods: PeriodRow[];
 }>;
-
-function currentMonth() {
-  return new Intl.DateTimeFormat("en-CA", {
-    month: "2-digit",
-    timeZone: "America/Argentina/Buenos_Aires",
-    year: "numeric",
-  }).format(new Date()) + "-01";
-}
 
 function privilegedClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -87,7 +80,7 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
   if (!user) redirect("/");
 
   const service = privilegedClient();
-  const month = currentMonth();
+  const month = accountingPeriodMonthAt();
   const [deskRows, deskTermRows, userTermRows] = await Promise.all([
     readAll(service.from("nodal_desks").select("id,name,parent_id,created_at").order("created_at").order("id")),
     readAll(service.from("nodal_desk_terms").select("desk_id,effective_month,manager_id,nodal_bps,active").order("desk_id").order("effective_month")),

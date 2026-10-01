@@ -152,4 +152,75 @@ describe("operational summary", () => {
     expect(summary.periodResultInCents).toBe(99_700);
     expect(summary.positionDifferenceInCents).toBe(0);
   });
+
+  it("conserva una cuenta viva trasladada sin volver a descontar su compra", () => {
+    const summary = buildOperationalSummary({
+      accounts: [{
+        fundsOrigin: "Aporte trader",
+        id: "carried-live",
+        priceInCents: 8_000,
+        purchaseBelongsToPeriod: false,
+        state: "live",
+        stateOrigin: "automatic",
+      }],
+      controls: [],
+      entries: [{
+        accountId: "carried-live",
+        accountReference: 1,
+        companyId: "company",
+        companyName: "Company",
+        dailyControlId: "previous-period-control",
+        destination: "NETO BROKER -",
+        id: "previous-period-entry",
+        magnitudeInCents: 12_000,
+        operatedOn: "2026-09-30",
+        participantRole: "leader",
+        phase: "Evaluacion",
+      }],
+      fundingWithdrawals: [],
+      opening: {
+        accumulatedResultInCents: -20_000,
+        brokerBalanceInCents: 80_000,
+        capitalNetInCents: 100_000,
+        fundingPendingInCents: 0,
+        gainReconciliationBaselineInCents: 20_000,
+        walletBalanceInCents: 0,
+      },
+      phaseWithdrawals: [],
+      walletMovements: [],
+    });
+
+    expect(summary.floatingInCents).toBe(20_000);
+    expect(summary.periodResultInCents).toBe(0);
+    expect(summary.capitalNetInCents).toBe(100_000);
+    expect(summary.realizedReconciliationDifferenceInCents).toBe(0);
+  });
+
+  it("reconoce en el nuevo período la vida completa de una cuenta trasladada que se cierra", () => {
+    const summary = buildOperationalSummary({
+      accounts: [{
+        fundsOrigin: "Aporte trader", id: "carried-closed", priceInCents: 0,
+        purchaseBelongsToPeriod: false, state: "closed", stateOrigin: "automatic",
+      }],
+      controls: [{
+        balanceAfterInCents: 130_000, controlNumber: 1, kind: "balance_update",
+        movementInCents: null, operatingResultInCents: 30_000, originDestination: null,
+      }],
+      entries: [
+        { accountId: "carried-closed", accountReference: 1, companyId: "company", companyName: "Company", dailyControlId: "old", destination: "NETO BROKER +", id: "old-entry", magnitudeInCents: 20_000, operatedOn: "2026-09-30", participantRole: "leader", phase: "Evaluacion" },
+        { accountId: "carried-closed", accountReference: 1, companyId: "company", companyName: "Company", dailyControlId: "new", destination: "NETO BROKER +", id: "new-entry", magnitudeInCents: 30_000, operatedOn: "2026-10-06", participantRole: "leader", phase: "Evaluacion" },
+      ],
+      fundingWithdrawals: [],
+      opening: {
+        accumulatedResultInCents: 20_000, brokerBalanceInCents: 100_000,
+        capitalNetInCents: 80_000, fundingPendingInCents: 0,
+        gainReconciliationBaselineInCents: -20_000, walletBalanceInCents: 0,
+      },
+      phaseWithdrawals: [], walletMovements: [],
+    });
+
+    expect(summary.realizedGainInCents).toBe(50_000);
+    expect(summary.periodResultInCents).toBe(30_000);
+    expect(summary.realizedReconciliationDifferenceInCents).toBe(0);
+  });
 });

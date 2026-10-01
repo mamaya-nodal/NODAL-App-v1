@@ -47,6 +47,19 @@ describe("resolveWorkspaceSelection", () => {
     expect(selection?.period?.id).toBe("practice-aug");
   });
 
+  it("elige el período abierto aunque el siguiente ya esté programado", () => {
+    const selection = resolveWorkspaceSelection([{
+      id: "real-space",
+      modality: "real",
+      periods: [
+        { id: "september", lifecycleStatus: "open", periodMonth: "2026-09-01" },
+        { id: "october", lifecycleStatus: "scheduled", periodMonth: "2026-10-01" },
+      ],
+    }], undefined, undefined);
+
+    expect(selection?.period?.id).toBe("september");
+  });
+
   it("no crea una seleccion si el usuario no posee espacios", () => {
     expect(resolveWorkspaceSelection([], "real", "2026-08-01")).toBeNull();
   });

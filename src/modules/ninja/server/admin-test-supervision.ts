@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { accountingPeriodMonthAt } from "@/modules/accounting/domain/period-calendar";
 
 import type {
   AdminNinjaTestSupervision,
@@ -8,14 +9,6 @@ import type {
   NinjaSupervisionSession,
 } from "../domain/admin-test-supervision";
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
-
-function currentMonthInBuenosAires() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    day: "2-digit", month: "2-digit", timeZone: "America/Argentina/Buenos_Aires", year: "numeric",
-  }).formatToParts(new Date());
-  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
-  return `${value("year")}-${value("month")}-01`;
-}
 
 function serviceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -47,7 +40,7 @@ export async function loadAdminNinjaTestSupervision(
     service.from("ninja_connectors").select("id,status,connector_version,paired_at,last_seen_at").eq("owner_user_id", userId).eq("status", "active").order("paired_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const realWorkspace = (workspaces ?? []).find((workspace) => workspace.modality === "real");
-  const period = realWorkspace?.periods.find((candidate) => candidate.period_month === currentMonthInBuenosAires()) ?? null;
+  const period = realWorkspace?.periods.find((candidate) => candidate.period_month === accountingPeriodMonthAt()) ?? null;
 
   if (!connector) {
     return {

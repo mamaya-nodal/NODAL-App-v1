@@ -3,7 +3,13 @@ export type WorkspaceModality = "real" | "practice";
 export type WorkspaceOption = {
   id: string;
   modality: WorkspaceModality;
-  periods: Array<{ id: string; periodMonth: string }>;
+  periods: Array<{
+    id: string;
+    lifecycleStatus?: "scheduled" | "open" | "closed" | "closed_with_observations";
+    operationalStartOn?: string;
+    periodMonth: string;
+    scheduledCloseAt?: string;
+  }>;
 };
 
 export type WorkspaceSelection = {
@@ -31,6 +37,7 @@ export function resolveWorkspaceSelection(
   );
   const period =
     periods.find((option) => option.periodMonth === requestedPeriod) ??
+    periods.find((option) => option.lifecycleStatus === "open") ??
     periods[0] ??
     null;
 

@@ -1,6 +1,7 @@
 import { requireNodalAdmin } from "./admin-access";
 import { readAll } from "./read-all";
 import { loadPeriodSummaries } from "./load-period-summaries";
+import { accountingPeriodMonthAt } from "@/modules/accounting/domain/period-calendar";
 import {
   calculateDeskOverview,
   ROOT_DESK,
@@ -39,12 +40,7 @@ export async function loadDesks(
   );
   if (!missing && [desks, terms, userTerms, history].some((r) => r.error))
     throw new Error("No se pudo cargar la estructura de mesas.");
-  const currentMonth =
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "America/Argentina/Buenos_Aires",
-      year: "numeric",
-      month: "2-digit",
-    }).format(new Date()) + "-01";
+  const currentMonth = accountingPeriodMonthAt();
   const periods = [
     ...new Set([
       currentMonth,
@@ -57,7 +53,7 @@ export async function loadDesks(
     .reverse();
   const month = periods.includes(requestedMonth ?? "")
     ? requestedMonth!
-    : periods[0];
+    : currentMonth;
   const allPeriods = (spaces.data ?? []).flatMap((s) =>
     s.periods
       .filter((p) => p.period_month <= month)
