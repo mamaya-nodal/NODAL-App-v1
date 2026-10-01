@@ -1316,9 +1316,9 @@ vigente sin aprobacion y evidencia suficiente.
 
 ### APP-127 - Calendario contable NODAL y rectificación de períodos cerrados
 
-- **Fecha:** 2026-10-01. Decisión funcional confirmada; todavía no implementada.
-  Debe sincronizarse con la documentación propietaria de Contabilidad antes de
-  reemplazar el comportamiento mensual vigente.
+- **Fecha:** 2026-10-01. Decisión funcional confirmada e implementada en la app.
+  La migración conserva la trazabilidad del sistema de referencia y no autoriza
+  reemplazarlo antes de la conciliación paralela aprobada.
 - **Calendario:** el período identificado con un mes comienza el primer lunes de
   ese mes, aunque sea feriado. El período anterior termina el viernes inmediato
   anterior a las 19:00, hora de Buenos Aires. En ese momento la aplicación
@@ -1371,6 +1371,15 @@ vigente sin aprobacion y evidencia suficiente.
   administrarse desde el panel del usuario NODAL habilitado para tener
   identidades. La regla, permisos, vigencia y efecto contable se definirán más
   adelante; no se infieren en esta decisión.
+- **Automatización:** Producción ejecuta diariamente una función privada a las
+  22:00 UTC, equivalentes a las 19:00 de Buenos Aires. La función es idempotente,
+  sólo cierra períodos vencidos y exige el secreto exclusivo `CRON_SECRET`.
+  El cierre se aplica a los espacios Real y Práctica para mantener sus
+  calendarios alineados.
+- **Precisión del proveedor:** el plan Hobby de Vercel usa una ventana flexible
+  de hasta una hora para cron jobs. El corte contable guardado sigue siendo las
+  19:00 y la base impide cerrar antes, pero el cambio visible puede ejecutarse
+  entre las 19:00 y las 20:00. Para garantizar ejecución puntual a las 19:00 se
+  requiere Vercel Pro o un programador alternativo aprobado.
 - **Alcance pendiente:** todavía deben confirmarse el tratamiento de eventos
-  recibidos con demora, conciliaciones pendientes al corte y la aplicación del
-  cierre en el espacio Práctica.
+  recibidos con demora y las conciliaciones pendientes al corte.
