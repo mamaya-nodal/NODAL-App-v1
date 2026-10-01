@@ -3,7 +3,9 @@
 import { useActionState } from "react";
 
 import type { PeriodCloseControlData } from "@/modules/accounting/server/load-period-close-control";
+import { canApprovePeriodClosure } from "@/modules/accounting/domain/period-close-approval";
 import {
+  approveAccountingClosure,
   rectifyAccountingClosure,
   resolveAccountingClosureObservation,
   retryAccountingClosures,
@@ -61,6 +63,16 @@ function RectificationForm({ periodId }: Readonly<{ periodId: string }>) {
   </form>;
 }
 
+function ApprovalForm({ periodId }: Readonly<{ periodId: string }>) {
+  const [result, action, pending] = useActionState(approveAccountingClosure, initial);
+  return <form action={action} className="close-approval-form">
+    <input name="period_id" type="hidden" value={periodId} />
+    <label><input name="approval_confirmed" required type="checkbox" /> Revisé el cierre y apruebo esta versión</label>
+    <button className="primary-action" disabled={pending}>{pending ? "Aprobando…" : "Aprobar cierre"}</button>
+    <ActionMessage result={result} />
+  </form>;
+}
+
 export function PeriodClosePanel({ data }: Readonly<{ data: PeriodCloseControlData }>) {
   const lastRun = data.runs[0];
   return <div className="admin-page admin-shell close-control-page">
@@ -71,6 +83,7 @@ export function PeriodClosePanel({ data }: Readonly<{ data: PeriodCloseControlDa
       <article><span>Estado</span><strong>{lastRun?.status === "succeeded" ? "Correcto" : lastRun?.status === "partial" ? "Parcial" : lastRun?.status === "failed" ? "Falló" : lastRun?.status === "running" ? "En curso" : "—"}</strong><small>{lastRun ? `${lastRun.closedPeriodCount} de ${lastRun.duePeriodCount} vencidos cerrados` : ""}</small></article>
       <article><span>Períodos abiertos</span><strong>{data.openPeriods.length}</strong><small>Real y Práctica</small></article>
       <article><span>Cierres observados</span><strong>{data.closedPeriods.filter((period) => period.closureStatus === "closed_with_observations" && !period.resolution).length}</strong><small>Pendientes de explicación o rectificación</small></article>
+      <article><span>Pendientes de aprobación</span><strong>{data.closedPeriods.filter((period) => !period.approval).length}</strong><small>Requieren revisión de Admin Master</small></article>
     </section>
 
     <section className="desk-surface">
@@ -89,10 +102,17 @@ export function PeriodClosePanel({ data }: Readonly<{ data: PeriodCloseControlDa
         {data.closedPeriods.map((period) => {
           const observed = period.closureStatus === "closed_with_observations";
           const resolved = Boolean(period.resolution);
+          const approved = Boolean(period.approval);
+          const approvedAt = period.approval?.approved_at ?? null;
+          const canApprove = canApprovePeriodClosure({
+            approved,
+            hasResolvedObservation: resolved,
+            status: period.closureStatus,
+          });
           return <details className="close-period-card" key={period.periodId}>
             <summary>
               <div><strong>{period.owner}</strong><span>{period.modality === "practice" ? "Práctica" : "Real"} · {month(period.month)} · versión {period.version}</span></div>
-              <span className={`close-status ${period.closureStatus}`}>{period.closureStatus === "rectified" ? "Rectificado" : observed ? resolved ? "Observación resuelta" : "Con observaciones" : "Cerrado"}</span>
+              <span className={`close-status ${approved ? "approved" : period.closureStatus}`}>{approved ? "Aprobado" : period.closureStatus === "rectified" ? "Rectificado · pendiente" : observed ? resolved ? "Observación resuelta · pendiente" : "Con observaciones" : "Pendiente de aprobación"}</span>
               <time>{dateTime(period.closedAt)}</time>
             </summary>
             <div className="close-period-body">
@@ -103,9 +123,15 @@ export function PeriodClosePanel({ data }: Readonly<{ data: PeriodCloseControlDa
                 <div><dt>Diferencia capital</dt><dd>{money(period.positionDifferenceInCents)}</dd></div>
                 <div><dt>Diferencia ganancias</dt><dd>{money(period.realizedDifferenceInCents)}</dd></div>
               </dl>
+              <div className="close-report-review">
+                <div><strong>Revisión del informe</strong><p>Estos importes provienen de la fotografía inmutable que alimentará el PDF definitivo.</p></div>
+                <span>{approved ? `Aprobado ${dateTime(approvedAt)}` : "Pendiente de aprobación"}</span>
+              </div>
               {period.resolution && <div className="close-resolution"><strong>Resolución registrada</strong><p>{period.resolution.resolution}</p><small>{period.resolution.evidence} · {dateTime(period.resolution.resolved_at)}</small></div>}
               {observed && !resolved && <details className="close-inner-action"><summary>Resolver sin cambiar importes</summary><ResolutionForm periodId={period.periodId} /></details>}
               <details className="close-inner-action"><summary>Rectificar importes del cierre</summary><RectificationForm periodId={period.periodId} /></details>
+              {canApprove && <ApprovalForm periodId={period.periodId} />}
+              {approved && period.dispatch && <div className="close-dispatch-state"><strong>Correo de cierre</strong><span>{period.dispatch.delivery_status === "awaiting_documents" ? "Esperando informe PDF y factura" : period.dispatch.delivery_status}</span><small>Para {period.dispatch.recipient_email} · desde {period.dispatch.sender_email}</small><small>Asunto: {period.dispatch.subject}</small></div>}
             </div>
           </details>;
         })}

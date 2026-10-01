@@ -1392,17 +1392,23 @@ vigente sin aprobacion y evidencia suficiente.
   Master puede consultar el estado y reintentar períodos vencidos sin duplicar
   cierres ya realizados.
 
-### APP-128 - Informes descargables de cierre
+### APP-128 - Informes PDF de cierre y aprobación de Admin Master
 
-- **Fecha:** 2026-10-01. Alcance funcional confirmado; implementación pendiente.
-- **Formato:** el informe descargable será exclusivamente PDF.
-- **Usuario NODAL:** podrá descargar su informe individual de cada cierre.
+- **Fecha:** 2026-10-01. Aprobación implementada; generación documental y envío pendientes de integrar.
+- **Cierre automático:** a la hora de corte el sistema congela el período, traslada las cuentas vivas y abre el siguiente sin esperar intervención humana. La versión resultante queda pendiente de aprobación; la aprobación no modifica el corte ni la pertenencia temporal de las operaciones.
+- **Aprobación:** Admin Master revisa la fotografía contable y aprueba explícitamente la última versión mediante un check. Un cierre con observaciones sin resolver no puede aprobarse. Una rectificación crea una versión nueva que requiere su propia aprobación; nunca hereda la anterior.
+- **Revisión asistida futura:** antes de aprobar, Admin Master podrá ejecutar un agente de revisión contable. Sus reglas, evidencia y alcance se definirán antes de implementarlo y no se presuponen en esta decisión.
+- **Formato:** el informe será exclusivamente PDF y no se ofrecerá como descarga en la app del usuario.
+- **Usuario NODAL:** recibirá por correo su informe individual aprobado junto con la factura correspondiente.
 - **Administrador de mesa:** tendrá un cierre consolidado de su mesa y el
   desglose autorizado por usuario e identidad.
 - **Admin Master:** tendrá un informe global consolidado, además del acceso a
   los informes de mesa e individuales.
 - **Fuente:** los informes se generarán desde fotografías versionadas del cierre,
   nunca recalculando silenciosamente un período histórico con datos vigentes.
+- **Entrega:** aprobar crea una entrega auditable en estado `awaiting_documents`; no se envía ningún mensaje hasta que el PDF y la factura estén disponibles. El destinatario se congela con el correo del usuario, el remitente será `noreply@nodaltrading.com` y el asunto comenzará con `Cierre período`.
+- **Google Workspace:** la integración recomendada es Gmail API con una cuenta de servicio limitada a `gmail.send` y delegación de dominio, con secretos fuera del repositorio. `noreply@nodaltrading.com` será un alias de envío autorizado y usará `Reply-To: contacto@nodaltrading.com`; no se habilita SMTP por contraseña común. Esta alternativa evita depender de una IP fija de Vercel y permite auditar cada identificador de mensaje devuelto por Google.
+- **Contacto:** `contacto@nodaltrading.com` se planifica como Grupo de Google con bandeja colaborativa y `mamaya@nodaltrading.com` como miembro inicial. De ese modo recibe comunicaciones externas, permite responder como equipo y no exige otra licencia. Si NODAL necesita inicio de sesión Gmail y buzón totalmente independiente, deberá crearse en cambio como usuario pago de Workspace.
 - **Pendiente previo:** ampliar la fotografía de cierre con detalle congelado por
-  cuenta e identidad y definir la comisión propia de las identidades antes de
-  construir sus importes definitivos.
+  cuenta e identidad, definir la comisión propia de las identidades, construir
+  el PDF y la factura y configurar el envío autorizado en Google Workspace.

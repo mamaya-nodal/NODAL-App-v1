@@ -34,6 +34,7 @@ Cada ambiente tendrá sus propias variables de entorno. Nunca se copiarán secre
 6. Acordar retención de respaldos, responsable y frecuencia de una copia independiente de la base. Un respaldo no se considera válido hasta restaurarlo en un proyecto de prueba separado y comprobar los datos.
 7. Solicitar una revisión externa de seguridad: acceso, roles, políticas de base, OAuth, secretos y flujos de corrección económica.
 8. Ejecutar el piloto en paralelo con Sheets y aprobar la conciliación antes de reemplazar el sistema actual.
+9. Configurar en Google Workspace el alias de envío `noreply@nodaltrading.com`, el grupo colaborativo `contacto@nodaltrading.com` y una cuenta de servicio con delegación de dominio limitada al alcance `gmail.send`. Guardar la credencial exclusivamente como secreto del entorno y probar SPF, DKIM, DMARC, adjuntos PDF y trazabilidad del identificador de Gmail antes de habilitar entregas reales.
 
 ## Respaldo y recuperación
 

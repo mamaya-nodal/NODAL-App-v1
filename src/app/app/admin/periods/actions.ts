@@ -100,3 +100,22 @@ export async function resolveAccountingClosureObservation(
   return { message: "Observación resuelta y auditada.", ok: true };
 }
 
+export async function approveAccountingClosure(
+  _previous: ClosureActionResult,
+  form: FormData,
+): Promise<ClosureActionResult> {
+  const confirmed = form.get("approval_confirmed") === "on";
+  if (!confirmed) return { message: "Confirmá que revisaste el cierre antes de aprobarlo.", ok: false };
+
+  const db = await requireNodalAdmin();
+  const { error } = await db.rpc("admin_approve_period_closure", {
+    target_period_id: value(form, "period_id"),
+  });
+  if (error?.message.includes("UNRESOLVED_OBSERVATIONS")) {
+    return { message: "Primero resolvé o rectificá las observaciones del cierre.", ok: false };
+  }
+  if (error) return { message: "No se pudo aprobar el cierre.", ok: false };
+  refresh();
+  return { message: "Cierre aprobado. El envío quedó esperando el informe PDF y la factura.", ok: true };
+}
+
