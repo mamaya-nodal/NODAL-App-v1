@@ -33,13 +33,13 @@ type ReconciliationParticipant = Readonly<{
   account_id: string | null;
   account_name: string;
   allocated_broker_result_in_cents?: number | string | null;
-  connection_name: string;
+  connection_name: string | null;
   direction: string | null;
   instruments: string[];
   opened_at: string;
   quantity: number;
   result: number | string | null;
-  session_id: number;
+  session_id: number | null;
   settled_at: string | null;
 }>;
 
@@ -401,8 +401,8 @@ export function TradeTelemetryProbe({
                         <section className="reconciliation-side prop-side">
                           <header><span>{batch.prop_accounts.length === 1 ? "Cuenta prop" : "Cuentas prop"}</span><strong>{batch.prop_accounts.length || "—"}</strong></header>
                           {batch.prop_accounts.length === 0 ? <p>Sin cuentas prop asignadas.</p> : batch.prop_accounts.map((account) => (
-                            <div className="reconciliation-prop" key={account.session_id}>
-                              <div><strong>{account.account_name}</strong><small>{account.connection_name}</small></div>
+                            <div className="reconciliation-prop" key={account.session_id ?? account.account_id ?? account.account_name}>
+                              <div><strong>{account.account_name}</strong><small>{account.connection_name ?? "Asignación manual"}</small></div>
                               <dl>
                                 <div><dt>Posición</dt><dd>{reconciliationPosition(account.direction, account.quantity, account.instruments)}</dd></div>
                                 <div><dt>Resultado prop</dt><dd className={(moneyNumber(account.result) ?? 0) < 0 ? "negative" : ""}>{formatMoney(moneyNumber(account.result))}</dd></div>
@@ -480,7 +480,7 @@ export function TradeTelemetryProbe({
                     <div>
                       <p><span>{batch.company_name ?? "Sin empresa"} · {phaseLabel(batch.phase)}</span><small>{batch.broker ? reconciliationPosition(batch.broker.direction, batch.broker.quantity, batch.broker.instruments) : "Sin cobertura identificada"}</small><strong>{duration(batch.opened_at, batch.settled_at)}</strong></p>
                       {batch.prop_accounts.map((account) => (
-                        <p key={account.session_id}><span>{account.account_name}</span><small>{reconciliationPosition(account.direction, account.quantity, account.instruments)}</small><strong>{formatMoney(moneyNumber(account.result))}</strong></p>
+                        <p key={account.session_id ?? account.account_id ?? account.account_name}><span>{account.account_name}</span><small>{reconciliationPosition(account.direction, account.quantity, account.instruments)}</small><strong>{formatMoney(moneyNumber(account.result))}</strong></p>
                       ))}
                     </div>
                   </details>

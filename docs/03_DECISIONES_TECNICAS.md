@@ -17,6 +17,11 @@
   crea controles diarios.
 - **Seguridad:** la nueva lectura está filtrada en servidor por el titular del
   conector activo y mantiene la separación entre autenticación y autorización.
+- **Continuidad de exclusiones:** la vista completa mantiene fuera de la lista
+  operativa las sesiones broker previamente marcadas como duplicadas o
+  sustituidas. También incorpora las cuentas adjudicadas manualmente a un lote,
+  aunque no tengan una sesión técnica prop asociada. Ninguna de ambas reglas
+  cambia la conciliación ni sus importes.
 - **Reversión:** checkpoint Git
   `checkpoint-before-operations-reconciliation-redesign-2026-10-01`.
 
