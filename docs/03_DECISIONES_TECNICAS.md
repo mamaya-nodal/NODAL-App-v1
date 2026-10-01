@@ -22,6 +22,9 @@
   sustituidas. También incorpora las cuentas adjudicadas manualmente a un lote,
   aunque no tengan una sesión técnica prop asociada. Ninguna de ambas reglas
   cambia la conciliación ni sus importes.
+- **Representación única:** si una asignación manual también conservó su sesión
+  técnica, la cuenta se muestra una sola vez y se prioriza el detalle técnico.
+  La corrección es visual y no modifica lotes, importes ni controles diarios.
 - **Reversión:** checkpoint Git
   `checkpoint-before-operations-reconciliation-redesign-2026-10-01`.
 
