@@ -1376,10 +1376,10 @@ vigente sin aprobacion y evidencia suficiente.
   sólo cierra períodos vencidos y exige el secreto exclusivo `CRON_SECRET`.
   El cierre se aplica a los espacios Real y Práctica para mantener sus
   calendarios alineados.
-- **Precisión del proveedor:** el plan Hobby de Vercel usa una ventana flexible
-  de hasta una hora para cron jobs. El corte contable guardado sigue siendo las
-  19:00 y la base impide cerrar antes, pero el cambio visible puede ejecutarse
-  entre las 19:00 y las 20:00. Para garantizar ejecución puntual a las 19:00 se
-  requiere Vercel Pro o un programador alternativo aprobado.
+- **Ventana de ejecución aprobada:** el plan Hobby de Vercel usa una ventana
+  flexible de hasta una hora para cron jobs. Se acepta que el proceso automático
+  se ejecute entre las 19:00 y las 20:00. El corte contable guardado continúa
+  siendo las 19:00 y la base impide cerrar antes; la demora técnica no modifica
+  el período al que pertenece cada registro ni exige cambiar de plan.
 - **Alcance pendiente:** todavía deben confirmarse el tratamiento de eventos
   recibidos con demora y las conciliaciones pendientes al corte.
