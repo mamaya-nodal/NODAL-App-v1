@@ -7,7 +7,11 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    return NextResponse.json({ error: "Configuración del cierre incompleta." }, { status: 503 });
+  }
+
+  if (request.headers.get("authorization") !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
