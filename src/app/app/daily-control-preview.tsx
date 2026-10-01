@@ -765,133 +765,27 @@ export function DailyControlPreview({
           .reduce((total, row) => total + (row.operatingResultInCents ?? 0), 0)}
       />
 
-      <details
-        className={`operation-context-preview${pendingBalance ? " pending" : ""}`}
-        open={pendingBalance ? true : undefined}
-      >
-        <summary className="operation-context-heading">
-          <strong>Asignación de cuentas</strong>
-          {companyId && leaderId && (
-            <span className="active-context-badge">Preparada</span>
-          )}
-        </summary>
-
-        <div className="operation-context-fields">
-          <div className="form-field">
-            <label htmlFor="preview_company">Empresa</label>
-            <select
-              id="preview_company"
-              onChange={(event) => changeCompany(event.target.value)}
-              value={companyId}
-            >
-              <option value="">Elegí una empresa</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
+      {pendingBalance && !reviewOpen && (
+        <div className="pending-sync-alert" role="alert">
+          <div>
+            <strong>Hay un ajuste excepcional sin resolver.</strong>
+            <span>No se aceptará otro saldo hasta revisarlo.</span>
           </div>
+          <button className="primary-action" onClick={() => setReviewOpen(true)} type="button">
+            Revisar ahora
+          </button>
+        </div>
+      )}
 
-          <div className="form-field">
-            <label htmlFor="preview_leader">Cuenta líder</label>
-            <select
-              disabled={companyAccounts.length === 0}
-              id="preview_leader"
-              onChange={(event) => changeLeader(event.target.value)}
-              value={leaderId}
-            >
-              <option value="">
-                {companyId && companyAccounts.length === 0
-                  ? "No hay cuentas compradas"
-                  : "Elegí la cuenta líder"}
-              </option>
-              {companyAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.externalName ?? `Cuenta ${account.referenceNumber}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="preview_phase">Fase</label>
-            <select
-              id="preview_phase"
-              onChange={(event) =>
-                setPhase(event.target.value as (typeof OPERATION_PHASES)[number])
-              }
-              value={phase}
-            >
-              {OPERATION_PHASES.map((operationPhase) => (
-                <option key={operationPhase} value={operationPhase}>
-                  {operationPhase}
-                </option>
-              ))}
-            </select>
+      {ninjaBrokerSourceNotice && (
+        <div className="ninja-source-notice" role="status">
+          <span aria-hidden="true" className="ninja-source-notice-icon">!</span>
+          <div>
+            <strong>Conector activo · sin cuenta broker</strong>
+            <span>{ninjaBrokerSourceNotice}</span>
           </div>
         </div>
-
-        <div className="replica-section">
-          <div className="replica-heading">
-            <strong>Cuentas replicadas</strong>
-            <span>{replicaIds.length} seleccionadas</span>
-          </div>
-
-          {!companyId ? (
-            <p className="empty-state">Elegí una empresa para cargar su propia grilla.</p>
-          ) : companyAccounts.length === 0 ? (
-            <p className="empty-state">
-              Esta empresa todavía no tiene cuentas compradas en el período.
-            </p>
-          ) : !leaderId ? (
-            <p className="empty-state">
-              Elegí primero la cuenta líder. No aparecerá entre las réplicas.
-            </p>
-          ) : (
-            <div className="replica-grid" aria-label="Seleccionar cuentas replicadas">
-              {companyAccounts
-                .filter((account) => account.id !== leaderId)
-                .map((account) => {
-                  const selected = replicaIds.includes(account.id);
-                  return (
-                    <button
-                      aria-pressed={selected}
-                      className={`replica-account${selected ? " selected" : ""}`}
-                      key={account.id}
-                      onClick={() => changeReplica(account.id)}
-                      type="button"
-                    >
-                      {account.externalName ?? account.referenceNumber}
-                    </button>
-                  );
-                })}
-            </div>
-          )}
-        </div>
-
-        {pendingBalance && !reviewOpen && (
-          <div className="pending-sync-alert" role="alert">
-            <div>
-              <strong>Hay un saldo de NinjaTrader sin resolver.</strong>
-              <span>No se aceptará otro saldo hasta revisarlo.</span>
-            </div>
-            <button className="primary-action" onClick={() => setReviewOpen(true)} type="button">
-              Revisar ahora
-            </button>
-          </div>
-        )}
-
-        {ninjaBrokerSourceNotice && (
-          <div className="ninja-source-notice" role="status">
-            <span aria-hidden="true" className="ninja-source-notice-icon">!</span>
-            <div>
-              <strong>Conector activo · sin cuenta broker</strong>
-              <span>{ninjaBrokerSourceNotice}</span>
-            </div>
-          </div>
-        )}
-      </details>
+      )}
 
       <div className="balance-summary broker-live-summary" aria-live="polite">
         <div className="broker-live-heading">
@@ -1295,6 +1189,103 @@ export function DailyControlPreview({
                 </small>
               </div>
             )}
+
+            <div className="sync-exception-assignment">
+              <strong>Destino del ajuste excepcional</strong>
+              <div className="operation-context-fields">
+                <div className="form-field">
+                  <label htmlFor="preview_company">Empresa</label>
+                  <select
+                    id="preview_company"
+                    onChange={(event) => changeCompany(event.target.value)}
+                    value={companyId}
+                  >
+                    <option value="">Elegí una empresa</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="preview_leader">Cuenta líder</label>
+                  <select
+                    disabled={companyAccounts.length === 0}
+                    id="preview_leader"
+                    onChange={(event) => changeLeader(event.target.value)}
+                    value={leaderId}
+                  >
+                    <option value="">
+                      {companyId && companyAccounts.length === 0
+                        ? "No hay cuentas compradas"
+                        : "Elegí la cuenta líder"}
+                    </option>
+                    {companyAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.externalName ?? `Cuenta ${account.referenceNumber}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="preview_phase">Fase</label>
+                  <select
+                    id="preview_phase"
+                    onChange={(event) =>
+                      setPhase(event.target.value as (typeof OPERATION_PHASES)[number])
+                    }
+                    value={phase}
+                  >
+                    {OPERATION_PHASES.map((operationPhase) => (
+                      <option key={operationPhase} value={operationPhase}>
+                        {operationPhase}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="replica-section">
+                <div className="replica-heading">
+                  <strong>Cuentas replicadas</strong>
+                  <span>{replicaIds.length} seleccionadas</span>
+                </div>
+
+                {!companyId ? (
+                  <p className="empty-state">Elegí una empresa para cargar su propia grilla.</p>
+                ) : companyAccounts.length === 0 ? (
+                  <p className="empty-state">
+                    Esta empresa todavía no tiene cuentas compradas en el período.
+                  </p>
+                ) : !leaderId ? (
+                  <p className="empty-state">
+                    Elegí primero la cuenta líder. No aparecerá entre las réplicas.
+                  </p>
+                ) : (
+                  <div className="replica-grid" aria-label="Seleccionar cuentas replicadas">
+                    {companyAccounts
+                      .filter((account) => account.id !== leaderId)
+                      .map((account) => {
+                        const selected = replicaIds.includes(account.id);
+                        return (
+                          <button
+                            aria-pressed={selected}
+                            className={`replica-account${selected ? " selected" : ""}`}
+                            key={account.id}
+                            onClick={() => changeReplica(account.id)}
+                            type="button"
+                          >
+                            {account.externalName ?? account.referenceNumber}
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            </div>
 
             <div className="sync-destination">
               <span>Se propone registrar en</span>

@@ -1,5 +1,17 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-129 - Asignación contextual dentro de cada conciliación
+
+- **Fecha:** 2026-10-01. Simplificación de la vista Operaciones solicitada por
+  el usuario.
+- **Decisión:** se elimina la tarjeta global `Asignación de cuentas`. Los lotes
+  que no concilian conservan sus acciones locales `Asignar cuentas` y
+  `Registrar sin cobertura`, evitando dos lugares distintos para resolver el
+  mismo problema.
+- **Excepción:** la selección de empresa, cuenta líder, réplicas y fase se
+  conserva solamente dentro del diálogo de ajuste excepcional de saldo. No se
+  muestra en el recorrido normal ni modifica conciliaciones existentes.
+
 ### APP-128 - Conciliación completa como unidad visual en Operaciones
 
 - **Fecha:** 2026-10-01. Reorganización solicitada para que Automatización no

@@ -1741,6 +1741,17 @@ html[data-theme="day"] .ninja-source-notice {
   font-size: 0.82rem;
 }
 
+.sync-exception-assignment {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.sync-exception-assignment > strong {
+  display: block;
+  margin-bottom: 12px;
+}
+
 .contingency-audit-note {
   margin: 18px 0 0;
   padding: 14px;
