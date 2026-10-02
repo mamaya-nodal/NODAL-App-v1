@@ -1,5 +1,17 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-132 - Bandeja de cuentas detectadas como tarjetas independientes
+
+- **Fecha:** 2026-10-02. Corrección visual solicitada en Cuentas.
+- **Decisión:** el estado de NinjaTrader y cada cuenta prop pendiente se
+  presentan como tarjetas separadas. Cada cuenta conserva su propio formulario,
+  sus acciones `Omitir` y `Registrar cuenta` y su trazabilidad de detección.
+- **Alineación:** el contador de cuentas y todas las acciones de la bandeja usan
+  centrado vertical uniforme; se elimina el margen heredado que desplazaba las
+  acciones secundarias.
+- **Alcance:** no cambia la clasificación de cuentas, las omisiones guardadas,
+  la actualización del inventario ni el registro contable.
+
 ### APP-131 - Orden y jerarquía uniforme en Operaciones
 
 - **Fecha:** 2026-10-01. Reorganización visual solicitada por el usuario.
