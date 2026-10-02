@@ -7,18 +7,19 @@ import type { ReactNode } from "react";
 
 import { ThemeToggle } from "../theme-toggle";
 import { WorkspaceIcon, type WorkspaceIconName } from "../workspace-icon";
+import {
+  WorkspaceUserMenu,
+  type WorkspaceVersionInfo,
+} from "../workspace-user-menu";
 
 type Props = Readonly<{
   children: ReactNode;
   scope?: "desk" | "master";
   userLabel: string;
+  versionInfo: WorkspaceVersionInfo;
 }>;
 
-function initials(label: string) {
-  return label.split(/\s|@/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
-}
-
-export function AdminWorkspace({ children, scope = "master", userLabel }: Props) {
+export function AdminWorkspace({ children, scope = "master", userLabel, versionInfo }: Props) {
   const pathname = usePathname();
   const panelHref = scope === "desk" ? "/app/mi-mesa" : "/app/admin";
   const panelLabel = scope === "desk" ? "Mi mesa" : "Vista general";
@@ -60,7 +61,10 @@ export function AdminWorkspace({ children, scope = "master", userLabel }: Props)
       <div className="workspace-stage">
         <header className="workspace-topbar">
           <div><span>{scope === "desk" ? "Administración de mesa" : "Panel de administración"}</span><strong>{activeLabel}</strong></div>
-          <div className="workspace-top-actions"><ThemeToggle /><span className="workspace-avatar" title={userLabel}>{initials(userLabel)}</span></div>
+          <div className="workspace-top-actions">
+            <ThemeToggle />
+            <WorkspaceUserMenu userLabel={userLabel} versionInfo={versionInfo} />
+          </div>
         </header>
         <div className="app-page-shell workspace-content admin-page-shell">{children}</div>
         <nav className="workspace-mobile-navigation" aria-label="Navegación móvil de administración">

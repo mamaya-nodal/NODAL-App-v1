@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { currentAppRelease } from "@/lib/app-release";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 
 import { AdminWorkspace } from "../admin/admin-workspace";
@@ -19,9 +20,25 @@ export default async function MyDeskLayout({ children }: Readonly<{ children: Re
     .select("display_name,email")
     .eq("id", user.id)
     .maybeSingle();
+  const { data: connectorRows } = await supabase.rpc(
+    "get_current_user_ninja_connector_status",
+  );
+  const connector = Array.isArray(connectorRows)
+    ? connectorRows.find((row) => row.identity_id === null) ?? null
+    : null;
+  const appRelease = currentAppRelease();
 
   return (
-    <AdminWorkspace scope="desk" userLabel={profile?.display_name || profile?.email || "Administrador de mesa"}>
+    <AdminWorkspace
+      scope="desk"
+      userLabel={profile?.display_name || profile?.email || "Administrador de mesa"}
+      versionInfo={{
+        appRevision: appRelease.revision,
+        appVersion: appRelease.version,
+        connectorOnline: connector ? Boolean(connector.is_online) : null,
+        connectorVersion: typeof connector?.connector_version === "string" ? connector.connector_version : null,
+      }}
+    >
       {children}
     </AdminWorkspace>
   );

@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { resolveWithDeadline } from "@/lib/async/resolve-with-deadline";
+import { currentAppRelease } from "@/lib/app-release";
 import { createClient } from "@/lib/supabase/server";
 import { readWithRetry, reportReadFailure } from "@/lib/supabase/read-with-retry";
 import { ConnectionRecovery } from "./connection-recovery";
@@ -200,6 +201,7 @@ type NinjaOperationProbeRpcRow = {
 async function renderPrivateAppPage({
   searchParams,
 }: PrivateAppPageProps) {
+  const appRelease = currentAppRelease();
   const supabase = await createClient();
   const {
     data: claimsData,
@@ -1321,6 +1323,12 @@ async function renderPrivateAppPage({
       initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "accounts" : "home"}
       userLabel={nodalUser?.display_name || nodalUser?.email || userEmail || "Alumno"}
       username={typeof claimsData?.claims.user_metadata?.username === "string" ? claimsData.claims.user_metadata.username : undefined}
+      versionInfo={{
+        appRevision: appRelease.revision,
+        appVersion: appRelease.version,
+        connectorOnline,
+        connectorVersion: ninjaConnector?.connectorVersion ?? null,
+      }}
     >
       <NinjaConnectorMonitor inventoryRevision={ninjaInventoryRevision} online={connectorOnline} />
       {!connectorOnline ? (

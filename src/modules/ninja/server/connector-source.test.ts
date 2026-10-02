@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { LATEST_NINJA_CONNECTOR_VERSION } from "../domain/connector-version";
+
 const connectorSource = readFileSync(
   join(process.cwd(), "integrations", "ninjatrader", "NodalNinjaConnector.cs"),
   "utf8",
@@ -10,7 +12,9 @@ const connectorSource = readFileSync(
 
 describe("Ninja connector source", () => {
   it("publica la revisión de compatibilidad 0.8", () => {
-    expect(connectorSource).toContain('ConnectorVersion = "0.8"');
+    expect(connectorSource).toContain(
+      `ConnectorVersion = "${LATEST_NINJA_CONNECTOR_VERSION}"`,
+    );
   });
 
   it("evita la colisión entre el estado de cuenta y el enum de NinjaTrader", () => {

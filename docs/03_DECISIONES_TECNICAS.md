@@ -1497,3 +1497,12 @@ vigente sin aprobacion y evidencia suficiente.
 - **Hallazgo:** el conector 0.7 declaraba un método auxiliar llamado `ConnectionStatus` y también utilizaba el enum homónimo de NinjaTrader. Algunas instalaciones resolvían el identificador como el método y producían `CS0119` al compilar.
 - **Corrección:** la versión 0.8 renombra el método auxiliar y referencia de forma explícita `NinjaTrader.Cbi.ConnectionStatus.Connected`, eliminando la ambigüedad entre versiones del compilador de NinjaTrader.
 - **Actualización:** `ACTUALIZAR-NODAL.cmd` reemplaza únicamente el código del complemento. Conserva vínculos, credenciales cifradas, historial y cola de telemetría; no requiere un nuevo código de vinculación.
+
+### APP-133 - Menú de usuario y versiones visibles
+
+- **Fecha:** 2026-10-02. Menú implementado en el espacio personal y en los paneles administrativos.
+- **Acceso:** al pulsar el nombre o avatar se despliega un menú con `Configuración`, `Ayuda` y `Versión`. Se cierra al pulsar fuera o presionar Escape y mantiene navegación por teclado.
+- **Versión de la app:** se muestra la versión declarada del producto y la revisión corta exacta del despliegue, permitiendo identificar qué código está utilizando el usuario.
+- **Versión del conector:** se muestra la última versión que el conector instalado informó mediante su heartbeat, junto con su estado en línea o sin señal. Una falta de señal no borra la última versión conocida.
+- **Referencia:** el menú también informa la última versión de conector publicada por NODAL. Esta referencia no sustituye la versión instalada recibida desde NinjaTrader.
+- **Alcance inicial:** Configuración queda como espacio reservado y Ayuda ofrece contacto por `contacto@nodaltrading.com`; sus funciones adicionales se definirán posteriormente.

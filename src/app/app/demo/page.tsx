@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { currentAppRelease } from "@/lib/app-release";
 import { decideAccess } from "@/modules/access/domain/access-decision";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 
@@ -8,6 +9,7 @@ import { AppWorkspace } from "../app-workspace";
 import { DemoAccountingWorkspace } from "./demo-accounting-workspace";
 
 export default async function AccountingDemoPage() {
+  const appRelease = currentAppRelease();
   const supabase = await createClient();
   const {
     data: { user },
@@ -41,6 +43,12 @@ export default async function AccountingDemoPage() {
       initialView="accounts"
       userLabel={nodalUser?.display_name || nodalUser?.email || user?.email || "Simulación"}
       username={typeof user?.user_metadata?.username === "string" ? user.user_metadata.username : undefined}
+      versionInfo={{
+        appRevision: appRelease.revision,
+        appVersion: appRelease.version,
+        connectorOnline: null,
+        connectorVersion: null,
+      }}
     >
       <DemoAccountingWorkspace />
     </AppWorkspace>

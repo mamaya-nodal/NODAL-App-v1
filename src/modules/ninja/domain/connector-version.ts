@@ -1,0 +1,1 @@
+export const LATEST_NINJA_CONNECTOR_VERSION = "0.8";

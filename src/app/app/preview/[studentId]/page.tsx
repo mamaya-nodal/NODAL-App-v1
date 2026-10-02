@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { requireNodalAdmin } from "@/modules/admin/server/admin-access";
+import { currentAppRelease } from "@/lib/app-release";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { loadAdminNinjaTestSupervision } from "@/modules/ninja/server/admin-test-supervision";
 
@@ -42,6 +43,7 @@ function relation<T>(value: T | T[] | null): T | null {
 }
 
 export default async function AdminUserPreview({ params }: Props) {
+  const appRelease = currentAppRelease();
   const caller = await requireNodalAdmin();
   const { studentId } = await params;
   const service = serviceClient();
@@ -135,6 +137,12 @@ export default async function AdminUserPreview({ params }: Props) {
       authorized
       userLabel={student.display_name || student.email}
       username={student.display_name || student.email}
+      versionInfo={{
+        appRevision: appRelease.revision,
+        appVersion: appRelease.version,
+        connectorOnline,
+        connectorVersion: supervision.connector?.version ?? null,
+      }}
     >
       <div className="notice admin-user-preview-banner" role="status">
         <span><strong>Vista de Ivo:</strong> copia administrativa de solo lectura.</span>

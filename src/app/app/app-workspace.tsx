@@ -9,6 +9,10 @@ import type { AdministrationScope } from "@/modules/admin/domain/administration-
 
 import { ThemeToggle } from "./theme-toggle";
 import { WorkspaceIcon, type WorkspaceIconName } from "./workspace-icon";
+import {
+  WorkspaceUserMenu,
+  type WorkspaceVersionInfo,
+} from "./workspace-user-menu";
 
 type View = "home" | "accounts" | "operations" | "accounting" | "identities";
 
@@ -36,6 +40,7 @@ type Props = Readonly<{
   initialView?: View;
   userLabel: string;
   username?: string;
+  versionInfo: WorkspaceVersionInfo;
 }>;
 
 function viewFromHash(fallback: View): View {
@@ -48,15 +53,6 @@ function subscribe(callback: () => void) {
   return () => window.removeEventListener("hashchange", callback);
 }
 
-function initials(label: string) {
-  return label
-    .split(/\s|@/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-}
-
 export function AppWorkspace({
   administrationScope,
   authorized,
@@ -65,6 +61,7 @@ export function AppWorkspace({
   initialView = "home",
   userLabel,
   username,
+  versionInfo,
 }: Props) {
   // Una actualizaciÃ³n de datos no debe reinterpretar avisos viejos de la URL
   // ni sacar al usuario de la pantalla que estaba usando.
@@ -135,12 +132,12 @@ export function AppWorkspace({
         <header className="workspace-topbar">
           <div className="workspace-top-actions">
             <ThemeToggle />
-            <div className="workspace-user" title={userLabel}>
-              <span>{username || userLabel}</span>
-              <span className="workspace-avatar">
-                {avatarUrl ? <img alt="" src={avatarUrl} /> : initials(userLabel)}
-              </span>
-            </div>
+            <WorkspaceUserMenu
+              avatarUrl={avatarUrl}
+              userLabel={userLabel}
+              username={username}
+              versionInfo={versionInfo}
+            />
           </div>
         </header>
 
