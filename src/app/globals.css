@@ -15,6 +15,10 @@
   --action-font-weight: 800;
   --action-focus: 0 0 0 3px color-mix(in srgb, var(--brand) 24%, transparent);
   --action-primary-shadow: 0 10px 26px color-mix(in srgb, var(--brand) 18%, transparent);
+  --action-green-background: linear-gradient(135deg, rgb(255 255 255 / 42%), transparent 44%), rgb(147 255 59 / 88%);
+  --action-green-border: rgb(255 255 255 / 42%);
+  --action-green-color: #0b160c;
+  --action-green-shadow: inset 0 1px 0 rgb(255 255 255 / 65%), 0 8px 22px rgb(63 135 30 / 18%);
 }
 
 html[data-theme="day"] {
@@ -415,8 +419,10 @@ h1 {
 
 .primary-action {
   flex: 0 0 auto;
-  background: var(--brand);
-  color: var(--brand-contrast);
+  border-color: var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
 }
 
 .secondary-action {
@@ -873,10 +879,10 @@ html[data-theme="day"] .connector-gate-modal {
 .ninja-pairing-panel.is-compact .primary-action,
 .ninja-pairing-panel.is-compact .secondary-action {
   margin-top: 0;
-  border: 1px solid rgb(255 255 255 / 44%);
-  background: linear-gradient(135deg, rgb(255 255 255 / 42%), transparent 44%), rgb(147 255 59 / 88%);
-  color: #0b160c;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 65%), 0 9px 24px rgb(63 135 30 / 19%);
+  border: 1px solid var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
   backdrop-filter: blur(13px) saturate(130%);
 }
 .ninja-pairing-panel.is-compact :is(.primary-action, .secondary-action):hover { filter: saturate(108%) brightness(1.02); transform: translateY(-1px); }
@@ -2215,7 +2221,7 @@ html[data-theme="day"] .ninja-source-notice {
 .diagnostic-form label { font-weight: 800; }
 .diagnostic-form > div { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .diagnostic-form input { min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; font: inherit; }
-.diagnostic-form button { padding: 11px 15px; border: 0; border-radius: 9px; background: var(--brand); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.diagnostic-form button { padding: 11px 15px; border: 1px solid var(--action-green-border); border-radius: 9px; background: var(--action-green-background); color: var(--action-green-color); box-shadow: var(--action-green-shadow); font: inherit; font-weight: 800; cursor: pointer; }
 .diagnostic-form button:disabled { cursor: wait; opacity: .6; }
 
 .alert-card {
@@ -2256,10 +2262,11 @@ html[data-theme="day"] .ninja-source-notice {
 
 .summary-form button {
   min-height: 44px;
-  border: 0;
+  border: 1px solid var(--action-green-border);
   border-radius: 10px;
-  background: var(--brand);
-  color: white;
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
   font: inherit;
   font-weight: 800;
 }
@@ -2507,8 +2514,10 @@ html[data-theme="day"] .ninja-source-notice {
   justify-self: end;
   padding: 10px 13px;
   border-radius: 10px;
-  background: var(--brand);
-  color: white;
+  border: 1px solid var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
   font-size: 0.85rem;
   font-weight: 800;
   text-decoration: none;
@@ -2556,8 +2565,10 @@ html[data-theme="day"] .ninja-source-notice {
   flex: 0 0 auto;
   padding: 12px 15px;
   border-radius: 11px;
-  background: var(--brand);
-  color: white;
+  border: 1px solid var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
   font-weight: 800;
   text-decoration: none;
 }
@@ -2907,8 +2918,10 @@ html[data-theme="day"] .ninja-source-notice {
 }
 
 .theme-toggle button[aria-pressed="true"] {
-  background: var(--brand);
-  color: var(--brand-contrast);
+  border-color: var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
 }
 
 .app-page-shell .development-badge {
@@ -3585,7 +3598,7 @@ html[data-theme="day"] .app-page-shell .register-entry-value > strong { color: #
   border-color: var(--line);
   background: color-mix(in srgb, var(--paper) 64%, var(--surface));
 }
-.app-page-shell .summary-form button { background: var(--brand); color: var(--brand-contrast); }
+.app-page-shell .summary-form button { border-color: var(--action-green-border); background: var(--action-green-background); color: var(--action-green-color); box-shadow: var(--action-green-shadow); }
 .app-page-shell .summary-list {
   border-color: var(--line);
   background: color-mix(in srgb, var(--surface) 76%, var(--paper));
@@ -4195,8 +4208,10 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   margin-top: auto;
   padding: 9px 12px;
   border-radius: 9px;
-  background: #93ff3b;
-  color: #10200b;
+  border: 1px solid var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
   font-size: .72rem;
   font-weight: 850;
   text-decoration: none;
@@ -4824,14 +4839,10 @@ html[data-theme="day"] .nodal-workspace .replica-account.selected {
 .nodal-workspace .primary-action,
 .nodal-workspace .summary-form button,
 .nodal-workspace .diagnostic-form button {
-  border: 1px solid rgb(255 255 255 / 42%);
-  background:
-    linear-gradient(135deg, rgb(255 255 255 / 42%), transparent 44%),
-    rgb(147 255 59 / 88%);
-  color: var(--app-action-text);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 65%),
-    0 8px 22px rgb(63 135 30 / 18%);
+  border: 1px solid var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
   backdrop-filter: blur(13px) saturate(130%);
 }
 
@@ -5182,12 +5193,10 @@ html[data-theme="day"] .nodal-workspace {
 .admin-workspace .admin-detail-link,
 .admin-workspace .admin-manage-link,
 .admin-workspace .primary-action {
-  border: 1px solid rgb(255 255 255 / 42%);
-  background:
-    linear-gradient(135deg, rgb(255 255 255 / 42%), transparent 44%),
-    rgb(147 255 59 / 88%);
-  color: var(--app-action-text);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 65%), 0 8px 22px rgb(63 135 30 / 18%);
+  border: 1px solid var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
   backdrop-filter: blur(13px) saturate(130%);
 }
 
@@ -5481,10 +5490,10 @@ html[data-theme="day"] .nodal-workspace .status::before {
 }
 
 html[data-theme="day"] .nodal-workspace .secondary-action {
-  border-color: rgb(255 255 255 / 72%);
-  background: linear-gradient(135deg, rgb(255 255 255 / 40%), transparent 44%), #93ff3b;
-  color: #0b0e0c;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 72%), 0 7px 18px rgb(70 142 37 / 16%);
+  border-color: var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
 }
 
 html[data-theme="day"] .nodal-workspace :is(input, select, textarea):focus {
@@ -5865,10 +5874,10 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 .summary-form button,
 .diagnostic-form button,
 .ninja-alert-link {
-  border: 1px solid color-mix(in srgb, var(--brand) 66%, transparent);
-  background: var(--brand);
-  color: var(--brand-contrast);
-  box-shadow: var(--action-primary-shadow);
+  border: 1px solid var(--action-green-border);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
+  box-shadow: var(--action-green-shadow);
 }
 
 .secondary-action,
@@ -7052,7 +7061,7 @@ html[data-theme="day"] .accounting-history {
 }
 
 .demo-account-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.nodal-workspace .purchase-panel .demo-account-kpis { margin-top: 24px; }
+.nodal-workspace .purchase-panel .demo-account-kpis { margin-top: 12px; }
 .demo-account-kpis article,
 .demo-broker-balance,
 .demo-today-result,
@@ -7229,7 +7238,7 @@ html[data-theme="day"] .accounting-history {
 .manual-account-edit-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
 .manual-account-edit-actions .cancel,
 .manual-account-delete-confirm .cancel { color: var(--app-copy); }
-.manual-account-edit-actions .save { border-color: color-mix(in srgb, var(--app-accent) 55%, var(--app-border)); color: #10200f; background: var(--app-accent); }
+.manual-account-edit-actions .save { border-color: var(--action-green-border); color: var(--action-green-color); background: var(--action-green-background); box-shadow: var(--action-green-shadow); }
 .manual-account-delete-confirm strong { color: var(--app-title); font-size: 12px; }
 .manual-account-delete-confirm p { max-width: 680px; margin: 7px 0 12px; color: var(--app-copy); font-size: 10px; line-height: 1.5; }
 .manual-account-delete-confirm > div { display: flex; justify-content: flex-end; gap: 8px; }
@@ -7336,7 +7345,7 @@ html[data-theme="day"] .accounting-history {
 .named-wallet-display strong { min-width: 0; overflow: hidden; color: var(--app-title); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .named-wallet-row input { width: min(300px, 46vw); min-height: 38px; padding: 0 11px; border: 1px solid var(--app-border); border-radius: 9px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 11px; font-weight: 750; -webkit-text-fill-color: var(--app-title); }
 .named-wallet-row button,
-.wallet-create-inline button { min-height: 38px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--app-accent) 55%, var(--app-border)); border-radius: 9px; color: #13220e; background: linear-gradient(135deg, #cfff72, #8df04d); box-shadow: 0 5px 14px rgb(109 216 50 / 16%); font: inherit; font-size: 10px; font-weight: 850; cursor: pointer; }
+.wallet-create-inline button { min-height: 38px; padding: 0 14px; border: 1px solid var(--action-green-border); border-radius: 9px; color: var(--action-green-color); background: var(--action-green-background); box-shadow: var(--action-green-shadow); font: inherit; font-size: 10px; font-weight: 850; cursor: pointer; }
 .named-wallet-row button:disabled { border-color: var(--app-border); color: var(--app-subtle); background: var(--app-panel); box-shadow: none; cursor: default; opacity: .78; }
 .named-wallet-row .wallet-edit-button,
 .named-wallet-row .wallet-edit-cancel { border-color: var(--app-border); color: var(--app-copy); background: transparent; box-shadow: none; }
@@ -7951,10 +7960,11 @@ html[data-theme="day"] .manual-coverage-close { background: #ffffff; }
 .broker-account-breakdown button {
   min-height: 34px;
   padding: 6px 11px;
-  border: 0;
+  border: 1px solid var(--action-green-border);
   border-radius: 9px;
-  color: var(--app-title);
-  background: var(--app-accent);
+  color: var(--action-green-color);
+  background: var(--action-green-background);
+  box-shadow: var(--action-green-shadow);
   font-size: 11px;
   font-weight: 800;
   cursor: pointer;

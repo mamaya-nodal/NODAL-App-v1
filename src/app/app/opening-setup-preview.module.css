@@ -26,15 +26,15 @@
 .nextButton {
   min-height: 42px;
   padding: 0 18px;
-  border: 1px solid rgb(255 255 255 / 48%);
+  border: 1px solid var(--action-green-border);
   border-radius: 11px;
-  background: var(--app-action);
-  color: var(--app-action-text);
+  background: var(--action-green-background);
+  color: var(--action-green-color);
   font: inherit;
   font-size: 12px;
   font-weight: 850;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgb(76 151 34 / 18%);
+  box-shadow: var(--action-green-shadow);
 }
 
 .savedOpening,

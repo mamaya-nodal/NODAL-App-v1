@@ -1,5 +1,15 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-133 - Degradado único para acciones verdes
+
+- **Fecha:** 2026-10-02. Unificación visual solicitada por el usuario.
+- **Patrón:** `Registrar cuenta` define el fondo, borde, color de texto y sombra
+  canónicos de toda acción verde. Esos valores viven en variables compartidas
+  y se reutilizan en la app personal, apertura, formularios y administración.
+- **Jerarquía:** la unificación alcanza sólo a controles que ya son verdes. Las
+  acciones neutras, de texto, cancelación y destructivas conservan su aspecto y
+  significado propios.
+
 ### APP-132 - Bandeja de cuentas detectadas como tarjetas independientes
 
 - **Fecha:** 2026-10-02. Corrección visual solicitada en Cuentas.
@@ -9,9 +19,9 @@
 - **Alineación:** el contador de cuentas y todas las acciones de la bandeja usan
   centrado vertical uniforme; se elimina el margen heredado que desplazaba las
   acciones secundarias.
-- **Ritmo vertical:** el resumen `Total / Activas / Vírgenes / Invertido`
-  conserva una separación de sección respecto de la última cuenta detectada y
-  no se presenta pegado a su tarjeta.
+- **Ritmo vertical:** el encabezado de NinjaTrader, cada cuenta detectada y el
+  resumen `Total / Activas / Vírgenes / Invertido` mantienen la misma separación
+  de 12 px.
 - **Alcance:** no cambia la clasificación de cuentas, las omisiones guardadas,
   la actualización del inventario ni el registro contable.
 
