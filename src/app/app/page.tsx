@@ -36,6 +36,7 @@ import type {
   AccountPhaseWithdrawal,
 } from "@/modules/operations/domain/account-phase-results";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
+import { isPayoutEligibleAccount } from "@/modules/operations/domain/account-progress";
 import {
   buildOperationalSummary,
   type OperationalSummary,
@@ -985,7 +986,13 @@ async function renderPrivateAppPage({
     );
     approvedPayoutHistory = (historicalFundingWithdrawalRows ?? []).flatMap((withdrawal) =>
       withdrawal.phase && withdrawal.phase !== "Evaluacion"
-        ? [{ accountId: withdrawal.account_id, phase: withdrawal.phase as AccountOverviewPayout["phase"] }]
+        ? [{
+            accountId: withdrawal.account_id,
+            amountInCents: Number(withdrawal.amount_cents),
+            approvedOn: withdrawal.approved_on,
+            id: withdrawal.id,
+            phase: withdrawal.phase as AccountOverviewPayout["phase"],
+          }]
         : [],
     );
     walletMovements = (walletMovementRows ?? []).map((movement) => ({
@@ -1582,7 +1589,17 @@ async function renderPrivateAppPage({
             <h2 id="accounting-title">Contabilidad</h2>
           </div>
           <ProgressSummary
-            accounts={accountOptions.map((account) => ({ id: account.id, label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}` }))}
+            accounts={accountHistory.map((account) => {
+              const hasFundedEntry = operationEntryHistory.some((entry) =>
+                entry.accountId === account.id && entry.phase !== "Evaluacion");
+              const operationalState = account.currentOperationalState
+                ?? (hasFundedEntry ? "Funded" : "Evaluation");
+              return {
+                eligibleForPayout: isPayoutEligibleAccount(account.state, operationalState),
+                id: account.id,
+                label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}`,
+              };
+            })}
             economicTrace={economicTrace}
             embedded
             liveBrokerBalance={liveNinjaBrokerBalance}

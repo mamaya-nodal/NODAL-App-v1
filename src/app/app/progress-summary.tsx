@@ -18,7 +18,7 @@ import {
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 
 type Props = Readonly<{
-  accounts: Array<{ id: string; label: string }>;
+  accounts: Array<{ eligibleForPayout: boolean; id: string; label: string }>;
   embedded?: boolean;
   economicTrace?: EconomicTraceItem[];
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
@@ -84,6 +84,7 @@ const labels = {
 
 export function ProgressSummary({ accounts, economicTrace = [], embedded = false, liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periods = [], summary, wallets }: Props) {
   const router = useRouter();
+  const payoutAccounts = accounts.filter((account) => account.eligibleForPayout);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [walletDraftName, setWalletDraftName] = useState("");
@@ -469,21 +470,21 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <strong>{summary.fundingWithdrawals.length}</strong>
           </summary>
           <form className="summary-form" onSubmit={withdrawal}>
-            <select defaultValue="" name="account" required>
-              <option disabled value="">Cuenta</option>
-              {accounts.map((account) => (
+            <select defaultValue="" disabled={payoutAccounts.length === 0} name="account" required>
+              <option disabled value="">{payoutAccounts.length === 0 ? "Sin cuentas Funded vivas" : "Cuenta Funded viva"}</option>
+              {payoutAccounts.map((account) => (
                 <option key={account.id} value={account.id}>{account.label}</option>
               ))}
             </select>
             <input defaultValue={today()} name="approved_on" required type="date" />
             <input inputMode="decimal" name="amount" placeholder="Importe aprobado" required />
-            <button disabled={saving}>Registrar payout</button>
+            <button disabled={saving || payoutAccounts.length === 0}>Registrar payout</button>
           </form>
           {summary.fundingWithdrawals.length > 0 && (
             <div className="summary-list">
               {summary.fundingWithdrawals.map((item) => (
                 <div className="payout-list-row" key={item.id}>
-                  <p><strong>{date(item.approvedOn)}</strong> · {money(item.amountInCents)}{item.phase ? ` · ${item.phase}` : ""}</p>
+                  <p><strong>{accounts.find((account) => account.id === item.accountId)?.label ?? "Cuenta no disponible"}</strong><span>{date(item.approvedOn)} · {money(item.amountInCents)}{item.phase ? ` · ${item.phase}` : ""}</span></p>
                   {item.collectedOn ? (
                     <span>Cobrado el {date(item.collectedOn)}{(item.feeInCents ?? 0) > 0 ? ` · Fee ${money(item.feeInCents ?? 0)}` : ""}</span>
                   ) : (

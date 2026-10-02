@@ -2,6 +2,7 @@ import { ACCOUNT_PHASES } from "./account-detail";
 
 export type AccountPhase = (typeof ACCOUNT_PHASES)[number];
 export type AccountOperationalState = "Evaluation" | "Funded" | "Live";
+export type AccountAccountingState = "virgin" | "live" | "closed";
 
 export type AccountProgressEntry = Readonly<{
   dailyControlId: string;
@@ -16,6 +17,13 @@ export type AccountProgress = Readonly<{
   phase: AccountPhase;
   tradeDay: number;
 }>;
+
+export function isPayoutEligibleAccount(
+  accountingState: AccountAccountingState,
+  operationalState: AccountOperationalState,
+): boolean {
+  return accountingState === "live" && operationalState === "Funded";
+}
 
 export function nextAccountPhase(phase: AccountPhase): AccountPhase {
   const index = ACCOUNT_PHASES.indexOf(phase);

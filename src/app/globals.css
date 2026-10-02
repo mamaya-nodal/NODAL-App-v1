@@ -7226,6 +7226,87 @@ html[data-theme="day"] .accounting-history {
 .demo-account-detail span { color: var(--app-subtle); font-size: 9px; }
 .demo-account-detail strong { margin-top: 6px; color: var(--app-title); font-size: 11px; }
 
+.account-phase-progress {
+  margin: 0 15px 15px;
+  padding: 12px 15px 13px;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--app-input) 76%, transparent);
+  overflow-x: auto;
+}
+.account-phase-progress-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.account-phase-progress-heading strong { color: var(--app-title); font-size: 10px; }
+.account-phase-progress-heading span { color: var(--app-subtle); font-size: 9px; font-weight: 750; }
+.account-phase-track {
+  min-width: 600px;
+  display: grid;
+  grid-auto-columns: minmax(90px, 1fr);
+  grid-auto-flow: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.account-phase-track li {
+  --phase-color: var(--app-accent);
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  color: var(--app-subtle);
+  text-align: center;
+}
+.account-phase-track li:nth-child(1) { --phase-color: #64c8ff; }
+.account-phase-track li:nth-child(2) { --phase-color: #35d7ad; }
+.account-phase-track li:nth-child(3) { --phase-color: #9b83ff; }
+.account-phase-track li:nth-child(4) { --phase-color: #f5ad42; }
+.account-phase-track li:nth-child(5) { --phase-color: #ff7d72; }
+.account-phase-track li:nth-child(6) { --phase-color: #79f23d; }
+.account-phase-line {
+  position: absolute;
+  top: 11px;
+  right: 50%;
+  width: 100%;
+  height: 3px;
+  background: var(--app-border);
+}
+.account-phase-track li:first-child .account-phase-line { display: none; }
+.account-phase-track li.is-complete .account-phase-line,
+.account-phase-track li.is-current .account-phase-line {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--phase-color) 58%, var(--app-border)), var(--phase-color));
+}
+.account-phase-node {
+  z-index: 1;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--phase-color) 42%, var(--app-border));
+  border-radius: 999px;
+  background: var(--app-panel);
+  color: var(--phase-color);
+  font-size: 9px;
+  font-weight: 900;
+}
+.account-phase-track li.is-complete .account-phase-node {
+  border-color: var(--phase-color);
+  background: var(--phase-color);
+  color: #0c1a10;
+}
+.account-phase-track li.is-current .account-phase-node {
+  border-color: var(--phase-color);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--phase-color) 13%, transparent);
+}
+.account-phase-track li strong { color: var(--app-copy); font-size: 9px; }
+.account-phase-track li.is-complete strong,
+.account-phase-track li.is-current strong { color: var(--phase-color); }
+.account-phase-track li small { max-width: 110px; overflow: hidden; color: var(--app-subtle); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+
 .manual-account-management { display: grid; gap: 10px; padding: 0 15px 15px; }
 .manual-account-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .manual-account-actions button,
@@ -7362,7 +7443,8 @@ html[data-theme="day"] .accounting-history {
 .wallet-create-inline .summary-form { margin-top: 10px; }
 .payout-list-row { min-height: 50px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 11px; border-radius: 9px; background: var(--app-input); }
 .payout-list-row + .payout-list-row { margin-top: 6px; }
-.payout-list-row p { margin: 0; color: var(--app-copy); font-size: 10px; }
+.payout-list-row p { display: grid; gap: 3px; margin: 0; color: var(--app-copy); font-size: 10px; }
+.payout-list-row p > span { display: block; }
 .payout-list-row span { color: var(--app-subtle); font-size: 9px; }
 .payout-collection-form { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
 .payout-collection-form :is(select, input) { width: 132px; min-height: 32px; padding: 0 8px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 9px; }

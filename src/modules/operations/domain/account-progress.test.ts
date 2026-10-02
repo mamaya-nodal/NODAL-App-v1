@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   accountProgressLabel,
+  isPayoutEligibleAccount,
   resolveCurrentAccountProgress,
 } from "./account-progress";
 
@@ -11,6 +12,14 @@ const entry = (dailyControlId: string, phase: "Evaluacion" | "Primera vuelta" | 
 });
 
 describe("progreso operativo de una cuenta", () => {
+  it("habilita payouts únicamente para cuentas Funded vivas", () => {
+    expect(isPayoutEligibleAccount("live", "Funded")).toBe(true);
+    expect(isPayoutEligibleAccount("virgin", "Funded")).toBe(false);
+    expect(isPayoutEligibleAccount("closed", "Funded")).toBe(false);
+    expect(isPayoutEligibleAccount("live", "Evaluation")).toBe(false);
+    expect(isPayoutEligibleAccount("live", "Live")).toBe(false);
+  });
+
   it("presenta Evaluación Día 1 antes del primer trade", () => {
     const progress = resolveCurrentAccountProgress({ entries: [], operationalState: "Evaluation", payouts: [] });
     expect(accountProgressLabel(progress)).toBe("Evaluación Día 1");

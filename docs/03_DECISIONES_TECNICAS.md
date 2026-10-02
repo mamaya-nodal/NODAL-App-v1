@@ -1461,3 +1461,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **Configuración aplicada en Workspace:** el 2026-10-01 se creó `noreply@nodaltrading.com` como alias de `mamaya@nodaltrading.com` y `contacto@nodaltrading.com` como Grupo de Google con bandeja colaborativa. Mauricio es propietario; las personas externas pueden publicar por correo, sólo los invitados pueden incorporarse y sólo propietarios, administradores y miembros pueden ver conversaciones y miembros. Las respuestas del grupo usan `contacto@nodaltrading.com` como remitente predeterminado.
 - **Límite de esta configuración:** las direcciones ya existen, pero la aplicación aún no posee una credencial de Gmail API ni permiso delegado para enviar. Esa credencial se creará como una decisión separada, con alcance explícito, cuando estén listos el PDF, la factura y el trabajador de entrega.
 - **Pendiente documental:** construir la factura, definir la comisión propia de las identidades y configurar la credencial autorizada de Gmail API. Hasta completar esos tres puntos, una aprobación deja el despacho en `awaiting_documents` y no envía correo.
+
+### APP-129 - Progreso visual por fase y checkpoints de payout
+
+- **Fecha:** 2026-10-02. Decisión funcional confirmada e implementada en la app.
+- **Ubicación:** cada tarjeta de cuenta desplegada muestra una barra compacta de progreso entre sus datos principales y las acciones o el historial económico.
+- **Alcance vigente:** la barra representa Evaluación y desde Primera hasta Quinta vuelta. El componente se construye desde el catálogo ordenado de fases y admite agregar fases posteriores sin rediseñar su estructura; no se incorporan todavía fases de negocio no aprobadas.
+- **Semántica:** el avance es discreto por fases. El día operativo actual se muestra dentro de la fase activa, pero no se calcula un porcentaje interno porque una fase no posee una cantidad obligatoria de trades.
+- **Checkpoints:** la aprobación de Evaluación y cada payout aprobado quedan marcados. Para los payouts se conserva y presenta la fecha; el importe completo permanece disponible en el detalle del checkpoint.
+- **Registro de payouts:** el selector ofrece únicamente cuentas con estado operativo `Funded` y estado contable `Viva`. El historial identifica expresamente la cuenta asociada.
+- **Integridad:** la base rechaza cuentas no elegibles y un segundo payout activo para la misma cuenta y vuelta. El control se ejecuta con bloqueo de la cuenta para evitar duplicados concurrentes.

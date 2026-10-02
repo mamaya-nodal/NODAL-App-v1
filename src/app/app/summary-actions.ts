@@ -68,7 +68,15 @@ export async function createFundingWithdrawal(input: Readonly<{ accountId: strin
   if (!uuid(input.periodId) || !uuid(input.accountId) || !input.approvedOn || !cents) return { ok: false, message: "Revisá cuenta, fecha e importe del payout." };
   const { supabase, user } = await client(); if (!user) return { ok: false, message: "La sesión venció." };
   const { error } = await supabase.rpc("create_nodal_funding_withdrawal", { target_account_id: input.accountId, target_amount_cents: cents, target_approved_on: input.approvedOn, target_period_id: input.periodId });
-  if (error) return { ok: false, message: "No se pudo guardar el payout aprobado." };
+  if (error) {
+    if (error.message.includes("FUNDING_PAYOUT_ALREADY_RECORDED")) {
+      return { ok: false, message: "Esta cuenta ya tiene un payout registrado en la vuelta actual." };
+    }
+    if (error.message.includes("FUNDING_ACCOUNT_NOT_ELIGIBLE")) {
+      return { ok: false, message: "El payout sólo puede registrarse en una cuenta Funded viva." };
+    }
+    return { ok: false, message: "No se pudo guardar el payout aprobado." };
+  }
   revalidatePath("/app"); return { ok: true, message: "Payout aprobado y pendiente de cobro." };
 }
 

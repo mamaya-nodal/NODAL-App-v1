@@ -7,6 +7,7 @@ import {
   calculateAccountResult,
   type AccountPhaseWithdrawal,
 } from "@/modules/operations/domain/account-phase-results";
+import { ACCOUNT_PHASES } from "@/modules/operations/domain/account-detail";
 import {
   entriesForAccount,
   type OperationRegisterEntry,
@@ -64,12 +65,18 @@ export type AccountEconomicHistoryRow = Readonly<{
 type AccountPresentation = Readonly<{
   account: AccountOverviewAccount;
   operationalState: AccountOperationalState;
+  payouts: AccountOverviewPayout[];
   progress: ReturnType<typeof resolveCurrentAccountProgress>;
   resultInCents: number | null;
   trades: number;
 }>;
 
-export type AccountOverviewPayout = ApprovedAccountPayout & Readonly<{ accountId: string }>;
+export type AccountOverviewPayout = ApprovedAccountPayout & Readonly<{
+  accountId: string;
+  amountInCents: number;
+  approvedOn: string;
+  id: string;
+}>;
 
 function money(cents: number) {
   return new Intl.NumberFormat("es-AR", {
@@ -107,6 +114,7 @@ function presentation(
 
   const operationalState = account.currentOperationalState
     ?? (activePhase === "Evaluacion" ? "Evaluation" : "Funded");
+  const accountPayouts = payouts.filter((payout) => payout.accountId === account.id);
   return {
     account,
     operationalState,
@@ -114,14 +122,56 @@ function presentation(
       entries: accountEntries,
       observedClosedTradeCount: account.technicalTradeCount,
       operationalState,
-      payouts: payouts.filter((payout) => payout.accountId === account.id),
+      payouts: accountPayouts,
     }),
+    payouts: accountPayouts,
     resultInCents: account.state === "virgin" || accountEntries.length === 0 ? null : latestResult,
     trades: Math.max(
       new Set(accountEntries.map((entry) => entry.dailyControlId)).size,
       account.technicalTradeCount,
     ),
   };
+}
+
+function phaseLabel(phaseIndex: number): string {
+  return phaseIndex === 0 ? "Evaluación" : `${phaseIndex}.ª vuelta`;
+}
+
+function AccountPhaseProgress({ item }: Readonly<{ item: AccountPresentation }>) {
+  const currentIndex = ACCOUNT_PHASES.indexOf(item.progress.phase);
+
+  return (
+    <section className="account-phase-progress" aria-label={`Progreso de ${item.account.externalName ?? `Cuenta ${item.account.referenceNumber}`}`}>
+      <div className="account-phase-progress-heading">
+        <strong>Progreso operativo</strong>
+        <span>{accountProgressLabel(item.progress)}</span>
+      </div>
+      <ol className="account-phase-track">
+        {ACCOUNT_PHASES.map((phase, phaseIndex) => {
+          const payout = item.payouts.find((candidate) => candidate.phase === phase);
+          const evaluationCompleted = phase === "Evaluacion" && currentIndex > 0;
+          const completed = evaluationCompleted || Boolean(payout) || phaseIndex < currentIndex;
+          const current = phaseIndex === currentIndex && !payout;
+          const detail = payout
+            ? `Payout ${money(payout.amountInCents)} aprobado el ${date(payout.approvedOn)}`
+            : evaluationCompleted
+              ? "Evaluación aprobada"
+              : current
+                ? accountProgressLabel(item.progress)
+                : "Pendiente";
+
+          return (
+            <li className={`${completed ? "is-complete" : ""}${current ? " is-current" : ""}`} key={phase} title={detail}>
+              <span className="account-phase-line" aria-hidden="true" />
+              <span className="account-phase-node" aria-hidden="true">{completed ? "✓" : current ? item.progress.tradeDay : ""}</span>
+              <strong>{phaseLabel(phaseIndex)}</strong>
+              <small>{payout ? `Payout · ${date(payout.approvedOn)}` : evaluationCompleted ? "Aprobada" : current ? `Día ${item.progress.tradeDay}` : "Pendiente"}</small>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
 }
 
 function AccountCard({ item, wallets }: Readonly<{
@@ -178,6 +228,7 @@ function AccountCard({ item, wallets }: Readonly<{
         <div><span>Variación prop</span><strong>{account.initialBalanceInCents === null || account.currentCashValueInCents === null ? "—" : money(account.currentCashValueInCents - account.initialBalanceInCents)}</strong></div>
         <div><span>Resultado contable</span><strong>{resultInCents === null ? account.state === "closed" ? "Pendiente" : "—" : money(resultInCents)}</strong></div>
       </div>
+      <AccountPhaseProgress item={item} />
       {(account.canEditPurchase || account.canDelete) && (
         <div className="manual-account-management">
           {actionMode === null && (
