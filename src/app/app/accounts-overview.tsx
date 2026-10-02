@@ -137,6 +137,7 @@ function presentation(
 function AccountPhaseProgress({ item }: Readonly<{ item: AccountPresentation }>) {
   const maximumLevel = ACCOUNT_PHASES.length - 1;
   const powerLevel = accountPowerLevel(item.progress.phase);
+  const fundedReached = powerLevel >= 1;
   const checkpoints = item.payouts.flatMap((payout) => {
     const payoutNumber = ACCOUNT_PHASES.indexOf(payout.phase);
     const checkpointLevel = payoutNumber + 1;
@@ -149,15 +150,25 @@ function AccountPhaseProgress({ item }: Readonly<{ item: AccountPresentation }>)
     <section className="account-phase-progress" aria-label={`Progreso de ${item.account.externalName ?? `Cuenta ${item.account.referenceNumber}`}`}>
       <div className="account-phase-progress-heading">
         <div>
-          <strong>Potencia operativa</strong>
           <span>{accountProgressLabel(item.progress)}</span>
         </div>
         <div className="account-power-score">
-          {finalPayout && <small title={`Payout ${money(finalPayout.amountInCents)} · ${date(finalPayout.approvedOn)}`}>5.º payout</small>}
+          {finalPayout && <small title={`Payout ${money(finalPayout.amountInCents)} · ${date(finalPayout.approvedOn)}`}>✓ 5.º payout</small>}
           <strong>{powerLevel}<span>/5</span></strong>
         </div>
       </div>
       <div className="account-power-meter-wrap">
+        {fundedReached && (
+          <span
+            className="account-power-checkpoint is-funded"
+            style={{ left: `${(1 / maximumLevel) * 100}%` }}
+            title="Evaluación aprobada · Estado operativo Funded"
+          >
+            <span><b aria-hidden="true">✓</b> Funded</span>
+            <small>1/5</small>
+            <i aria-hidden="true" />
+          </span>
+        )}
         {checkpoints.map(({ checkpointLevel, payout, payoutNumber }) => (
           <span
             className="account-power-checkpoint"
@@ -165,7 +176,7 @@ function AccountPhaseProgress({ item }: Readonly<{ item: AccountPresentation }>)
             style={{ left: `${(checkpointLevel / maximumLevel) * 100}%` }}
             title={`${money(payout.amountInCents)} aprobado el ${date(payout.approvedOn)}`}
           >
-            <span>{payoutNumber === 1 ? "1.er" : `${payoutNumber}.º`} payout</span>
+            <span><b aria-hidden="true">✓</b> {payoutNumber === 1 ? "1.er" : `${payoutNumber}.º`} payout</span>
             <small>{checkpointLevel}/5</small>
             <i aria-hidden="true" />
           </span>

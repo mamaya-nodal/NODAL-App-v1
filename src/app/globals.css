@@ -7242,8 +7242,7 @@ html[data-theme="day"] .accounting-history {
   margin-bottom: 2px;
 }
 .account-phase-progress-heading > div:first-child { display: grid; gap: 3px; }
-.account-phase-progress-heading > div:first-child strong { color: var(--app-title); font-size: 10px; }
-.account-phase-progress-heading > div:first-child span { color: var(--app-subtle); font-size: 9px; font-weight: 750; }
+.account-phase-progress-heading > div:first-child span { color: var(--app-copy); font-size: 9px; font-weight: 800; }
 .account-power-score { display: flex; align-items: center; gap: 8px; }
 .account-power-score > small {
   padding: 4px 7px;
@@ -7344,6 +7343,12 @@ html[data-theme="day"] .accounting-history {
   white-space: nowrap;
   box-shadow: 0 1px 0 rgba(255, 255, 255, .12);
 }
+.account-power-checkpoint > span b {
+  margin-right: 2px;
+  color: #71f13b;
+  font-size: 10px;
+  line-height: 0;
+}
 .account-power-checkpoint small { font-size: 7px; font-weight: 800; }
 .account-power-checkpoint > i {
   position: absolute;
@@ -7354,16 +7359,16 @@ html[data-theme="day"] .accounting-history {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, .18);
 }
 .account-power-scale {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  display: flex;
+  justify-content: space-between;
   margin-top: 5px;
   color: var(--app-subtle);
   font-size: 7px;
   font-weight: 800;
 }
-.account-power-scale span { text-align: center; }
-.account-power-scale span:first-child { text-align: left; }
-.account-power-scale span:last-child { text-align: right; }
+.account-power-scale span { width: 0; display: flex; justify-content: center; }
+.account-power-scale span:first-child { justify-content: flex-start; }
+.account-power-scale span:last-child { justify-content: flex-end; }
 @keyframes account-power-breathe {
   0%, 100% { filter: brightness(.9); }
   50% { filter: brightness(1.18); }
