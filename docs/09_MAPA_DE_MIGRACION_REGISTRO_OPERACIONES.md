@@ -4,7 +4,8 @@
 - Fecha: `2026-08-10`
 - Propietario: `Producto y Tecnologia`
 - Estado: `Base funcional para validacion`
-- Alcance: registro por cuenta, fases, arrastre, estado y replicas.
+- Alcance: registro por cuenta, fases, días por trade, estados operativos,
+  estados contables, arrastre y replicas.
 
 ## Proposito
 
@@ -32,6 +33,9 @@ La plantilla contiene seis etapas: `Evaluacion`, `Primera vuelta`, `Segunda
 vuelta`, `Tercera vuelta`, `Cuarta vuelta` y `Quinta vuelta`.
 
 - Cada etapa conserva fecha y datos de trades.
+- `D1`, `D2`, `D3` numera trades dentro de la fase, no días calendario.
+- Las cuatro filas de Evaluación y seis de cada vuelta son capacidad visual
+  inicial; una fase puede requerir menos o más trades.
 - Evaluacion contiene `NETO BROKER +` y `NETO BROKER-`.
 - Las vueltas posteriores contienen `NETO PROP`, `NETO BROKER +` y
   `NETO BROKER -`.
@@ -39,7 +43,13 @@ vuelta`, `Tercera vuelta`, `Cuarta vuelta` y `Quinta vuelta`.
 - En las vueltas posteriores existe tambien `TOTAL RETIRO`.
 
 Los `TOTAL GANANCIA` se encuentran al cierre de cada etapa. Esos totales y los
-datos operativos determinan el estado de la cuenta.
+datos operativos determinan el estado contable de la cuenta.
+
+Los estados operativos son `Evaluation`, `Funded` y `Live`. Al superar
+Evaluación, la nueva cuenta se empareja con la anterior, comienza Primera vuelta
+y pasa a Funded. El primer payout aprobado abre Segunda vuelta; cada payout
+aprobado siguiente abre la vuelta posterior sin abandonar Funded. La transición
+a Live es independiente.
 
 ### Arrastre entre fases
 
@@ -51,9 +61,9 @@ Regla vigente:
 Esta regla debe ejecutarse en un servicio de negocio del backend, no en la
 interfaz.
 
-### Estados de cuenta
+### Estados contables
 
-Regla vigente compartida con Contabilidad:
+Regla vigente de estado contable compartida con Contabilidad:
 
 1. sin datos operativos: `Cuenta virgen`;
 2. con datos operativos y sin ningun total positivo: `Cuenta viva`;
@@ -98,7 +108,8 @@ entradas, no un segundo formulario que el alumno deba completar desde cero.
 | Rol de cuenta | Lider o replica | Confirmado |
 | Control Diario de origen | Vinculo interno | Confirmado |
 | Usuario, fecha de confirmacion y correcciones | Auditoria | Confirmado |
-| N° trade, Trade Prop y Neto Prop | Regla o fuente operativa aun no documentada completamente | Pendiente de Operaciones |
+| N° trade o día | Ordinal del trade dentro de la fase; avanza al cerrar cada trade | Confirmado |
+| Trade Prop y Neto Prop | Regla o fuente operativa aun no documentada completamente | Pendiente de Operaciones |
 | Tratamiento del resultado negativo | Resultado economico con signo negativo; magnitud positiva en `NETO BROKER -` y arrastre absoluto si la fase termina negativa | Confirmado por formulas vigentes |
 | Formula detallada de retiros por vuelta | Regla de negocio vigente | Pendiente de validacion funcional antes de portar |
 
@@ -109,7 +120,7 @@ cuenta a la vez con sus fases y entradas reales.
 
 1. El alumno selecciona empresa y cuenta, o llega desde un registro creado en
    Control Diario.
-2. Ve el estado actual de la cuenta y el motivo que lo determina.
+2. Ve fase, día actual, estado operativo y estado contable con sus respectivos orígenes.
 3. Ve cada fase como una seccion con sus entradas, totales y arrastre recibido.
 4. Cada entrada indica si fue creada desde Control Diario o si fue corregida.
 5. Las replicas muestran el mismo origen operativo, pero conservan su propia
@@ -151,7 +162,10 @@ habilitados siguen dependiendo de las fuentes propietarias.
 
 | Caso | Resultado esperado |
 |---|---|
-| Cuenta nueva sin operaciones | Sigue `Cuenta virgen`. |
+| Cuenta nueva sin operaciones | Estado contable `Cuenta virgen`, estado operativo `Evaluation` y `Evaluación Día 1`. |
+| Dos trades el mismo día calendario | Se registran como Día 1 y Día 2 de la fase. |
+| Evaluación superada | Empareja la cuenta nueva, pasa a Funded e inicia Primera vuelta Día 1. |
+| Primer payout aprobado | Cierra Primera vuelta e inicia Segunda vuelta Día 1; continúa Funded. |
 | Control Diario positivo en Evaluacion | Crea `NETO BROKER +`, calcula total y cambia a `Cuenta viva` o `Cuenta cerrada` segun las reglas completas. |
 | Resultado negativo de una fase | Se registra y se arrastra a la fase siguiente segun la regla vigente. |
 | Total positivo | No se arrastra a la etapa siguiente y la cuenta queda `Cuenta cerrada`. |
@@ -181,7 +195,7 @@ broker visible. No denomina a este subtotal `TOTAL GANANCIA`, porque todavia no
 incluye todos los componentes de las vueltas. Tampoco permite correcciones ni
 actualiza estados en esta etapa.
 
-El servicio de estado de cuenta tambien conserva la regla vigente: sin datos
+El servicio de estado contable tambien conserva la regla vigente: sin datos
 operativos es virgen; con actividad y sin `TOTAL GANANCIA` positivo es viva; con
 algun `TOTAL GANANCIA` positivo es cerrada. No se conecto aun a PostgreSQL
 porque las entradas broker aisladas no bastan para reconstruir todos los
@@ -209,7 +223,7 @@ esa misma diferencia más el `TOTAL RETIRO` manual.
 decisión confirmada reemplaza para la app cualquier intento de inferirlo desde
 una fórmula, porque el pago de fondeo no es uniforme entre empresas.
 
-El control de estado ya está conectado al servidor con tres modos:
+El control de estado contable ya está conectado al servidor con tres modos:
 `Automático`, `Forzar Cuenta viva` y `Forzar Cuenta cerrada`. Los forzados se
 conservan y auditan; en modo `Cuenta viva`, un total positivo se arrastra como
 `NETO BROKER +` a la vuelta siguiente. Al restaurar `Automático` se recupera

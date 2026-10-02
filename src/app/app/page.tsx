@@ -90,7 +90,7 @@ import {
 import { ProgressSummary, type WalletView } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
-import { AccountsOverview, type AccountOverviewAccount } from "./accounts-overview";
+import { AccountsOverview, type AccountOverviewAccount, type AccountOverviewPayout } from "./accounts-overview";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
 import { OpeningAccountReferences, OpeningOperationReference } from "./opening-snapshot-panels";
 import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary";
@@ -252,7 +252,7 @@ async function renderPrivateAppPage({
   let excludedNinjaAccountKeys = new Set<string>();
   let ninjaNamesByAccountId = new Map<string, string>();
   let ninjaConnectionNamesByAccountId = new Map<string, string>();
-  let ninjaPhasesByAccountId = new Map<string, "Evaluation" | "Funded" | "Live">();
+  let ninjaOperationalStatesByAccountId = new Map<string, "Evaluation" | "Funded" | "Live">();
   let ninjaInventories: NinjaInventoryRpcRow[] = [];
   let connectedNinjaBrokerAccountNames: string[] = [];
   let connectedNinjaPropAccountNames: string[] = [];
@@ -351,6 +351,7 @@ async function renderPrivateAppPage({
   let operationEntryHistory: OperationRegisterEntry[] = [];
   let phaseWithdrawals: AccountPhaseWithdrawal[] = [];
   let phaseWithdrawalHistory: AccountPhaseWithdrawal[] = [];
+  let approvedPayoutHistory: AccountOverviewPayout[] = [];
   let walletMovements: WalletMovement[] = [];
   let walletViews: WalletView[] = [];
   let fundingWithdrawals: FundingWithdrawal[] = [];
@@ -503,7 +504,7 @@ async function renderPrivateAppPage({
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("funding_withdrawals")
-          .select("period_id, account_id, phase, amount_cents, collected_on, wallet_id, collection_fee_cents")
+          .select("id, period_id, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents, created_at")
           .eq("is_active", true)
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
@@ -594,7 +595,7 @@ async function renderPrivateAppPage({
     ninjaConnectionNamesByAccountId = new Map(
       (ninjaLinkRows ?? []).map((link) => [link.account_id, link.connection_name]),
     );
-    ninjaPhasesByAccountId = new Map(activeNinjaLinks.flatMap((link) =>
+    ninjaOperationalStatesByAccountId = new Map(activeNinjaLinks.flatMap((link) =>
       link.phase === "Evaluation" || link.phase === "Funded" || link.phase === "Live"
         ? [[link.account_id, link.phase] as const]
         : [],
@@ -937,7 +938,7 @@ async function renderPrivateAppPage({
         companyId: account.company_id,
         companyName: company.display_name,
         currentCashValueInCents: ninjaBalance?.currentInCents ?? manualBalance?.cashValueInCents ?? null,
-        currentNinjaPhase: ninjaPhasesByAccountId.get(account.id) ?? null,
+        currentOperationalState: ninjaOperationalStatesByAccountId.get(account.id) ?? null,
         externalName: ninjaNamesByAccountId.get(account.id) ?? null,
         economicHistory,
         fundsOrigin: purchase?.funds_origin ?? null,
@@ -981,6 +982,11 @@ async function renderPrivateAppPage({
         phase: withdrawal.phase as AccountPhaseWithdrawal["phase"],
         totalWithdrawalInCents: Number(withdrawal.total_withdrawal_cents),
       }],
+    );
+    approvedPayoutHistory = (historicalFundingWithdrawalRows ?? []).flatMap((withdrawal) =>
+      withdrawal.phase && withdrawal.phase !== "Evaluacion"
+        ? [{ accountId: withdrawal.account_id, phase: withdrawal.phase as AccountOverviewPayout["phase"] }]
+        : [],
     );
     walletMovements = (walletMovementRows ?? []).map((movement) => ({
       amountInCents: Number(movement.amount_cents), id: movement.id,
@@ -1035,7 +1041,7 @@ async function renderPrivateAppPage({
       history: account.economicHistory ?? [],
       id: account.id,
       label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}`,
-      phase: account.currentNinjaPhase,
+      operationalState: account.currentOperationalState,
       payoutInCents: (historicalFundingWithdrawalRows ?? [])
         .filter((withdrawal) => withdrawal.account_id === account.id)
         .reduce((total, withdrawal) => total + Number(withdrawal.amount_cents), 0),
@@ -1455,6 +1461,7 @@ async function renderPrivateAppPage({
           <AccountsOverview
             accounts={accountHistory}
             entries={operationEntryHistory}
+            payouts={approvedPayoutHistory}
             wallets={walletViews}
             withdrawals={phaseWithdrawalHistory}
           />

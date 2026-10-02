@@ -4,7 +4,7 @@
 
 Este documento define las reglas que NODAL App deberá usar para detectar, clasificar y enlazar cuentas a partir de lo observable en Ninja. Su propósito es preservar continuidad contable y operativa dentro de NODAL, no reproducir procesos internos de las prop firms.
 
-Alcance actual: programas de US$50.000. Los prefijos de cada empresa y fase se mantienen en la matriz comparativa de empresas.
+Alcance actual: programas de US$50.000. Los prefijos de cada empresa y estado operativo se mantienen en la matriz comparativa de empresas.
 
 ## Datos que la aplicación puede usar
 
@@ -21,8 +21,9 @@ La aplicación no debe basar sus decisiones en contratos, botones internos de la
 
 | Concepto | Uso en NODAL |
 | --- | --- |
-| Fase | CE: cuenta de evaluación; CF: cuenta funded; CL: cuenta live. Se determina por el prefijo de la empresa. |
-| Estado | Virgen, viva o cerrada. |
+| Estado operativo | CE: Evaluation; CF: Funded; CL: Live. Se determina por el prefijo de la empresa. |
+| Estado contable | Virgen, viva o cerrada. |
+| Fase NODAL | Evaluación, Primera vuelta, Segunda vuelta y siguientes. |
 | Vida NODAL | Identificador interno que evita sobrescribir historial cuando Ninja reutiliza o cambia el nombre de una cuenta. Una misma etiqueta externa puede representar más de una vida. |
 | Emparejamiento | Enlace interno entre dos vidas para mantener continuidad económica. No afirma que Ninja conserve un identificador único entre fases. |
 
@@ -47,7 +48,7 @@ Cuando, dentro de un mismo evento de inventario, desaparecen cuentas CE y aparec
 
 1. Una CE que alcanzó US$53.001 y no tocó su piso vigente es candidata a continuar como CF.
 2. Una CE que tocó su piso vigente se clasifica como cerrada por quema.
-3. Si cantidades, saldos o fases son inconsistentes, se genera una alerta para revisión.
+3. Si cantidades, saldos o estados operativos son inconsistentes, se genera una alerta para revisión.
 4. Si los candidatos y las cuentas CF aparecidas son coherentes, NODAL crea el enlace interno necesario para conservar el historial económico.
 
 El enlace es determinista dentro de NODAL: no pretende afirmar que una etiqueta específica de CE corresponda de forma única a una etiqueta específica de CF en Ninja.
@@ -89,7 +90,7 @@ Si aparece una CL sin una CF compatible que haya desaparecido, NODAL registra la
 
 ## Reglas de cuenta live (CL)
 
-- La fase CL se clasifica por prefijo.
+- El estado operativo Live se clasifica por prefijo.
 - Si una CL desaparece, NODAL notifica al usuario y solicita que indique qué ocurrió.
 - En esta etapa no se infiere automáticamente quema, retiro, reset ni ninguna otra causa de desaparición.
 

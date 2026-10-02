@@ -1,5 +1,27 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-134 - Fases, estados operativos, estados contables y días por trade
+
+- **Fecha:** 2026-10-02. Definición funcional expresa de Mauricio.
+- **Fases NODAL:** `Evaluación`, `Primera vuelta`, `Segunda vuelta` y vueltas
+  posteriores. Toda cuenta comienza en Evaluación. El primer payout aprobado
+  por la prop cierra Primera vuelta; cada payout aprobado posterior cierra la
+  vuelta vigente y abre la siguiente.
+- **Estados operativos:** `Evaluation`, `Funded` y `Live`. Al superar Evaluación
+  comienza Primera vuelta y el estado pasa a Funded. Cambiar de vuelta no cambia
+  el estado Funded; Funded a Live sigue siendo una transición independiente.
+- **Estados contables:** `Virgen`, `Viva` y `Cerrada`. No deben denominarse
+  estados operativos ni confundirse con los valores informados por Ninja.
+- **Día:** `D1`, `D2`, `D3` es el ordinal del trade dentro de su fase, no una
+  fecha calendario. Una cobertura con varias cuentas es un solo trade para cada
+  participante. Al cerrar un trade la cuenta queda preparada para el día
+  siguiente. Las cuatro filas de Evaluación y seis de cada vuelta son capacidad
+  visual inicial, no límites operativos.
+- **Automatización:** una cuenta registrada sin trades muestra `Evaluación Día
+  1`; la contabilización automática avanza la vuelta únicamente por payouts
+  aprobados anteriores al nuevo trade. Los informes numeran controles/trades,
+  no fechas distintas.
+
 ### APP-133 - Degradado único para acciones verdes
 
 - **Fecha:** 2026-10-02. Unificación visual solicitada por el usuario.
@@ -226,7 +248,7 @@
 | APP-045 | El estado admite Automático, Forzar Cuenta viva y Forzar Cuenta cerrada. El modo forzado queda guardado y auditado. Forzar viva conserva el arrastre positivo a la siguiente vuelta; al volver a Automático se recupera el estado calculado. | Vigente |
 | APP-046 | Resumen Operativo calcula capital, estados, flotante, ganancia realizada, comisión y conciliaciones desde los registros ya existentes. Billetera y retiros de fondeo se guardan como movimientos trazables: un retiro aprobado queda pendiente y solo integra billetera al confirmar su cobro. | Vigente |
 
-| APP-047 | Las alertas iniciales del Resumen se calculan desde datos y diferencias concretas: saldo broker ausente, conciliaciones de capital o ganancias, retiros aprobados sin cobro y estados de cuenta forzados. Informan el origen y conducen a revisarlo; nunca corrigen valores ni marcan un período como cerrado. | Vigente |
+| APP-047 | Las alertas iniciales del Resumen se calculan desde datos y diferencias concretas: saldo broker ausente, conciliaciones de capital o ganancias, retiros aprobados sin cobro y estados contables forzados. Informan el origen y conducen a revisarlo; nunca corrigen valores ni marcan un período como cerrado. | Vigente |
 
 | APP-048 | El asistente de alertas opera exclusivamente en lectura. Usa GPT-5.6 Luna con razonamiento bajo y escala automáticamente a GPT-5.6 Terra cuando el diagnóstico no queda verificado por reglas deterministas. Las respuestas se reutilizan mientras el expediente no cambie; ninguna IA puede corregir registros, resolver alertas ni cerrar períodos. | Vigente |
 | APP-049 | Las conciliaciones muestran su desglose calculado: componentes observable y esperado para capital, y ganancia cerrada contra reconstrucción para ganancias. Los vínculos llevan a los registros de origen; una diferencia sigue siendo una alerta, nunca un ajuste automático. | Vigente |
@@ -267,7 +289,7 @@ vigente sin aprobacion y evidencia suficiente.
 ### APP-068 - Clasificación automática limitada a nomenclaturas inequívocas de Ninja
 
 - **Estado:** Aprobada e implementada.
-- **Decisión:** El clasificador reconoce automáticamente los prefijos confirmados de Lucid Flex y MAXX, My Funded Futures, Topstep, Funded Futures Family, Tradeify y Take Profit Trader. La salida muestra empresa, producto y fase en inglés (`Evaluation`, `Funded`, `Live`).
+- **Decisión:** El clasificador reconoce automáticamente los prefijos confirmados de Lucid Flex y MAXX, My Funded Futures, Topstep, Funded Futures Family, Tradeify y Take Profit Trader. La salida muestra empresa, producto y estado operativo en inglés (`Evaluation`, `Funded`, `Live`).
 - **Límite:** Una cuenta Live numérica de Tradeify permanece clasificada como broker hasta disponer de evidencia adicional que la distinga. Las etiquetas enmascaradas de FundedNext no se usan como regla de Ninja.
 - **Motivo:** Evitar que NODAL cree compras o enlaces contables falsos por una coincidencia ambigua.
 
@@ -706,7 +728,7 @@ vigente sin aprobacion y evidencia suficiente.
   cuentas reales. Entran las cuentas prop vinculadas y los brokers clasificados
   inequívocamente dentro de conexiones aprobadas. `Sim101` conserva la
   allowlist únicamente como excepción de prueba.
-- **Alcance de riesgo:** Empresa, producto, fase y tamaño forman parte de la
+- **Alcance de riesgo:** Empresa, producto, estado operativo y tamaño forman parte de la
   identidad del programa. Las reglas automáticas de piso y transición se
   aplican exclusivamente al alcance confirmado de USD 50.000; un tamaño futuro
   sin regla aprobada no se mezcla ni se automatiza.

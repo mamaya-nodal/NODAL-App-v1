@@ -122,7 +122,7 @@ Todo valor automatico debe mostrar su fecha, origen y una explicacion comprensib
 
 ### 4. Compra de cuentas
 
-**Vigente:** una compra registra fecha, empresa, referencia, precio y origen de fondos. Una cuenta nueva comienza como Cuenta virgen.
+**Vigente:** una compra registra fecha, empresa, referencia, precio y origen de fondos. Una cuenta nueva comienza con estado contable Cuenta virgen, estado operativo Evaluation y fase Evaluación Día 1.
 
 La aplicacion debe registrar la fecha real, identificar empresa y referencia, conservar precio y origen, evitar duplicados, mostrar estado y resultado bruto y conservar las correcciones.
 
@@ -150,23 +150,42 @@ La aplicacion debe:
 
 ### 6. Operaciones por cuenta
 
-**Vigente:** una cuenta puede contener Evaluacion y vueltas Primera a Quinta. El resultado depende del recorrido completo.
+**Vigente:** una cuenta puede contener Evaluación y vueltas Primera a Quinta. El resultado depende del recorrido completo. Las vueltas posteriores que se incorporen deben conservar la misma regla.
 
-La aplicacion debe seleccionar empresa y cuenta, mostrar el estado, registrar las fases sin perder historia, guardar y corregir datos, calcular totales deterministas y conservar origen, fecha y usuario.
+Los tres ejes se registran por separado:
+
+- fase NODAL: Evaluación, Primera vuelta, Segunda vuelta y siguientes;
+- estado operativo: Evaluation, Funded o Live;
+- estado contable: Virgen, Viva o Cerrada.
+
+El día es el ordinal del trade dentro de la fase. Una cuenta nueva muestra
+`Evaluación Día 1`; al cerrarse ese trade muestra `Evaluación Día 2`, aunque
+ambos trades ocurran en la misma fecha. Cuatro filas de Evaluación y seis por
+vuelta son una presentación inicial y no limitan la cantidad de trades.
+
+Al superar Evaluación se enlaza la nueva cuenta, comienza Primera vuelta Día 1
+y el estado operativo pasa a Funded. El primer payout aprobado por la prop abre
+Segunda vuelta Día 1; cada payout aprobado siguiente abre la vuelta posterior.
+El estado permanece Funded hasta una transición independiente a Live.
+
+La aplicacion debe seleccionar empresa y cuenta, mostrar ambos estados, fase y día de trade, registrar las fases sin perder historia, guardar y corregir datos, calcular totales deterministas y conservar origen, fecha y usuario.
 
 **Vigente:** un total negativo se arrastra a la etapa siguiente; uno positivo no se arrastra.
 
-**Pendiente de Operaciones:** documentar el significado y las condiciones de cada fase. Las rutas completas no se copiaran sin necesidad y aprobacion.
+**Pendiente de Operaciones:** documentar únicamente las condiciones operativas
+detalladas que aún falten dentro de cada fase. La secuencia, los días por trade
+y el avance por payout ya están confirmados. Las rutas completas no se copiarán
+sin necesidad y aprobación.
 
-### 7. Estados de cuenta
+### 7. Estados contables
 
-Automatizacion contable vigente:
+Automatizacion del estado contable vigente:
 
 1. algun `TOTAL GANANCIA` positivo: Cuenta cerrada;
 2. datos operativos sin total positivo: Cuenta viva;
 3. ausencia de datos operativos: Cuenta virgen.
 
-La aplicacion debe calcular el estado en el servidor, explicar su causa, actualizar los resumenes y conservar los datos que lo determinaron.
+La aplicacion debe calcular el estado contable en el servidor, explicar su causa, actualizar los resumenes y conservar los datos que lo determinaron.
 
 **Pendiente de Operaciones:** validar que esta automatizacion representa todos los escenarios reales.
 
@@ -310,7 +329,7 @@ El primer incremento sera pequeno pero completo:
 3. registra la compra de una cuenta;
 4. registra un control diario;
 5. guarda una operacion de una fase;
-6. el sistema actualiza estado y resultado bruto;
+6. el sistema actualiza fase, día, estados y resultado bruto;
 7. el panel refleja el efecto sobre el capital;
 8. la auditoria permite reconstruir las acciones.
 
@@ -321,12 +340,12 @@ No incluye inicialmente integracion productiva con NinjaTrader, cierre mensual d
 Con casos anonimizados de Sheets se comprobara:
 
 - numeracion y referencia de compra;
-- estado inicial Cuenta virgen;
+- estado contable inicial Cuenta virgen y estado operativo Evaluation;
 - efecto del precio sin actividad;
 - calculo de movimientos y saldo;
 - preservacion de fecha operativa;
 - guardado y recuperacion de una fase;
-- transicion de estado;
+- transición de fase, estado operativo y estado contable;
 - resultado bruto;
 - actualizacion del resumen;
 - aislamiento entre usuarios, modalidades y periodos;
@@ -346,7 +365,7 @@ Una diferencia se clasificara como dato de entrada, regla, implementacion o prob
 
 ### Operaciones
 
-- significado y condiciones de cada fase;
+- condiciones operativas detalladas todavía no documentadas dentro de cada fase;
 - suficiencia de la regla de estados;
 - cierres negativos excepcionales;
 - cambios permitidos en grupos de replicas;

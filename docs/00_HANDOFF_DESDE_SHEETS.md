@@ -23,10 +23,11 @@ Totales dejaron de ser dependencias del modelo actual.
 
 ## Funciones relevantes ya existentes
 
-- compras con fecha, empresa, referencia, estado, precio manual y origen;
+- compras con fecha, empresa, referencia, estado contable, precio manual y origen;
 - Control Diario con saldo, deposito o retiro, resultado, empresa, lider y fase;
 - Registro de Operaciones por cuenta, carga, guardado, limpieza y replicas;
-- estados Cuenta virgen, Cuenta viva y Cuenta cerrada;
+- estados contables Cuenta virgen, Cuenta viva y Cuenta cerrada;
+- estados operativos Evaluation, Funded y Live;
 - resumen mensual, semanal, historico y conciliaciones;
 - retiros de fondeo pendientes y cobrados;
 - comision estimada de mesa y ganancia estimada del trader;

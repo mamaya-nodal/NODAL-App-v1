@@ -115,7 +115,7 @@ El resumen no debe pedir carga al alumno. Debe explicar lo ya registrado.
 
 | Informacion | Fuente en la app | Carga del alumno |
 |---|---|---|
-| Estados de cuenta | Compras y operaciones guardadas. | Ninguna. |
+| Estados contables | Compras y operaciones guardadas. | Ninguna. |
 | Saldo broker | Control Diario o integracion autorizada. | Solo respaldo manual cuando sea necesario. |
 | Billetera, retiros y movimientos externos | Registros especificos del Nivel 2. | No corresponde al primer recorrido. |
 | Resultado semanal y mensual | Calculos deterministas. | Ninguna. |

@@ -18,6 +18,22 @@ describe("accounting phase at operation time", () => {
   it("preserves an established subsequent round", () => {
     expect(resolveNinjaAccountingPhase({ ...base, entries: [{ phase: "Segunda vuelta", occurredAt: "2026-09-29T10:00:00Z" }] })).toBe("Segunda vuelta");
   });
+  it("moves the next funded trade to the following round after payout approval", () => {
+    expect(resolveNinjaAccountingPhase({
+      ...base,
+      entries: [{ phase: "Primera vuelta", occurredAt: "2026-09-29T10:00:00Z" }],
+      openedAt: "2026-10-01T15:00:00Z",
+      payouts: [{ phase: "Primera vuelta", occurredAt: "2026-09-30T18:00:00Z" }],
+    })).toBe("Segunda vuelta");
+  });
+  it("does not move a trade for a payout approved afterwards", () => {
+    expect(resolveNinjaAccountingPhase({
+      ...base,
+      entries: [{ phase: "Primera vuelta", occurredAt: "2026-09-29T10:00:00Z" }],
+      openedAt: "2026-10-01T15:00:00Z",
+      payouts: [{ phase: "Primera vuelta", occurredAt: "2026-10-01T16:00:00Z" }],
+    })).toBe("Primera vuelta");
+  });
   it("does not assign a phase when the account type is unknown", () => {
     expect(resolveNinjaAccountingPhase({ ...base, detectedPhase: null })).toBeNull();
   });

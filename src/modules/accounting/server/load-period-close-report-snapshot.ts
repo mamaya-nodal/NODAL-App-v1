@@ -36,6 +36,7 @@ type AccountRow = {
 };
 type EntryRow = {
   account_id: string;
+  created_at: string;
   daily_control_id: string;
   destination: OperationRegisterEntry["destination"];
   id: string;
@@ -48,6 +49,7 @@ type BatchRow = {
   accounting_company_id: string | null;
   accounting_phase: string | null;
   broker_session_id: number;
+  daily_control_id: string | null;
   id: string;
   opened_at: string;
   operated_on: string | null;
@@ -117,13 +119,26 @@ function finalAccountResult(
   ).phaseResults].reverse().find((phase) => phase.totalGainInCents !== 0)?.totalGainInCents ?? 0;
 }
 
-function phaseDay(entries: readonly EntryRow[], accountIds: readonly string[], phase: string | null, operatedOn: string): string {
+export function phaseTradeLabel(
+  entries: readonly EntryRow[],
+  accountIds: readonly string[],
+  phase: string | null,
+  targetDailyControlId: string | null,
+): string {
   if (!phase) return "Sin fase";
-  const days = [...new Set(entries
-    .filter((entry) => accountIds.includes(entry.account_id) && entry.phase === phase && entry.operated_on <= operatedOn)
-    .map((entry) => entry.operated_on))].sort();
+  const firstSeenByTrade = new Map<string, string>();
+  for (const entry of entries.filter((candidate) =>
+    accountIds.includes(candidate.account_id) && candidate.phase === phase,
+  )) {
+    const firstSeen = firstSeenByTrade.get(entry.daily_control_id);
+    if (!firstSeen || entry.created_at < firstSeen) firstSeenByTrade.set(entry.daily_control_id, entry.created_at);
+  }
+  const trades = [...firstSeenByTrade]
+    .sort((left, right) => left[1].localeCompare(right[1]) || left[0].localeCompare(right[0]))
+    .map(([dailyControlId]) => dailyControlId);
+  const targetIndex = targetDailyControlId ? trades.indexOf(targetDailyControlId) : trades.length - 1;
   const label = phase === "Evaluacion" ? "Evaluación" : phase;
-  return `${label} D${Math.max(1, days.length)}`;
+  return `${label} D${Math.max(1, targetIndex + 1)}`;
 }
 
 async function loadDeskSnapshot(
@@ -226,13 +241,13 @@ export async function loadPeriodCloseReportSnapshot(
   const [companiesResult, purchasesResult, entriesResult, withdrawalsResult, fundingResult, assignmentsResult, identitiesResult, linksResult, batchesResult] = await Promise.all([
     companyIds.length ? db.from("companies").select("id,display_name").in("id", companyIds) : Promise.resolve({ data: [], error: null }),
     accountIds.length ? db.from("purchases").select("account_id,price_cents").in("account_id", accountIds) : Promise.resolve({ data: [], error: null }),
-    accountIds.length ? db.from("operation_entries").select("id,daily_control_id,account_id,operated_on,phase,participant_role,destination,magnitude_cents").in("account_id", accountIds).order("operated_on") : Promise.resolve({ data: [], error: null }),
+    accountIds.length ? db.from("operation_entries").select("id,daily_control_id,account_id,operated_on,phase,participant_role,destination,magnitude_cents,created_at").in("account_id", accountIds).order("operated_on") : Promise.resolve({ data: [], error: null }),
     accountIds.length ? db.from("account_phase_withdrawals").select("account_id,phase,total_withdrawal_cents").in("account_id", accountIds) : Promise.resolve({ data: [], error: null }),
     accountIds.length ? db.from("funding_withdrawals").select("account_id,period_id").eq("period_id", period.id).eq("is_active", true).in("account_id", accountIds) : Promise.resolve({ data: [], error: null }),
     accountIds.length ? db.from("identity_account_assignments").select("account_id,identity_id,assigned_at,unassigned_at").in("account_id", accountIds).lte("assigned_at", closure.closed_at) : Promise.resolve({ data: [], error: null }),
     db.from("nodal_identities").select("id,first_name,last_name").eq("workspace_id", workspace.id),
     accountIds.length ? db.from("ninja_account_links").select("account_id,external_account_name,linked_at,closed_at").in("account_id", accountIds).order("linked_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
-    db.from("ninja_operation_batches").select("id,broker_session_id,opened_at,settled_at,operated_on,accounting_phase,accounting_company_id").eq("accounting_period_id", period.id).eq("accounting_status", "committed").order("opened_at", { ascending: false }),
+    db.from("ninja_operation_batches").select("id,broker_session_id,daily_control_id,opened_at,settled_at,operated_on,accounting_phase,accounting_company_id").eq("accounting_period_id", period.id).eq("accounting_status", "committed").order("opened_at", { ascending: false }),
   ]);
   const failed = [companiesResult, purchasesResult, entriesResult, withdrawalsResult, fundingResult, assignmentsResult, identitiesResult, linksResult, batchesResult].find((result) => result.error);
   if (failed) throw new Error("No se pudo congelar el detalle operativo del informe.");
@@ -301,7 +316,7 @@ export async function loadPeriodCloseReportSnapshot(
       identityName: names.join(" / "),
       instruments: instruments(session?.instruments),
       openedAt: session?.opened_at ?? batch.opened_at,
-      phaseDay: phaseDay(entries, batchAccountIds, batch.accounting_phase, batch.operated_on ?? batch.opened_at.slice(0, 10)),
+      phaseDay: phaseTradeLabel(entries, batchAccountIds, batch.accounting_phase, batch.daily_control_id),
     }];
   });
   const coveredAccountIds = new Set(operations.flatMap((operation) => operation.accounts));
@@ -318,7 +333,7 @@ export async function loadPeriodCloseReportSnapshot(
       identityName: identityName(account.id),
       instruments: [],
       openedAt: latestEntry ? `${latestEntry.operated_on}T00:00:00-03:00` : closure.closed_at,
-      phaseDay: phaseDay(entries, [account.id], latestEntry?.phase ?? null, latestEntry?.operated_on ?? period.period_month),
+      phaseDay: phaseTradeLabel(entries, [account.id], latestEntry?.phase ?? null, latestEntry?.daily_control_id ?? null),
     }];
   });
   const allOperations = [...operations, ...fallbackOperations].sort((left, right) => right.openedAt.localeCompare(left.openedAt));

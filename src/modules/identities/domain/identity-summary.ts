@@ -40,7 +40,7 @@ export type IdentityAccount = Readonly<{
   history: readonly IdentityAccountHistoryRow[];
   id: string;
   label: string;
-  phase: string | null;
+  operationalState: string | null;
   payoutInCents: number;
   resultInCents: number;
   state: "closed" | "live" | "virgin";

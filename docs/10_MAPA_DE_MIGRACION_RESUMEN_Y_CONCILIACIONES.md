@@ -66,7 +66,7 @@ la componen y estado de conciliacion.
 |---|---|---|
 | Situacion actual | Saldo broker, saldo billetera, retiros pendientes y posicion observable. | Controles diarios, movimientos externos y retiros. |
 | Resultado y capital | Capital neto aportado, resultado acumulado, posicion esperada y diferencia de conciliacion. | Capital, flujos y resultados calculados. |
-| Estado operativo | Cuentas virgenes, vivas y cerradas; flotante de cobertura. | Compras y Registro de Operaciones. |
+| Estado contable | Cuentas virgenes, vivas y cerradas; flotante de cobertura. | Compras y Registro de Operaciones. |
 | Ganancia realizada y conciliacion | Ganancia de cuentas cerradas, ganancia conciliada, resultado del periodo, flotante de cuentas vivas, precio de cuentas virgenes y diferencia de ganancias. | Resultado por cuenta y estados. |
 | Comision y ganancia trader | Comision de mesa y ganancia estimada del trader. | Ganancia realizada de cuentas cerradas y regla de comision. |
 | Resultado semanal | Compras, resultado broker, retiros aprobados y resultado semanal. | Registros fechados del periodo. |
@@ -95,7 +95,7 @@ La seccion Resumen se organizara en estos grupos:
 
 1. situacion actual;
 2. capital y resultado;
-3. cuentas y estado operativo;
+3. cuentas, estados contables y estados operativos;
 4. ganancia realizada, comision y conciliaciones;
 5. evolucion semanal;
 6. movimientos externos y retiros de fondeo.
@@ -152,7 +152,7 @@ base y tramo aplicado, y excluir administradores del calculo.
 | Saldo broker | Se confirma un Control Diario de saldo o movimiento. | Control Diario, fecha operativa y carga o integracion futura. |
 | Estados y resultado bruto de cuenta | Se crea o corrige una entrada operativa. | Registro de Operaciones y control de origen. |
 | Cuentas por estado y precios virgenes | Cambian compras o estados. | Compras y Registro de Operaciones. |
-| Ganancia realizada y comision | Cambian resultados o estados de cuentas. | Cuentas cerradas y regla de comision vigente. |
+| Ganancia realizada y comision | Cambian resultados o estados contables. | Cuentas cerradas y regla de comision vigente. |
 | Saldo billetera y pendientes | Se registra un movimiento o retiro. | Movimiento externo o retiro de fondeo. |
 | Semanas | Se incorporan registros con fecha operativa. | Registros dentro del rango semanal. |
 | Conciliaciones | Cambia cualquier componente incluido. | Detalle de valores y registros comparados. |
@@ -208,7 +208,7 @@ fuentes de datos del resumen.
 
 La primera versión completa del Resumen ya está implementada en la app de
 desarrollo. Calcula capital neto, resultado del período, posición observable y
-esperada, estados de cuenta, flotante, ganancia realizada, comisión, ganancia
+esperada, estados contables, flotante, ganancia realizada, comisión, ganancia
 estimada del trader y las dos diferencias de conciliación.
 
 También incorpora registros auditados para movimientos de billetera y retiros

@@ -149,7 +149,7 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, signalSt
                 {identity.accounts.length === 0 ? <p>Sin cuentas asignadas.</p> : identity.accounts.map((account) => (
                   <details className="identity-account-card" key={account.id}>
                     <summary>
-                      <span><strong>{account.label}</strong><small>{accountState(account)}{account.phase ? ` · ${account.phase}` : ""}</small></span>
+                      <span><strong>{account.label}</strong><small>{accountState(account)}{account.operationalState ? ` · ${account.operationalState}` : ""}</small></span>
                       <span><small>Cash value</small><strong>{account.balanceInCents === null ? "—" : money(account.balanceInCents)}</strong></span>
                       <strong className={account.resultInCents < 0 ? "negative" : undefined}>{money(account.resultInCents)}</strong>
                       <i aria-hidden="true" />

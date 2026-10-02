@@ -1,15 +1,15 @@
-export type AccountOperationalState = "virgin" | "live" | "closed";
+export type AccountAccountingState = "virgin" | "live" | "closed";
 export type AccountStateOrigin = "automatic" | "manual_live" | "manual_closed";
 
-export type AccountStateEvidence = Readonly<{
+export type AccountAccountingStateEvidence = Readonly<{
   hasOperationalData: boolean;
   phaseTotalGainInCents: ReadonlyArray<number | null>;
   stateOrigin?: AccountStateOrigin;
 }>;
 
-export function deriveAccountOperationalState(
-  evidence: AccountStateEvidence,
-): AccountOperationalState {
+export function deriveAccountAccountingState(
+  evidence: AccountAccountingStateEvidence,
+): AccountAccountingState {
   for (const totalInCents of evidence.phaseTotalGainInCents) {
     if (totalInCents !== null && !Number.isSafeInteger(totalInCents)) {
       throw new Error("Cada TOTAL GANANCIA debe expresarse en centavos enteros.");

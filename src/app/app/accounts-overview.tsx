@@ -11,15 +11,22 @@ import {
   entriesForAccount,
   type OperationRegisterEntry,
 } from "@/modules/operations/domain/operation-register";
+import {
+  accountProgressLabel,
+  resolveCurrentAccountProgress,
+  type AccountOperationalState,
+  type ApprovedAccountPayout,
+} from "@/modules/operations/domain/account-progress";
 
 import type { RegisterAccount } from "./operation-register";
 import { deleteRegisteredAccount, updateRegisteredAccountPurchase } from "./purchase-actions";
 
-type AccountFilter = "active" | "all" | "closed" | "evaluation" | "funded";
+type AccountFilter = "active" | "all" | "closed" | "evaluation" | "funded" | "operational-live";
 
 type Props = Readonly<{
   accounts: AccountOverviewAccount[];
   entries: OperationRegisterEntry[];
+  payouts: AccountOverviewPayout[];
   wallets: PurchaseWalletOption[];
   withdrawals: AccountPhaseWithdrawal[];
 }>;
@@ -34,7 +41,7 @@ export type AccountOverviewAccount = RegisterAccount & Readonly<{
   canDelete?: boolean;
   canEditPurchase?: boolean;
   currentCashValueInCents: number | null;
-  currentNinjaPhase: "Evaluation" | "Funded" | "Live" | null;
+  currentOperationalState: AccountOperationalState | null;
   initialBalanceInCents: number | null;
   minimumNetLiquidationInCents: number | null;
   ninjaConnectionName: string | null;
@@ -56,10 +63,13 @@ export type AccountEconomicHistoryRow = Readonly<{
 
 type AccountPresentation = Readonly<{
   account: AccountOverviewAccount;
+  operationalState: AccountOperationalState;
+  progress: ReturnType<typeof resolveCurrentAccountProgress>;
   resultInCents: number | null;
-  stage: "Evaluation" | "Funded";
   trades: number;
 }>;
+
+export type AccountOverviewPayout = ApprovedAccountPayout & Readonly<{ accountId: string }>;
 
 function money(cents: number) {
   return new Intl.NumberFormat("es-AR", {
@@ -78,6 +88,7 @@ function date(value: string | null) {
 function presentation(
   account: AccountOverviewAccount,
   entries: OperationRegisterEntry[],
+  payouts: AccountOverviewPayout[],
   withdrawals: AccountPhaseWithdrawal[],
 ): AccountPresentation {
   const accountEntries = entriesForAccount(entries, account.id);
@@ -94,12 +105,18 @@ function presentation(
     (phase) => phase.totalGainInCents !== 0,
   )?.totalGainInCents ?? 0;
 
+  const operationalState = account.currentOperationalState
+    ?? (activePhase === "Evaluacion" ? "Evaluation" : "Funded");
   return {
     account,
+    operationalState,
+    progress: resolveCurrentAccountProgress({
+      entries: accountEntries,
+      observedClosedTradeCount: account.technicalTradeCount,
+      operationalState,
+      payouts: payouts.filter((payout) => payout.accountId === account.id),
+    }),
     resultInCents: account.state === "virgin" || accountEntries.length === 0 ? null : latestResult,
-    stage: account.currentNinjaPhase === "Funded" || account.currentNinjaPhase === "Live"
-      ? "Funded"
-      : activePhase === "Evaluacion" ? "Evaluation" : "Funded",
     trades: Math.max(
       new Set(accountEntries.map((entry) => entry.dailyControlId)).size,
       account.technicalTradeCount,
@@ -112,7 +129,7 @@ function AccountCard({ item, wallets }: Readonly<{
   wallets: readonly PurchaseWalletOption[];
 }>) {
   const router = useRouter();
-  const { account, resultInCents, stage, trades } = item;
+  const { account, operationalState, progress, resultInCents, trades } = item;
   const [actionMode, setActionMode] = useState<"delete" | "edit" | null>(null);
   const [fundsOrigin, setFundsOrigin] = useState<"Aporte trader" | "Saldo generado">(
     account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
@@ -121,16 +138,20 @@ function AccountCard({ item, wallets }: Readonly<{
   const [walletId, setWalletId] = useState(account.purchaseWalletId ?? "");
   const [working, setWorking] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-  const state = account.state === "closed" ? "Cerrada" : account.state === "virgin" ? "Virgen" : "Activa";
+  const state = account.state === "closed" ? "Cerrada" : account.state === "virgin" ? "Virgen" : "Viva";
   return (
     <details className="demo-account-card">
       <summary>
         <span className="demo-account-identity">
           <strong>{account.companyName}</strong>
-          <small>{account.externalName ?? `Cuenta ${account.referenceNumber}`}</small>
+          <span className="demo-account-reference">
+            <small>{account.externalName ?? `Cuenta ${account.referenceNumber}`}</small>
+            <b aria-hidden="true">|</b>
+            <em>{accountProgressLabel(progress)}</em>
+          </span>
           {account.ninjaConnectionName && <small className="demo-account-connection">{account.ninjaConnectionName}</small>}
         </span>
-        <span className={`demo-stage ${stage.toLowerCase()}`}>{stage}</span>
+        <span className={`demo-stage ${operationalState.toLowerCase()}`}>{operationalState}</span>
         <span className="demo-account-balance">
           <small>Cash value</small>
           <strong>{account.currentCashValueInCents === null ? "—" : money(account.currentCashValueInCents)}</strong>
@@ -143,7 +164,9 @@ function AccountCard({ item, wallets }: Readonly<{
         <i aria-hidden="true" />
       </summary>
       <div className="demo-account-detail">
-        <div><span>Estado</span><strong>{state}</strong></div>
+        <div><span>Estado contable</span><strong>{state}</strong></div>
+        <div><span>Estado operativo</span><strong>{operationalState}</strong></div>
+        <div><span>Fase y próximo trade</span><strong>{accountProgressLabel(progress)}</strong></div>
         <div><span>Período</span><strong>{account.periodLabel}</strong></div>
         <div><span>Compra</span><strong>{date(account.purchasedOn)}</strong></div>
         <div><span>Trades</span><strong>{trades}</strong></div>
@@ -257,31 +280,33 @@ function AccountCard({ item, wallets }: Readonly<{
   );
 }
 
-export function AccountsOverview({ accounts, entries, wallets, withdrawals }: Props) {
+export function AccountsOverview({ accounts, entries, payouts, wallets, withdrawals }: Props) {
   const [filter, setFilter] = useState<AccountFilter>("all");
   const [closedLimit, setClosedLimit] = useState(8);
   const items = useMemo(
     () => accounts
-      .map((account) => presentation(account, entries, withdrawals))
+      .map((account) => presentation(account, entries, payouts, withdrawals))
       .sort((left, right) =>
         right.account.periodMonth.localeCompare(left.account.periodMonth) ||
         left.account.companyName.localeCompare(right.account.companyName, "es") ||
         right.account.referenceNumber - left.account.referenceNumber,
       ),
-    [accounts, entries, withdrawals],
+    [accounts, entries, payouts, withdrawals],
   );
   const counts: Record<AccountFilter, number> = {
     active: items.filter((item) => item.account.state === "live").length,
     all: items.length,
     closed: items.filter((item) => item.account.state === "closed").length,
-    evaluation: items.filter((item) => item.stage === "Evaluation").length,
-    funded: items.filter((item) => item.stage === "Funded").length,
+    evaluation: items.filter((item) => item.operationalState === "Evaluation").length,
+    funded: items.filter((item) => item.operationalState === "Funded").length,
+    "operational-live": items.filter((item) => item.operationalState === "Live").length,
   };
   const visible = items.filter((item) => {
     if (filter === "all") return true;
     if (filter === "active") return item.account.state === "live";
     if (filter === "closed") return item.account.state === "closed";
-    return item.stage.toLowerCase() === filter;
+    if (filter === "operational-live") return item.operationalState === "Live";
+    return item.operationalState.toLowerCase() === filter;
   });
   const active = visible.filter((item) => item.account.state === "live");
   const virgin = visible.filter((item) => item.account.state === "virgin");
@@ -293,15 +318,15 @@ export function AccountsOverview({ accounts, entries, wallets, withdrawals }: Pr
     <>
       <div className="demo-account-kpis">
         <article><span>Total</span><strong>{accounts.length}</strong></article>
-        <article><span>Activas</span><strong>{counts.active}</strong></article>
+        <article><span>Vivas</span><strong>{counts.active}</strong></article>
         <article><span>Vírgenes</span><strong>{items.filter((item) => item.account.state === "virgin").length}</strong></article>
         <article><span>Invertido</span><strong>{money(invested)}</strong></article>
       </div>
 
       <div className="demo-filter-row" aria-label="Filtrar cuentas">
         {([
-          ["all", "Todas"], ["active", "Activas"], ["evaluation", "Evaluation"],
-          ["funded", "Funded"], ["closed", "Cerradas"],
+          ["all", "Todas"], ["active", "Vivas"], ["evaluation", "Evaluation"],
+          ["funded", "Funded"], ["operational-live", "Live"], ["closed", "Cerradas"],
         ] as const).map(([value, label]) => (
           <button
             aria-pressed={filter === value}

@@ -63,7 +63,8 @@ entre modalidades y el selector nunca crea registros.
 
 - los unicos origenes vigentes son `Aporte trader` y `Saldo generado`;
 - `Capital propio` y cualquier opcion inventada son rechazados;
-- una compra nueva genera una `Cuenta virgen`;
+- una compra nueva genera estado contable `Cuenta virgen`, estado operativo
+  `Evaluation` y progreso `Evaluación Día 1`;
 - precio e importes se representan en centavos enteros;
 - numero general y referencia por empresa son datos automaticos, no campos manuales.
 - la fecha de compra se obtiene en el servidor con la zona horaria de Buenos Aires;
@@ -162,7 +163,7 @@ auditoria, la repeticion del evento sin duplicados y el bloqueo de una division
 no exacta. Una consulta posterior confirmo que no quedo ningun registro de esa
 prueba en la base.
 
-El calculo de estado ya existe como servicio determinista y reproduce la regla
+El calculo de estado contable ya existe como servicio determinista y reproduce la regla
 propietaria de virgen, viva y cerrada. Todavia no escribe `accounts.state`: un
 resultado de broker aislado no equivale al `TOTAL GANANCIA` completo de una
 fase, que tambien depende de campos operativos pendientes de modelar.

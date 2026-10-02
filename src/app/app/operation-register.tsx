@@ -272,7 +272,7 @@ export function OperationRegister({
                 <summary>Ajustes de cuenta</summary>
                 <div className="account-state-control">
                   <label className="form-field" htmlFor="account_state_mode">
-                    <span>Estado</span>
+                    <span>Estado contable</span>
                     <select
                       id="account_state_mode"
                       onChange={(event) => setStateMode(event.target.value as AccountStateMode)}

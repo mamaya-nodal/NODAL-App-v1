@@ -41,6 +41,7 @@ beforeEach(() => {
       accounts: [{ id: "account", period_id: "period", company_id: "company" }],
       periods: [{ id: "period", operational_start_on: "2026-09-07", scheduled_close_at: "2026-10-02T22:00:00Z" }],
       operation_entries: [],
+      funding_withdrawals: [],
       ninja_operation_batches: single && filters.broker_session_id === 10
         ? { accounting_status: "committed", daily_control_id: "previous-control", accounting_period_id: "period" }
         : null,

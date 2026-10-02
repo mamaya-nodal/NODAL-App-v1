@@ -144,15 +144,22 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
   const batches = correlateAutomaticOperationBatches(classified)
     .sort((left, right) => left.broker.openedAt.localeCompare(right.broker.openedAt));
   const accountIds = [...new Set(classified.flatMap((operation) => operation.accountId ? [operation.accountId] : []))];
-  const [{ data: accountRows, error: accountError }, { data: entryRows, error: entryError }] = await Promise.all([
+  const [
+    { data: accountRows, error: accountError },
+    { data: entryRows, error: entryError },
+    { data: payoutRows, error: payoutError },
+  ] = await Promise.all([
     accountIds.length
       ? supabase.from("accounts").select("id,period_id,company_id").in("id", accountIds)
       : Promise.resolve({ data: [], error: null }),
     accountIds.length
       ? supabase.from("operation_entries").select("account_id,phase,operated_on,created_at,daily_control_id").in("account_id", accountIds).order("operated_on", { ascending: false }).order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
+    accountIds.length
+      ? supabase.from("funding_withdrawals").select("account_id,phase,created_at").in("account_id", accountIds).eq("is_active", true)
+      : Promise.resolve({ data: [], error: null }),
   ]);
-  if (accountError || entryError) return { persistedBatches: 0 };
+  if (accountError || entryError || payoutError) return { persistedBatches: 0 };
   const accountsById = new Map((accountRows ?? []).map((account) => [account.id, account]));
   const controlIds = [...new Set((entryRows ?? []).map((entry) => entry.daily_control_id))];
   const { data: timedBatches, error: timingError } = controlIds.length
@@ -290,6 +297,11 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
             phase: entry.phase as AccountingPhase,
             occurredAt: controlTimes.get(entry.daily_control_id) ?? entry.created_at,
           })),
+          payouts: (payoutRows ?? []).flatMap((payout) =>
+            payout.account_id === prop.accountId && payout.phase && payout.phase !== "Evaluacion"
+              ? [{ phase: payout.phase as Exclude<AccountingPhase, "Evaluacion" | null>, occurredAt: payout.created_at }]
+              : [],
+          ),
         }),
       }];
     });

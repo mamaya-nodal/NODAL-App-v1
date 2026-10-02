@@ -39,7 +39,7 @@ La aplicacion clasifica `FTMO` seguido exclusivamente por digitos como:
 
 - empresa: `FTMO`;
 - tamano: USD 50.000;
-- fase: `Evaluation`;
+- estado operativo: `Evaluation`;
 - producto: `Growth`.
 
 La cuenta puede detectarse, presentarse, registrarse y seguirse con la regla Growth 50K confirmada:

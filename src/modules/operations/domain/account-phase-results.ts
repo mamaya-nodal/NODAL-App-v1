@@ -1,6 +1,6 @@
 import {
-  deriveAccountOperationalState,
-  type AccountOperationalState,
+  deriveAccountAccountingState,
+  type AccountAccountingState,
   type AccountStateOrigin,
 } from "./account-state";
 import { ACCOUNT_PHASES } from "./account-detail";
@@ -29,7 +29,7 @@ export type AccountPhaseResult = Readonly<{
 
 export type AccountCalculatedResult = Readonly<{
   phaseResults: AccountPhaseResult[];
-  state: AccountOperationalState;
+  state: AccountAccountingState;
 }>;
 
 function assertCents(value: number, label: string): void {
@@ -93,7 +93,7 @@ export function calculateAccountResult(
 
   return {
     phaseResults,
-    state: deriveAccountOperationalState({
+    state: deriveAccountAccountingState({
       hasOperationalData: entries.length > 0 || withdrawals.length > 0,
       phaseTotalGainInCents: phaseResults.map((phase) => phase.totalGainInCents),
       stateOrigin,
