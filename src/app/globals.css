@@ -7052,6 +7052,7 @@ html[data-theme="day"] .accounting-history {
 }
 
 .demo-account-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.nodal-workspace .purchase-panel .demo-account-kpis { margin-top: 24px; }
 .demo-account-kpis article,
 .demo-broker-balance,
 .demo-today-result,

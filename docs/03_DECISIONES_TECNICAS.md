@@ -9,6 +9,9 @@
 - **Alineación:** el contador de cuentas y todas las acciones de la bandeja usan
   centrado vertical uniforme; se elimina el margen heredado que desplazaba las
   acciones secundarias.
+- **Ritmo vertical:** el resumen `Total / Activas / Vírgenes / Invertido`
+  conserva una separación de sección respecto de la última cuenta detectada y
+  no se presenta pegado a su tarjeta.
 - **Alcance:** no cambia la clasificación de cuentas, las omisiones guardadas,
   la actualización del inventario ni el registro contable.
 
