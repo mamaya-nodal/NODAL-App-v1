@@ -8,7 +8,7 @@ type SummaryData = Readonly<{
 
 export async function loadPeriodCloseControl() {
   const db = await requireNodalAdmin();
-  const [users, workspaces, periods, closures, resolutions, approvals, dispatches, runs] = await Promise.all([
+  const [users, workspaces, periods, closures, resolutions, approvals, dispatches, reports, runs] = await Promise.all([
     readAll(db.from("nodal_users").select("id,display_name,email").order("id")),
     readAll(db.from("workspaces").select("id,owner_user_id,modality").order("id")),
     readAll(db.from("periods").select("id,workspace_id,period_month,lifecycle_status,scheduled_close_at,closed_at").order("scheduled_close_at", { ascending: false })),
@@ -16,10 +16,11 @@ export async function loadPeriodCloseControl() {
     readAll(db.from("period_closure_observation_resolutions").select("id,period_id,closure_version_id,resolution,evidence,resolved_at").order("resolved_at", { ascending: false })),
     readAll(db.from("period_closure_approvals").select("id,period_id,closure_version_id,approved_by,approved_at").order("approved_at", { ascending: false })),
     readAll(db.from("period_closure_dispatches").select("id,closure_version_id,recipient_email,sender_email,subject,delivery_status,created_at,queued_at,sent_at,failure_message").order("created_at", { ascending: false })),
+    readAll(db.from("period_closure_reports").select("id,closure_version_id,report_status,generated_at,failure_message").order("created_at", { ascending: false })),
     db.from("accounting_period_close_runs").select("id,trigger_source,status,due_period_count,closed_period_count,failures,started_at,completed_at").order("started_at", { ascending: false }).limit(20),
   ]);
 
-  const failed = [users, workspaces, periods, closures, resolutions, approvals, dispatches, runs].find((result) => result.error);
+  const failed = [users, workspaces, periods, closures, resolutions, approvals, dispatches, reports, runs].find((result) => result.error);
   if (failed) throw new Error("No se pudo cargar el control de cierres.");
 
   const userById = new Map((users.data ?? []).map((user) => [user.id, user]));
@@ -32,6 +33,7 @@ export async function loadPeriodCloseControl() {
   const resolutionByClosure = new Map((resolutions.data ?? []).map((resolution) => [resolution.closure_version_id, resolution]));
   const approvalByClosure = new Map((approvals.data ?? []).map((approval) => [approval.closure_version_id, approval]));
   const dispatchByClosure = new Map((dispatches.data ?? []).map((dispatch) => [dispatch.closure_version_id, dispatch]));
+  const reportByClosure = new Map((reports.data ?? []).map((report) => [report.closure_version_id, report]));
 
   const periodRows = (periods.data ?? []).map((period) => {
     const workspace = workspaceById.get(period.workspace_id);
@@ -41,6 +43,7 @@ export async function loadPeriodCloseControl() {
     const resolution = closure ? resolutionByClosure.get(closure.id) ?? null : null;
     const approval = closure ? approvalByClosure.get(closure.id) ?? null : null;
     const dispatch = closure ? dispatchByClosure.get(closure.id) ?? null : null;
+    const report = closure ? reportByClosure.get(closure.id) ?? null : null;
     return {
       approval,
       closedAt: closure?.closed_at ?? period.closed_at,
@@ -56,6 +59,7 @@ export async function loadPeriodCloseControl() {
       realizedDifferenceInCents: Number(summary.realizedReconciliationDifferenceInCents ?? 0),
       realizedGainInCents: Number(closure?.realized_gain_cents ?? 0),
       reason: closure?.reason ?? null,
+      report,
       resolution,
       dispatch,
       scheduledCloseAt: period.scheduled_close_at,

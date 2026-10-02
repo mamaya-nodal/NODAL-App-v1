@@ -103,8 +103,8 @@ export function PeriodClosePanel({ data }: Readonly<{ data: PeriodCloseControlDa
           const observed = period.closureStatus === "closed_with_observations";
           const resolved = Boolean(period.resolution);
           const approved = Boolean(period.approval);
-          const approvedAt = period.approval?.approved_at ?? null;
-          const canApprove = canApprovePeriodClosure({
+          const reportReady = period.report?.report_status === "ready";
+          const canApprove = reportReady && canApprovePeriodClosure({
             approved,
             hasResolvedObservation: resolved,
             status: period.closureStatus,
@@ -124,13 +124,16 @@ export function PeriodClosePanel({ data }: Readonly<{ data: PeriodCloseControlDa
                 <div><dt>Diferencia ganancias</dt><dd>{money(period.realizedDifferenceInCents)}</dd></div>
               </dl>
               <div className="close-report-review">
-                <div><strong>Revisión del informe</strong><p>Estos importes provienen de la fotografía inmutable que alimentará el PDF definitivo.</p></div>
-                <span>{approved ? `Aprobado ${dateTime(approvedAt)}` : "Pendiente de aprobación"}</span>
+                <div><strong>Informe PDF</strong><p>Fotografía inmutable de esta versión del cierre, con operaciones, identidades y mesa.</p></div>
+                {reportReady
+                  ? <a className="secondary-action close-report-link" href={`/api/admin/period-reports/${period.closureId}`} rel="noreferrer" target="_blank">Revisar informe PDF</a>
+                  : <span>{period.report?.report_status === "failed" ? `Falló: ${period.report.failure_message ?? "sin detalle"}` : "Generación pendiente"}</span>}
               </div>
               {period.resolution && <div className="close-resolution"><strong>Resolución registrada</strong><p>{period.resolution.resolution}</p><small>{period.resolution.evidence} · {dateTime(period.resolution.resolved_at)}</small></div>}
               {observed && !resolved && <details className="close-inner-action"><summary>Resolver sin cambiar importes</summary><ResolutionForm periodId={period.periodId} /></details>}
               <details className="close-inner-action"><summary>Rectificar importes del cierre</summary><RectificationForm periodId={period.periodId} /></details>
               {canApprove && <ApprovalForm periodId={period.periodId} />}
+              {!approved && !reportReady && <p className="close-report-gate">La aprobación se habilitará cuando el PDF esté listo para revisar.</p>}
               {approved && period.dispatch && <div className="close-dispatch-state"><strong>Correo de cierre</strong><span>{period.dispatch.delivery_status === "awaiting_documents" ? "Esperando informe PDF y factura" : period.dispatch.delivery_status}</span><small>Para {period.dispatch.recipient_email} · desde {period.dispatch.sender_email}</small><small>Asunto: {period.dispatch.subject}</small></div>}
             </div>
           </details>;

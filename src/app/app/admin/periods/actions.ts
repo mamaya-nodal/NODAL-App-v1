@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createServiceClient } from "@/lib/supabase/service";
 import { runAccountingPeriodClose } from "@/modules/accounting/server/run-period-close";
+import { ensurePeriodCloseReport } from "@/modules/accounting/server/generate-period-close-report";
 import { requireNodalAdmin } from "@/modules/admin/server/admin-access";
 
 export type ClosureActionResult = Readonly<{ message: string; ok: boolean }>;
@@ -35,12 +36,14 @@ export async function retryAccountingClosures(
     const outcome = await runAccountingPeriodClose(createServiceClient(), "manual", user.id);
     refresh();
     if (outcome.failed.length > 0) {
-      return { message: `${outcome.closedPeriodIds.length} cierres completados y ${outcome.failed.length} pendientes.`, ok: false };
+      return { message: `${outcome.closedPeriodIds.length} cierres completados, ${outcome.generatedReportPeriodIds.length} informes generados y ${outcome.failed.length} tareas pendientes.`, ok: false };
     }
     return {
       message: outcome.closedPeriodIds.length === 0
-        ? "No había períodos vencidos pendientes."
-        : `${outcome.closedPeriodIds.length} cierres completados.`,
+        ? outcome.generatedReportPeriodIds.length > 0
+          ? `${outcome.generatedReportPeriodIds.length} informes pendientes fueron generados.`
+          : "No había períodos ni informes pendientes."
+        : `${outcome.closedPeriodIds.length} cierres completados y ${outcome.generatedReportPeriodIds.length} informes generados.`,
       ok: true,
     };
   } catch {
@@ -75,8 +78,17 @@ export async function rectifyAccountingClosure(
     target_result_adjustment_cents: resultAdjustment,
   });
   if (error) return { message: "No se pudo rectificar el cierre. Revisá los datos.", ok: false };
+  try {
+    await ensurePeriodCloseReport(createServiceClient(), value(form, "period_id"));
+  } catch {
+    refresh();
+    return {
+      message: "El cierre quedó rectificado, pero el nuevo PDF no pudo generarse. Usá Reintentar cierres para completarlo.",
+      ok: false,
+    };
+  }
   refresh();
-  return { message: "Cierre rectificado y ajuste incorporado al período vigente.", ok: true };
+  return { message: "Cierre rectificado, ajuste incorporado al período vigente y nuevo PDF generado.", ok: true };
 }
 
 export async function resolveAccountingClosureObservation(
@@ -113,6 +125,9 @@ export async function approveAccountingClosure(
   });
   if (error?.message.includes("UNRESOLVED_OBSERVATIONS")) {
     return { message: "Primero resolvé o rectificá las observaciones del cierre.", ok: false };
+  }
+  if (error?.message.includes("REPORT_NOT_READY")) {
+    return { message: "El informe PDF todavía no está listo. Reintentá su generación antes de aprobar.", ok: false };
   }
   if (error) return { message: "No se pudo aprobar el cierre.", ok: false };
   refresh();

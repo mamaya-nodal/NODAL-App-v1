@@ -1394,23 +1394,23 @@ vigente sin aprobacion y evidencia suficiente.
 
 ### APP-128 - Informes PDF de cierre y aprobación de Admin Master
 
-- **Fecha:** 2026-10-01. Aprobación implementada; generación documental y envío pendientes de integrar.
+- **Fecha:** 2026-10-02. Aprobación y generación del informe individual implementadas; factura y envío pendientes de integrar.
 - **Cierre automático:** a la hora de corte el sistema congela el período, traslada las cuentas vivas y abre el siguiente sin esperar intervención humana. La versión resultante queda pendiente de aprobación; la aprobación no modifica el corte ni la pertenencia temporal de las operaciones.
 - **Aprobación:** Admin Master revisa la fotografía contable y aprueba explícitamente la última versión mediante un check. Un cierre con observaciones sin resolver no puede aprobarse. Una rectificación crea una versión nueva que requiere su propia aprobación; nunca hereda la anterior.
 - **Revisión asistida futura:** antes de aprobar, Admin Master podrá ejecutar un agente de revisión contable. Sus reglas, evidencia y alcance se definirán antes de implementarlo y no se presuponen en esta decisión.
-- **Formato:** el informe será exclusivamente PDF y no se ofrecerá como descarga en la app del usuario.
+- **Formato:** el informe es exclusivamente PDF y no se ofrece como descarga en la app del usuario. Admin Master dispone de una vista previa protegida antes de aprobar.
+- **Resumen individual:** cada versión cerrada congela y genera un PDF propio con portada contable, operaciones cerradas en orden decreciente, cuentas prop agrupadas dentro de una misma cobertura, último trade, rendimiento por identidad y, cuando corresponda, la mesa del titular con el desglose integrante/administrador/NODAL.
 - **Usuario NODAL:** recibirá por correo su informe individual aprobado junto con la factura correspondiente.
 - **Administrador de mesa:** tendrá un cierre consolidado de su mesa y el
   desglose autorizado por usuario e identidad.
 - **Admin Master:** tendrá un informe global consolidado, además del acceso a
   los informes de mesa e individuales.
-- **Fuente:** los informes se generarán desde fotografías versionadas del cierre,
+- **Fuente:** los informes se generan desde fotografías versionadas del cierre,
   nunca recalculando silenciosamente un período histórico con datos vigentes.
+- **Persistencia y control:** la fotografía se conserva en `period_closure_reports` y el PDF en el bucket privado `period-close-reports`, ambos ligados a una única `period_closure_versions`. Una rectificación genera otro informe. La base rechaza la aprobación cuando el informe de esa versión no está listo y el ejecutor automático reintenta informes faltantes o fallidos sin volver a cerrar el período.
 - **Entrega:** aprobar crea una entrega auditable en estado `awaiting_documents`; no se envía ningún mensaje hasta que el PDF y la factura estén disponibles. El destinatario se congela con el correo del usuario, el remitente será `noreply@nodaltrading.com` y el asunto comenzará con `Cierre período`.
 - **Google Workspace:** la integración recomendada es Gmail API con una cuenta de servicio limitada a `gmail.send` y delegación de dominio, con secretos fuera del repositorio. `noreply@nodaltrading.com` será un alias de envío autorizado y usará `Reply-To: contacto@nodaltrading.com`; no se habilita SMTP por contraseña común. Esta alternativa evita depender de una IP fija de Vercel y permite auditar cada identificador de mensaje devuelto por Google.
 - **Contacto:** `contacto@nodaltrading.com` se planifica como Grupo de Google con bandeja colaborativa y `mamaya@nodaltrading.com` como miembro inicial. De ese modo recibe comunicaciones externas, permite responder como equipo y no exige otra licencia. Si NODAL necesita inicio de sesión Gmail y buzón totalmente independiente, deberá crearse en cambio como usuario pago de Workspace.
 - **Configuración aplicada en Workspace:** el 2026-10-01 se creó `noreply@nodaltrading.com` como alias de `mamaya@nodaltrading.com` y `contacto@nodaltrading.com` como Grupo de Google con bandeja colaborativa. Mauricio es propietario; las personas externas pueden publicar por correo, sólo los invitados pueden incorporarse y sólo propietarios, administradores y miembros pueden ver conversaciones y miembros. Las respuestas del grupo usan `contacto@nodaltrading.com` como remitente predeterminado.
 - **Límite de esta configuración:** las direcciones ya existen, pero la aplicación aún no posee una credencial de Gmail API ni permiso delegado para enviar. Esa credencial se creará como una decisión separada, con alcance explícito, cuando estén listos el PDF, la factura y el trabajador de entrega.
-- **Pendiente previo:** ampliar la fotografía de cierre con detalle congelado por
-  cuenta e identidad, definir la comisión propia de las identidades, construir
-  el PDF y la factura y configurar el envío autorizado en Google Workspace.
+- **Pendiente documental:** construir la factura, definir la comisión propia de las identidades y configurar la credencial autorizada de Gmail API. Hasta completar esos tres puntos, una aprobación deja el despacho en `awaiting_documents` y no envía correo.

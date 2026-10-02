@@ -19,7 +19,11 @@ export async function runAccountingPeriodClose(
 
   try {
     const outcome = await closeDueAccountingPeriods(supabase);
-    const dueCount = outcome.closedPeriodIds.length + outcome.failed.length;
+    const duePeriodIds = new Set([
+      ...outcome.closedPeriodIds,
+      ...outcome.failed.filter((failure) => failure.stage === "close").map((failure) => failure.periodId),
+    ]);
+    const dueCount = duePeriodIds.size;
     const status = outcome.failed.length === 0
       ? "succeeded"
       : outcome.closedPeriodIds.length > 0

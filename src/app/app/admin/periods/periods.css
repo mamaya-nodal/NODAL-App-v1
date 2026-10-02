@@ -53,6 +53,8 @@
 .close-dispatch-state { display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; padding: 14px; border-radius: 12px; background: var(--app-input, var(--surface)); }
 .close-report-review p { margin: 5px 0 0; color: var(--muted); font-size: .76rem; }
 .close-report-review > span { color: var(--muted); font-size: .76rem; text-align: right; }
+.close-report-link { align-self: center; text-decoration: none; white-space: nowrap; }
+.close-report-gate { margin: 12px 0 0; color: var(--muted); font-size: .78rem; }
 .close-dispatch-state { display: grid; grid-template-columns: auto 1fr; }
 .close-dispatch-state > span { text-align: right; font-weight: 800; }
 .close-dispatch-state small { grid-column: 1 / -1; color: var(--muted); }

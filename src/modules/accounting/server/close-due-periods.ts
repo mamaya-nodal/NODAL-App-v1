@@ -2,10 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
+import { generatePendingPeriodCloseReports } from "./generate-period-close-report";
 
 export type PeriodCloseOutcome = Readonly<{
   closedPeriodIds: string[];
-  failed: Array<{ message: string; periodId: string }>;
+  generatedReportPeriodIds: string[];
+  failed: Array<{ message: string; periodId: string; stage: "close" | "report" }>;
 }>;
 
 export function periodHasObservations(summary: OperationalSummary): boolean {
@@ -45,18 +47,19 @@ export async function closeDueAccountingPeriods(
   if (error) throw new Error("No se pudieron identificar los períodos pendientes de cierre.");
 
   const periodIds = (duePeriods ?? []).map((period) => period.id);
-  if (periodIds.length === 0) return { closedPeriodIds: [], failed: [] };
-
-  const summaries = await loadPeriodSummaries(supabase, periodIds, {
-    loadCommission: (userId, month) => loadCommissionWithService(supabase, userId, month),
-  });
   const closedPeriodIds: string[] = [];
-  const failed: Array<{ message: string; periodId: string }> = [];
+  const failed: Array<{ message: string; periodId: string; stage: "close" | "report" }> = [];
+
+  const summaries = periodIds.length > 0
+    ? await loadPeriodSummaries(supabase, periodIds, {
+        loadCommission: (userId, month) => loadCommissionWithService(supabase, userId, month),
+      })
+    : new Map();
 
   for (const periodId of periodIds) {
     const loaded = summaries.get(periodId);
     if (!loaded) {
-      failed.push({ message: "No se pudo reconstruir el resumen de cierre.", periodId });
+      failed.push({ message: "No se pudo reconstruir el resumen de cierre.", periodId, stage: "close" });
       continue;
     }
     const { error: closeError } = await supabase.rpc("close_nodal_accounting_period_as_service", {
@@ -66,11 +69,13 @@ export async function closeDueAccountingPeriods(
       target_summary: loaded.summary,
     });
     if (closeError) {
-      failed.push({ message: closeError.message, periodId });
+      failed.push({ message: closeError.message, periodId, stage: "close" });
       continue;
     }
     closedPeriodIds.push(periodId);
   }
 
-  return { closedPeriodIds, failed };
+  const reports = await generatePendingPeriodCloseReports(supabase, closedPeriodIds);
+  failed.push(...reports.failed.map((failure) => ({ ...failure, stage: "report" as const })));
+  return { closedPeriodIds, failed, generatedReportPeriodIds: reports.generatedPeriodIds };
 }
