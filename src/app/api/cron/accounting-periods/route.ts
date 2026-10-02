@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { runAccountingPeriodClose } from "@/modules/accounting/server/run-period-close";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
