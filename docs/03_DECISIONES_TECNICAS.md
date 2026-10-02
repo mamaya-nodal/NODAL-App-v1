@@ -1,5 +1,23 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-135 - Cuentas como vista unica del resultado individual
+
+- **Fecha:** 2026-10-02. Simplificacion funcional confirmada por Mauricio.
+- **Interfaz:** se retira `Resultados por cuenta` de la orejeta Operaciones.
+  La ficha desplegada de cada cuenta en `Cuentas` queda como unico lugar del
+  alumno para consultar su recorrido, fase, trades, resultado e historial
+  economico individual.
+- **Operaciones:** conserva saldo broker, automatizacion, conciliaciones,
+  operaciones detectadas e historial operativo. No repite una ficha contable
+  por cuenta con un alcance temporal diferente.
+- **Payouts y excepciones:** el payout se registra mediante su flujo formal y
+  no mediante `TOTAL RETIRO` dentro de Operaciones. Los cambios excepcionales
+  de estado contable dejan de estar disponibles en el recorrido ordinario del
+  alumno y requieren un futuro flujo administrativo auditado.
+- **Integridad:** no se eliminan operaciones, retiros, resultados, servicios de
+  calculo ni datos historicos. El cambio retira solamente la vista duplicada y
+  sus controles antiguos del recorrido visible.
+
 ### APP-134 - Fases, estados operativos, estados contables y días por trade
 
 - **Fecha:** 2026-10-02. Definición funcional expresa de Mauricio.

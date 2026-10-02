@@ -85,10 +85,7 @@ import {
   type PersistedDailyControl,
 } from "./daily-control-preview";
 import { HomeOverview } from "./home-overview";
-import {
-  OperationRegister,
-  type RegisterAccount,
-} from "./operation-register";
+import type { RegisterAccount } from "./operation-register";
 import { ProgressSummary, type WalletView } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
@@ -1577,20 +1574,6 @@ async function renderPrivateAppPage({
             periodId={selection.period.id}
             propAccountNames={connectedNinjaPropAccountNames}
           />
-          <details className="demo-operation-disclosure real-account-results">
-            <summary>
-              <span>Resultados por cuenta</span>
-              <strong>{accountOptions.length}</strong>
-              <i aria-hidden="true" />
-            </summary>
-            <OperationRegister
-              accounts={accountOptions}
-              embedded
-              entries={operationEntries}
-              periodId={selection.period.id}
-              withdrawals={phaseWithdrawals}
-            />
-          </details>
         </section>
       )}
 
