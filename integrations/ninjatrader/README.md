@@ -35,6 +35,10 @@ expone actualmente. Ya no usa la colección global histórica de NinjaTrader,
 que puede conservar objetos de cuentas reemplazadas después de una actualización
 o de un cambio de Evaluation a Funded.
 
+La versión 0.8 conserva ese comportamiento y corrige una ambigüedad de nombres
+que algunas versiones de NinjaTrader interpretaban como el error de compilación
+`CS0119`. La actualización no modifica vínculos, credenciales, historial ni cola.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.

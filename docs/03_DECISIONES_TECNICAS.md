@@ -1490,3 +1490,10 @@ vigente sin aprobacion y evidencia suficiente.
 - **Alcance:** Operaciones acepta solamente saldos asociados a un evento real e identificable del conector de NinjaTrader. También se bloquean en el servidor los depósitos, retiros y simulaciones manuales, incluso si una pestaña antigua conserva la interfaz anterior.
 - **Datos existentes:** no se eliminan ni se recalculan movimientos históricos ya registrados. Permanecen disponibles para trazabilidad y conciliación.
 - **Pendiente de Contabilidad:** depósitos y retiros se incorporarán más adelante mediante un flujo contable específico, con origen o destino, fecha, período, evidencia, autorización, contrapartida y trazabilidad definidos antes de habilitar su registración.
+
+### APP-132 - Compatibilidad de compilación del conector Ninja 0.8
+
+- **Fecha:** 2026-10-02. Corrección implementada y publicada para las instalaciones existentes.
+- **Hallazgo:** el conector 0.7 declaraba un método auxiliar llamado `ConnectionStatus` y también utilizaba el enum homónimo de NinjaTrader. Algunas instalaciones resolvían el identificador como el método y producían `CS0119` al compilar.
+- **Corrección:** la versión 0.8 renombra el método auxiliar y referencia de forma explícita `NinjaTrader.Cbi.ConnectionStatus.Connected`, eliminando la ambigüedad entre versiones del compilador de NinjaTrader.
+- **Actualización:** `ACTUALIZAR-NODAL.cmd` reemplaza únicamente el código del complemento. Conserva vínculos, credenciales cifradas, historial y cola de telemetría; no requiere un nuevo código de vinculación.

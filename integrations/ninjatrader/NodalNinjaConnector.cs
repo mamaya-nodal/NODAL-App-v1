@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.7
+// NODAL Ninja Connector v0.8
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -23,7 +23,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 {
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.7";
+		private const string ConnectorVersion = "0.8";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
@@ -549,7 +549,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 				.OrderBy(account => ConnectionName(account), StringComparer.Ordinal)
 				.ThenBy(account => account.Name, StringComparer.Ordinal)
 				.Select(account => string.Join(",",
-					ConnectionName(account), ConnectionStatus(account), account.Name,
+					ConnectionName(account), AccountConnectionStatus(account), account.Name,
 					Number(Read(account, AccountItem.CashValue)),
 					Number(Read(account, AccountItem.NetLiquidation)),
 					Number(Read(account, AccountItem.TotalCashBalance)),
@@ -572,7 +572,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			return "{"
 				+ "\"accountName\":\"" + Escape(account.Name) + "\","
 				+ "\"connectionName\":\"" + Escape(ConnectionName(account)) + "\","
-				+ "\"connectionStatus\":\"" + Escape(ConnectionStatus(account)) + "\","
+				+ "\"connectionStatus\":\"" + Escape(AccountConnectionStatus(account)) + "\","
 				+ "\"providerName\":\"" + Escape(ProviderName(account)) + "\","
 				+ "\"cashValue\":" + Number(Read(account, AccountItem.CashValue)) + ","
 				+ "\"netLiquidation\":" + Number(Read(account, AccountItem.NetLiquidation)) + ","
@@ -587,7 +587,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			List<Account> accounts = new List<Account>();
 			lock (Connection.Connections)
 			{
-				foreach (Connection connection in Connection.Connections.Where(item => item != null && item.Status == ConnectionStatus.Connected))
+				foreach (Connection connection in Connection.Connections.Where(item => item != null && item.Status == NinjaTrader.Cbi.ConnectionStatus.Connected))
 				{
 					lock (connection.Accounts)
 						accounts.AddRange(connection.Accounts.Where(account => account != null));
@@ -628,7 +628,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			return account.Connection == null || account.Connection.Options == null ? "sin_proveedor" : account.Connection.Options.Provider.ToString();
 		}
 
-		private static string ConnectionStatus(Account account)
+		private static string AccountConnectionStatus(Account account)
 		{
 			return account.Connection == null ? "sin_conexion" : account.Connection.Status.ToString();
 		}
