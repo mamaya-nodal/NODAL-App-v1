@@ -1482,3 +1482,11 @@ vigente sin aprobacion y evidencia suficiente.
 - **Continuidad contable:** un nombre Funded sin titularidad hereda el destino de las cuentas Evaluation compatibles ya adjudicadas en la misma conexión, que alcanzaron el objetivo y todavía están pendientes de transición, cuando existe un único destino inequívoco. Esta continuidad se aplica antes que el semáforo vigente; una evaluación histórica ya resuelta no puede apropiarse de una funded futura.
 - **Semáforo:** pausar una identidad impide adjudicarle cuentas prop nuevas sin historia, pero no rompe la titularidad ni la detección de una transición de fase de cuentas que ya le pertenecen.
 - **Ambigüedad:** si las evaluaciones compatibles pertenecen a más de un destino, no se infiere continuidad y el caso permanece retenido para revisión. Nunca se mueve una cuenta entre contabilidades por aproximación.
+
+### APP-131 - Retiro temporal de movimientos manuales de broker en Operaciones
+
+- **Fecha:** 2026-10-02. Decisión funcional confirmada e implementada en la app.
+- **Interfaz:** se elimina de Operaciones la tarjeta `Registrar saldo excepcional`. La ausencia de datos en vivo de NinjaTrader no habilita por sí sola la carga de un movimiento económico manual.
+- **Alcance:** Operaciones acepta solamente saldos asociados a un evento real e identificable del conector de NinjaTrader. También se bloquean en el servidor los depósitos, retiros y simulaciones manuales, incluso si una pestaña antigua conserva la interfaz anterior.
+- **Datos existentes:** no se eliminan ni se recalculan movimientos históricos ya registrados. Permanecen disponibles para trazabilidad y conciliación.
+- **Pendiente de Contabilidad:** depósitos y retiros se incorporarán más adelante mediante un flujo contable específico, con origen o destino, fecha, período, evidencia, autorización, contrapartida y trazabilidad definidos antes de habilitar su registración.

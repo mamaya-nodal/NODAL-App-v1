@@ -11,15 +11,12 @@ import {
   type DailyControlAccount,
 } from "@/modules/control-diario/domain/account-selection";
 import {
-  calculateDailyBalance,
   parseControlAmountToCents,
   type DailyBalanceEntry,
 } from "@/modules/control-diario/domain/balance-rules";
-import type { ControlOriginDestination } from "@/modules/control-diario/domain/control-catalogs";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import { TradeTelemetryProbe, type ManualCoverageAccount } from "./trade-telemetry-probe";
 import {
-  assertCanReceiveBrokerBalance,
   correctBrokerBalanceReview,
   createBrokerBalanceReview,
   effectiveBrokerBalance,
@@ -156,12 +153,6 @@ export function DailyControlPreview({
   const [balanceInCents, setBalanceInCents] = useState<number | null>(initialBalance);
   const [liveNinjaBalance, setLiveNinjaBalance] = useState(initialLiveNinjaBalance);
   const [liveNinjaOnline, setLiveNinjaOnline] = useState(ninjaOnline);
-  const [entryKind, setEntryKind] = useState<EntryKind>(
-    initialBalance === null ? "deposit" : "balance_update",
-  );
-  const [originDestination, setOriginDestination] =
-    useState<ControlOriginDestination>("Aporte trader");
-  const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -178,8 +169,6 @@ export function DailyControlPreview({
       : null;
   const [pendingBalance, setPendingBalance] =
     useState<BrokerBalanceReview | null>(initialNinjaReview);
-  const [movementConfirmationKey, setMovementConfirmationKey] =
-    useState<string | null>(null);
   const [pendingConfirmationKey, setPendingConfirmationKey] =
     useState<string | null>(incomingNinjaBalance?.id ?? null);
   const [reviewOpen, setReviewOpen] = useState(Boolean(initialNinjaReview));
@@ -333,87 +322,6 @@ export function DailyControlPreview({
     setBalanceInCents(nextBalanceInCents);
   }
 
-  async function addPreviewEntry(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSuccessMessage(null);
-
-    try {
-      assertCanReceiveBrokerBalance(pendingBalance);
-
-      const valueInCents = parseControlAmountToCents(amount);
-      const entry: DailyBalanceEntry =
-        entryKind === "balance_update"
-          ? { balanceInCents: valueInCents, kind: entryKind }
-          : { amountInCents: valueInCents, kind: entryKind };
-      calculateDailyBalance(balanceInCents, entry);
-
-      if (entryKind === "balance_update") {
-        if (!companyId || !leaderId) {
-          throw new Error(
-            "Prepará primero la empresa, la cuenta líder, las réplicas y la fase.",
-          );
-        }
-        setPendingBalance(createBrokerBalanceReview(balanceInCents, valueInCents));
-        resetCustomAllocation();
-        setPendingConfirmationKey(crypto.randomUUID());
-        setReviewOpen(true);
-      } else {
-        const confirmationKey = movementConfirmationKey ?? crypto.randomUUID();
-        setMovementConfirmationKey(confirmationKey);
-        setIsSaving(true);
-        const result = await confirmDailyControl({
-          amountInCents: valueInCents,
-          balanceInCents: null,
-          companyId: null,
-          confirmationKey,
-          kind: entryKind,
-          leaderAccountId: null,
-          originDestination,
-          periodId,
-          phase: null,
-          receivedBalanceInCents: null,
-          replicaAccountIds: [],
-          syncIssueReason: null,
-        });
-        setIsSaving(false);
-
-        if (!result.ok) throw new Error(result.message);
-        appendRow(
-          result.control.dailyControlId,
-          result.control.controlNumber,
-          entryKind,
-          valueInCents,
-          result.control.balanceAfterInCents,
-          result.control.operatingResultInCents,
-        );
-        setMovementConfirmationKey(null);
-        setEntryKind("balance_update");
-        setSuccessMessage("Movimiento guardado correctamente.");
-        if (incomingNinjaBalance && !pendingBalance) {
-          setPendingBalance(
-            createBrokerBalanceReview(
-              result.control.balanceAfterInCents,
-              incomingNinjaBalance.balanceInCents,
-            ),
-          );
-          setPendingConfirmationKey(incomingNinjaBalance.id);
-          setReviewOpen(true);
-        }
-        router.refresh();
-      }
-
-      setAmount("");
-      setError(null);
-    } catch (caughtError) {
-      setIsSaving(false);
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "No se pudo calcular la vista previa.",
-      );
-    }
-  }
-
   async function confirmPendingBalance() {
     if (
       !pendingBalance ||
@@ -474,7 +382,6 @@ export function DailyControlPreview({
       setShowContingency(false);
       setCorrectedAmount("");
       resetCustomAllocation();
-      setEntryKind("balance_update");
       setSuccessMessage(
         `Control guardado y ${result.control.operationEntriesCreated} registros por cuenta creados.`,
       );
@@ -538,12 +445,6 @@ export function DailyControlPreview({
   function changeReplica(accountId: string) {
     setReplicaIds(toggleReplica(leaderId, replicaIds, accountId));
     resetCustomAllocation();
-  }
-
-  function changeEntryKind(nextKind: EntryKind) {
-    setEntryKind(nextKind);
-    if (nextKind === "deposit") setOriginDestination("Aporte trader");
-    if (nextKind === "withdrawal") setOriginDestination("Retiro personal");
   }
 
   function openHistoricalCorrection(row: PreviewRow) {
@@ -834,92 +735,6 @@ export function DailyControlPreview({
             ))}
           </div>
         </details>
-      )}
-
-      {!liveNinjaBalance && (
-      <details className="accounting-exception daily-movement-exception">
-        <summary>Registrar saldo excepcional</summary>
-        <form
-          className={`daily-preview-form${entryKind === "balance_update" ? "" : " with-origin"}`}
-          onSubmit={addPreviewEntry}
-        >
-        <div className="form-field">
-          <label htmlFor="preview_entry_kind">Acción</label>
-          <select
-            disabled={Boolean(pendingBalance) || isSaving}
-            id="preview_entry_kind"
-            onChange={(event) => changeEntryKind(event.target.value as EntryKind)}
-            value={entryKind}
-          >
-            <option value="deposit">
-              {balanceInCents === null ? "Depósito inicial" : "Depósito"}
-            </option>
-            <option disabled={balanceInCents === null} value="withdrawal">
-              Retiro
-            </option>
-            {process.env.NODE_ENV === "development" && (
-              <option disabled={balanceInCents === null} value="balance_update">
-                Simular saldo de NinjaTrader
-              </option>
-            )}
-          </select>
-        </div>
-
-        {entryKind !== "balance_update" && (
-          <div className="form-field">
-            <label htmlFor="preview_origin_destination">Origen / destino</label>
-            <select
-              disabled={Boolean(pendingBalance) || isSaving}
-              id="preview_origin_destination"
-              onChange={(event) =>
-                setOriginDestination(event.target.value as ControlOriginDestination)
-              }
-              value={originDestination}
-            >
-              {entryKind === "deposit" ? (
-                <>
-                  <option value="Aporte trader">Aporte trader</option>
-                  <option value="Saldo billetera">Saldo billetera</option>
-                </>
-              ) : (
-                <>
-                  <option value="Retiro personal">Retiro personal</option>
-                  <option value="Saldo billetera">Saldo billetera</option>
-                </>
-              )}
-            </select>
-          </div>
-        )}
-
-        <div className="form-field">
-          <label htmlFor="preview_amount">
-            {entryKind === "balance_update" ? "Saldo recibido (USD)" : "Importe (USD)"}
-          </label>
-          <input
-            disabled={Boolean(pendingBalance) || isSaving}
-            id="preview_amount"
-            inputMode="decimal"
-            onChange={(event) => setAmount(event.target.value)}
-            placeholder={balanceInCents === null ? "Ejemplo: 5000" : "Ejemplo: 5500"}
-            required
-            type="text"
-            value={amount}
-          />
-        </div>
-
-        <button
-          className="primary-action"
-          disabled={Boolean(pendingBalance) || isSaving}
-          type="submit"
-        >
-          {isSaving
-            ? "Guardando…"
-            : entryKind === "balance_update"
-              ? "Revisar saldo recibido"
-              : "Guardar movimiento"}
-        </button>
-        </form>
-      </details>
       )}
 
       {error && (

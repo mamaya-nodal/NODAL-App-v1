@@ -7,10 +7,11 @@ import {
   OPERATION_PHASES,
   type OperationPhase,
 } from "@/modules/control-diario/domain/account-selection";
+import type { ControlOriginDestination } from "@/modules/control-diario/domain/control-catalogs";
 import {
-  CONTROL_ORIGIN_DESTINATIONS,
-  type ControlOriginDestination,
-} from "@/modules/control-diario/domain/control-catalogs";
+  MANUAL_BROKER_ENTRY_DISABLED_MESSAGE,
+  validateBrokerEntryAccess,
+} from "@/modules/control-diario/domain/broker-entry-access";
 
 export type ConfirmDailyControlInput = Readonly<{
   amountInCents: number | null;
@@ -79,19 +80,11 @@ function validateInput(input: ConfirmDailyControlInput): string | null {
     return "El contexto de guardado no es válido. Recargá la página e intentá nuevamente.";
   }
 
-  if (input.kind === "deposit" || input.kind === "withdrawal") {
-    if (input.ninjaBalanceEventId) {
-      return "Un movimiento de capital no puede vincularse a un saldo de NinjaTrader.";
-    }
-    if (
-      !isSafeCents(input.amountInCents) ||
-      !input.originDestination ||
-      !CONTROL_ORIGIN_DESTINATIONS.includes(input.originDestination)
-    ) {
-      return "Revisá el importe y el origen o destino del movimiento.";
-    }
-    return null;
-  }
+  const accessMessage = validateBrokerEntryAccess(
+    input.kind,
+    input.ninjaBalanceEventId,
+  );
+  if (accessMessage) return accessMessage;
 
   if (input.ninjaBalanceEventId && !isUuid(input.ninjaBalanceEventId)) {
     return "No se pudo identificar el saldo recibido desde NinjaTrader.";
@@ -204,6 +197,13 @@ export async function confirmDailyControl(
 ): Promise<ConfirmDailyControlResult> {
   const validationMessage = validateInput(input);
   if (validationMessage) return { ok: false, message: validationMessage };
+  const ninjaBalanceEventId = input.ninjaBalanceEventId;
+  if (!ninjaBalanceEventId) {
+    return {
+      ok: false,
+      message: MANUAL_BROKER_ENTRY_DISABLED_MESSAGE,
+    };
+  }
 
   const supabase = await createClient();
   const {
@@ -211,19 +211,13 @@ export async function confirmDailyControl(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
 
-  const isBalanceUpdate = input.kind === "balance_update";
-  const isRealNinjaBalance = Boolean(input.ninjaBalanceEventId);
-  const sourceEventKey = isRealNinjaBalance
-    ? `ninja-balance:${input.ninjaBalanceEventId}`
-    : `development-simulation:${input.confirmationKey}`;
+  const sourceEventKey = `ninja-balance:${ninjaBalanceEventId}`;
   const commonBalanceParameters = {
     target_balance_cents: input.balanceInCents,
     target_company_id: input.companyId,
     target_confirmation_key: input.confirmationKey,
     target_leader_account_id: input.leaderAccountId,
-    target_observations: isRealNinjaBalance
-      ? "Saldo recibido automáticamente desde NinjaTrader"
-      : "Recepción simulada durante el desarrollo previo a NinjaTrader",
+    target_observations: "Saldo recibido automáticamente desde NinjaTrader",
     target_operated_on: currentDateInBuenosAires(),
     target_period_id: input.periodId,
     target_phase: input.phase,
@@ -247,21 +241,17 @@ export async function confirmDailyControl(
         target_balance_cents: input.balanceInCents,
         target_company_id: input.companyId,
         target_confirmation_key: input.confirmationKey,
-        target_kind: input.kind,
+        target_kind: "balance_update",
         target_leader_account_id: input.leaderAccountId,
-        target_observations: isBalanceUpdate
-          ? isRealNinjaBalance
-            ? "Saldo recibido automáticamente desde NinjaTrader"
-            : "Recepción simulada durante el desarrollo previo a NinjaTrader"
-          : null,
+        target_observations: "Saldo recibido automáticamente desde NinjaTrader",
         target_operated_on: currentDateInBuenosAires(),
-        target_origin_destination: input.originDestination,
+        target_origin_destination: null,
         target_period_id: input.periodId,
         target_phase: input.phase,
         target_received_balance_cents: input.receivedBalanceInCents,
         target_replica_account_ids: input.replicaAccountIds,
-        target_source: isBalanceUpdate ? "ninjatrader" : "manual",
-        target_source_event_key: isBalanceUpdate ? sourceEventKey : null,
+        target_source: "ninjatrader",
+        target_source_event_key: sourceEventKey,
         target_sync_issue_reason: input.syncIssueReason?.trim() || null,
       });
 
@@ -272,22 +262,19 @@ export async function confirmDailyControl(
     return { ok: false, message: "El servidor no devolvió la confirmación esperada." };
   }
 
-
-  if (input.ninjaBalanceEventId) {
-    const { data: resolved, error: resolutionError } = await supabase.rpc(
-      "confirm_ninja_broker_balance_event",
-      {
-        target_daily_control_id: row.daily_control_id,
-        target_event_id: input.ninjaBalanceEventId,
-      },
-    );
-    if (resolutionError || resolved !== true) {
-      return {
-        ok: false,
-        message:
-          "El control se guardó, pero falta cerrar la recepción de NinjaTrader. Volvé a confirmar: no se duplicará.",
-      };
-    }
+  const { data: resolved, error: resolutionError } = await supabase.rpc(
+    "confirm_ninja_broker_balance_event",
+    {
+      target_daily_control_id: row.daily_control_id,
+      target_event_id: ninjaBalanceEventId,
+    },
+  );
+  if (resolutionError || resolved !== true) {
+    return {
+      ok: false,
+      message:
+        "El control se guardó, pero falta cerrar la recepción de NinjaTrader. Volvé a confirmar: no se duplicará.",
+    };
   }
 
   revalidatePath("/app");
