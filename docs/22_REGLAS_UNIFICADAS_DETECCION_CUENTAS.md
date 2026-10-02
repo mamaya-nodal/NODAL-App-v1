@@ -51,6 +51,12 @@ Cuando, dentro de un mismo evento de inventario, desaparecen cuentas CE y aparec
 3. Si cantidades, saldos o estados operativos son inconsistentes, se genera una alerta para revisión.
 4. Si los candidatos y las cuentas CF aparecidas son coherentes, NODAL crea el enlace interno necesario para conservar el historial económico.
 
+El semáforo operativo de una identidad no altera esta continuidad. Una cuenta CF
+compatible conserva el destino contable de las CE que ya estaban adjudicadas a
+esa identidad, alcanzaron el objetivo y siguen pendientes de transición. Una CE
+histórica ya resuelta no se reutiliza. Si existen varios destinos compatibles,
+la transición no se infiere y queda pendiente de revisión.
+
 El enlace es determinista dentro de NODAL: no pretende afirmar que una etiqueta específica de CE corresponda de forma única a una etiqueta específica de CF en Ninja.
 
 ### Reset de CE

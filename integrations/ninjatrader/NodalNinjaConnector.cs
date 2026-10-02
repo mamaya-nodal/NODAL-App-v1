@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.6
+// NODAL Ninja Connector v0.7
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -23,7 +23,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 {
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.6";
+		private const string ConnectorVersion = "0.7";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
@@ -145,9 +145,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			if (settings == null || !settings.HasBaseUrl)
 				return;
 
-			List<Account> accounts;
-			lock (Account.All)
-				accounts = Account.All.Where(IsConnected).ToList();
+			List<Account> accounts = ConnectedAccounts();
 
 			foreach (Account account in accounts)
 			{
@@ -392,9 +390,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		private async Task SendInventoryAsync(bool force)
 		{
-			List<Account> accounts;
-			lock (Account.All)
-				accounts = Account.All.Where(IsConnected).ToList();
+			List<Account> accounts = ConnectedAccounts();
 
 			string fingerprint = BuildInventoryFingerprint(accounts);
 			lock (sendLock)
@@ -586,10 +582,18 @@ namespace NinjaTrader.NinjaScript.AddOns
 				+ "}";
 		}
 
-		private static bool IsConnected(Account account)
+		private static List<Account> ConnectedAccounts()
 		{
-			return account != null && account.Connection != null
-				&& string.Equals(ConnectionStatus(account), "Connected", StringComparison.OrdinalIgnoreCase);
+			List<Account> accounts = new List<Account>();
+			lock (Connection.Connections)
+			{
+				foreach (Connection connection in Connection.Connections.Where(item => item != null && item.Status == ConnectionStatus.Connected))
+				{
+					lock (connection.Accounts)
+						accounts.AddRange(connection.Accounts.Where(account => account != null));
+				}
+			}
+			return accounts.Distinct().ToList();
 		}
 
 		private static bool IsObserved(AccountItem accountItem)

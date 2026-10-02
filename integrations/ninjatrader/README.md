@@ -30,6 +30,11 @@ existente y agrega el destino. El titular enciende o pausa cada identidad desde
 su app; el servidor fecha cada cambio y evita duplicar el mismo evento entre
 contabilidades. Las props ya registradas permanecen en su contabilidad original.
 
+La versión 0.7 toma el inventario desde las cuentas que cada conexión activa
+expone actualmente. Ya no usa la colección global histórica de NinjaTrader,
+que puede conservar objetos de cuentas reemplazadas después de una actualización
+o de un cambio de Evaluation a Funded.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.

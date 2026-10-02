@@ -13,6 +13,13 @@ type OwnershipRow = Readonly<{
   owner_user_id: string;
 }>;
 
+export type PropOwnershipForContinuation = Readonly<{
+  accountName: string;
+  connectionName: string;
+  destinationConnectorId: string;
+  eligibleForFundedContinuation: boolean;
+}>;
+
 type EpochRow = Readonly<{
   destination_connector_id: string | null;
   effective_from: string;
@@ -30,6 +37,55 @@ function serviceClient() {
 
 function accountKey(connectionName: string, accountName: string) {
   return `${connectionName}\u0000${accountName}`;
+}
+
+/**
+ * A Funded name continues in the ledger that already owns compatible
+ * Evaluation names. This continuity takes precedence over the live signal
+ * switch: pausing an identity must not make a phase replacement lose its
+ * accounting owner.
+ */
+export function inferFundedContinuationDestination(
+  account: NinjaAccountSnapshot,
+  observedAt: string,
+  ownershipRows: readonly PropOwnershipForContinuation[],
+) {
+  const appeared = classifyNinjaAccount(account, observedAt);
+  if (appeared.type !== "prop" || appeared.phase !== "Funded" || !appeared.companyCode
+    || appeared.accountSizeInCents === null) return null;
+
+  const destinations = new Set(ownershipRows.flatMap((owned) => {
+    if (!owned.eligibleForFundedContinuation || owned.connectionName !== account.connectionName) return [];
+    const prior = classifyNinjaAccount({ ...account, accountName: owned.accountName }, observedAt);
+    return prior.type === "prop" && prior.phase === "Evaluation"
+      && prior.companyCode === appeared.companyCode
+      && prior.accountSizeInCents === appeared.accountSizeInCents
+      ? [owned.destinationConnectorId]
+      : [];
+  }));
+  return destinations.size === 1 ? [...destinations][0] : null;
+}
+
+function pendingFundedContinuations(rows: readonly Readonly<{ connector_id: string; state: unknown }>[]) {
+  const keys = new Set<string>();
+  for (const row of rows) {
+    if (!row.state || typeof row.state !== "object") continue;
+    const lives = (row.state as { lives?: unknown }).lives;
+    if (!Array.isArray(lives)) continue;
+    for (const life of lives) {
+      if (!life || typeof life !== "object") continue;
+      const connectionName = (life as { connectionName?: unknown }).connectionName;
+      const tracked = (life as { tracked?: unknown }).tracked;
+      if (typeof connectionName !== "string" || !tracked || typeof tracked !== "object") continue;
+      const accountName = (tracked as { externalAccountName?: unknown }).externalAccountName;
+      const phase = (tracked as { phase?: unknown }).phase;
+      const reachedTarget = (tracked as { reachedEvaluationTarget?: unknown }).reachedEvaluationTarget;
+      if (typeof accountName === "string" && phase === "Evaluation" && reachedTarget === true) {
+        keys.add(`${row.connector_id}\u0000${connectionName}\u0000${accountName}`);
+      }
+    }
+  }
+  return keys;
 }
 
 function telemetryAccount(event: NinjaTradeTelemetryEvent): NinjaAccountSnapshot {
@@ -62,9 +118,15 @@ async function routingState(physicalConnectorId: string) {
       .eq("physical_connector_id", physicalConnectorId),
   ]);
   if (epochsResult.error || ownershipResult.error || destinationsResult.error) return null;
+  const destinationIds = destinationsResult.data.map((row) => row.destination_connector_id);
+  const transitionStatesResult = destinationIds.length === 0
+    ? { data: [], error: null }
+    : await supabase.from("ninja_transition_states").select("connector_id,state").in("connector_id", destinationIds);
+  if (transitionStatesResult.error) return null;
   return {
     destinationOwners: new Map(destinationsResult.data.map((row) => [row.destination_connector_id, row.destination_owner_user_id])),
     ownership: new Map((ownershipResult.data as OwnershipRow[]).map((row) => [accountKey(row.connection_name, row.account_name), row])),
+    pendingFundedContinuations: pendingFundedContinuations(transitionStatesResult.data ?? []),
     rows: epochsResult.data as unknown as EpochRow[],
     supabase,
   };
@@ -111,6 +173,13 @@ export async function routeNinjaInventory(
   const grouped = new Map<string, NinjaAccountSnapshot[]>();
   const currentEpochs = epochsAt(state.rows, state.destinationOwners, snapshot.observedAt);
   const currentDestination = currentEpochs.at(-1)?.destination?.connectorId ?? null;
+  const propOwnershipRows = [...state.ownership.values()]
+    .filter((row) => row.account_type === "prop")
+    .map((row) => ({ accountName: row.account_name, connectionName: row.connection_name,
+      destinationConnectorId: row.destination_connector_id,
+      eligibleForFundedContinuation: state.pendingFundedContinuations.has(
+        `${row.destination_connector_id}\u0000${row.connection_name}\u0000${row.account_name}`,
+      ) }));
   if (currentDestination) grouped.set(currentDestination, []);
   for (const account of snapshot.accounts) {
     const classified = classifyNinjaAccount(account, snapshot.observedAt);
@@ -128,7 +197,10 @@ export async function routeNinjaInventory(
         observedAt: snapshot.observedAt, physicalConnectorId, supabase: state.supabase });
       continue;
     }
-    const destination = ownership?.destination_connector_id ?? (decision.kind === "route" ? decision.connectorId : null);
+    const continuationDestination = ownership ? null
+      : inferFundedContinuationDestination(account, snapshot.observedAt, propOwnershipRows);
+    const destination = ownership?.destination_connector_id ?? continuationDestination
+      ?? (decision.kind === "route" ? decision.connectorId : null);
     if (!destination) continue;
     grouped.set(destination, [...(grouped.get(destination) ?? []), account]);
   }
@@ -147,6 +219,13 @@ export async function routeNinjaTelemetry(
   const state = await routingState(physicalConnectorId);
   if (!state) return null;
   const grouped = new Map<string, NinjaTradeTelemetryEvent[]>();
+  const propOwnershipRows = [...state.ownership.values()]
+    .filter((row) => row.account_type === "prop")
+    .map((row) => ({ accountName: row.account_name, connectionName: row.connection_name,
+      destinationConnectorId: row.destination_connector_id,
+      eligibleForFundedContinuation: state.pendingFundedContinuations.has(
+        `${row.destination_connector_id}\u0000${row.connection_name}\u0000${row.account_name}`,
+      ) }));
   for (const event of batch.events) {
     const account = telemetryAccount(event);
     const classified = classifyNinjaAccount(account, event.occurredAt);
@@ -164,7 +243,10 @@ export async function routeNinjaTelemetry(
         observedAt: event.occurredAt, physicalConnectorId, supabase: state.supabase });
       continue;
     }
-    const destination = ownership?.destination_connector_id ?? (decision.kind === "route" ? decision.connectorId : null);
+    const continuationDestination = ownership ? null
+      : inferFundedContinuationDestination(account, event.occurredAt, propOwnershipRows);
+    const destination = ownership?.destination_connector_id ?? continuationDestination
+      ?? (decision.kind === "route" ? decision.connectorId : null);
     if (!destination) continue;
     grouped.set(destination, [...(grouped.get(destination) ?? []), event]);
   }

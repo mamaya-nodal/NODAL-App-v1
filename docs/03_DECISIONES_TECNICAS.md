@@ -1473,3 +1473,12 @@ vigente sin aprobacion y evidencia suficiente.
 - **Movimiento:** el relleno activo respira y presenta un brillo muy sutil en bucle. La animación se desactiva cuando el dispositivo solicita reducción de movimiento.
 - **Registro de payouts:** el selector ofrece únicamente cuentas con estado operativo `Funded` y estado contable `Viva`. El historial identifica expresamente la cuenta asociada.
 - **Integridad:** la base rechaza cuentas no elegibles y un segundo payout activo para la misma cuenta y vuelta. El control se ejecuta con bloqueo de la cuenta para evitar duplicados concurrentes.
+
+### APP-130 - Continuidad Evaluation a Funded independiente del semáforo
+
+- **Fecha:** 2026-10-02. Corrección confirmada después del caso real de Natalia Albini en Tradeify.
+- **Hallazgo:** Ninja reemplazó cinco nombres `TDFYSL` por cinco `FTDFYSLX`. El conector continuó observando objetos históricos mediante `Account.All` y el enrutamiento descartó los nombres funded nuevos porque la identidad estaba pausada y todavía no tenían titularidad propia. La app conservó las tarjetas Evaluation anteriores.
+- **Inventario del conector:** desde la versión 0.7 se enumeran exclusivamente las cuentas expuestas por `Accounts` dentro de cada conexión activa. Una cuenta retirada de la conexión deja de permanecer activa por el solo hecho de que su objeto histórico siga dentro de la colección global de NinjaTrader.
+- **Continuidad contable:** un nombre Funded sin titularidad hereda el destino de las cuentas Evaluation compatibles ya adjudicadas en la misma conexión, que alcanzaron el objetivo y todavía están pendientes de transición, cuando existe un único destino inequívoco. Esta continuidad se aplica antes que el semáforo vigente; una evaluación histórica ya resuelta no puede apropiarse de una funded futura.
+- **Semáforo:** pausar una identidad impide adjudicarle cuentas prop nuevas sin historia, pero no rompe la titularidad ni la detección de una transición de fase de cuentas que ya le pertenecen.
+- **Ambigüedad:** si las evaluaciones compatibles pertenecen a más de un destino, no se infiere continuidad y el caso permanece retenido para revisión. Nunca se mueve una cuenta entre contabilidades por aproximación.
