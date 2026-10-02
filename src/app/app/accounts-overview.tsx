@@ -13,6 +13,7 @@ import {
   type OperationRegisterEntry,
 } from "@/modules/operations/domain/operation-register";
 import {
+  accountPowerLevel,
   accountProgressLabel,
   resolveCurrentAccountProgress,
   type AccountOperationalState,
@@ -133,43 +134,55 @@ function presentation(
   };
 }
 
-function phaseLabel(phaseIndex: number): string {
-  return phaseIndex === 0 ? "Evaluación" : `${phaseIndex}.ª vuelta`;
-}
-
 function AccountPhaseProgress({ item }: Readonly<{ item: AccountPresentation }>) {
-  const currentIndex = ACCOUNT_PHASES.indexOf(item.progress.phase);
+  const maximumLevel = ACCOUNT_PHASES.length - 1;
+  const powerLevel = accountPowerLevel(item.progress.phase);
+  const checkpoints = item.payouts.flatMap((payout) => {
+    const payoutNumber = ACCOUNT_PHASES.indexOf(payout.phase);
+    const checkpointLevel = payoutNumber + 1;
+    if (payoutNumber < 1 || checkpointLevel > maximumLevel) return [];
+    return [{ checkpointLevel, payout, payoutNumber }];
+  });
+  const finalPayout = item.payouts.find((payout) => payout.phase === "Quinta vuelta");
 
   return (
     <section className="account-phase-progress" aria-label={`Progreso de ${item.account.externalName ?? `Cuenta ${item.account.referenceNumber}`}`}>
       <div className="account-phase-progress-heading">
-        <strong>Progreso operativo</strong>
-        <span>{accountProgressLabel(item.progress)}</span>
+        <div>
+          <strong>Potencia operativa</strong>
+          <span>{accountProgressLabel(item.progress)}</span>
+        </div>
+        <div className="account-power-score">
+          {finalPayout && <small title={`Payout ${money(finalPayout.amountInCents)} · ${date(finalPayout.approvedOn)}`}>5.º payout</small>}
+          <strong>{powerLevel}<span>/5</span></strong>
+        </div>
       </div>
-      <ol className="account-phase-track">
-        {ACCOUNT_PHASES.map((phase, phaseIndex) => {
-          const payout = item.payouts.find((candidate) => candidate.phase === phase);
-          const evaluationCompleted = phase === "Evaluacion" && currentIndex > 0;
-          const completed = evaluationCompleted || Boolean(payout) || phaseIndex < currentIndex;
-          const current = phaseIndex === currentIndex && !payout;
-          const detail = payout
-            ? `Payout ${money(payout.amountInCents)} aprobado el ${date(payout.approvedOn)}`
-            : evaluationCompleted
-              ? "Evaluación aprobada"
-              : current
-                ? accountProgressLabel(item.progress)
-                : "Pendiente";
-
-          return (
-            <li className={`${completed ? "is-complete" : ""}${current ? " is-current" : ""}`} key={phase} title={detail}>
-              <span className="account-phase-line" aria-hidden="true" />
-              <span className="account-phase-node" aria-hidden="true">{completed ? "✓" : current ? item.progress.tradeDay : ""}</span>
-              <strong>{phaseLabel(phaseIndex)}</strong>
-              <small>{payout ? `Payout · ${date(payout.approvedOn)}` : evaluationCompleted ? "Aprobada" : current ? `Día ${item.progress.tradeDay}` : "Pendiente"}</small>
-            </li>
-          );
-        })}
-      </ol>
+      <div className="account-power-meter-wrap">
+        {checkpoints.map(({ checkpointLevel, payout, payoutNumber }) => (
+          <span
+            className="account-power-checkpoint"
+            key={payout.id}
+            style={{ left: `${(checkpointLevel / maximumLevel) * 100}%` }}
+            title={`${money(payout.amountInCents)} aprobado el ${date(payout.approvedOn)}`}
+          >
+            <span>{payoutNumber === 1 ? "1.er" : `${payoutNumber}.º`} payout</span>
+            <small>{checkpointLevel}/5</small>
+            <i aria-hidden="true" />
+          </span>
+        ))}
+        <div className="account-power-meter" aria-hidden="true">
+          {Array.from({ length: maximumLevel }, (_, segmentIndex) => (
+            <span
+              className={`${segmentIndex < powerLevel ? "is-complete" : ""}${segmentIndex === powerLevel ? " is-active" : ""}`}
+              key={segmentIndex}
+            ><i /></span>
+          ))}
+          <span className={`account-power-final-cap${powerLevel === maximumLevel ? " is-active" : ""}`} />
+        </div>
+        <div className="account-power-scale" aria-hidden="true">
+          {Array.from({ length: maximumLevel + 1 }, (_, level) => <span key={level}>{level}</span>)}
+        </div>
+      </div>
     </section>
   );
 }

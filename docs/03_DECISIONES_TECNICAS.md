@@ -1465,9 +1465,10 @@ vigente sin aprobacion y evidencia suficiente.
 ### APP-129 - Progreso visual por fase y checkpoints de payout
 
 - **Fecha:** 2026-10-02. Decisión funcional confirmada e implementada en la app.
-- **Ubicación:** cada tarjeta de cuenta desplegada muestra una barra compacta de progreso entre sus datos principales y las acciones o el historial económico.
+- **Ubicación:** cada tarjeta de cuenta desplegada muestra una barra compacta de potencia entre sus datos principales y las acciones o el historial económico. El espacio es flexible y se adapta al contenido disponible; no replica una dimensión fija de la maqueta.
 - **Alcance vigente:** la barra representa Evaluación y desde Primera hasta Quinta vuelta. El componente se construye desde el catálogo ordenado de fases y admite agregar fases posteriores sin rediseñar su estructura; no se incorporan todavía fases de negocio no aprobadas.
-- **Semántica:** el avance es discreto por fases. El día operativo actual se muestra dentro de la fase activa, pero no se calcula un porcentaje interno porque una fase no posee una cantidad obligatoria de trades.
-- **Checkpoints:** la aprobación de Evaluación y cada payout aprobado quedan marcados. Para los payouts se conserva y presenta la fecha; el importe completo permanece disponible en el detalle del checkpoint.
+- **Semántica:** la potencia va de `0/5` en Evaluación a `5/5` en Quinta vuelta. Cada avance completa el color de la fase anterior y deja visible una carga mínima del color siguiente: verde para Evaluación, amarillo para Primera vuelta, naranja para Segunda, magenta para Tercera, azul para Cuarta y un remate violeta al alcanzar Quinta. El día operativo actual se muestra como texto contextual, pero no modifica el nivel porque una fase no posee una cantidad obligatoria de trades.
+- **Checkpoints:** cada payout aprobado queda marcado con una línea oscura y un cartel por fuera de la barra. El primer payout se ubica en `2/5`, al completar Primera vuelta y entrar en Segunda; los siguientes respetan la misma secuencia. La fecha y el importe permanecen disponibles en el detalle del checkpoint.
+- **Movimiento:** el relleno activo respira y presenta un brillo muy sutil en bucle. La animación se desactiva cuando el dispositivo solicita reducción de movimiento.
 - **Registro de payouts:** el selector ofrece únicamente cuentas con estado operativo `Funded` y estado contable `Viva`. El historial identifica expresamente la cuenta asociada.
 - **Integridad:** la base rechaza cuentas no elegibles y un segundo payout activo para la misma cuenta y vuelta. El control se ejecuta con bloqueo de la cuenta para evitar duplicados concurrentes.

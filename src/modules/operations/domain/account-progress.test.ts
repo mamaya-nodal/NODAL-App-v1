@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  accountPowerLevel,
   accountProgressLabel,
   isPayoutEligibleAccount,
   resolveCurrentAccountProgress,
@@ -12,6 +13,15 @@ const entry = (dailyControlId: string, phase: "Evaluacion" | "Primera vuelta" | 
 });
 
 describe("progreso operativo de una cuenta", () => {
+  it("traduce Evaluación y las cinco vueltas a una escala de poder de 0 a 5", () => {
+    expect(accountPowerLevel("Evaluacion")).toBe(0);
+    expect(accountPowerLevel("Primera vuelta")).toBe(1);
+    expect(accountPowerLevel("Segunda vuelta")).toBe(2);
+    expect(accountPowerLevel("Tercera vuelta")).toBe(3);
+    expect(accountPowerLevel("Cuarta vuelta")).toBe(4);
+    expect(accountPowerLevel("Quinta vuelta")).toBe(5);
+  });
+
   it("habilita payouts únicamente para cuentas Funded vivas", () => {
     expect(isPayoutEligibleAccount("live", "Funded")).toBe(true);
     expect(isPayoutEligibleAccount("virgin", "Funded")).toBe(false);

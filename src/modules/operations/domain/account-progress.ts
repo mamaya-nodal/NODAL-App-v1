@@ -25,6 +25,10 @@ export function isPayoutEligibleAccount(
   return accountingState === "live" && operationalState === "Funded";
 }
 
+export function accountPowerLevel(phase: AccountPhase): number {
+  return Math.max(0, ACCOUNT_PHASES.indexOf(phase));
+}
+
 export function nextAccountPhase(phase: AccountPhase): AccountPhase {
   const index = ACCOUNT_PHASES.indexOf(phase);
   return ACCOUNT_PHASES[Math.min(index + 1, ACCOUNT_PHASES.length - 1)];
