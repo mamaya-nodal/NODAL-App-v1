@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { LATEST_NINJA_CONNECTOR_VERSION } from "@/modules/ninja/domain/connector-version";
+import {
+  LATEST_NINJA_CONNECTOR_VERSION,
+  connectorVersionState,
+} from "@/modules/ninja/domain/connector-version";
 
 export type WorkspaceVersionInfo = Readonly<{
   appRevision: string | null;
   appVersion: string;
   connectorOnline: boolean | null;
+  connectorInstalledSourceVersion: string | null;
   connectorVersion: string | null;
 }>;
 
@@ -67,6 +71,18 @@ export function WorkspaceUserMenu({
   function selectSection(nextSection: MenuSection) {
     setSection((current) => current === nextSection ? null : nextSection);
   }
+
+  const versionState = connectorVersionState({
+    installedSourceVersion: versionInfo.connectorInstalledSourceVersion,
+    runningVersion: versionInfo.connectorVersion,
+  });
+  const versionMessage = versionState === "current"
+    ? "Conector actualizado y activo."
+    : versionState === "pending_activation"
+      ? "El código nuevo ya fue copiado. Falta compilar o reiniciar NinjaTrader."
+      : versionState === "update_available"
+        ? `Actualización disponible: v${LATEST_NINJA_CONNECTOR_VERSION}.`
+        : "La app todavía no recibió información de esta instalación.";
 
   return (
     <div className="workspace-user-menu" ref={containerRef}>
@@ -145,8 +161,12 @@ export function WorkspaceUserMenu({
                   <dd>{versionInfo.appRevision ?? "Entorno local"}</dd>
                 </div>
                 <div>
-                  <dt>Conector Ninja</dt>
+                  <dt>En ejecución</dt>
                   <dd>{versionInfo.connectorVersion ? `v${versionInfo.connectorVersion}` : "Sin información"}</dd>
+                </div>
+                <div>
+                  <dt>Código actualizado</dt>
+                  <dd>{versionInfo.connectorInstalledSourceVersion ? `v${versionInfo.connectorInstalledSourceVersion}` : "Sin informar"}</dd>
                 </div>
                 <div>
                   <dt>Estado</dt>
@@ -159,7 +179,8 @@ export function WorkspaceUserMenu({
                   </dd>
                 </div>
               </dl>
-              <small>Última versión publicada del conector: v{LATEST_NINJA_CONNECTOR_VERSION}</small>
+              <p className={`workspace-version-status is-${versionState}`}>{versionMessage}</p>
+              <small>Última versión publicada: v{LATEST_NINJA_CONNECTOR_VERSION}</small>
             </div>
           ) : null}
         </div>

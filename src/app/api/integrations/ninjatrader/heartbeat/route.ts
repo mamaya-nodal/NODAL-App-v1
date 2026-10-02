@@ -1,4 +1,4 @@
-import { requireNinjaConnector, rememberNinjaConnectorVersion } from "@/modules/ninja/server/connector-auth";
+import { requireNinjaConnector, rememberNinjaConnectorVersions } from "@/modules/ninja/server/connector-auth";
 import { refreshNinjaTechnicalOperations } from "@/modules/ninja/server/technical-operation-processing";
 import { refreshNinjaTransitionsFromLatestSnapshot } from "@/modules/ninja/server/transition-processing";
 import { bootstrapNinjaBrokerBalance } from "@/modules/ninja/server/broker-balance-processing";
@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => ({})) as { connectorVersion?: unknown };
+  const body = await request.json().catch(() => ({})) as {
+    connectorVersion?: unknown;
+    installedSourceVersion?: unknown;
+  };
   const connector = await requireNinjaConnector(request);
   if (connector instanceof Response) return connector;
   // Primero reconstruimos las operaciones mientras todos los vinculos de cuenta
@@ -16,7 +19,11 @@ export async function POST(request: Request) {
   await refreshNinjaTechnicalOperations(connector.connectorId);
   await Promise.all([
     refreshNinjaTransitionsFromLatestSnapshot(connector.connectorId),
-    rememberNinjaConnectorVersion(connector.connectorId, body.connectorVersion),
+    rememberNinjaConnectorVersions(
+      connector.connectorId,
+      body.connectorVersion,
+      body.installedSourceVersion,
+    ),
   ]);
   return Response.json(
     { accepted: true },

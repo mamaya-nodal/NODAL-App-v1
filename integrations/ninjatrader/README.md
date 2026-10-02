@@ -39,6 +39,10 @@ La versión 0.8 conserva ese comportamiento y corrige una ambigüedad de nombres
 que algunas versiones de NinjaTrader interpretaban como el error de compilación
 `CS0119`. La actualización no modifica vínculos, credenciales, historial ni cola.
 
+La versión 0.9 registra por separado el código copiado por el actualizador y la
+versión que NinjaTrader está ejecutando. La app puede indicar si los archivos ya
+se actualizaron pero todavía falta compilar o reiniciar para activar la versión.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.

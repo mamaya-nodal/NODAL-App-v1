@@ -164,6 +164,7 @@ type NinjaConnectorStatusRpcRow = {
   identity_id: string | null;
   identity_last_name: string | null;
   is_online: boolean;
+  installed_source_version: string | null;
   last_seen_at: string | null;
   paired_at: string;
   status: string;
@@ -280,7 +281,7 @@ async function renderPrivateAppPage({
         .from("workspaces")
         .select("id, modality, periods(id, period_month, lifecycle_status, operational_start_on, scheduled_close_at)")
         .order("modality")),
-      readWithRetry(() => supabase.rpc("get_current_user_ninja_connector_status")),
+      readWithRetry(() => supabase.rpc("get_current_user_ninja_connector_status_v2")),
     ]);
 
     if (workspaceError || connectorError) {
@@ -303,6 +304,7 @@ async function renderPrivateAppPage({
     ninjaConnectors = ((ninjaConnectorRows ?? []) as NinjaConnectorStatusRpcRow[]).map((connectorRow) => ({
       connectorId: connectorRow.connector_id,
       connectorVersion: connectorRow.connector_version,
+      installedSourceVersion: connectorRow.installed_source_version,
       identityId: connectorRow.identity_id,
       isOnline: connectorRow.is_online,
       lastSeenAt: connectorRow.last_seen_at,
@@ -1327,6 +1329,7 @@ async function renderPrivateAppPage({
         appRevision: appRelease.revision,
         appVersion: appRelease.version,
         connectorOnline,
+        connectorInstalledSourceVersion: ninjaConnector?.installedSourceVersion ?? null,
         connectorVersion: ninjaConnector?.connectorVersion ?? null,
       }}
     >

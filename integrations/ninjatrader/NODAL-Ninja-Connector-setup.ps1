@@ -26,6 +26,25 @@ if (!(Test-Path -LiteralPath $connectorSourcePath)) {
   throw "No se encontro NodalNinjaConnector.cs junto al instalador."
 }
 
+$connectorSourceText = Get-Content -LiteralPath $connectorSourcePath -Raw
+$connectorVersionMatch = [regex]::Match($connectorSourceText, 'ConnectorVersion\s*=\s*"(?<version>[0-9A-Za-z._-]+)"')
+if (!$connectorVersionMatch.Success) {
+  throw "No se pudo identificar la version del conector incluido."
+}
+$connectorSourceVersion = $connectorVersionMatch.Groups['version'].Value
+
+function Set-InstalledSourceVersion {
+  param([string]$ConfigPath, [string]$Version)
+
+  $configurationLines = if (Test-Path -LiteralPath $ConfigPath) {
+    @(Get-Content -LiteralPath $ConfigPath | Where-Object { $_ -notmatch '^InstalledSourceVersion=' })
+  } else {
+    @()
+  }
+  $configurationLines + "InstalledSourceVersion=$Version" |
+    Set-Content -LiteralPath $ConfigPath -Encoding utf8
+}
+
 if ($UpdateOnly) {
   if (!(Test-Path -LiteralPath $connectorConfigPath) -or !(Test-Path -LiteralPath $installedConnectorPath)) {
     throw "No se encontro una instalacion existente. Usa INSTALAR-NODAL para la primera vinculacion."
@@ -36,14 +55,15 @@ if ($UpdateOnly) {
   $backupSource = Join-Path $connectorDirectory ("connector-source-" + [Guid]::NewGuid().ToString("N") + ".bak")
   Copy-Item -LiteralPath $installedConnectorPath -Destination $backupSource
   Copy-Item -LiteralPath $connectorSourcePath -Destination $installedConnectorPath -Force
+  Set-InstalledSourceVersion -ConfigPath $connectorConfigPath -Version $connectorSourceVersion
 
   if ([string]::IsNullOrWhiteSpace($PairingCode)) {
-    Write-Output "Conector actualizado. Tus vinculos, historial y cola de datos se conservaron."
+    Write-Output "Codigo del conector actualizado a v$connectorSourceVersion. Tus vinculos, historial y cola de datos se conservaron."
     $PairingCode = Read-Host "Para agregar otro vinculo, pega su codigo. Si solo querias actualizar, presiona ENTER"
   }
 
   if ([string]::IsNullOrWhiteSpace($PairingCode)) {
-    Write-Output "Actualizacion terminada sin agregar otro vinculo. Compila NodalNinjaConnector en NinjaTrader."
+    Write-Output "La app detectara el codigo v$connectorSourceVersion cuando el conector vuelva a enviar señal. Compila NodalNinjaConnector y reinicia NinjaTrader para activarlo."
     exit 0
   }
 } elseif ([string]::IsNullOrWhiteSpace($PairingCode)) {
@@ -60,15 +80,17 @@ New-Item -ItemType Directory -Force -Path $addOnDirectory | Out-Null
 if (Test-Path -LiteralPath $connectorConfigPath) {
   Copy-Item -LiteralPath $connectorConfigPath -Destination ($connectorConfigPath + ".before-pairing.bak") -Force
   $existingLines = Get-Content -LiteralPath $connectorConfigPath
-  $keptLines = @($existingLines | Where-Object { $_ -notmatch '^(BaseUrl|PairingCode)=' })
+  $keptLines = @($existingLines | Where-Object { $_ -notmatch '^(BaseUrl|PairingCode|InstalledSourceVersion)=' })
   @(
     "BaseUrl=$normalizedBaseUrl"
     "PairingCode=$normalizedCode"
+    "InstalledSourceVersion=$connectorSourceVersion"
   ) + $keptLines | Set-Content -LiteralPath $connectorConfigPath -Encoding utf8
 } else {
   @(
     "BaseUrl=$normalizedBaseUrl"
     "PairingCode=$normalizedCode"
+    "InstalledSourceVersion=$connectorSourceVersion"
   ) | Set-Content -LiteralPath $connectorConfigPath -Encoding utf8
 }
 
@@ -79,4 +101,4 @@ if ($UpdateOnly) {
 } else {
   Write-Output "Conector preparado para NODAL. Si ya estaba instalado, sus vinculos e historial se conservaron."
 }
-Write-Output "Ahora compila NodalNinjaConnector en NinjaTrader; el codigo se canjeara una sola vez."
+Write-Output "Ahora compila NodalNinjaConnector v$connectorSourceVersion en NinjaTrader; el codigo se canjeara una sola vez."

@@ -8,6 +8,7 @@ import { NinjaConnectorMonitor } from "./ninja-connector-monitor";
 export type NinjaConnectorStatus = Readonly<{
   connectorId: string;
   connectorVersion: string;
+  installedSourceVersion: string | null;
   identityId: string | null;
   isOnline: boolean;
   lastSeenAt: string | null;

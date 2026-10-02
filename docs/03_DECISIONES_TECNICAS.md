@@ -1506,3 +1506,14 @@ vigente sin aprobacion y evidencia suficiente.
 - **Versión del conector:** se muestra la última versión que el conector instalado informó mediante su heartbeat, junto con su estado en línea o sin señal. Una falta de señal no borra la última versión conocida.
 - **Referencia:** el menú también informa la última versión de conector publicada por NODAL. Esta referencia no sustituye la versión instalada recibida desde NinjaTrader.
 - **Alcance inicial:** Configuración queda como espacio reservado y Ayuda ofrece contacto por `contacto@nodaltrading.com`; sus funciones adicionales se definirán posteriormente.
+
+### APP-134 - Trazabilidad de actualización del conector
+
+- **Fecha:** 2026-10-02. Implementado desde el conector 0.9.
+- **Problema corregido:** una actualización copiaba el nuevo archivo fuente, pero la app sólo conocía la versión del último ejecutable que había enviado un heartbeat. El menú podía rotular una versión histórica como instalada sin explicar que el conector estaba sin señal.
+- **Tres estados separados:** la app distingue la última versión publicada por NODAL, la versión de código que `ACTUALIZAR-NODAL.cmd` copió en NinjaTrader y la versión compilada que se encuentra realmente en ejecución.
+- **Registro local:** el actualizador extrae la versión incluida en el archivo fuente y la conserva como `InstalledSourceVersion` sin modificar vínculos, credenciales, historial ni cola.
+- **Comunicación:** desde 0.9, cada heartbeat autenticado informa tanto la versión en ejecución como la versión de código copiada. El servidor las guarda por separado y nunca interpreta una copia como compilación exitosa.
+- **Compatibilidad:** la lectura ampliada se publica como `get_current_user_ninja_connector_status_v2`; la función anterior se conserva para no interrumpir despliegues o clientes todavía activos durante la transición.
+- **Diagnóstico:** si el código copiado es más nuevo que el runtime, el menú indica que falta compilar o reiniciar NinjaTrader. Si el runtime es anterior a la última publicación, muestra una actualización disponible. Si no existe señal, conserva los últimos valores conocidos y lo declara expresamente.
+- **Límite de transición:** las versiones anteriores a 0.9 no pueden informar retrospectivamente el código copiado. La primera actualización a 0.9 seguirá figurando como pendiente o desconocida hasta que un conector compatible vuelva a emitir señal; desde entonces las actualizaciones futuras se detectarán antes de activar el nuevo runtime.

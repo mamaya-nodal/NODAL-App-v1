@@ -4062,6 +4062,21 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   font-size: 9px;
 }
 
+.workspace-version-section .workspace-version-status {
+  margin: 10px 0 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--app-border, #29322c);
+  border-radius: 9px;
+  background: var(--app-soft, rgb(147 255 59 / 10%));
+  color: var(--app-title, #f6f9f7);
+  font-weight: 720;
+}
+
+.workspace-version-section .workspace-version-status:is(.is-pending_activation, .is-update_available) {
+  border-color: rgb(245 166 35 / 38%);
+  background: rgb(245 166 35 / 10%);
+}
+
 .workspace-avatar { overflow: hidden; }
 
 .workspace-avatar img {

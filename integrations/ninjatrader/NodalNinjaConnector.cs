@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.8
+// NODAL Ninja Connector v0.9
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -23,7 +23,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 {
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.8";
+		private const string ConnectorVersion = "0.9";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
@@ -68,6 +68,10 @@ namespace NinjaTrader.NinjaScript.AddOns
 				RefreshInventory();
 				heartbeatTimer = new Timer(_ => QueueHeartbeat(), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(15));
 				Write("INICIO|modo=solo_lectura|identidad=usuario_nodal|version=" + ConnectorVersion);
+				string installedSourceVersion = ConnectorSettings.ReadInstalledSourceVersion();
+				if (!string.IsNullOrWhiteSpace(installedSourceVersion)
+					&& !string.Equals(installedSourceVersion, ConnectorVersion, StringComparison.OrdinalIgnoreCase))
+					Write("ACTUALIZACION_PENDIENTE|codigo=" + installedSourceVersion + "|ejecucion=" + ConnectorVersion + "|Compilá y reiniciá NinjaTrader.");
 			}
 			else if (State == State.Terminated)
 			{
@@ -369,9 +373,11 @@ namespace NinjaTrader.NinjaScript.AddOns
 		{
 			try
 			{
+				string installedSourceVersion = ConnectorSettings.ReadInstalledSourceVersion();
 				using (HttpResponseMessage response = await SendAuthorizedAsync(
 					"/api/integrations/ninjatrader/heartbeat",
-					"{\"connectorVersion\":\"" + ConnectorVersion + "\"}"))
+					"{\"connectorVersion\":\"" + ConnectorVersion
+					+ "\",\"installedSourceVersion\":\"" + Escape(installedSourceVersion) + "\"}"))
 				{
 					bool healthy = response != null && response.IsSuccessStatusCode;
 					if (healthy && !heartbeatWasHealthy)
@@ -667,10 +673,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 				string configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "NinjaTrader 8", "NODAL", ConfigFileName);
 				ConnectorSettings result = new ConnectorSettings(configPath);
 				if (!File.Exists(configPath)) return result;
-				Dictionary<string, string> values = File.ReadAllLines(configPath)
-					.Select(line => new { Line = line, Separator = line.IndexOf('=') })
-					.Where(item => item.Separator > 0)
-					.ToDictionary(item => item.Line.Substring(0, item.Separator).Trim(), item => item.Line.Substring(item.Separator + 1).Trim(), StringComparer.OrdinalIgnoreCase);
+				Dictionary<string, string> values = ReadValues(configPath);
 
 				string value;
 				if (values.TryGetValue("BaseUrl", out value)) result.BaseUrl = value;
@@ -682,6 +685,28 @@ namespace NinjaTrader.NinjaScript.AddOns
 				if (values.TryGetValue("AccessExpiresAtUtc", out value) && DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out parsed)) result.AccessExpiresAtUtc = parsed.ToUniversalTime();
 				if (values.TryGetValue("RefreshExpiresAtUtc", out value) && DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out parsed)) result.RefreshExpiresAtUtc = parsed.ToUniversalTime();
 				return result;
+			}
+
+			public static string ReadInstalledSourceVersion()
+			{
+				string configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "NinjaTrader 8", "NODAL", ConfigFileName);
+				if (!File.Exists(configPath)) return string.Empty;
+				string value;
+				return ReadValues(configPath).TryGetValue("InstalledSourceVersion", out value)
+					? value
+					: string.Empty;
+			}
+
+			private static Dictionary<string, string> ReadValues(string configPath)
+			{
+				return File.ReadAllLines(configPath)
+					.Select(line => new { Line = line, Separator = line.IndexOf('=') })
+					.Where(item => item.Separator > 0)
+					.GroupBy(item => item.Line.Substring(0, item.Separator).Trim(), StringComparer.OrdinalIgnoreCase)
+					.ToDictionary(
+						group => group.Key,
+						group => group.Last().Line.Substring(group.Last().Separator + 1).Trim(),
+						StringComparer.OrdinalIgnoreCase);
 			}
 
 			public void ApplySession(string connectorId, string accessToken, DateTime accessExpiresAtUtc, string refreshToken, DateTime refreshExpiresAtUtc, bool clearPairingCode)
@@ -716,6 +741,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 					"BaseUrl=" + (BaseUrl ?? string.Empty),
 					"PairingCode=" + (PairingCode ?? string.Empty),
 					"ConnectorId=" + (ConnectorId ?? string.Empty),
+					"InstalledSourceVersion=" + ReadInstalledSourceVersion(),
 					"AccessTokenProtected=" + Protect(AccessToken),
 					"AccessExpiresAtUtc=" + AccessExpiresAtUtc.ToString("O", CultureInfo.InvariantCulture),
 					"RefreshTokenProtected=" + Protect(RefreshToken),

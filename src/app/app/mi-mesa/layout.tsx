@@ -21,7 +21,7 @@ export default async function MyDeskLayout({ children }: Readonly<{ children: Re
     .eq("id", user.id)
     .maybeSingle();
   const { data: connectorRows } = await supabase.rpc(
-    "get_current_user_ninja_connector_status",
+    "get_current_user_ninja_connector_status_v2",
   );
   const connector = Array.isArray(connectorRows)
     ? connectorRows.find((row) => row.identity_id === null) ?? null
@@ -36,6 +36,7 @@ export default async function MyDeskLayout({ children }: Readonly<{ children: Re
         appRevision: appRelease.revision,
         appVersion: appRelease.version,
         connectorOnline: connector ? Boolean(connector.is_online) : null,
+        connectorInstalledSourceVersion: typeof connector?.installed_source_version === "string" ? connector.installed_source_version : null,
         connectorVersion: typeof connector?.connector_version === "string" ? connector.connector_version : null,
       }}
     >

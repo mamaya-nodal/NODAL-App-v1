@@ -160,13 +160,31 @@ export async function requireNinjaConnector(request: Request): Promise<Authentic
   }
 }
 
-export async function rememberNinjaConnectorVersion(connectorId: string, connectorVersion: unknown) {
-  if (typeof connectorVersion !== "string") return;
-  const cleanVersion = connectorVersion.trim();
-  if (!/^[0-9A-Za-z._-]{1,40}$/.test(cleanVersion)) return;
+function cleanConnectorVersion(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const cleanVersion = value.trim();
+  return /^[0-9A-Za-z._-]{1,40}$/.test(cleanVersion) ? cleanVersion : null;
+}
+
+export async function rememberNinjaConnectorVersions(
+  connectorId: string,
+  connectorVersion: unknown,
+  installedSourceVersion: unknown,
+) {
+  const cleanRunningVersion = cleanConnectorVersion(connectorVersion);
+  const cleanInstalledSourceVersion = cleanConnectorVersion(installedSourceVersion);
+  if (!cleanRunningVersion && !cleanInstalledSourceVersion) return;
   const supabase = serviceClient();
   if (!supabase) return;
-  await supabase.from("ninja_connectors").update({ connector_version: cleanVersion }).eq("id", connectorId);
+  await supabase
+    .from("ninja_connectors")
+    .update({
+      ...(cleanRunningVersion ? { connector_version: cleanRunningVersion } : {}),
+      ...(cleanInstalledSourceVersion
+        ? { installed_source_version: cleanInstalledSourceVersion }
+        : {}),
+    })
+    .eq("id", connectorId);
 }
 
 export function bearerToken(request: Request): string | null {

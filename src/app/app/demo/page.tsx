@@ -47,6 +47,7 @@ export default async function AccountingDemoPage() {
         appRevision: appRelease.revision,
         appVersion: appRelease.version,
         connectorOnline: null,
+        connectorInstalledSourceVersion: null,
         connectorVersion: null,
       }}
     >

@@ -9,12 +9,28 @@ const connectorSource = readFileSync(
   join(process.cwd(), "integrations", "ninjatrader", "NodalNinjaConnector.cs"),
   "utf8",
 );
+const connectorInstaller = readFileSync(
+  join(
+    process.cwd(),
+    "integrations",
+    "ninjatrader",
+    "NODAL-Ninja-Connector-setup.ps1",
+  ),
+  "utf8",
+);
 
 describe("Ninja connector source", () => {
-  it("publica la revisión de compatibilidad 0.8", () => {
+  it("publica la revisión vigente", () => {
     expect(connectorSource).toContain(
       `ConnectorVersion = "${LATEST_NINJA_CONNECTOR_VERSION}"`,
     );
+  });
+
+  it("registra la versión del código copiado para que el runtime pueda informarla", () => {
+    expect(connectorInstaller).toContain(
+      '"InstalledSourceVersion=$connectorSourceVersion"',
+    );
+    expect(connectorSource).toContain('installedSourceVersion');
   });
 
   it("evita la colisión entre el estado de cuenta y el enum de NinjaTrader", () => {

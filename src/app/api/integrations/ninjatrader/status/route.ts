@@ -28,7 +28,7 @@ export async function GET() {
   }
 
   const [statusResult, inventoryResult, aliasesResult] = await Promise.all([
-    readWithRetry(() => supabase.rpc("get_current_user_ninja_connector_status")),
+    readWithRetry(() => supabase.rpc("get_current_user_ninja_connector_status_v2")),
     readWithRetry(() => supabase.rpc("get_current_user_ninja_inventory")),
     supabase
       .from("ninja_broker_account_aliases")

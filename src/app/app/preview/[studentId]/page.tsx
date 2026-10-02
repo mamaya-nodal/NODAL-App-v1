@@ -141,6 +141,7 @@ export default async function AdminUserPreview({ params }: Props) {
         appRevision: appRelease.revision,
         appVersion: appRelease.version,
         connectorOnline,
+        connectorInstalledSourceVersion: null,
         connectorVersion: supervision.connector?.version ?? null,
       }}
     >

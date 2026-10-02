@@ -11,7 +11,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
     ? await supabase.from("nodal_users").select("display_name, email").eq("id", user.id).maybeSingle()
     : { data: null };
   const { data: connectorRows } = user
-    ? await supabase.rpc("get_current_user_ninja_connector_status")
+    ? await supabase.rpc("get_current_user_ninja_connector_status_v2")
     : { data: null };
   const connector = Array.isArray(connectorRows)
     ? connectorRows.find((row) => row.identity_id === null) ?? null
@@ -25,6 +25,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
         appRevision: appRelease.revision,
         appVersion: appRelease.version,
         connectorOnline: connector ? Boolean(connector.is_online) : null,
+        connectorInstalledSourceVersion: typeof connector?.installed_source_version === "string" ? connector.installed_source_version : null,
         connectorVersion: typeof connector?.connector_version === "string" ? connector.connector_version : null,
       }}
     >
