@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import { clampDateToPeriodSchedule } from "@/modules/accounting/domain/period-calendar";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
+import { presentWalletBalances } from "@/modules/wallets/domain/balance-presentation";
 import { buildSummaryAlerts } from "@/modules/summary/domain/summary-alerts";
 import { buildConciliationBreakdown, sumConciliationLines } from "@/modules/summary/domain/conciliation-breakdown";
 import {
@@ -37,10 +38,12 @@ type Props = Readonly<{
 }>;
 
 export type WalletView = Readonly<{
+  automatic: boolean;
   balanceInCents: number;
   id: string;
   identityId: string | null;
   name: string;
+  observedBalanceInCents: number | null;
 }>;
 
 export type WalletIdentityView = Readonly<{
@@ -113,6 +116,11 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const [movementKind, setMovementKind] = useState<keyof typeof labels>("external_contribution");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
   const [liveOnline, setLiveOnline] = useState(ninjaOnline);
+  const walletBalances = presentWalletBalances(wallets.map((wallet) => ({
+    accountingInCents: wallet.balanceInCents,
+    automatic: wallet.automatic,
+    observedInCents: wallet.observedBalanceInCents,
+  })));
   const alerts = buildSummaryAlerts(summary);
   const conciliation = buildConciliationBreakdown(summary);
   const hasConciliationDifference =
@@ -352,7 +360,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       )}
 
       <details className="demo-operation-disclosure accounting-balances">
-        <summary><span>Otros saldos</span><strong>{money(summary.walletBalanceInCents)}</strong><i aria-hidden="true" /></summary>
+        <summary><span>Otros saldos</span><strong>{money(walletBalances.availableInCents)}</strong><i aria-hidden="true" /></summary>
         <div className="demo-wallets">
           {wallets.map((wallet) => (
             <div className="named-wallet-row" key={wallet.id}>
@@ -417,7 +425,11 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                   {identities.map((identity) => <option key={identity.id} value={identity.id}>{identity.name}</option>)}
                 </select>
               </label>
-              <div className="named-wallet-balance"><span>Saldo contable</span><strong>{money(wallet.balanceInCents)}</strong></div>
+              <div className="named-wallet-balance">
+                <span>{wallet.automatic ? "Saldo detectado" : "Saldo contable"}</span>
+                <strong>{money(wallet.automatic && wallet.observedBalanceInCents !== null ? wallet.observedBalanceInCents : wallet.balanceInCents)}</strong>
+                {wallet.automatic && <small>Contable {money(wallet.balanceInCents)}</small>}
+              </div>
               <button
                 className="wallet-delete-button"
                 disabled={walletSavingId === wallet.id}
@@ -427,7 +439,9 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
               {walletFeedback[wallet.id] && walletEditingId !== wallet.id && <small className="named-wallet-feedback" role="status">{walletFeedback[wallet.id]}</small>}
             </div>
           ))}
-          <p><span>Total billeteras</span><strong>{money(summary.walletBalanceInCents)}</strong></p>
+          <p><span>Saldo disponible</span><strong>{money(walletBalances.availableInCents)}</strong></p>
+          <p><span>Saldo contable</span><strong>{money(summary.walletBalanceInCents)}</strong></p>
+          {walletBalances.differenceInCents !== 0 && <p className="wallet-balance-difference"><span>Diferencia por conciliar</span><strong>{money(walletBalances.differenceInCents)}</strong></p>}
           <p><span>Payouts pendientes</span><strong>{money(summary.fundingPendingInCents)}</strong></p>
           <p><span>Capital neto aportado</span><strong>{money(summary.capitalNetInCents)}</strong></p>
           <WalletConnections

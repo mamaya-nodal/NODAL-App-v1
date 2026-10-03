@@ -509,7 +509,7 @@ async function renderPrivateAppPage({
           .order("created_at"),
         supabase
           .from("nodal_wallet_sources")
-          .select("wallet_id,identity_id")
+          .select("wallet_id,identity_id,address,observed_cents")
           .eq("workspace_id", selection.workspace.id),
         supabase
           .from("period_opening_snapshots")
@@ -522,10 +522,20 @@ async function renderPrivateAppPage({
           .from("period_opening_wallets")
           .select("opening_snapshot_id,wallet_id,balance_cents,nodal_wallets(name)"),
       ]);
-    const walletIdentityById = new Map((walletSourceRows ?? []).map((source) => [source.wallet_id, source.identity_id]));
+    const walletSourceById = new Map((walletSourceRows ?? []).map((source) => [source.wallet_id, source]));
     walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
       const { data } = await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id });
-      return { balanceInCents: Number(data ?? 0), id: wallet.id, identityId: walletIdentityById.get(wallet.id) ?? null, name: wallet.name };
+      const source = walletSourceById.get(wallet.id);
+      return {
+        automatic: Boolean(source?.address),
+        balanceInCents: Number(data ?? 0),
+        id: wallet.id,
+        identityId: source?.identity_id ?? null,
+        name: wallet.name,
+        observedBalanceInCents: source?.observed_cents === null || source?.observed_cents === undefined
+          ? null
+          : Number(source.observed_cents),
+      };
     }));
     const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

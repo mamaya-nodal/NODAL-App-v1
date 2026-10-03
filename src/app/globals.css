@@ -7656,6 +7656,8 @@ html[data-theme="day"] .accounting-history {
 .named-wallet-row form > small { color: var(--app-positive); font-size: 9px; font-weight: 750; }
 .named-wallet-balance { min-width: 120px; display: flex; align-items: flex-end; flex-direction: column; gap: 5px; }
 .named-wallet-balance strong { color: var(--app-title); font-size: 13px; }
+.named-wallet-balance small { color: var(--app-subtle); font-size: 8px; font-weight: 700; white-space: nowrap; }
+.demo-wallets .wallet-balance-difference strong { color: var(--app-warning); }
 .named-wallet-owner { display: grid; gap: 5px; }
 .named-wallet-owner > span { color: var(--app-subtle); font-size: 9px; font-weight: 750; }
 .named-wallet-owner select { min-height: 34px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 10px; font-weight: 750; }

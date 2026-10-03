@@ -1611,3 +1611,16 @@ vigente sin aprobacion y evidencia suficiente.
 - **Actualizador:** al elegir solo actualizar y presionar ENTER, quita cualquier código adicional pendiente, conserva tokens cifrados, destinos vinculados y cola de telemetría, y crea una copia local de la configuración anterior. Si se ingresa un código nuevo, mantiene el flujo de vinculación adicional.
 - **Servidor:** el latido registra la versión informada antes de reconstruir operaciones y transiciones; una falla posterior no deja una versión antigua como aparente revisión activa. Los errores al guardar la versión se registran para diagnóstico.
 - **Verificación:** pruebas de la ruta y del paquete; la activación efectiva en la PC de Alfred requiere que ejecute el actualizador corregido y compile o reinicie NinjaTrader. La app solo debe mostrar 0.10 tras recibir el latido de ese ejecutable.
+
+### APP-139 - Presentación de saldos manuales y automáticos
+
+- **Fecha:** 2026-10-03.
+- **Regla visual:** una billetera manual presenta su saldo contable; una
+  billetera automática presenta la última lectura válida de USDT/USDC.
+- **Total disponible:** toma una sola fuente por billetera. En una billetera
+  automática reemplaza visualmente el saldo contable por la observación; nunca
+  suma ambos importes.
+- **Trazabilidad:** el saldo contable continúa visible por separado y cualquier
+  diferencia se expone como pendiente de conciliar. La observación no crea ni
+  modifica movimientos, aportes, ganancias o payouts.
+
