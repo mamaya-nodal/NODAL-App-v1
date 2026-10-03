@@ -11,8 +11,12 @@ type ReadResult = { data: unknown; error: unknown };
 export function requireSuccessfulReads<T extends readonly ReadResult[]>(results: T): T {
   const index = results.findIndex((result) => result.error || result.data === null || result.data === undefined);
   if (index >= 0) {
-    const error = results[index].error as { code?: string } | null;
-    throw new DataReadError(`${results.length}-${index + 1}-${error?.code || "READ"}`);
+    const reference = results.flatMap((result, position) => {
+      if (!result.error && result.data !== null && result.data !== undefined) return [];
+      const error = result.error as { code?: string } | null;
+      return [`${position + 1}-${error?.code || "READ"}`];
+    }).join(",");
+    throw new DataReadError(`${results.length}:${reference}`);
   }
   return results;
 }

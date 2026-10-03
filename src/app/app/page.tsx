@@ -443,9 +443,10 @@ async function renderPrivateAppPage({
           .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
           .order("occurred_at", { ascending: false })
           .limit(500),
-        supabase
+        (privileged ?? supabase)
           .from("ninja_broker_balance_events")
           .select("id, observed_at, balance_cents, source_accounts, source_event_id")
+          .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
           .order("observed_at", { ascending: false })
           .limit(30),
         supabase
