@@ -16,6 +16,7 @@ import {
   renameWallet,
 } from "./summary-actions";
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
+import { WalletConnections } from "./wallet-connections";
 
 type Props = Readonly<{
   accounts: Array<{ eligibleForPayout: boolean; id: string; label: string }>;
@@ -379,7 +380,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                   </div>
                 </div>
               )}
-              <div className="named-wallet-balance"><span>Saldo disponible</span><strong>{money(wallet.balanceInCents)}</strong></div>
+              <div className="named-wallet-balance"><span>Saldo contable</span><strong>{money(wallet.balanceInCents)}</strong></div>
             </div>
           ))}
           <p><span>Total billeteras</span><strong>{money(summary.walletBalanceInCents)}</strong></p>
@@ -394,6 +395,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
               <button disabled={saving}>Crear billetera</button>
             </form>
           </details>
+          <WalletConnections key={periodId} periodId={periodId} wallets={wallets} />
         </div>
       </details>
 

@@ -1548,6 +1548,15 @@ vigente sin aprobacion y evidencia suficiente.
 - **Validación:** regresiones con vivas negativas y positivas, cuentas vírgenes nuevas y trasladadas, cierres con ganancia y pérdida, payouts y fees, broker sin cobertura, evidencia faltante, diferencias intencionales e inmutabilidad de cierres previos. Comprobación de datos de desarrollo exclusivamente de lectura, sin crear asientos ni modificar saldos.
 - **Fuera de alcance:** no cambia la regla de comisión, las fases o los estados contables. Los nuevos flujos de depósitos, retiros, transferencias y cobro de pendientes entre períodos requieren una revisión específica posterior; esta corrección no los da por resueltos.
 
+### APP-137 - Billeteras manuales y evidencia cripto separada del libro
+
+- **Fecha:** 2026-10-03. Autorizado por Mauricio. Implementado localmente; activación pendiente de acceso Supabase y clave Moralis.
+- **Regla:** la lectura de USDT/USDC no constituye aporte, ingreso ni payout. El saldo nominal detectado se muestra separado del saldo contable USD. No se altera la regla económica ni se fuerza una conciliación.
+- **Identidad:** cada dirección EVM corresponde a una billetera del workspace, con identidad opcional; no se duplica por usar MetaMask y Trust Wallet con la misma dirección.
+- **Evidencia:** ingesta idempotente por red/hash/log y vínculo explícito al movimiento o cobro existente. Una transferencia interna conserva un asiento con dos extremos. Sin clasificación automática ni reconocimiento automático de payouts.
+- **Seguridad:** lectura pública sin semillas o claves privadas; proveedor sólo en servidor, RLS, control de titular activo, auditoría y períodos abiertos para vinculaciones. Falta de red conserva última lectura, nunca un cero ficticio.
+- **Límites y verificación:** ver `38_WALLETS_CRIPTO.md`. No hay cobertura universal de redes ni lectura real validada aún. La prueba SQL remota está bloqueada por sesión administrativa vencida; no se publicó ni se aplicó migración remota.
+
 ### APP-136 - Código adicional rechazado no detiene el conector Ninja
 
 - **Fecha:** 2026-10-03. Corrección del caso de Alfred durante la actualización del conector.

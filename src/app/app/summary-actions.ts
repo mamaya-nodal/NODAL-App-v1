@@ -52,7 +52,7 @@ export async function createWallet(input: Readonly<{ date: string; name: string;
   const { supabase, user } = await client(); if (!user) return { ok: false, message: "La sesión venció." };
   const { error } = await supabase.rpc("create_nodal_wallet", { target_name: input.name.trim(), target_opened_on: input.date, target_opening_balance_cents: opening, target_period_id: input.periodId });
   if (error) return { ok: false, message: error.message.includes("duplicate") ? "Ya existe una billetera con ese nombre." : "No se pudo crear la billetera." };
-  revalidatePath("/app"); return { ok: true, message: "Billetera creada. El saldo inicial quedó registrado como aporte trader." };
+  revalidatePath("/app"); return { ok: true, message: opening > 0 ? "Billetera creada. El saldo inicial quedó registrado como aporte trader." : "Billetera creada sin movimientos iniciales. Podés asignarle una identidad y conectar su dirección pública." };
 }
 
 export async function renameWallet(input: Readonly<{ name: string; walletId: string }>): Promise<Result> {

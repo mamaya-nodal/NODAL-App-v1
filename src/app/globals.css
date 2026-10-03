@@ -8598,3 +8598,25 @@ html[data-theme="day"] .nodal-workspace .real-telemetry-overview {
   .prior-period-adjustment { grid-template-columns: 1fr; }
   .prior-period-adjustment small { grid-column: auto; }
 }
+.wallet-connections .wallet-connection-card {
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border, #cddcd3);
+  border-radius: 16px;
+}
+.wallet-connections .wallet-connection-card small {
+  display: block;
+  overflow-wrap: anywhere;
+  margin-block: .5rem;
+}
+.wallet-connections .wallet-reading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem 1.5rem;
+  margin-block: 1rem;
+}
+.wallet-connections .summary-form label {
+  display: grid;
+  gap: .4rem;
+  min-width: 0;
+}
