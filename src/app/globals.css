@@ -8093,6 +8093,10 @@ html[data-theme="day"] .demo-stage.live {
 .real-account-results > .operation-register-panel { margin: 0; padding: 0 15px 15px; border: 0; }
 
 .accounting-view .demo-accounting-grid { margin-bottom: 0; }
+.accounting-view .demo-accounting-primary { grid-row: auto; min-height: 0; }
+.accounting-view .demo-accounting-primary strong { margin-top: 12px !important; font-size: clamp(24px, 3vw, 36px) !important; letter-spacing: -1px !important; }
+.accounting-view .accounting-result-detail { margin-top: 14px; }
+.accounting-result-detail > .conciliation-grid { padding: 0 16px 16px; }
 .accounting-view .demo-periods-heading { margin-top: 18px; }
 .accounting-view .accounting-period-archive,
 .accounting-view .accounting-balances,

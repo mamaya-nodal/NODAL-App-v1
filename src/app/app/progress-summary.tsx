@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
 import { buildSummaryAlerts } from "@/modules/summary/domain/summary-alerts";
-import { buildConciliationBreakdown } from "@/modules/summary/domain/conciliation-breakdown";
+import { buildConciliationBreakdown, sumConciliationLines } from "@/modules/summary/domain/conciliation-breakdown";
 import {
   collectFundingWithdrawal,
   createWallet,
@@ -59,7 +59,7 @@ const money = (cents: number) =>
     currency: "USD",
     signDisplay: "auto",
     style: "currency",
-  }).format(cents / 100);
+  }).format((cents || 0) / 100);
 
 const today = () =>
   new Intl.DateTimeFormat("en-CA", {
@@ -103,6 +103,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const hasConciliationDifference =
     conciliation.capital.differenceInCents !== 0 ||
     conciliation.gains.differenceInCents !== 0;
+  const hasUnverifiedConciliation = !conciliation.capital.verified || !conciliation.gains.verified;
   const recentPeriods = periods.slice(0, 2);
   const archivedPeriods = periods.slice(2);
 
@@ -235,14 +236,31 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           {periodLabel && <small>{periodLabel}</small>}
         </article>
         <article><span>Resultado del período</span><strong>{money(summary.periodResultInCents)}</strong></article>
+        <article><span>Resultado acumulado</span><strong>{money(summary.accumulatedResultInCents)}</strong><small>Incluye períodos anteriores</small></article>
         <article>
-          <span>Saldo broker</span>
-          <strong>{liveBalance ? money(liveBalance.balanceInCents) : summary.brokerBalanceInCents === null ? "—" : money(summary.brokerBalanceInCents)}</strong>
-          <small>{liveBalance ? liveOnline ? "En vivo" : "Último dato" : "Sin datos de Ninja"}</small>
+          <span>Saldo broker contable</span>
+          <strong>{summary.brokerBalanceInCents === null ? "—" : money(summary.brokerBalanceInCents)}</strong>
+          <small>{liveBalance ? `Ninja: ${money(liveBalance.balanceInCents)} · ${liveOnline ? "En vivo" : "Último dato"}` : "Sin datos de Ninja"}</small>
         </article>
-        <article><span>Comisión de usuario</span><strong>{money(summary.commissionInCents)}</strong><small>{summary.commissionRateLabel}</small></article>
-        <article><span>Ganancia del usuario</span><strong>{money(summary.traderGainInCents)}</strong></article>
+        <article><span>Comisión sobre tu operativa</span><strong>{money(summary.commissionInCents)}</strong><small>{summary.commissionRateLabel}</small></article>
+        <article><span>Ganancia por operativa propia</span><strong>{money(summary.traderGainInCents)}</strong></article>
       </div>
+
+      <details className="demo-operation-disclosure accounting-result-detail">
+        <summary><span>Detalle del resultado acumulado</span><strong>{money(summary.accumulatedResultInCents)}</strong><i aria-hidden="true" /></summary>
+        <div className="conciliation-grid">
+          <ConciliationSide lines={conciliation.accumulated.lines} title={conciliation.accumulated.complete ? "Composición del resultado" : "Continuidad del resultado"} total={conciliation.accumulated.total} />
+          <div className="conciliation-side">
+            <strong>Cuentas vivas y vírgenes</strong>
+            <p><span>Flotante al inicio</span><span>{summary.resultDetails ? money(summary.resultDetails.openingLiveResultInCents) : "No disponible"}</span></p>
+            <p><span>Flotante actual</span><span>{summary.resultDetails ? money(summary.resultDetails.liveResultInCents) : "No disponible"}</span></p>
+            <p><span>Costo de vírgenes al inicio</span><span>{summary.resultDetails ? money(summary.resultDetails.openingVirginPriceInCents) : "No disponible"}</span></p>
+            <p><span>Costo de vírgenes actual</span><span>{money(summary.virginPriceInCents)}</span></p>
+            <small>El flotante conserva su signo. Para el resultado del período se toma su variación, no se vuelve a contar el saldo inicial.</small>
+            {!conciliation.accumulated.complete && <p>El desglose histórico completo no está disponible; no se infieren importes para completarlo.</p>}
+          </div>
+        </div>
+      </details>
 
       {((summary.priorPeriodResultAdjustmentInCents ?? 0) !== 0
         || (summary.priorPeriodCommissionAdjustmentInCents ?? 0) !== 0) && (
@@ -367,7 +385,6 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           <p><span>Total billeteras</span><strong>{money(summary.walletBalanceInCents)}</strong></p>
           <p><span>Payouts pendientes</span><strong>{money(summary.fundingPendingInCents)}</strong></p>
           <p><span>Capital neto aportado</span><strong>{money(summary.capitalNetInCents)}</strong></p>
-          <p><span>Flotante</span><strong>{money(summary.floatingInCents)}</strong></p>
           <details className="wallet-create-inline">
             <summary>+ Agregar billetera</summary>
             <form className="summary-form" onSubmit={addWallet}>
@@ -394,31 +411,33 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
         </details>
       )}
 
-      <details className="accounting-disclosure demo-operation-disclosure" open={hasConciliationDifference ? true : undefined}>
+      <details className="accounting-disclosure demo-operation-disclosure" open={hasConciliationDifference || hasUnverifiedConciliation ? true : undefined}>
         <summary>
           <span>Conciliaciones</span>
-          <strong>{hasConciliationDifference ? "Revisar" : "Sin diferencias"}</strong>
+          <strong>{hasUnverifiedConciliation ? "Pendiente de verificar" : hasConciliationDifference ? "Revisar" : "Sin diferencias"}</strong>
         </summary>
         <div className="conciliation-grid">
           <ConciliationCard
             difference={conciliation.capital.differenceInCents}
+            verified={conciliation.capital.verified}
             leftLines={conciliation.capital.observable}
             leftTitle="Posición observable"
-            leftTotal={summary.positionObservableInCents}
+            leftTotal={sumConciliationLines(conciliation.capital.observable)}
             rightLines={conciliation.capital.expected}
             rightTitle="Posición esperada"
-            rightTotal={summary.positionExpectedInCents}
+            rightTotal={sumConciliationLines(conciliation.capital.expected)}
             title="Capital"
           />
           <ConciliationCard
             difference={conciliation.gains.differenceInCents}
-            leftLines={[]}
-            leftTitle="Cuentas cerradas"
-            leftTotal={conciliation.gains.closedInCents}
+            verified={conciliation.gains.verified}
+            leftLines={conciliation.gains.ledger}
+            leftTitle="Según movimientos del período"
+            leftTotal={conciliation.gains.ledgerTotal}
             rightLines={conciliation.gains.reconstructed}
-            rightTitle="Ganancia reconstruida"
-            rightTotal={summary.realizedGainInCents - conciliation.gains.differenceInCents}
-            title="Ganancias"
+            rightTitle="Según cuentas y arrastres"
+            rightTotal={conciliation.gains.reconstructedTotal}
+            title="Resultado del período"
           />
         </div>
       </details>
@@ -510,6 +529,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
 }
 
 function ConciliationCard({
+  verified,
   difference,
   leftLines,
   leftTitle,
@@ -519,13 +539,14 @@ function ConciliationCard({
   rightTotal,
   title,
 }: {
-  difference: number;
+  verified: boolean;
+  difference: number | null;
   leftLines: Array<{ href: string; label: string; valueInCents: number | null }>;
   leftTitle: string;
-  leftTotal: number;
+  leftTotal: number | null;
   rightLines: Array<{ href: string; label: string; valueInCents: number | null }>;
   rightTitle: string;
-  rightTotal: number;
+  rightTotal: number | null;
   title: string;
 }) {
   return (
@@ -535,9 +556,9 @@ function ConciliationCard({
         <ConciliationSide lines={leftLines} title={leftTitle} total={leftTotal} />
         <ConciliationSide lines={rightLines} title={rightTitle} total={rightTotal} />
       </div>
-      <p className={`conciliation-difference${difference !== 0 ? " has-difference" : ""}`}>
+      <p className={`conciliation-difference${!verified || difference !== 0 ? " has-difference" : ""}`}>
         <span>Diferencia</span>
-        <strong>{money(difference)}</strong>
+        <strong>{verified && difference !== null ? money(difference) : "No se pudo verificar"}</strong>
       </p>
     </article>
   );
@@ -550,7 +571,7 @@ function ConciliationSide({
 }: {
   lines: Array<{ href: string; label: string; valueInCents: number | null }>;
   title: string;
-  total: number;
+  total: number | null;
 }) {
   return (
     <div className="conciliation-side">
@@ -558,12 +579,12 @@ function ConciliationSide({
       {lines.map((line) => (
         <p key={line.label}>
           <a href={line.href}>{line.label}</a>
-          <span>{line.valueInCents === null ? "Sin saldo informado" : money(line.valueInCents)}</span>
+          <span>{line.valueInCents === null ? "No disponible" : money(line.valueInCents)}</span>
         </p>
       ))}
       <footer>
         <span>Total</span>
-        <strong>{money(total)}</strong>
+        <strong>{total === null ? "No disponible" : money(total)}</strong>
       </footer>
     </div>
   );

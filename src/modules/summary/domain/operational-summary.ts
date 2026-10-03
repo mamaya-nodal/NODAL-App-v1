@@ -49,6 +49,14 @@ export type FundingWithdrawal = Readonly<{
 }>;
 
 export type OperationalOpeningSnapshot = Readonly<{
+  liveResultInCents?: number;
+  virginPriceInCents?: number;
+  verified?: boolean;
+  accumulatedClosedResultInCents?: number;
+  accumulatedUncoveredResultInCents?: number;
+  accumulatedFeesInCents?: number;
+  accumulatedAdjustmentsInCents?: number;
+  accumulatedBreakdownAvailable?: boolean;
   accountStates?: Readonly<{ virgin: number; live: number; closed: number }>;
   accumulatedResultInCents: number;
   brokerBalanceInCents: number | null;
@@ -60,6 +68,23 @@ export type OperationalOpeningSnapshot = Readonly<{
 }>;
 
 export type OperationalSummary = Readonly<{
+  resultDetails?: Readonly<{
+    verified: boolean;
+    openingLiveResultInCents: number;
+    openingVirginPriceInCents: number;
+    openingAccumulatedResultInCents: number;
+    liveResultInCents: number;
+    brokerResultInCents: number;
+    purchasesInCents: number;
+    approvedPayoutsInCents: number;
+    feesInCents: number;
+    reconstructedPeriodResultInCents: number;
+    accumulatedClosedResultInCents: number;
+    accumulatedUncoveredResultInCents: number;
+    accumulatedFeesInCents: number;
+    accumulatedAdjustmentsInCents?: number;
+    accumulatedBreakdownAvailable: boolean;
+  }>;
   uncoveredBrokerResultInCents?: number;
   accountStates: Readonly<{ virgin: number; live: number; closed: number }>;
   accumulatedResultInCents: number;
@@ -141,8 +166,10 @@ export function buildOperationalSummary(input: Readonly<{
   };
   const manualAccountStateCount = input.accounts.filter((account) => account.stateOrigin !== "automatic").length;
   const realizedGainInCents = sum(accountTotals.filter(({ account }) => account.state === "closed").map(({ total }) => total));
-  const floatingInCents = (opening.floatingInCents ?? 0)
-    + Math.abs(sum(accountTotals.filter(({ account }) => account.state === "live").map(({ total }) => total)));
+  const liveResultInCents = -(opening.floatingInCents ?? 0)
+    + sum(accountTotals.filter(({ account }) => account.state === "live").map(({ total }) => total));
+  // Legacy snapshots store the magnitude; new displays use the signed result.
+  const floatingInCents = Math.abs(liveResultInCents);
   const virginPriceInCents = sum(input.accounts.filter((account) => account.state === "virgin").map((account) => account.priceInCents));
   const orderedControls = [...input.controls].sort((left, right) => left.controlNumber - right.controlNumber);
   const brokerBalanceInCents = orderedControls.at(-1)?.balanceAfterInCents ?? opening.brokerBalanceInCents;
@@ -175,7 +202,34 @@ export function buildOperationalSummary(input: Readonly<{
   const positionObservableInCents = (brokerBalanceInCents ?? 0) + walletBalanceInCents + fundingPendingInCents;
   const positionExpectedInCents = capitalNetInCents + accumulatedResultInCents;
   const commission = calculateDeskCommission(realizedGainInCents);
+  // Compatibility for old callers only. The shared loader supplies signed,
+  // independently persisted opening balances, never a balancing difference.
+  const openingLiveResultInCents = opening.liveResultInCents
+    ?? -(opening.gainReconciliationBaselineInCents ?? opening.floatingInCents ?? 0);
+  const openingVirginPriceInCents = opening.virginPriceInCents ?? 0;
+  const reconstructedPeriodResultInCents = realizedGainInCents
+    + liveResultInCents - openingLiveResultInCents
+    - virginPriceInCents + openingVirginPriceInCents
+    + uncoveredBrokerResultInCents - transferFees;
   return {
+    resultDetails: {
+      verified: opening.verified !== false,
+      openingLiveResultInCents,
+      openingVirginPriceInCents,
+      openingAccumulatedResultInCents: opening.accumulatedResultInCents,
+      liveResultInCents,
+      brokerResultInCents: brokerOperatingResult,
+      purchasesInCents: totalPurchases,
+      approvedPayoutsInCents: approved,
+      feesInCents: transferFees,
+      reconstructedPeriodResultInCents,
+      accumulatedClosedResultInCents: (opening.accumulatedClosedResultInCents ?? 0) + realizedGainInCents,
+      accumulatedUncoveredResultInCents: (opening.accumulatedUncoveredResultInCents ?? 0) + uncoveredBrokerResultInCents,
+      accumulatedFeesInCents: (opening.accumulatedFeesInCents ?? 0) + transferFees,
+      accumulatedAdjustmentsInCents: opening.accumulatedAdjustmentsInCents ?? 0,
+      accumulatedBreakdownAvailable: opening.accumulatedBreakdownAvailable
+        ?? (opening.accumulatedResultInCents === 0 && openingLiveResultInCents === 0 && openingVirginPriceInCents === 0),
+    },
     accountStates: states,
     uncoveredBrokerResultInCents,
     accumulatedResultInCents,
@@ -193,8 +247,7 @@ export function buildOperationalSummary(input: Readonly<{
     positionExpectedInCents,
     positionObservableInCents,
     realizedGainInCents,
-    realizedReconciliationDifferenceInCents: realizedGainInCents - (periodResultInCents - uncoveredBrokerResultInCents + floatingInCents + virginPriceInCents)
-      + (opening.gainReconciliationBaselineInCents ?? 0),
+    realizedReconciliationDifferenceInCents: reconstructedPeriodResultInCents - periodResultInCents,
     traderGainInCents: Math.max(realizedGainInCents, 0) - commission.amountInCents,
     virginPriceInCents,
     walletBalanceInCents,

@@ -18,4 +18,9 @@ describe("cierre de períodos", () => {
       realizedReconciliationDifferenceInCents: 1,
     })).toBe(true);
   });
+
+  it("marca evidencia incompleta incluso con diferencias numéricas en cero", () => {
+    expect(periodHasObservations({ ...reconciled, brokerBalanceInCents: null })).toBe(true);
+    expect(periodHasObservations({ ...reconciled, resultDetails: { verified: false } } as typeof reconciled)).toBe(true);
+  });
 });

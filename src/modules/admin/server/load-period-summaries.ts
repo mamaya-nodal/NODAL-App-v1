@@ -1,6 +1,7 @@
 import type {
   FundingWithdrawal,
   OperationalSummary,
+  OperationalOpeningSnapshot,
   WalletMovement,
 } from "@/modules/summary/domain/operational-summary";
 import { buildOperationalSummary } from "@/modules/summary/domain/operational-summary";
@@ -11,12 +12,14 @@ import type { AccountPhaseWithdrawal } from "@/modules/operations/domain/account
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 import { operationalOpeningFromRecord, type PeriodOpeningRecord } from "@/modules/summary/domain/opening-snapshot";
 import { applyPriorPeriodAdjustments } from "@/modules/accounting/domain/prior-period-adjustments";
+import { openingFromClosure } from "@/modules/summary/domain/closure-opening";
 
 type Supabase = Awaited<
   ReturnType<typeof import("@/lib/supabase/server").createClient>
 >;
 
 export type LoadedPeriodSummary = Readonly<{
+  opening?: OperationalOpeningSnapshot;
   lastOperatedOn: string | null;
   summary: OperationalSummary;
 }>;
@@ -38,13 +41,27 @@ export async function loadPeriodSummaries(
   }
   if (periodIds.length === 0) return result;
 
+  const requestedIds = new Set(periodIds);
+  const { data: requestedPeriods, error: requestedError } = await supabase.from("periods")
+    .select("id,workspace_id,period_month").in("id", periodIds);
+  if (requestedError) throw new Error("No se pudieron verificar los períodos solicitados.");
+  const workspaceIds = [...new Set((requestedPeriods ?? []).map((period) => period.workspace_id))];
+  if (workspaceIds.length === 0) return result;
+  const { data: historyPeriods, error: ownersError } = await supabase.from("periods")
+    .select("id,workspace_id,period_month,lifecycle_status,workspaces(owner_user_id)")
+    .in("workspace_id", workspaceIds).order("period_month");
+  if (ownersError) throw new Error("No se pudo verificar la continuidad de los períodos.");
+  const periodOwners = (historyPeriods ?? []).filter((period) => (requestedPeriods ?? []).some((requested) =>
+    requested.workspace_id === period.workspace_id && requested.period_month >= period.period_month));
+  periodIds = periodOwners.map((period) => period.id);
+
   const [accountsResult, controlsResult, walletResult, fundingResult, openingResult, carryoversResult, closuresResult, rectificationsResult] = await Promise.all([
     readAll(supabase.from("accounts").select("id, period_id, state, state_origin").in("period_id", periodIds).order("id")),
     readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, transfer_fee_cents").in("period_id", periodIds).order("id")),
     readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, destination_wallet_id, occurred_on, kind, amount_cents, fee_cents, observation").in("period_id", periodIds).order("id")),
-    readAll(supabase.from("funding_withdrawals").select("id, period_id, account_id, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents").eq("is_active", true).in("period_id", periodIds).order("id")),
+    readAll(supabase.from("funding_withdrawals").select("id, period_id, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents").eq("is_active", true).in("period_id", periodIds).order("id")),
     readAll(supabase.from("period_opening_snapshots").select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference").in("period_id", periodIds).order("id")),
-    readAll(supabase.from("account_period_carryovers").select("to_period_id,account_id,lifetime_result_cents").in("to_period_id", periodIds).order("id")),
+    readAll(supabase.from("account_period_carryovers").select("from_period_id,to_period_id,account_id,account_state,lifetime_result_cents,purchase_price_cents").in("to_period_id", periodIds).order("id")),
     readAll(supabase.from("period_closure_versions").select("period_id,version,summary_data").in("period_id", periodIds).order("version", { ascending: false })),
     readAll(supabase.from("period_rectifications").select("adjustment_period_id,result_adjustment_cents,commission_adjustment_cents").in("adjustment_period_id", periodIds).order("created_at")),
   ]);
@@ -73,8 +90,6 @@ export async function loadPeriodSummaries(
   const purchases = purchasesResult.data ?? [];
   const entries = entriesResult.data ?? [];
   const phaseWithdrawals = withdrawalsResult.data ?? [];
-  const {data:periodOwners,error:ownersError}=await supabase.from('periods').select('id,period_month,lifecycle_status,workspaces(owner_user_id)').in('id',periodIds);
-  if(ownersError)throw new Error('No se pudieron verificar los períodos.');
   const commissionLoader = options?.loadCommission ?? loadIndividualCommission;
   const agreements=new Map(await Promise.all((periodOwners??[]).map(async p=>{
     const workspace=Array.isArray(p.workspaces)?p.workspaces[0]:p.workspaces;
@@ -88,20 +103,19 @@ export async function loadPeriodSummaries(
     }
   }
 
-  for (const periodId of periodIds) {
+  const openingByPeriod = new Map<string, OperationalOpeningSnapshot>();
+  const emptyOpening: OperationalOpeningSnapshot = {
+    accumulatedResultInCents: 0, brokerBalanceInCents: null, capitalNetInCents: 0,
+    fundingPendingInCents: 0, walletBalanceInCents: 0, liveResultInCents: 0,
+    virginPriceInCents: 0, verified: true, accumulatedBreakdownAvailable: true,
+  };
+  for (const [periodIndex, period] of periodOwners.entries()) {
+    const periodId = period.id;
     const controlsForPeriod = controls.filter((control) => control.period_id === periodId);
     const operatingDates = controlsForPeriod
       .filter((control) => control.kind === "balance_update")
       .map((control) => control.operated_on)
       .sort();
-    const closedSummary = latestClosureByPeriod.get(periodId);
-    if (closedSummary) {
-      result.set(periodId, {
-        lastOperatedOn: operatingDates.at(-1) ?? null,
-        summary: closedSummary,
-      });
-      continue;
-    }
     const accountsForPeriod = accounts.filter((account) => account.period_id === periodId);
     const accountIdsForPeriod = new Set(accountsForPeriod.map((account) => account.id));
     const purchasesByAccount = new Map(
@@ -147,6 +161,7 @@ export async function loadPeriodSummaries(
       .filter((withdrawal) => withdrawal.period_id === periodId)
       .map((withdrawal) => ({
         accountId: withdrawal.account_id,
+        phase: withdrawal.phase as FundingWithdrawal["phase"],
         amountInCents: Number(withdrawal.amount_cents),
         approvedOn: withdrawal.approved_on,
         collectedOn: withdrawal.collected_on,
@@ -173,20 +188,38 @@ export async function loadPeriodSummaries(
       walletBalanceInCents: Number(openingRow.wallet_balance_cents),
       wallets: [],
     }) : undefined;
-    const carriedResult = carryovers
-      .filter((carryover) => carryover.to_period_id === periodId)
-      .reduce((total, carryover) => total + Number(carryover.lifetime_result_cents), 0);
-    const opening = carriedResult === 0 ? baseOpening : {
-      ...(baseOpening ?? {
-        accumulatedResultInCents: 0,
-        brokerBalanceInCents: null,
-        capitalNetInCents: 0,
-        fundingPendingInCents: 0,
-        walletBalanceInCents: 0,
-      }),
-      gainReconciliationBaselineInCents:
-        (baseOpening?.gainReconciliationBaselineInCents ?? 0) - carriedResult,
-    };
+    const previousPeriod = periodOwners.slice(0, periodIndex).reverse()
+      .find((candidate) => candidate.workspace_id === period.workspace_id);
+    const previous = previousPeriod ? result.get(previousPeriod.id)?.summary : undefined;
+    const previousFees = previousPeriod ? controls.filter((row) => row.period_id === previousPeriod.id)
+      .reduce((total, row) => total + Number(row.transfer_fee_cents ?? 0), 0)
+      + walletMovements.filter((row) => row.period_id === previousPeriod.id)
+        .reduce((total, row) => total + Number(row.fee_cents ?? 0), 0)
+      + fundingWithdrawals.filter((row) => row.period_id === previousPeriod.id && row.collected_on)
+        .reduce((total, row) => total + Number(row.collection_fee_cents ?? 0), 0) : 0;
+    const opening: OperationalOpeningSnapshot = baseOpening ? {
+      ...baseOpening,
+      // Migration totals are preserved, but cannot prove a per-account breakdown.
+      liveResultInCents: -(baseOpening.floatingInCents ?? 0),
+      verified: (baseOpening.accountStates?.live ?? 0) === 0 && (baseOpening.accountStates?.virgin ?? 0) === 0,
+      accumulatedBreakdownAvailable: false,
+    } : previous && previousPeriod ? {
+      ...openingFromClosure(previous, carryovers
+        .filter((row) => row.to_period_id === periodId && row.from_period_id === previousPeriod.id)
+        .map((row) => ({
+          accountState: row.account_state as "live" | "virgin",
+          lifetimeResultInCents: Number(row.lifetime_result_cents),
+          purchasePriceInCents: Number(row.purchase_price_cents),
+        })), previousFees, openingByPeriod.get(previousPeriod.id) ?? emptyOpening),
+      ...(!latestClosureByPeriod.has(previousPeriod.id) ? { verified: false } : {}),
+    } : { ...emptyOpening };
+    openingByPeriod.set(periodId, opening);
+    const closedSummary = latestClosureByPeriod.get(periodId);
+    if (closedSummary) {
+      // Published history remains immutable; the new opening reads its evidence.
+      result.set(periodId, { opening, lastOperatedOn: operatingDates.at(-1) ?? null, summary: closedSummary });
+      continue;
+    }
     const summary = applyPriorPeriodAdjustments(applyIndividualCommission(buildOperationalSummary({
       accounts: accountsForPeriod.map((account) => {
         const purchase = purchasesByAccount.get(account.id);
@@ -211,7 +244,10 @@ export async function loadPeriodSummaries(
       })),
       entries: entriesForPeriod,
       fundingWithdrawals: fundingForPeriod,
-      opening,
+      opening: {
+        ...opening,
+        verified: opening.verified !== false && accountsForPeriod.every((account) => purchasesByAccount.has(account.id)),
+      },
       phaseWithdrawals: phaseWithdrawalsForPeriod,
       walletMovements: walletForPeriod,
     }),agreements.get(periodId)??null), rectifications
@@ -221,9 +257,10 @@ export async function loadPeriodSummaries(
         resultInCents: adjustments.resultInCents + Number(rectification.result_adjustment_cents),
       }), { commissionInCents: 0, resultInCents: 0 }));
     result.set(periodId, {
+      opening,
       lastOperatedOn: operatingDates.at(-1) ?? null,
       summary,
     });
   }
-  return result;
+  return new Map([...result].filter(([id]) => requestedIds.has(id)));
 }

@@ -5,6 +5,7 @@ export type SummaryAlert = Readonly<{
     | "capital_reconciliation_difference"
     | "gain_reconciliation_difference"
     | "missing_broker_balance"
+    | "unverified_opening"
     | "pending_funding_withdrawal"
     | "manual_account_state";
   detail: string;
@@ -15,6 +16,9 @@ export type SummaryAlert = Readonly<{
 
 export function buildSummaryAlerts(summary: OperationalSummary): SummaryAlert[] {
   const alerts: SummaryAlert[] = [];
+  if (summary.resultDetails?.verified === false) {
+    alerts.push({ code: "unverified_opening", detail: "Falta evidencia suficiente para verificar el arrastre de cuentas del cierre anterior. No se generó ningún ajuste para compensarlo.", href: "#contabilidad", severity: "attention", title: "Arrastre pendiente de verificar" });
+  }
 
   if (summary.brokerBalanceInCents === null) {
     alerts.push({ code: "missing_broker_balance", detail: "Todavía no hay un saldo de broker registrado para este período.", href: "#operaciones", severity: "attention", title: "Falta informar el saldo de broker" });
@@ -23,7 +27,7 @@ export function buildSummaryAlerts(summary: OperationalSummary): SummaryAlert[] 
     alerts.push({ code: "capital_reconciliation_difference", detail: "La posición observable y la posición esperada no coinciden. Revisá los movimientos que integran Contabilidad; la app no ajusta importes automáticamente.", href: "#contabilidad", severity: "attention", title: "Diferencia en la conciliación de capital" });
   }
   if (summary.realizedReconciliationDifferenceInCents !== 0) {
-    alerts.push({ code: "gain_reconciliation_difference", detail: "La ganancia de cuentas cerradas no coincide con la reconstrucción del período, flotante y cuentas vírgenes.", href: "#operaciones", severity: "attention", title: "Diferencia en la conciliación de ganancias" });
+    alerts.push({ code: "gain_reconciliation_difference", detail: "El resultado del período no coincide con el detalle de cuentas, sus arrastres y gastos. La diferencia se conserva para revisar su origen.", href: "#contabilidad", severity: "attention", title: "Diferencia en la conciliación del resultado" });
   }
   const pending = summary.fundingWithdrawals.filter((withdrawal) => !withdrawal.collectedOn);
   if (pending.length > 0) {

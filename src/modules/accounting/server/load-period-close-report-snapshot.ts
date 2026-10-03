@@ -380,7 +380,7 @@ export async function loadPeriodCloseReportSnapshot(
       brokerBalanceInCents: summary.brokerBalanceInCents ?? null,
       commissionInCents: asNumber(closure.commission_cents),
       commissionRateLabel: summary.commissionRateLabel ?? "Sin porcentaje",
-      floatingInCents: summary.floatingInCents ?? 0,
+      floatingInCents: summary.resultDetails?.liveResultInCents ?? summary.floatingInCents ?? 0,
       fundingPendingInCents: summary.fundingPendingInCents ?? 0,
       positionObservableInCents: summary.positionObservableInCents ?? 0,
       realizedGainInCents: asNumber(closure.realized_gain_cents),

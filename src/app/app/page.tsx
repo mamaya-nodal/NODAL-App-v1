@@ -1,5 +1,3 @@
-import { applyIndividualCommission } from '@/modules/summary/domain/individual-commission';
-import { loadIndividualCommission } from '@/modules/summary/server/individual-commission';
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -51,11 +49,9 @@ import {
   type CapitalHistoryPoint,
   type HomePerformance,
 } from "@/modules/summary/domain/home-dashboard";
-import { buildPeriodOpening } from "@/modules/summary/domain/period-opening";
 import { canConfigurePeriodOpening } from "@/modules/summary/domain/opening-eligibility";
 import type { OperationalOpeningSnapshot } from "@/modules/summary/domain/operational-summary";
 import {
-  operationalOpeningFromRecord,
   type OpeningAccountStage,
   type PeriodOpeningRecord,
 } from "@/modules/summary/domain/opening-snapshot";
@@ -331,9 +327,6 @@ async function renderPrivateAppPage({
     undefined,
   );
   const currentPeriod = selection?.period;
-  const individualCommissionPromise = currentPeriod
-    ? loadIndividualCommission(userId, currentPeriod.periodMonth)
-    : Promise.resolve(null);
   const personalDashboardPromise = currentPeriod
     ? loadPersonalDeskDashboard(currentPeriod.periodMonth, userId)
     : Promise.resolve(null);
@@ -349,9 +342,7 @@ async function renderPrivateAppPage({
   let accountOptions: AccountView[] = [];
   let accountHistory: AccountOverviewAccount[] = [];
   let dailyControls: PersistedDailyControl[] = [];
-  let operationEntries: OperationRegisterEntry[] = [];
   let operationEntryHistory: OperationRegisterEntry[] = [];
-  let phaseWithdrawals: AccountPhaseWithdrawal[] = [];
   let phaseWithdrawalHistory: AccountPhaseWithdrawal[] = [];
   let approvedPayoutHistory: AccountOverviewPayout[] = [];
   let walletMovements: WalletMovement[] = [];
@@ -409,7 +400,6 @@ async function renderPrivateAppPage({
       { data: openingSnapshotRows },
       { data: openingBatchRows },
       { data: openingWalletRows },
-      { data: carryoverRows },
     ] =
       await Promise.all([
         supabase
@@ -525,10 +515,6 @@ async function renderPrivateAppPage({
         supabase
           .from("period_opening_wallets")
           .select("opening_snapshot_id,wallet_id,balance_cents,nodal_wallets(name)"),
-        supabase
-          .from("account_period_carryovers")
-          .select("account_id,lifetime_result_cents")
-          .eq("to_period_id", selection.period.id),
       ]);
     walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
       const { data } = await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id });
@@ -794,37 +780,6 @@ async function renderPrivateAppPage({
       ),
       operatedOn: control.operated_on,
     }));
-    const registerAccountsById = new Map(
-      accountOptions.map((account) => [account.id, account]),
-    );
-    operationEntries = (historicalOperationEntryRows ?? []).flatMap((entry) => {
-      const account = registerAccountsById.get(entry.account_id);
-      if (!account) return [];
-      return [
-        {
-          accountId: account.id,
-          accountReference: account.referenceNumber,
-          companyId: account.companyId,
-          companyName: account.companyName,
-          dailyControlId: entry.daily_control_id,
-          destination: entry.destination,
-          id: entry.id,
-          magnitudeInCents: Number(entry.magnitude_cents),
-          operatedOn: entry.operated_on,
-          participantRole: entry.participant_role,
-          phase: entry.phase,
-        },
-      ];
-    });
-    phaseWithdrawals = (historicalPhaseWithdrawalRows ?? []).flatMap((withdrawal) => {
-      if (!registerAccountsById.has(withdrawal.account_id)) return [];
-      if (withdrawal.phase === "Evaluacion") return [];
-      return [{
-        accountId: withdrawal.account_id,
-        phase: withdrawal.phase as AccountPhaseWithdrawal["phase"],
-        totalWithdrawalInCents: Number(withdrawal.total_withdrawal_cents),
-      }];
-    });
     const historicalPeriodsById = new Map(
       selection.workspace.periods.map((period) => [period.id, period] as const),
     );
@@ -1156,97 +1111,14 @@ async function renderPrivateAppPage({
       })),
     }));
     openingSnapshot = openingRecords.find((record) => record.periodId === selection.period!.id) ?? null;
-    const historicalOpening = buildPeriodOpening({
-      controls: (historicalControlRows ?? []).map((control) => ({
-        balanceAfterInCents: Number(control.balance_after_cents),
-        controlNumber: control.control_number,
-        kind: control.kind,
-        movementInCents: control.movement_cents === null ? null : Number(control.movement_cents),
-        operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),
-        originDestination: control.origin_destination,
-        periodId: control.period_id,
-        transferFeeInCents: Number(control.transfer_fee_cents ?? 0),
-      })),
-      currentPeriodId: selection.period.id,
-      fundingWithdrawals: (historicalFundingWithdrawalRows ?? []).map((withdrawal) => ({
-        amountInCents: Number(withdrawal.amount_cents),
-        collectedOn: withdrawal.collected_on,
-        feeInCents: Number(withdrawal.collection_fee_cents ?? 0),
-        periodId: withdrawal.period_id,
-      })),
-      periodIdsInOrder: [...selection.workspace.periods]
-        .sort((left, right) => left.periodMonth.localeCompare(right.periodMonth))
-        .map((period) => period.id),
-      purchases: (historicalPurchaseRows ?? []).map((purchase) => ({
-        fundsOrigin: purchase.funds_origin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
-        periodId: purchase.period_id,
-        priceInCents: Number(purchase.price_cents),
-      })),
-      walletMovements: (historicalWalletMovementRows ?? []).map((movement) => ({
-        amountInCents: Number(movement.amount_cents),
-        destinationWalletId: movement.destination_wallet_id,
-        id: movement.id,
-        kind: movement.kind,
-        feeInCents: Number(movement.fee_cents ?? 0),
-        observation: movement.observation,
-        occurredOn: movement.occurred_on,
-        periodId: movement.period_id,
-      })),
-    });
-    const orderedWorkspacePeriods = [...selection.workspace.periods]
-      .sort((left, right) => left.periodMonth.localeCompare(right.periodMonth));
-    const periodIndex = orderedWorkspacePeriods.findIndex((workspacePeriod) => workspacePeriod.id === selection.period!.id);
-    const applicableSnapshots = openingRecords.filter((record) => {
-      const index = orderedWorkspacePeriods.findIndex((workspacePeriod) => workspacePeriod.id === record.periodId);
-      return index >= 0 && index <= periodIndex;
-    }).map(operationalOpeningFromRecord);
-    periodOpening = applicableSnapshots.reduce<OperationalOpeningSnapshot>((total, snapshot) => ({
-      accountStates: {
-        closed: (total.accountStates?.closed ?? 0) + (snapshot.accountStates?.closed ?? 0),
-        live: (total.accountStates?.live ?? 0) + (snapshot.accountStates?.live ?? 0),
-        virgin: (total.accountStates?.virgin ?? 0) + (snapshot.accountStates?.virgin ?? 0),
-      },
-      accumulatedResultInCents: total.accumulatedResultInCents + snapshot.accumulatedResultInCents,
-      brokerBalanceInCents: snapshot.brokerBalanceInCents ?? total.brokerBalanceInCents,
-      capitalNetInCents: total.capitalNetInCents + snapshot.capitalNetInCents,
-      floatingInCents: (total.floatingInCents ?? 0) + (snapshot.floatingInCents ?? 0),
-      gainReconciliationBaselineInCents: (total.gainReconciliationBaselineInCents ?? 0) + (snapshot.gainReconciliationBaselineInCents ?? 0),
-      fundingPendingInCents: total.fundingPendingInCents + snapshot.fundingPendingInCents,
-      walletBalanceInCents: total.walletBalanceInCents + snapshot.walletBalanceInCents,
-    }), historicalOpening);
-    periodOpening = {
-      ...periodOpening,
-      gainReconciliationBaselineInCents:
-        (periodOpening.gainReconciliationBaselineInCents ?? 0)
-        - (carryoverRows ?? []).reduce(
-          (total, carryover) => total + Number(carryover.lifetime_result_cents),
-          0,
-        ),
-    };
-    operationalSummary = buildOperationalSummary({
-      accounts: accountOptions.map((account) => ({
-        fundsOrigin: account.fundsOrigin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
-        id: account.id, priceInCents: account.priceInCents ?? 0, state: account.state,
-        purchaseBelongsToPeriod:
-          purchasesByAccountId.get(account.id)?.period_id === selection.period!.id,
-        stateOrigin: account.stateOrigin,
-      })),
-      controls: (dailyControlRows ?? []).map((control) => ({
-        isUncovered: control.is_uncovered,
-        balanceAfterInCents: Number(control.balance_after_cents), controlNumber: control.control_number,
-        kind: control.kind, movementInCents: control.movement_cents === null ? null : Number(control.movement_cents),
-        operatingResultInCents: control.operating_result_cents === null ? null : Number(control.operating_result_cents),
-        originDestination: control.origin_destination,
-        transferFeeInCents: Number(control.transfer_fee_cents ?? 0),
-      })),
-      entries: operationEntries, fundingWithdrawals, opening: periodOpening, phaseWithdrawals, walletMovements,
-    });
-    const [individualCommission, loadedPersonalDashboard, loadedAccountingPeriods] = await Promise.all([
-      individualCommissionPromise,
+    const [loadedPersonalDashboard, loadedAccountingPeriods] = await Promise.all([
       personalDashboardPromise,
       accountingPeriodSummariesPromise,
     ]);
-    operationalSummary = applyIndividualCommission(operationalSummary, individualCommission);
+    const loadedCurrent = loadedAccountingPeriods.get(selection.period.id);
+    if (!loadedCurrent) throw new Error("No se pudo verificar el resumen contable del período.");
+    operationalSummary = loadedCurrent.summary;
+    periodOpening = loadedCurrent.opening ?? periodOpening;
     personalDashboard = loadedPersonalDashboard ?? {
       billingInCents: operationalSummary.realizedGainInCents,
       earnings: buildPeriodEarnings({

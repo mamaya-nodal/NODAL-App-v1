@@ -12,6 +12,8 @@ export type PeriodCloseOutcome = Readonly<{
 
 export function periodHasObservations(summary: OperationalSummary): boolean {
   return summary.positionDifferenceInCents !== 0
+    || summary.brokerBalanceInCents === null
+    || summary.resultDetails?.verified === false
     || summary.realizedReconciliationDifferenceInCents !== 0;
 }
 

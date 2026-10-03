@@ -17,6 +17,10 @@ export function applyPriorPeriodAdjustments(
 
   return {
     ...summary,
+    ...(summary.resultDetails ? { resultDetails: {
+      ...summary.resultDetails,
+      accumulatedAdjustmentsInCents: (summary.resultDetails.accumulatedAdjustmentsInCents ?? 0) + adjustments.resultInCents,
+    } } : {}),
     accumulatedResultInCents: summary.accumulatedResultInCents + adjustments.resultInCents,
     commissionInCents: summary.commissionInCents + adjustments.commissionInCents,
     positionDifferenceInCents: summary.positionObservableInCents - positionExpectedInCents,

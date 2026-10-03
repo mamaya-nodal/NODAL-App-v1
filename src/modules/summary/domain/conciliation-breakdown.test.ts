@@ -17,6 +17,9 @@ describe("conciliation breakdown", () => {
     const breakdown = buildConciliationBreakdown(summary);
     expect(breakdown.capital.observable.reduce((total, line) => total + (line.valueInCents ?? 0), 0)).toBe(summary.positionObservableInCents);
     expect(breakdown.capital.expected.reduce((total, line) => total + (line.valueInCents ?? 0), 0)).toBe(summary.positionExpectedInCents);
-    expect(breakdown.gains.reconstructed.reduce((total, line) => total + (line.valueInCents ?? 0), 0)).toBe(summary.realizedGainInCents);
+    // Legacy snapshots have no signed opening evidence: do not infer a profit.
+    expect(breakdown.gains.verified).toBe(false);
+    expect(breakdown.gains.reconstructedTotal).toBeNull();
+    expect(breakdown.gains.differenceInCents).toBeNull();
   });
 });

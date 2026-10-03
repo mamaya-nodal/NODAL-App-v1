@@ -18,6 +18,6 @@ describe("confirmed broker-only results", () => {
     expect(summary.commissionInCents).toBe(0);
     expect(summary.positionDifferenceInCents).toBe(0);
     expect(summary.realizedReconciliationDifferenceInCents).toBe(0);
-    expect(buildConciliationBreakdown(summary).gains.reconstructed.reduce((total, line) => total + (line.valueInCents ?? 0), 0)).toBe(0);
+    expect(buildConciliationBreakdown(summary).gains.reconstructedTotal).toBe(result);
   });
 });
