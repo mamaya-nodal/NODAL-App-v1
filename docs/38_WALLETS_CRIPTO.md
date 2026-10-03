@@ -1,6 +1,6 @@
 # Billeteras manuales y lectura cripto
 
-Fecha: 2026-10-03. Implementación autorizada por Mauricio. La clave de Alchemy quedó configurada como secreto en Vercel para Producción y Preview; la activación funcional sigue condicionada a la migración y prueba remota de Supabase.
+Fecha: 2026-10-03. Implementación autorizada por Mauricio y publicada en Producción. La clave de Alchemy quedó configurada como secreto en Vercel para Producción y Preview. La migración remota de Supabase fue aplicada, verificada y registrada como `20261003180000_wallet_observations`.
 
 ## Alcance implementado
 
@@ -46,12 +46,10 @@ Unidades exactas de seis decimales conservadas como texto; redondeo a centavos p
 
 RLS para lectura por propietario activo; configuración y vínculo por funciones validadas; ingesta sólo con rol de servicio. La vinculación no modifica ni crea movimientos económicos. Cierres históricos permanecen inmutables.
 
-## Activación pendiente
+## Validación operativa pendiente
 
-1. Renovar sesión de administración Supabase: la CLI devolvió 401 Unauthorized. No se aplicó la migración remota.
-2. Ejecutar migración y prueba SQL en entorno de desarrollo, siempre dentro de transacción con rollback para fixtures. No considerar autorizaciones/SQL verificados hasta pasar esta prueba.
-3. Medir el consumo real de unidades de Alchemy antes de ampliar frecuencia o redes. La app «Nodal app» ya tiene Ethereum, Base, Arbitrum y Polygon Mainnet habilitadas, y su API key ya está configurada en Vercel sin compartirla por chat ni Git.
-4. Probar una dirección de prueba con saldo y transferencias conocidas, incluyendo error de una red, repetición, ambos extremos y payout ya cobrado; revisar interfaz autenticada.
-5. Publicar sólo tras la validación. No migrar usuarios de la planilla con esta entrega.
+1. Medir el consumo real de unidades de Alchemy antes de ampliar frecuencia o redes. La app «Nodal app» tiene Ethereum, Base, Arbitrum y Polygon Mainnet habilitadas.
+2. Conectar una dirección de prueba con saldo y transferencias conocidas y verificar la primera ejecución real del cron, incluyendo error de una red, repetición, ambos extremos y payout ya cobrado.
+3. No migrar usuarios de la planilla con esta entrega; la activación inicial se valida con una billetera de prueba.
 
-Validación local: TypeScript, build y 419 pruebas unitarias/regresión pasaron. ESLint sin errores (10 advertencias preexistentes). Prueba SQL y lectura real bloqueadas por los accesos anteriores. No se cambiaron datos económicos de usuarios.
+Validación: TypeScript, build y 419 pruebas unitarias/regresión pasaron. ESLint sin errores (10 advertencias preexistentes). En Supabase se verificaron las dos tablas, dos políticas RLS, RLS activo y permisos de funciones por rol; la migración quedó registrada en el historial. La aplicación publicada carga el bloque de conexión sin errores. La lectura real queda pendiente hasta conectar una dirección de prueba. No se cambiaron datos económicos de usuarios.
