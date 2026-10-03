@@ -45,6 +45,15 @@ function Set-InstalledSourceVersion {
     Set-Content -LiteralPath $ConfigPath -Encoding utf8
 }
 
+function Clear-PendingPairingCode {
+  param([string]$ConfigPath)
+
+  # ENTER in UpdateOnly means no new destination. An old, rejected code must
+  # not interrupt the existing authenticated connector on every heartbeat.
+  @(Get-Content -LiteralPath $ConfigPath | Where-Object { $_ -notmatch '^PairingCode=' }) +
+    'PairingCode=' | Set-Content -LiteralPath $ConfigPath -Encoding utf8
+}
+
 if ($UpdateOnly) {
   if (!(Test-Path -LiteralPath $connectorConfigPath) -or !(Test-Path -LiteralPath $installedConnectorPath)) {
     throw "No se encontro una instalacion existente. Usa INSTALAR-NODAL para la primera vinculacion."
@@ -54,6 +63,7 @@ if ($UpdateOnly) {
   # Back up source outside AddOns to avoid compiling a duplicate class.
   $backupSource = Join-Path $connectorDirectory ("connector-source-" + [Guid]::NewGuid().ToString("N") + ".bak")
   Copy-Item -LiteralPath $installedConnectorPath -Destination $backupSource
+  Copy-Item -LiteralPath $connectorConfigPath -Destination ($connectorConfigPath + ".before-update.bak") -Force
   Copy-Item -LiteralPath $connectorSourcePath -Destination $installedConnectorPath -Force
   Set-InstalledSourceVersion -ConfigPath $connectorConfigPath -Version $connectorSourceVersion
 
@@ -63,6 +73,8 @@ if ($UpdateOnly) {
   }
 
   if ([string]::IsNullOrWhiteSpace($PairingCode)) {
+    Clear-PendingPairingCode -ConfigPath $connectorConfigPath
+    Write-Output "Se descarto un codigo adicional pendiente. La sesion y los vinculos existentes se conservaron."
     Write-Output "La app detectara el codigo v$connectorSourceVersion cuando el conector vuelva a enviar señal. Compila NodalNinjaConnector y reinicia NinjaTrader para activarlo."
     exit 0
   }

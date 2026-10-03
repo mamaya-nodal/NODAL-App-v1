@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.9
+// NODAL Ninja Connector v0.10
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -23,7 +23,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 {
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.9";
+		private const string ConnectorVersion = "0.10";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
@@ -502,6 +502,14 @@ namespace NinjaTrader.NinjaScript.AddOns
 			string payload = "{\"code\":\"" + Escape(settings.PairingCode) + "\"}";
 			using (HttpResponseMessage response = await PostAsync("/api/integrations/ninjatrader/link", payload, settings.AccessToken))
 			{
+				if (response.StatusCode == HttpStatusCode.Conflict)
+				{
+					// The server has confirmed this one-time code cannot be used again.
+					// Preserve the authenticated session and resume regular telemetry.
+					settings.ClearPairingCode();
+					Write("VINCULO_ADICIONAL_DESCARTADO|El codigo vencio, ya fue usado o el destino ya estaba vinculado. La conexion existente continua.");
+					return true;
+				}
 				if (!response.IsSuccessStatusCode)
 				{
 					Write("VINCULO_ADICIONAL_RECHAZADO|El código venció, ya fue utilizado o el destino ya está vinculado.");

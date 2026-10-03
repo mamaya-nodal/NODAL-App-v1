@@ -48,5 +48,15 @@ describe("heartbeat de versiones Ninja", () => {
       "0.9",
       "1.0",
     );
+    expect(mocks.rememberVersions.mock.invocationCallOrder[0]).toBeLessThan(mocks.bootstrap.mock.invocationCallOrder[0]);
+  });
+
+  it("registra la versión aunque falle luego la reconstrucción", async () => {
+    mocks.bootstrap.mockRejectedValueOnce(new Error("reconstrucción pendiente"));
+    await expect(POST(new Request("https://app.test/heartbeat", {
+      body: JSON.stringify({ connectorVersion: "0.10", installedSourceVersion: "0.10" }),
+      method: "POST",
+    }))).rejects.toThrow("reconstrucción pendiente");
+    expect(mocks.rememberVersions).toHaveBeenCalledWith("connector-1", "0.10", "0.10");
   });
 });

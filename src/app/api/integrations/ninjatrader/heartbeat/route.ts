@@ -13,18 +13,18 @@ export async function POST(request: Request) {
   };
   const connector = await requireNinjaConnector(request);
   if (connector instanceof Response) return connector;
-  // Primero reconstruimos las operaciones mientras todos los vinculos de cuenta
+  // La versión debe registrarse aunque una tarea posterior de reconstrucción
+  // falle. Así el diagnóstico no muestra una revisión anterior como actual.
+  await rememberNinjaConnectorVersions(
+    connector.connectorId,
+    body.connectorVersion,
+    body.installedSourceVersion,
+  );
+  // Primero reconstruimos las operaciones mientras todos los vínculos de cuenta
   // siguen disponibles. Recién después aplicamos quemados y cierres de vínculo.
   await bootstrapNinjaBrokerBalance(connector.connectorId);
   await refreshNinjaTechnicalOperations(connector.connectorId);
-  await Promise.all([
-    refreshNinjaTransitionsFromLatestSnapshot(connector.connectorId),
-    rememberNinjaConnectorVersions(
-      connector.connectorId,
-      body.connectorVersion,
-      body.installedSourceVersion,
-    ),
-  ]);
+  await refreshNinjaTransitionsFromLatestSnapshot(connector.connectorId);
   return Response.json(
     { accepted: true },
     { headers: { "Cache-Control": "no-store, max-age=0" }, status: 202 },

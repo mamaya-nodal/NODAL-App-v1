@@ -10,7 +10,9 @@ una operatoria. No puede crear, modificar ni cerrar operaciones.
 Para una instalación existente, ejecutar `ACTUALIZAR-NODAL.cmd` y compilar
 `NodalNinjaConnector` en NinjaTrader. El comando actualiza los archivos y luego
 permite pegar opcionalmente otro código. Si se pega un código, agrega ese destino
-sin sustituir los vínculos anteriores; si se presiona `ENTER`, solamente actualiza.
+sin sustituir los vínculos anteriores; si se presiona `ENTER`, descarta cualquier
+código adicional pendiente y solamente actualiza. Conserva un respaldo local de
+la configuración anterior.
 La configuración, el historial y la cola cifrada se conservan en ambos casos.
 
 El procedimiento es el mismo en cualquier orden: una instalación que comenzó
@@ -42,6 +44,11 @@ que algunas versiones de NinjaTrader interpretaban como el error de compilación
 La versión 0.9 registra por separado el código copiado por el actualizador y la
 versión que NinjaTrader está ejecutando. La app puede indicar si los archivos ya
 se actualizaron pero todavía falta compilar o reiniciar para activar la versión.
+
+La versión 0.10 descarta un código adicional cuando el servidor confirma que ya
+venció, fue usado o corresponde a un destino ya vinculado. La sesión existente
+continúa enviando inventario y latidos. Un error de red o del servidor no
+descarta el código, para que pueda reintentarse.
 
 ## Vinculación
 

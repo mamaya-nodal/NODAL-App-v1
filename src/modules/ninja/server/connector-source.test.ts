@@ -33,6 +33,13 @@ describe("Ninja connector source", () => {
     expect(connectorSource).toContain('installedSourceVersion');
   });
 
+  it("un código adicional agotado no interrumpe la sesión existente", () => {
+    expect(connectorInstaller).toContain("Clear-PendingPairingCode -ConfigPath $connectorConfigPath");
+    expect(connectorInstaller).toContain(".before-update.bak");
+    expect(connectorSource).toContain("response.StatusCode == HttpStatusCode.Conflict");
+    expect(connectorSource).toContain("VINCULO_ADICIONAL_DESCARTADO");
+  });
+
   it("evita la colisión entre el estado de cuenta y el enum de NinjaTrader", () => {
     expect(connectorSource).toContain(
       "item.Status == NinjaTrader.Cbi.ConnectionStatus.Connected",

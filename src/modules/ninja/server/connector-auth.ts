@@ -176,7 +176,7 @@ export async function rememberNinjaConnectorVersions(
   if (!cleanRunningVersion && !cleanInstalledSourceVersion) return;
   const supabase = serviceClient();
   if (!supabase) return;
-  await supabase
+  const { error } = await supabase
     .from("ninja_connectors")
     .update({
       ...(cleanRunningVersion ? { connector_version: cleanRunningVersion } : {}),
@@ -185,6 +185,7 @@ export async function rememberNinjaConnectorVersions(
         : {}),
     })
     .eq("id", connectorId);
+  if (error) storageFailure("remember-version", error);
 }
 
 export function bearerToken(request: Request): string | null {

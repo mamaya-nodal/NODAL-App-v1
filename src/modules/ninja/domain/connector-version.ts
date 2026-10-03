@@ -1,4 +1,4 @@
-export const LATEST_NINJA_CONNECTOR_VERSION = "0.9";
+export const LATEST_NINJA_CONNECTOR_VERSION = "0.10";
 
 export type ConnectorVersionState =
   | "current"
