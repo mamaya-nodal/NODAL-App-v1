@@ -578,15 +578,24 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <span>Payouts</span>
             <strong>{summary.fundingWithdrawals.length}</strong>
           </summary>
-          <form className="summary-form" onSubmit={withdrawal}>
-            <select defaultValue="" disabled={payoutAccounts.length === 0} name="account" required>
-              <option disabled value="">{payoutAccounts.length === 0 ? "Sin cuentas Funded vivas" : "Cuenta Funded viva"}</option>
-              {payoutAccounts.map((account) => (
-                <option key={account.id} value={account.id}>{account.label}</option>
-              ))}
-            </select>
-            <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="approved_on" required type="date" />
-            <input inputMode="decimal" name="amount" placeholder="Importe aprobado" required />
+          <form className="summary-form payout-registration-form" onSubmit={withdrawal}>
+            <label>
+              <span>Cuenta Funded viva</span>
+              <select defaultValue="" disabled={payoutAccounts.length === 0} name="account" required>
+                <option disabled value="">{payoutAccounts.length === 0 ? "Sin cuentas disponibles" : "Seleccionar cuenta"}</option>
+                {payoutAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Fecha de aprobación</span>
+              <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="approved_on" required type="date" />
+            </label>
+            <label>
+              <span>Importe aprobado</span>
+              <input inputMode="decimal" name="amount" placeholder="US$ 0,00" required />
+            </label>
             <button disabled={saving || payoutAccounts.length === 0}>Registrar payout</button>
           </form>
           {summary.fundingWithdrawals.length > 0 && (

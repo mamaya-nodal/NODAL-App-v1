@@ -1635,4 +1635,7 @@ vigente sin aprobacion y evidencia suficiente.
   billetera ni payouts, porque ambos conservan su historial específico. La
   cronología general queda reservada para registros económicos que no poseen
   otra vista propia.
+- **Formulario de payout:** cuenta, fecha de aprobación e importe se presentan
+  con etiquetas visibles y una grilla uniforme. Si no existe una cuenta viva
+  con una vuelta Funded operada, el alta permanece deshabilitada.
 
