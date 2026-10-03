@@ -24,7 +24,7 @@ export async function loadWalletSources(periodId: string) {
     .select("id,wallet_id,chain,tx_hash,symbol,amount_cents,direction,occurred_at,movement_id,payout_id")
     .in("wallet_id", wallets.data.map((wallet) => wallet.id)).order("occurred_at", { ascending: false }).limit(100) : { data: [], error: null };
   if (observations.error) throw new Error("No se pudo cargar el historial detectado.");
-  return { configured: Boolean(process.env.MORALIS_API_KEY), open: period.lifecycle_status === "open", sources: sources.data ?? [],
+  return { configured: Boolean(process.env.ALCHEMY_API_KEY), open: period.lifecycle_status === "open", sources: sources.data ?? [],
     identities: identities.data ?? [], observations: observations.data ?? [], movements: movements.data ?? [], payouts: payouts.data ?? [] };
 }
 

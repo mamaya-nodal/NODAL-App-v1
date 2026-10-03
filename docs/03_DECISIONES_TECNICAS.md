@@ -1550,7 +1550,7 @@ vigente sin aprobacion y evidencia suficiente.
 
 ### APP-137 - Billeteras manuales y evidencia cripto separada del libro
 
-- **Fecha:** 2026-10-03. Autorizado por Mauricio. Implementado localmente; activación pendiente de acceso Supabase y clave Moralis.
+- **Fecha:** 2026-10-03. Autorizado por Mauricio. Implementado localmente; activación pendiente de acceso Supabase y clave Alchemy. Moralis se descartó al comprobar que su plan gratuito dejó de operar y su costo actual no fue aceptado.
 - **Regla:** la lectura de USDT/USDC no constituye aporte, ingreso ni payout. El saldo nominal detectado se muestra separado del saldo contable USD. No se altera la regla económica ni se fuerza una conciliación.
 - **Identidad:** cada dirección EVM corresponde a una billetera del workspace, con identidad opcional; no se duplica por usar MetaMask y Trust Wallet con la misma dirección.
 - **Evidencia:** ingesta idempotente por red/hash/log y vínculo explícito al movimiento o cobro existente. Una transferencia interna conserva un asiento con dos extremos. Sin clasificación automática ni reconocimiento automático de payouts.

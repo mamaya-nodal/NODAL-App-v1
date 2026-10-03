@@ -4,10 +4,6 @@ export const NETWORKS = [
     { symbol: "USDT", address: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
     { symbol: "USDC", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
   ] },
-  { id: "avalanche", name: "Avalanche", tokens: [
-    { symbol: "USDT", address: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7" },
-    { symbol: "USDC", address: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e" },
-  ] },
   { id: "base", name: "Base (USDC)", tokens: [
     { symbol: "USDC", address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913" },
   ] },

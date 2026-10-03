@@ -7,6 +7,7 @@ create table public.nodal_wallet_sources (
   started_at timestamptz not null default now(),
   synced_through timestamptz,
   observed_at timestamptz,
+  last_attempted_at timestamptz,
   observed_cents bigint check(observed_cents >= 0),
   breakdown jsonb,
   last_error text,
@@ -104,7 +105,7 @@ begin
       on conflict(wallet_id,chain,tx_hash,log_index) do nothing;
     end if;
   end loop;
-  update public.nodal_wallet_sources set observed_cents=target_balance,breakdown=target_breakdown,observed_at=now(),
+  update public.nodal_wallet_sources set observed_cents=target_balance,breakdown=target_breakdown,observed_at=now(),last_attempted_at=now(),
     synced_through=target_through,last_error=null,lease_until=now()+interval '10 minutes',lease_token=null where wallet_id=target_wallet_id;
 end; $$;
 revoke all on function public.complete_nodal_wallet_sync(uuid,uuid,timestamptz,bigint,jsonb,jsonb) from public,anon,authenticated;

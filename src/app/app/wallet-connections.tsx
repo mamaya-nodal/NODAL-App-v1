@@ -36,7 +36,7 @@ export function WalletConnections({ periodId, wallets }: { periodId: string; wal
       {!data.configured && <p role="status">Lectura automática pendiente de configuración del proveedor. Todavía no está activa.</p>}
       <details><summary>Redes y monedas consultadas</summary>
         <p>{NETWORKS.map((network) => `${network.name}: ${network.tokens.map((token) => token.symbol).join(" / ")}`).join(" · ")}</p>
-        <p>USDT0 es la representación de USDT incluida en Arbitrum y Polygon. No se incluyen BTC, ETH, otras redes, tokens puenteados distintos ni fondos en protocolos. Tron, Solana y BNB Chain todavía no están cubiertas.</p>
+        <p>USDT0 es la representación de USDT incluida en Arbitrum y Polygon. No se incluyen BTC, ETH, otras redes, tokens puenteados distintos ni fondos en protocolos. Tron, Solana, BNB Chain y Avalanche todavía no están cubiertas.</p>
       </details>
       {wallets.map((wallet) => {
         const source = data.sources.find((item) => item.wallet_id === wallet.id);

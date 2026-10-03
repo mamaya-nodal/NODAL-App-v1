@@ -18,26 +18,27 @@ Fecha: 2026-10-03. Implementación local autorizada por Mauricio. **No activada 
 | Red | Contratos admitidos |
 | --- | --- |
 | Ethereum | USDT y USDC nativos |
-| Avalanche C-Chain | USDT y USDC nativos |
 | Base | USDC nativo |
 | Arbitrum | USDC nativo y USDT0 |
 | Polygon | USDC nativo y USDT0 |
 
-USDT0 se identifica por su contrato, no por símbolos arbitrarios; es la representación de USDT indicada en las fuentes del emisor. No se incluyen Tron, Solana, BNB Chain, otras redes, USDC.e ni otros wrappers, staking, préstamos, gas en ETH ni BTC. Se muestra esta limitación en la interfaz. Ampliar cobertura requiere verificar contratos, proveedor y pruebas; no prometer cobertura universal de MetaMask o Trust Wallet.
+USDT0 se identifica por su contrato, no por símbolos arbitrarios; es la representación de USDT indicada en las fuentes del emisor. No se incluyen Tron, Solana, BNB Chain, Avalanche, otras redes, USDC.e ni otros wrappers, staking, préstamos, gas en ETH ni BTC. Se muestra esta limitación en la interfaz. Ampliar cobertura requiere verificar contratos, proveedor y pruebas; no prometer cobertura universal de MetaMask o Trust Wallet.
 
 Fuentes verificadas:
 - https://developers.circle.com/stablecoins/usdc-contract-addresses
 - https://tether.to/en/supported-protocols/
 - https://usdt0.to/ecosystem/arbitrum
 - https://usdt0.to/ecosystem/polygon
-- https://docs.moralis.com/data-api/evm/wallet/token-balances
-- https://docs.moralis.com/data-api/evm/wallet/token-transfers
+- https://www.alchemy.com/docs/create-an-api-key
+- https://www.alchemy.com/docs/data/token-api/token-api-endpoints/alchemy-get-token-balances
+- https://www.alchemy.com/docs/data/transfers-api/transfers-endpoints/alchemy-get-asset-transfers
+- https://www.alchemy.com/docs/reference/pricing-plans
 
 ## Operación y seguridad
 
-`MORALIS_API_KEY` sólo en servidor. Sin clave, la interfaz indica pendiente y el cron no consulta al proveedor. El usuario todavía no tiene cuenta de Moralis. No se contrataron servicios ni planes.
+`ALCHEMY_API_KEY` sólo en servidor. Sin clave, la interfaz indica pendiente y el cron no consulta al proveedor. Mauricio ya creó una cuenta gratuita de Alchemy; todavía falta configurar su clave en el entorno de la aplicación. No se contrató un plan pago.
 
-Cron `/api/cron/wallets`, cada 15 minutos, autorizado con `CRON_SECRET`. Hasta 10 billeteras por ejecución, empezando por lecturas más antiguas; más de 10 billeteras pueden requerir varios ciclos. No prometer tiempo real. Cada billetera tiene lease y cooldown, máximo 20 segundos de consulta y paginación acotada. Si alguna red falla no se publica un total parcial ni se reemplaza por cero la última lectura.
+Cron `/api/cron/wallets`, cada hora, autorizado con `CRON_SECRET`. Hasta 10 billeteras por ejecución, empezando por el último intento más antiguo para repartir el cupo incluso si alguna falla; más de 10 billeteras pueden requerir varios ciclos. No prometer tiempo real. Cada billetera tiene lease y cooldown, máximo 20 segundos de consulta y paginación acotada. Si alguna red falla no se publica un total parcial ni se reemplaza por cero la última lectura. La frecuencia y cantidad de direcciones deben compararse con los 30 millones de unidades de consumo gratuitas al mes; no hay garantía de que un número arbitrario de subcuentas entre en ese cupo.
 
 Transferencias hasta cinco minutos antes de la consulta; superposición de 24 horas para demoras de indexación. Idempotencia por billetera/red/hash/índice del evento. Este margen **no equivale a garantía de finalidad on-chain**. Las reorganizaciones o retrasos mayores requieren revisión; no hay automatización de asientos ni reparación silenciosa. Lecturas y evidencia quedan separadas del libro.
 
@@ -49,7 +50,7 @@ RLS para lectura por propietario activo; configuración y vínculo por funciones
 
 1. Renovar sesión de administración Supabase: la CLI devolvió 401 Unauthorized. No se aplicó la migración remota.
 2. Ejecutar migración y prueba SQL en entorno de desarrollo, siempre dentro de transacción con rollback para fixtures. No considerar autorizaciones/SQL verificados hasta pasar esta prueba.
-3. Crear cuenta Moralis y comprobar límites/costos para la cantidad real de direcciones. Configurar la clave en Vercel sin compartirla por chat ni Git.
+3. Abrir la app por defecto de Alchemy o crear «NODAL» con Ethereum, Base, Arbitrum y Polygon Mainnet habilitadas; configurar su API key en Vercel sin compartirla por chat ni Git. Medir el consumo real de unidades antes de ampliar frecuencia o redes.
 4. Probar una dirección de prueba con saldo y transferencias conocidas, incluyendo error de una red, repetición, ambos extremos y payout ya cobrado; revisar interfaz autenticada.
 5. Publicar sólo tras la validación. No migrar usuarios de la planilla con esta entrega.
 
