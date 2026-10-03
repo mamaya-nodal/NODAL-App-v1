@@ -1625,4 +1625,7 @@ vigente sin aprobacion y evidencia suficiente.
   general requiera revisión. Si una billetera automática todavía no tiene una
   lectura válida, la conciliación queda pendiente de verificar. La observación
   no crea ni modifica movimientos, aportes, ganancias o payouts.
+- **Interfaz:** la actualización manual de una fuente automática pertenece a la
+  tarjeta principal de esa billetera. No se repite la billetera en un bloque
+  técnico separado debajo del alta.
 

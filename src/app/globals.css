@@ -7638,7 +7638,7 @@ html[data-theme="day"] .accounting-history {
 .demo-wallets span { color: var(--app-title); font-size: 11px; }
 .demo-review-list span,
 .demo-wallets strong { color: var(--app-copy); font-size: 10px; }
-.named-wallet-row { min-height: 76px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(150px, .65fr) auto auto; align-items: center; gap: 14px; margin-bottom: 8px; padding: 12px 14px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-input); }
+.named-wallet-row { min-height: 76px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(150px, .7fr) minmax(112px, auto) auto; align-items: center; gap: 12px; margin-bottom: 8px; padding: 12px 14px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-input); }
 .named-wallet-row form,
 .named-wallet-display { min-width: 0; flex: 1; display: grid; gap: 6px; }
 .named-wallet-row form > label,
@@ -7653,6 +7653,7 @@ html[data-theme="day"] .accounting-history {
 .named-wallet-row button:disabled { border-color: var(--app-border); color: var(--app-subtle); background: var(--app-panel); box-shadow: none; cursor: default; opacity: .78; }
 .named-wallet-row .wallet-edit-button,
 .named-wallet-row .wallet-edit-cancel { border-color: var(--app-border); color: var(--app-copy); background: transparent; box-shadow: none; }
+.named-wallet-row .wallet-edit-button { min-height: 28px; padding: 0 9px; border-radius: 7px; font-size: 8px; font-weight: 750; }
 .named-wallet-row form > small { color: var(--app-positive); font-size: 9px; font-weight: 750; }
 .named-wallet-balance { min-width: 120px; display: flex; align-items: flex-end; flex-direction: column; gap: 5px; }
 .named-wallet-balance strong { color: var(--app-title); font-size: 13px; }
@@ -7661,7 +7662,10 @@ html[data-theme="day"] .accounting-history {
 .named-wallet-owner { display: grid; gap: 5px; }
 .named-wallet-owner > span { color: var(--app-subtle); font-size: 9px; font-weight: 750; }
 .named-wallet-owner select { min-height: 34px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 10px; font-weight: 750; }
-.named-wallet-row .wallet-delete-button { min-height: 34px; border-color: #efb2ad; color: #b9433a; background: transparent; box-shadow: none; }
+.named-wallet-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.named-wallet-row .wallet-refresh-button,
+.named-wallet-row .wallet-delete-button { min-height: 32px; padding: 0 11px; border-radius: 8px; font-size: 9px; }
+.named-wallet-row .wallet-delete-button { border-color: #efb2ad; color: #b9433a; background: transparent; box-shadow: none; }
 .named-wallet-feedback { grid-column: 1 / -1; color: var(--app-subtle); font-size: 9px; font-weight: 750; }
 .purchase-wallet-help { grid-column: 1 / -1; margin-top: -3px; color: var(--app-subtle); font-size: 9px; }
 .wallet-create-inline { margin-top: 8px; padding: 10px 12px; border: 1px dashed var(--app-border); border-radius: 10px; }

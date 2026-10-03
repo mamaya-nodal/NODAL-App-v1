@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { NETWORKS } from "@/modules/wallets/domain/stablecoins";
 import { evidenceDate, movementMatches } from "@/modules/wallets/domain/matching";
 import { createWallet } from "./summary-actions";
-import { assignWalletIdentity, configureWalletSource, linkWalletObservation, loadWalletSources, refreshWalletSource } from "./wallet-source-actions";
+import { assignWalletIdentity, configureWalletSource, linkWalletObservation, loadWalletSources } from "./wallet-source-actions";
 import type { WalletView } from "./progress-summary";
 
 type State = Awaited<ReturnType<typeof loadWalletSources>>;
@@ -100,7 +100,6 @@ export function WalletConnections({ defaultDate, maxDate, minDate, periodId, wal
   }
 
   const selected = PROVIDERS.find((item) => item.id === provider);
-  const connectedSources = data?.sources.filter((source) => source.address) ?? [];
   const observations = data?.observations ?? [];
 
   return <>
@@ -142,16 +141,6 @@ export function WalletConnections({ defaultDate, maxDate, minDate, periodId, wal
       </form>}
       {message && <small className="wallet-flow-message" role="status">{message}</small>}
     </details>
-
-    {connectedSources.length > 0 && <section className="wallet-connected-list" aria-label="Billeteras conectadas">
-      {connectedSources.map((source) => {
-        const wallet = wallets.find((item) => item.id === source.wallet_id);
-        return <article className="wallet-connection-card" key={source.wallet_id}>
-          <div><strong>{wallet?.name}</strong><span>{source.observed_cents === null ? "Sin lectura" : `USDT/USDC ${amount(source.observed_cents)}`}</span></div>
-          <button type="button" disabled={busy || !data?.configured} onClick={() => void run(() => refreshWalletSource(source.wallet_id))}>Actualizar</button>
-        </article>;
-      })}
-    </section>}
 
     {observations.length > 0 && <section className="wallet-observation-list">
       <h4>Movimientos detectados</h4>

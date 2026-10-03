@@ -17,7 +17,7 @@ import {
   removeWallet,
   renameWallet,
 } from "./summary-actions";
-import { assignWalletIdentity } from "./wallet-source-actions";
+import { assignWalletIdentity, refreshWalletSource } from "./wallet-source-actions";
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 import { WalletConnections } from "./wallet-connections";
 
@@ -214,6 +214,15 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     const result = await removeWallet(wallet.id);
     setWalletSavingId(null);
     setWalletFeedback((current) => ({ ...current, [wallet.id]: result.message }));
+    if (result.ok) router.refresh();
+  }
+
+  async function refreshWallet(walletId: string) {
+    setWalletSavingId(walletId);
+    setWalletFeedback((current) => ({ ...current, [walletId]: "" }));
+    const result = await refreshWalletSource(walletId);
+    setWalletSavingId(null);
+    setWalletFeedback((current) => ({ ...current, [walletId]: result.message }));
     if (result.ok) router.refresh();
   }
 
@@ -431,12 +440,20 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                 <strong>{money(wallet.automatic && wallet.observedBalanceInCents !== null ? wallet.observedBalanceInCents : wallet.balanceInCents)}</strong>
                 {wallet.automatic && <small>Contable {money(wallet.balanceInCents)}</small>}
               </div>
-              <button
-                className="wallet-delete-button"
-                disabled={walletSavingId === wallet.id}
-                onClick={() => void deleteWallet(wallet)}
-                type="button"
-              >Eliminar</button>
+              <div className="named-wallet-actions">
+                {wallet.automatic && <button
+                  className="wallet-refresh-button"
+                  disabled={walletSavingId === wallet.id}
+                  onClick={() => void refreshWallet(wallet.id)}
+                  type="button"
+                >{walletSavingId === wallet.id ? "Actualizando…" : "Actualizar"}</button>}
+                <button
+                  className="wallet-delete-button"
+                  disabled={walletSavingId === wallet.id}
+                  onClick={() => void deleteWallet(wallet)}
+                  type="button"
+                >Eliminar</button>
+              </div>
               {walletFeedback[wallet.id] && walletEditingId !== wallet.id && <small className="named-wallet-feedback" role="status">{walletFeedback[wallet.id]}</small>}
             </div>
           ))}
