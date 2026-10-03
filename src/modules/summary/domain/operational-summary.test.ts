@@ -153,6 +153,47 @@ describe("operational summary", () => {
     expect(summary.positionDifferenceInCents).toBe(0);
   });
 
+  it("mantiene el payout aprobado como pendiente sin reducir todavía el flotante", () => {
+    const summary = buildOperationalSummary({
+      accounts: [{ id: "funded", state: "live", stateOrigin: "automatic", priceInCents: 0, fundsOrigin: "Saldo generado" }],
+      controls: [{ controlNumber: 1, kind: "balance_update", movementInCents: null, operatingResultInCents: 100_000, originDestination: null, balanceAfterInCents: 100_000 }],
+      entries: [{ id: "trade", accountId: "funded", accountReference: 1, companyId: "x", companyName: "X", dailyControlId: "d", destination: "NETO BROKER +", magnitudeInCents: 100_000, operatedOn: "2026-10-03", participantRole: "leader", phase: "Primera vuelta" }],
+      phaseWithdrawals: [],
+      walletMovements: [],
+      fundingWithdrawals: [{
+        accountId: "funded", accountResultAppliedInPeriod: false, amountInCents: 40_000,
+        approvalBelongsToPeriod: true, approvedOn: "2026-10-03", collectedOn: null,
+        id: "pending", phase: "Primera vuelta",
+      }],
+    });
+
+    expect(summary.floatingInCents).toBe(100_000);
+    expect(summary.fundingPendingInCents).toBe(40_000);
+    expect(summary.walletBalanceInCents).toBe(0);
+    expect(summary.periodResultInCents).toBe(140_000);
+    expect(summary.realizedReconciliationDifferenceInCents).toBe(0);
+  });
+
+  it("registra una transferencia billetera-broker vinculada una sola vez y deja sólo el fee como gasto", () => {
+    const summary = buildOperationalSummary({
+      accounts: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [],
+      controls: [{
+        balanceAfterInCents: 99_700, controlNumber: 1, kind: "deposit", movementInCents: 99_700,
+        operatingResultInCents: null, originDestination: "Saldo billetera", transferFeeInCents: 300,
+      }],
+      walletMovements: [
+        { id: "opening", walletId: "wallet", kind: "external_contribution", amountInCents: 100_000, occurredOn: "2026-10-01", observation: null },
+        { id: "linked", dailyControlId: "control", walletId: "wallet", kind: "wallet_to_broker", amountInCents: 99_700, feeInCents: 300, occurredOn: "2026-10-02", observation: null },
+      ],
+    });
+
+    expect(summary.brokerBalanceInCents).toBe(99_700);
+    expect(summary.walletBalanceInCents).toBe(0);
+    expect(summary.capitalNetInCents).toBe(100_000);
+    expect(summary.periodResultInCents).toBe(-300);
+    expect(summary.positionDifferenceInCents).toBe(0);
+  });
+
   it("conserva una cuenta viva trasladada sin volver a descontar su compra", () => {
     const summary = buildOperationalSummary({
       accounts: [{

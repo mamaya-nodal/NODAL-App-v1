@@ -17,7 +17,7 @@ export async function loadWalletSources(periodId: string) {
     db.from("nodal_identities").select("id,first_name,last_name").eq("workspace_id", period.workspace_id).order("first_name"),
     db.from("nodal_wallets").select("id").eq("workspace_id", period.workspace_id).eq("is_active", true),
     db.from("wallet_movements").select("id,wallet_id,destination_wallet_id,kind,amount_cents,fee_cents,occurred_on").eq("period_id", periodId),
-    db.from("funding_withdrawals").select("id,wallet_id,amount_cents,collection_fee_cents,collected_on").eq("period_id", periodId).eq("is_active", true).not("collected_on", "is", null),
+    db.from("funding_withdrawals").select("id,wallet_id,amount_cents,collection_fee_cents,collected_on").eq("collected_period_id", periodId).eq("is_active", true).not("collected_on", "is", null),
   ]);
   if (sources.error || identities.error || wallets.error || movements.error || payouts.error) throw new Error("No se pudo cargar la conexión de billeteras.");
   const observations = wallets.data?.length ? await db.from("nodal_wallet_observations")

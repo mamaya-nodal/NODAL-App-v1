@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { buildNinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import { parsePurchasePriceToCents } from "@/modules/purchases/domain/purchase-rules";
 
 type Result = Readonly<{ ok: boolean; message: string; walletId?: string }>;
 const uuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-const walletKinds = ["external_contribution", "personal_withdrawal", "broker_to_wallet", "wallet_to_broker"] as const;
+const walletKinds = ["external_contribution", "personal_withdrawal"] as const;
+const brokerTransferKinds = ["broker_to_wallet", "wallet_to_broker"] as const;
 
 async function client() {
   const supabase = await createClient();
@@ -44,6 +46,58 @@ export async function createWalletTransfer(input: Readonly<{ amount: string; dat
   });
   if (error) return { ok: false, message: error.message.includes("insufficient") ? "La billetera de origen no tiene saldo suficiente." : "No se pudo guardar la transferencia entre billeteras." };
   revalidatePath("/app"); return { ok: true, message: "Transferencia entre billeteras guardada." };
+}
+
+export async function reconcileBrokerWalletTransfer(input: Readonly<{
+  date: string;
+  fee: string;
+  kind: string;
+  observation: string;
+  periodId: string;
+  walletId: string;
+}>): Promise<Result> {
+  const fee = input.fee.trim() ? amount(input.fee) : 0;
+  if (!uuid(input.periodId) || !uuid(input.walletId) || !input.date || fee === null
+    || !brokerTransferKinds.includes(input.kind as (typeof brokerTransferKinds)[number])) {
+    return { ok: false, message: "Revisá la billetera, la fecha y el fee." };
+  }
+  const { supabase, user } = await client();
+  if (!user) return { ok: false, message: "La sesión venció." };
+  const [inventoryResult, probeResult, reconciliationResult] = await Promise.all([
+    supabase.rpc("get_current_user_ninja_inventory"),
+    supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),
+    supabase.rpc("get_current_user_ninja_reconciliation_details", { target_limit: 100 }),
+  ]);
+  if (inventoryResult.error || probeResult.error || reconciliationResult.error) {
+    return { ok: false, message: "No se pudo verificar el saldo actual de NinjaTrader." };
+  }
+  const probes = Array.isArray(probeResult.data) ? probeResult.data as Array<{ status?: string }> : [];
+  const reconciliations = Array.isArray(reconciliationResult.data)
+    ? reconciliationResult.data as Array<{ accounting_status?: string }>
+    : [];
+  if (probes.some((probe) => probe.status === "open" || probe.status === "settling")
+    || reconciliations.some((item) => item.accounting_status !== "committed")) {
+    return { ok: false, message: "Hay una operación de NinjaTrader pendiente. Resolvela primero en Operaciones." };
+  }
+  const liveBalance = buildNinjaLiveBrokerBalance(Array.isArray(inventoryResult.data) ? inventoryResult.data : []);
+  if (!liveBalance) return { ok: false, message: "NinjaTrader no informó un saldo broker disponible." };
+  const { error } = await supabase.rpc("reconcile_nodal_wallet_broker_transfer", {
+    target_fee_cents: fee,
+    target_kind: input.kind,
+    target_observation: input.observation,
+    target_observed_broker_balance_cents: liveBalance.balanceInCents,
+    target_occurred_on: input.date,
+    target_period_id: input.periodId,
+    target_wallet_id: input.walletId,
+  });
+  if (error) {
+    if (error.message.includes("insufficient")) return { ok: false, message: "La billetera no tiene saldo suficiente para el importe detectado y su fee." };
+    if (error.message.includes("DIRECTION_MISMATCH")) return { ok: false, message: "El saldo broker cambió de dirección. Actualizá la pantalla y volvé a revisar." };
+    if (error.message.includes("BASELINE_MISSING")) return { ok: false, message: "Primero debe existir un saldo broker contable confirmado." };
+    return { ok: false, message: "No se pudo conciliar la transferencia con el broker." };
+  }
+  revalidatePath("/app");
+  return { ok: true, message: "Transferencia billetera–broker conciliada." };
 }
 
 export async function createWallet(input: Readonly<{ date: string; name: string; openingBalance: string; periodId: string }>): Promise<Result> {

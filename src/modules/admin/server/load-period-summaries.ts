@@ -58,8 +58,8 @@ export async function loadPeriodSummaries(
   const [accountsResult, controlsResult, walletResult, fundingResult, openingResult, carryoversResult, closuresResult, rectificationsResult] = await Promise.all([
     readAll(supabase.from("accounts").select("id, period_id, state, state_origin").in("period_id", periodIds).order("id")),
     readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, transfer_fee_cents").in("period_id", periodIds).order("id")),
-    readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, destination_wallet_id, occurred_on, kind, amount_cents, fee_cents, observation").in("period_id", periodIds).order("id")),
-    readAll(supabase.from("funding_withdrawals").select("id, period_id, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents").eq("is_active", true).in("period_id", periodIds).order("id")),
+    readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, destination_wallet_id, daily_control_id, occurred_on, kind, amount_cents, fee_cents, observation").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("funding_withdrawals").select("id, period_id, collected_period_id, account_result_applied_period_id, receipt_timing_v2, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents").eq("is_active", true).in("period_id", periodIds).order("id")),
     readAll(supabase.from("period_opening_snapshots").select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference").in("period_id", periodIds).order("id")),
     readAll(supabase.from("account_period_carryovers").select("from_period_id,to_period_id,account_id,account_state,lifetime_result_cents,purchase_price_cents").in("to_period_id", periodIds).order("id")),
     readAll(supabase.from("period_closure_versions").select("period_id,version,summary_data").in("period_id", periodIds).order("version", { ascending: false })),
@@ -149,6 +149,7 @@ export async function loadPeriodSummaries(
       .filter((movement) => movement.period_id === periodId)
       .map((movement) => ({
         amountInCents: Number(movement.amount_cents),
+        dailyControlId: movement.daily_control_id,
         destinationWalletId: movement.destination_wallet_id,
         id: movement.id,
         kind: movement.kind as WalletMovement["kind"],
@@ -158,12 +159,21 @@ export async function loadPeriodSummaries(
         walletId: movement.wallet_id,
       }));
     const fundingForPeriod: FundingWithdrawal[] = fundingWithdrawals
-      .filter((withdrawal) => withdrawal.period_id === periodId)
+      .filter((withdrawal) => withdrawal.period_id === periodId
+        || withdrawal.collected_period_id === periodId
+        || withdrawal.account_result_applied_period_id === periodId)
       .map((withdrawal) => ({
         accountId: withdrawal.account_id,
+        accountResultAppliedInPeriod: withdrawal.receipt_timing_v2
+          ? withdrawal.account_result_applied_period_id === periodId
+          : undefined,
         phase: withdrawal.phase as FundingWithdrawal["phase"],
         amountInCents: Number(withdrawal.amount_cents),
+        approvalBelongsToPeriod: withdrawal.receipt_timing_v2 ? withdrawal.period_id === periodId : undefined,
         approvedOn: withdrawal.approved_on,
+        collectionBelongsToPeriod: withdrawal.receipt_timing_v2
+          ? withdrawal.collected_period_id === periodId
+          : undefined,
         collectedOn: withdrawal.collected_on,
         feeInCents: Number(withdrawal.collection_fee_cents ?? 0),
         id: withdrawal.id,
@@ -195,7 +205,7 @@ export async function loadPeriodSummaries(
       .reduce((total, row) => total + Number(row.transfer_fee_cents ?? 0), 0)
       + walletMovements.filter((row) => row.period_id === previousPeriod.id)
         .reduce((total, row) => total + Number(row.fee_cents ?? 0), 0)
-      + fundingWithdrawals.filter((row) => row.period_id === previousPeriod.id && row.collected_on)
+      + fundingWithdrawals.filter((row) => row.collected_period_id === previousPeriod.id && row.collected_on)
         .reduce((total, row) => total + Number(row.collection_fee_cents ?? 0), 0) : 0;
     const opening: OperationalOpeningSnapshot = baseOpening ? {
       ...baseOpening,

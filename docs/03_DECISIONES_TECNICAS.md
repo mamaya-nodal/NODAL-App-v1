@@ -1639,3 +1639,15 @@ vigente sin aprobacion y evidencia suficiente.
   con etiquetas visibles y una grilla uniforme. Si no existe una cuenta viva
   con una vuelta Funded operada, el alta permanece deshabilitada.
 
+### APP-140 - Transferencias con broker y cobro efectivo de payouts
+
+- **Fecha:** 2026-10-03. Circuito confirmado por Mauricio e implementado en la app.
+- **Entrada y salida del circuito:** todo aporte externo ingresa primero a una billetera y todo retiro personal sale desde una billetera. No se registran aportes o retiros externos directos en el broker.
+- **Billetera y broker:** una variación de saldo broker sin operación Ninja pendiente se concilia como transferencia interna `billetera → broker` o `broker → billetera`. La app toma el importe de la diferencia detectada; el usuario elige la billetera, fecha y fee. Un único acto guarda ambos extremos con vínculo auditable y no duplica el saldo.
+- **Comisiones:** la transferencia interna conserva el capital total únicamente cuando no existe fee. El fee real reduce el saldo del circuito y se registra como gasto del período.
+- **Prioridad operativa:** si Ninja detectó una operación abierta, en asentamiento o todavía no contabilizada, la diferencia continúa en Operaciones. Contabilidad no ofrece simultáneamente la conciliación como transferencia.
+- **Payout aprobado:** registra cuenta, vuelta, fecha e importe y avanza el progreso operativo, pero permanece `Pendiente`. No acredita ninguna billetera ni reduce el flotante de la cuenta.
+- **Cobro del payout:** `Confirmar cobro` exige billetera, fecha efectiva y fee. En una única transacción acredita el importe neto a la billetera, reduce el flotante de la cuenta por el importe bruto y registra el fee como gasto. El cobro puede ocurrir en un período posterior al de aprobación.
+- **Históricos:** los payouts anteriores a esta decisión conservan su tratamiento original mediante una marca de compatibilidad. No se reescriben resultados ni cierres ya emitidos.
+- **Trazabilidad:** transferencias, cobros, fechas, billeteras, fees y períodos quedan auditados. Las lecturas automáticas de una wallet siguen siendo evidencia y no crean movimientos por sí solas.
+

@@ -192,6 +192,10 @@ type NinjaOperationProbeRpcRow = {
   status: "closed" | "open" | "settling";
 };
 
+type NinjaReconciliationRpcRow = {
+  accounting_status: string;
+};
+
 async function renderPrivateAppPage({
   searchParams,
 }: PrivateAppPageProps) {
@@ -267,6 +271,7 @@ async function renderPrivateAppPage({
     minimumNetLiquidationInCents: number | null;
     technicalTradeCount: number;
   }>();
+  let hasPendingNinjaOperation = false;
 
   if (allowed) {
     const [{ data: workspaces, error: workspaceError }, { data: ninjaConnectorRows, error: connectorError }] = await Promise.all([
@@ -380,11 +385,11 @@ async function renderPrivateAppPage({
       { data: dailyControlRows },
       { data: dailyControlParticipantRows },
       { data: walletMovementRows },
-      { data: fundingWithdrawalRows },
       { data: ninjaLinkRows },
       { data: ninjaAccountRegistrationExclusionRows },
       { data: ninjaInventoryRows },
       { data: ninjaOperationProbeRows },
+      { data: ninjaReconciliationRows },
       { data: ninjaTransitionRows },
       { data: ninjaRegistrationTransitionRows },
       { data: ninjaBrokerBalanceRows },
@@ -433,15 +438,9 @@ async function renderPrivateAppPage({
           .eq("period_id", selection.period.id),
         supabase
           .from("wallet_movements")
-          .select("id, wallet_id, destination_wallet_id, occurred_on, kind, amount_cents, fee_cents, observation, created_at")
+          .select("id, wallet_id, destination_wallet_id, daily_control_id, occurred_on, kind, amount_cents, fee_cents, observation, created_at")
           .eq("period_id", selection.period.id)
           .order("occurred_on", { ascending: false }),
-        supabase
-          .from("funding_withdrawals")
-          .select("id, account_id, approved_on, amount_cents, collected_on, phase, wallet_id, collection_fee_cents, created_at")
-          .eq("period_id", selection.period.id)
-          .eq("is_active", true)
-          .order("approved_on", { ascending: false }),
         supabase
           .from("ninja_account_links")
           .select("account_id, connector_id, connection_name, external_account_name, phase, closed_at, linked_at")
@@ -451,6 +450,7 @@ async function renderPrivateAppPage({
           .select("connector_id,connection_name,external_account_name"),
         supabase.rpc("get_current_user_ninja_inventory"),
         supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),
+        supabase.rpc("get_current_user_ninja_reconciliation_details", { target_limit: 100 }),
         supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
         supabase
           .from("ninja_account_change_events")
@@ -494,11 +494,11 @@ async function renderPrivateAppPage({
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("wallet_movements")
-          .select("id, period_id, wallet_id, destination_wallet_id, occurred_on, kind, amount_cents, fee_cents, observation")
+          .select("id, period_id, wallet_id, destination_wallet_id, daily_control_id, occurred_on, kind, amount_cents, fee_cents, observation")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("funding_withdrawals")
-          .select("id, period_id, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents, created_at")
+          .select("id, period_id, collected_period_id, account_result_applied_period_id, receipt_timing_v2, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents, created_at")
           .eq("is_active", true)
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
@@ -616,6 +616,9 @@ async function renderPrivateAppPage({
       }] as const),
     ));
     const technicalSessions = (ninjaOperationProbeRows ?? []) as NinjaOperationProbeRpcRow[];
+    hasPendingNinjaOperation = technicalSessions.some((session) => session.status === "open" || session.status === "settling")
+      || ((ninjaReconciliationRows ?? []) as NinjaReconciliationRpcRow[])
+        .some((batch) => batch.accounting_status !== "committed");
     const technicalSessionsByAccount = new Map<string, NinjaOperationProbeRpcRow[]>();
     for (const session of technicalSessions) {
       const key = `${session.connection_name}\u0000${session.account_name}`;
@@ -970,15 +973,29 @@ async function renderPrivateAppPage({
     );
     walletMovements = (walletMovementRows ?? []).map((movement) => ({
       amountInCents: Number(movement.amount_cents), id: movement.id,
+      dailyControlId: movement.daily_control_id,
       destinationWalletId: movement.destination_wallet_id,
       kind: movement.kind as WalletMovement["kind"], occurredOn: movement.occurred_on,
       observation: movement.observation,
       feeInCents: Number(movement.fee_cents ?? 0),
       walletId: movement.wallet_id,
     }));
-    fundingWithdrawals = (fundingWithdrawalRows ?? []).map((withdrawal) => ({
+    fundingWithdrawals = (historicalFundingWithdrawalRows ?? [])
+      .filter((withdrawal) => !withdrawal.collected_on
+        || withdrawal.period_id === selection.period!.id
+        || withdrawal.collected_period_id === selection.period!.id)
+      .map((withdrawal) => ({
       accountId: withdrawal.account_id, amountInCents: Number(withdrawal.amount_cents),
+      accountResultAppliedInPeriod: withdrawal.receipt_timing_v2
+        ? withdrawal.account_result_applied_period_id === selection.period!.id
+        : undefined,
+      approvalBelongsToPeriod: withdrawal.receipt_timing_v2
+        ? withdrawal.period_id === selection.period!.id
+        : undefined,
       approvedOn: withdrawal.approved_on, collectedOn: withdrawal.collected_on, id: withdrawal.id,
+      collectionBelongsToPeriod: withdrawal.receipt_timing_v2
+        ? withdrawal.collected_period_id === selection.period!.id
+        : undefined,
       feeInCents: Number(withdrawal.collection_fee_cents ?? 0),
       phase: withdrawal.phase,
       walletId: withdrawal.wallet_id,
@@ -1056,7 +1073,7 @@ async function renderPrivateAppPage({
     }));
     economicTrace = [
       ...(dailyControlRows ?? []).flatMap((control): EconomicTraceItem[] =>
-        control.kind === "balance_update" || control.movement_cents === null ? [] : [{
+        control.kind === "balance_update" || control.movement_cents === null || control.wallet_id ? [] : [{
           amountInCents: Number(control.movement_cents),
           date: control.operated_on,
           id: `broker-${control.id}`,
@@ -1455,6 +1472,7 @@ async function renderPrivateAppPage({
             economicTrace={economicTrace}
             embedded
             identities={walletIdentities}
+            hasPendingNinjaOperation={hasPendingNinjaOperation}
             liveBrokerBalance={liveNinjaBrokerBalance}
             ninjaOnline={connectorOnline}
             periodId={selection.period.id}
@@ -1462,6 +1480,7 @@ async function renderPrivateAppPage({
             periodOperationalStartOn={selection.period.operationalStartOn}
             periodScheduledCloseAt={selection.period.scheduledCloseAt}
             periods={accountingPeriods}
+            payouts={fundingWithdrawals}
             summary={operationalSummary}
             wallets={walletViews}
           />

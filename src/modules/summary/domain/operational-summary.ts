@@ -28,6 +28,7 @@ export type SummaryControl = Readonly<{
 
 export type WalletMovement = Readonly<{
   amountInCents: number;
+  dailyControlId?: string | null;
   destinationWalletId?: string | null;
   feeInCents?: number;
   id: string;
@@ -39,8 +40,11 @@ export type WalletMovement = Readonly<{
 
 export type FundingWithdrawal = Readonly<{
   accountId: string;
+  accountResultAppliedInPeriod?: boolean;
   amountInCents: number;
+  approvalBelongsToPeriod?: boolean;
   approvedOn: string;
+  collectionBelongsToPeriod?: boolean;
   collectedOn: string | null;
   feeInCents?: number;
   id: string;
@@ -177,9 +181,20 @@ export function buildOperationalSummary(input: Readonly<{
   const uncoveredBrokerResultInCents = sum(orderedControls.filter((control) => control.isUncovered).map((control) => control.operatingResultInCents ?? 0));
   const purchasesForPeriod = input.accounts.filter((account) => account.purchaseBelongsToPeriod !== false);
   const totalPurchases = sum(purchasesForPeriod.map((account) => account.priceInCents));
-  const approved = sum(input.fundingWithdrawals.map((withdrawal) => withdrawal.amountInCents));
-  const collected = sum(input.fundingWithdrawals.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.amountInCents));
-  const collectedNet = sum(input.fundingWithdrawals.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.amountInCents - (withdrawal.feeInCents ?? 0)));
+  const approved = sum(input.fundingWithdrawals
+    .filter((withdrawal) => withdrawal.approvalBelongsToPeriod !== false)
+    .map((withdrawal) => withdrawal.amountInCents));
+  const collectedForPeriod = input.fundingWithdrawals.filter((withdrawal) =>
+    withdrawal.collectedOn && withdrawal.collectionBelongsToPeriod !== false);
+  const collected = sum(collectedForPeriod.map((withdrawal) => withdrawal.amountInCents));
+  const collectedNet = sum(collectedForPeriod.map((withdrawal) =>
+    withdrawal.amountInCents - (withdrawal.feeInCents ?? 0)));
+  const explicitlyApprovedForTiming = sum(input.fundingWithdrawals
+    .filter((withdrawal) => withdrawal.approvalBelongsToPeriod === true)
+    .map((withdrawal) => withdrawal.amountInCents));
+  const explicitlyAppliedToAccountResult = sum(input.fundingWithdrawals
+    .filter((withdrawal) => withdrawal.accountResultAppliedInPeriod === true)
+    .map((withdrawal) => withdrawal.amountInCents));
   const generatedPurchases = sum(purchasesForPeriod.filter((account) => account.fundsOrigin === "Saldo generado").map((account) => account.priceInCents));
   const brokerContribution = sum(orderedControls.filter((control) => control.kind === "deposit" && control.originDestination === "Aporte trader").map((control) => control.movementInCents ?? 0));
   const brokerPersonalWithdrawal = sum(orderedControls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Retiro personal").map((control) => control.movementInCents ?? 0));
@@ -188,11 +203,17 @@ export function buildOperationalSummary(input: Readonly<{
   const externalWallet = sum(input.walletMovements.filter((movement) => movement.kind === "external_contribution").map((movement) => movement.amountInCents));
   const priorPendingCollection = sum(input.walletMovements.filter((movement) => movement.kind === "prior_pending_collection").map((movement) => movement.amountInCents));
   const personalWalletWithdrawal = sum(input.walletMovements.filter((movement) => movement.kind === "personal_withdrawal").map((movement) => movement.amountInCents));
-  const brokerToWallet = sum(input.walletMovements.filter((movement) => movement.kind === "broker_to_wallet").map((movement) => movement.amountInCents - (movement.feeInCents ?? 0)));
-  const walletToBroker = sum(input.walletMovements.filter((movement) => movement.kind === "wallet_to_broker").map((movement) => movement.amountInCents));
+  const brokerToWallet = sum(input.walletMovements
+    .filter((movement) => movement.kind === "broker_to_wallet" && !movement.dailyControlId)
+    .map((movement) => movement.amountInCents - (movement.feeInCents ?? 0)));
+  const walletToBroker = sum(input.walletMovements
+    .filter((movement) => movement.kind === "wallet_to_broker" && !movement.dailyControlId)
+    .map((movement) => movement.amountInCents));
   const walletToWalletFees = sum(input.walletMovements.filter((movement) => movement.kind === "wallet_to_wallet").map((movement) => movement.feeInCents ?? 0));
-  const transferFees = sum(input.walletMovements.map((movement) => movement.feeInCents ?? 0))
-    + sum(input.fundingWithdrawals.filter((withdrawal) => withdrawal.collectedOn).map((withdrawal) => withdrawal.feeInCents ?? 0))
+  const transferFees = sum(input.walletMovements
+    .filter((movement) => !movement.dailyControlId)
+    .map((movement) => movement.feeInCents ?? 0))
+    + sum(collectedForPeriod.map((withdrawal) => withdrawal.feeInCents ?? 0))
     + sum(orderedControls.map((control) => control.transferFeeInCents ?? 0));
   const capitalNetInCents = opening.capitalNetInCents + sum(purchasesForPeriod.filter((account) => account.fundsOrigin === "Aporte trader").map((account) => account.priceInCents)) + brokerContribution + externalWallet - brokerPersonalWithdrawal - personalWalletWithdrawal;
   const walletBalanceInCents = opening.walletBalanceInCents + collectedNet + priorPendingCollection - generatedPurchases - legacyWalletToBroker + legacyBrokerToWallet - walletToBroker + brokerToWallet + externalWallet - personalWalletWithdrawal - walletToWalletFees;
@@ -210,7 +231,9 @@ export function buildOperationalSummary(input: Readonly<{
   const reconstructedPeriodResultInCents = realizedGainInCents
     + liveResultInCents - openingLiveResultInCents
     - virginPriceInCents + openingVirginPriceInCents
-    + uncoveredBrokerResultInCents - transferFees;
+    + uncoveredBrokerResultInCents
+    + explicitlyApprovedForTiming + explicitlyAppliedToAccountResult
+    - transferFees;
   return {
     resultDetails: {
       verified: opening.verified !== false,

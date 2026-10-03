@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import { clampDateToPeriodSchedule } from "@/modules/accounting/domain/period-calendar";
-import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
+import type { FundingWithdrawal, OperationalSummary } from "@/modules/summary/domain/operational-summary";
 import { presentWalletBalances } from "@/modules/wallets/domain/balance-presentation";
 import { buildSummaryAlerts } from "@/modules/summary/domain/summary-alerts";
 import { buildConciliationBreakdown, sumConciliationLines } from "@/modules/summary/domain/conciliation-breakdown";
@@ -14,6 +14,7 @@ import {
   createFundingWithdrawal,
   createWalletMovement,
   createWalletTransfer,
+  reconcileBrokerWalletTransfer,
   removeWallet,
   renameWallet,
 } from "./summary-actions";
@@ -27,12 +28,14 @@ type Props = Readonly<{
   economicTrace?: EconomicTraceItem[];
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
   ninjaOnline?: boolean;
+  hasPendingNinjaOperation?: boolean;
   periodLabel?: string;
   periods?: AccountingPeriodView[];
   periodId: string;
   periodOperationalStartOn?: string;
   periodScheduledCloseAt?: string;
   identities?: WalletIdentityView[];
+  payouts?: FundingWithdrawal[];
   summary: OperationalSummary;
   wallets: WalletView[];
 }>;
@@ -97,7 +100,7 @@ const labels = {
   wallet_to_wallet: "Transferencia entre billeteras",
 } as const;
 
-export function ProgressSummary({ accounts, economicTrace = [], embedded = false, identities = [], liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, wallets }: Props) {
+export function ProgressSummary({ accounts, economicTrace = [], embedded = false, hasPendingNinjaOperation = false, identities = [], liveBrokerBalance = null, ninjaOnline = false, payouts, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, wallets }: Props) {
   const router = useRouter();
   const payoutAccounts = accounts.filter((account) => account.eligibleForPayout);
   const [message, setMessage] = useState<string | null>(null);
@@ -116,6 +119,11 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const [movementKind, setMovementKind] = useState<keyof typeof labels>("external_contribution");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
   const [liveOnline, setLiveOnline] = useState(ninjaOnline);
+  const displayedPayouts = payouts ?? summary.fundingWithdrawals;
+  const brokerDifferenceInCents = liveBalance && summary.brokerBalanceInCents !== null
+    ? liveBalance.balanceInCents - summary.brokerBalanceInCents
+    : 0;
+  const brokerTransferKind = brokerDifferenceInCents > 0 ? "wallet_to_broker" : "broker_to_wallet";
   const walletBalances = presentWalletBalances(wallets.map((wallet) => ({
     accountingInCents: wallet.balanceInCents,
     automatic: wallet.automatic,
@@ -175,6 +183,23 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       setMovementKind("external_contribution");
       router.refresh();
     }
+  }
+
+  async function reconcileBrokerTransfer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSaving(true);
+    const result = await reconcileBrokerWalletTransfer({
+      date: String(form.get("date") ?? ""),
+      fee: String(form.get("fee") ?? ""),
+      kind: brokerTransferKind,
+      observation: String(form.get("observation") ?? ""),
+      periodId,
+      walletId: String(form.get("wallet") ?? ""),
+    });
+    setSaving(false);
+    setMessage(result.message);
+    if (result.ok) router.refresh();
   }
 
   async function updateWalletName(event: FormEvent<HTMLFormElement>, walletId: string) {
@@ -249,7 +274,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     const form = new FormData(event.currentTarget);
     setSaving(true);
     const result = await collectFundingWithdrawal({
-      collectedOn: defaultBusinessDate,
+      collectedOn: String(form.get("collected_on") ?? ""),
       fee: String(form.get("fee") ?? ""),
       periodId,
       walletId: String(form.get("wallet") ?? ""),
@@ -487,6 +512,29 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
         </details>
       )}
 
+      {brokerDifferenceInCents !== 0 && !hasPendingNinjaOperation && (
+        <div className="broker-transfer-reconciliation" role="status">
+          <div>
+            <strong>Movimiento broker pendiente de conciliar</strong>
+            <span>
+              Ninja informa {money(Math.abs(brokerDifferenceInCents))} {brokerDifferenceInCents > 0 ? "más" : "menos"} que el saldo contable.
+            </span>
+            <small>Como no hay una operación pendiente, se trata como una transferencia {brokerDifferenceInCents > 0 ? "billetera → broker" : "broker → billetera"}.</small>
+          </div>
+          <form className="summary-form broker-transfer-form" onSubmit={reconcileBrokerTransfer}>
+            <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required>
+              <option disabled value="">Billetera relacionada</option>
+              {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
+            </select>
+            <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
+            <input aria-label="Importe detectado" disabled value={money(Math.abs(brokerDifferenceInCents))} />
+            <input inputMode="decimal" min="0" name="fee" placeholder="Fee USD (opcional)" />
+            <input name="observation" placeholder="Observación (opcional)" />
+            <button disabled={saving || wallets.length === 0}>Conciliar transferencia</button>
+          </form>
+        </div>
+      )}
+
       <details className="accounting-disclosure demo-operation-disclosure" open={hasConciliationDifference || hasUnverifiedConciliation ? true : undefined}>
         <summary>
           <span>Conciliaciones</span>
@@ -542,7 +590,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             </select>
             <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
             <select name="kind" onChange={(event) => setMovementKind(event.target.value as keyof typeof labels)} value={movementKind}>
-              {Object.entries(labels).map(([value, label]) => (
+              {Object.entries(labels).filter(([value]) => value === "external_contribution" || value === "personal_withdrawal" || value === "wallet_to_wallet").map(([value, label]) => (
                 <option disabled={value === "wallet_to_wallet" && wallets.length < 2} key={value} value={value}>{label}</option>
               ))}
             </select>
@@ -553,8 +601,8 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
               </select>
             )}
             <input inputMode="decimal" name="amount" placeholder={movementKind === "wallet_to_wallet" ? "Importe debitado del origen USD" : "Importe USD"} required />
-            {(movementKind === "broker_to_wallet" || movementKind === "wallet_to_broker" || movementKind === "wallet_to_wallet") && (
-              <input inputMode="decimal" min="0" name="fee" placeholder={movementKind === "wallet_to_wallet" ? "Fee incluido en el débito USD" : "Fee real USD (opcional)"} />
+            {movementKind === "wallet_to_wallet" && (
+              <input inputMode="decimal" min="0" name="fee" placeholder="Fee incluido en el débito USD" />
             )}
             <input name="observation" placeholder="Observación (opcional)" />
             <button disabled={saving}>Guardar movimiento</button>
@@ -576,7 +624,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
         <details className="accounting-action-card demo-operation-disclosure">
           <summary>
             <span>Payouts</span>
-            <strong>{summary.fundingWithdrawals.length}</strong>
+            <strong>{displayedPayouts.length}</strong>
           </summary>
           <form className="summary-form payout-registration-form" onSubmit={withdrawal}>
             <label>
@@ -598,19 +646,21 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             </label>
             <button disabled={saving || payoutAccounts.length === 0}>Registrar payout</button>
           </form>
-          {summary.fundingWithdrawals.length > 0 && (
+          {displayedPayouts.length > 0 && (
             <div className="summary-list">
-              {summary.fundingWithdrawals.map((item) => (
+              {displayedPayouts.map((item) => (
                 <div className="payout-list-row" key={item.id}>
                   <p><strong>{accounts.find((account) => account.id === item.accountId)?.label ?? "Cuenta no disponible"}</strong><span>{date(item.approvedOn)} · {money(item.amountInCents)}{item.phase ? ` · ${item.phase}` : ""}</span></p>
                   {item.collectedOn ? (
-                    <span>Cobrado el {date(item.collectedOn)}{(item.feeInCents ?? 0) > 0 ? ` · Fee ${money(item.feeInCents ?? 0)}` : ""}</span>
+                    <span>✓ Cobrado el {date(item.collectedOn)}{(item.feeInCents ?? 0) > 0 ? ` · Fee ${money(item.feeInCents ?? 0)}` : ""}</span>
                   ) : (
                     <form className="payout-collection-form" onSubmit={(event) => collect(event, item.id)}>
+                      <span className="payout-pending-status">Pendiente</span>
                       <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required aria-label="Billetera de destino">
                         <option disabled value="">Billetera</option>
                         {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
                       </select>
+                      <input aria-label="Fecha de cobro" defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="collected_on" required type="date" />
                       <input inputMode="decimal" min="0" name="fee" placeholder="Fee USD" />
                       <button className="text-action" disabled={saving || wallets.length === 0} type="submit">Confirmar cobro</button>
                     </form>

@@ -7690,6 +7690,14 @@ html[data-theme="day"] .accounting-history {
 .payout-list-row span { color: var(--app-subtle); font-size: 9px; }
 .payout-collection-form { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
 .payout-collection-form :is(select, input) { width: 132px; min-height: 32px; padding: 0 8px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 9px; }
+.payout-collection-form .payout-pending-status { padding: 4px 7px; border-radius: 999px; color: var(--app-warning); background: color-mix(in srgb, var(--app-warning) 10%, transparent); font-weight: 800; }
+.broker-transfer-reconciliation { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.2fr); align-items: center; gap: 16px; margin-top: 10px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--app-warning) 45%, var(--app-border)); border-radius: 13px; background: color-mix(in srgb, var(--app-warning) 5%, var(--app-panel)); }
+.broker-transfer-reconciliation > div { display: grid; gap: 4px; }
+.broker-transfer-reconciliation > div strong { color: var(--app-title); font-size: 11px; }
+.broker-transfer-reconciliation > div span { color: var(--app-copy); font-size: 10px; }
+.broker-transfer-reconciliation > div small { color: var(--app-subtle); font-size: 9px; line-height: 1.45; }
+.broker-transfer-form { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+.broker-transfer-form > button { grid-column: span 2; }
 .demo-assignment-map { display: flex; align-items: center; gap: 12px; color: var(--app-copy); font-size: 11px; }
 .demo-assignment-map span { flex: 1; padding: 13px; border-radius: 10px; background: var(--app-input); text-align: center; }
 .demo-assignment-map b { color: var(--app-positive); }
@@ -7843,6 +7851,9 @@ html[data-theme="day"] .demo-stage.live {
 }
 
 @media (max-width: 620px) {
+  .broker-transfer-reconciliation { grid-template-columns: 1fr; }
+  .broker-transfer-form { grid-template-columns: 1fr; }
+  .broker-transfer-form > button { grid-column: auto; }
   .demo-heading { align-items: flex-start; flex-direction: column; }
   .demo-heading > div { width: 100%; justify-content: space-between; }
   .demo-account-kpis { grid-template-columns: 1fr 1fr; }
