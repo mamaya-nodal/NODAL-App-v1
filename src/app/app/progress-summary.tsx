@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
+import { clampDateToPeriodSchedule } from "@/modules/accounting/domain/period-calendar";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
 import { buildSummaryAlerts } from "@/modules/summary/domain/summary-alerts";
 import { buildConciliationBreakdown, sumConciliationLines } from "@/modules/summary/domain/conciliation-breakdown";
@@ -26,6 +27,8 @@ type Props = Readonly<{
   periodLabel?: string;
   periods?: AccountingPeriodView[];
   periodId: string;
+  periodOperationalStartOn?: string;
+  periodScheduledCloseAt?: string;
   summary: OperationalSummary;
   wallets: WalletView[];
 }>;
@@ -82,7 +85,7 @@ const labels = {
   wallet_to_wallet: "Transferencia entre billeteras",
 } as const;
 
-export function ProgressSummary({ accounts, economicTrace = [], embedded = false, liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periods = [], summary, wallets }: Props) {
+export function ProgressSummary({ accounts, economicTrace = [], embedded = false, liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, wallets }: Props) {
   const router = useRouter();
   const payoutAccounts = accounts.filter((account) => account.eligibleForPayout);
   const [message, setMessage] = useState<string | null>(null);
@@ -106,6 +109,10 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const hasUnverifiedConciliation = !conciliation.capital.verified || !conciliation.gains.verified;
   const recentPeriods = periods.slice(0, 2);
   const archivedPeriods = periods.slice(2);
+  const defaultBusinessDate = periodOperationalStartOn && periodScheduledCloseAt
+    ? clampDateToPeriodSchedule(today(), periodOperationalStartOn, periodScheduledCloseAt)
+    : today();
+  const maximumBusinessDate = periodScheduledCloseAt?.slice(0, 10);
 
   useEffect(() => {
     const receiveStatus = (event: Event) => {
@@ -190,7 +197,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     const form = new FormData(event.currentTarget);
     setSaving(true);
     const result = await collectFundingWithdrawal({
-      collectedOn: today(),
+      collectedOn: defaultBusinessDate,
       fee: String(form.get("fee") ?? ""),
       periodId,
       walletId: String(form.get("wallet") ?? ""),
@@ -370,7 +377,14 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           <p><span>Total billeteras</span><strong>{money(summary.walletBalanceInCents)}</strong></p>
           <p><span>Payouts pendientes</span><strong>{money(summary.fundingPendingInCents)}</strong></p>
           <p><span>Capital neto aportado</span><strong>{money(summary.capitalNetInCents)}</strong></p>
-          <WalletConnections key={periodId} periodId={periodId} wallets={wallets} />
+          <WalletConnections
+            defaultDate={defaultBusinessDate}
+            key={periodId}
+            maxDate={maximumBusinessDate}
+            minDate={periodOperationalStartOn}
+            periodId={periodId}
+            wallets={wallets}
+          />
         </div>
       </details>
 
@@ -430,7 +444,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
               <option disabled value="">Billetera</option>
               {wallets.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
-            <input defaultValue={today()} name="date" required type="date" />
+            <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
             <select name="kind" onChange={(event) => setMovementKind(event.target.value as keyof typeof labels)} value={movementKind}>
               {Object.entries(labels).map(([value, label]) => (
                 <option disabled={value === "wallet_to_wallet" && wallets.length < 2} key={value} value={value}>{label}</option>
@@ -472,7 +486,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                 <option key={account.id} value={account.id}>{account.label}</option>
               ))}
             </select>
-            <input defaultValue={today()} name="approved_on" required type="date" />
+            <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="approved_on" required type="date" />
             <input inputMode="decimal" name="amount" placeholder="Importe aprobado" required />
             <button disabled={saving || payoutAccounts.length === 0}>Registrar payout</button>
           </form>

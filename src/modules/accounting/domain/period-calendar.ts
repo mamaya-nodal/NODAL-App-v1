@@ -76,3 +76,14 @@ export function dateBelongsToPeriodSchedule(
   const closeDate = scheduledCloseAt.slice(0, 10);
   return businessDate >= operationalStartOn && businessDate <= closeDate;
 }
+
+export function clampDateToPeriodSchedule(
+  businessDate: string,
+  operationalStartOn: string,
+  scheduledCloseAt: string,
+): string {
+  const closeDate = scheduledCloseAt.slice(0, 10);
+  if (businessDate < operationalStartOn) return operationalStartOn;
+  if (businessDate > closeDate) return closeDate;
+  return businessDate;
+}

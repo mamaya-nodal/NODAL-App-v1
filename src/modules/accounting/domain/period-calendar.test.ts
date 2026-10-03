@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   accountingPeriodMonthAt,
+  clampDateToPeriodSchedule,
   dateBelongsToPeriodSchedule,
   firstMondayOfMonth,
   periodSchedule,
@@ -45,5 +46,23 @@ describe("calendario contable NODAL", () => {
       "2026-10-05",
       "2026-10-30T19:00:00-03:00",
     )).toBe(false);
+  });
+
+  it("propone una fecha válida cuando el período ya cambió pero todavía no comenzó a operar", () => {
+    expect(clampDateToPeriodSchedule(
+      "2026-10-03",
+      "2026-10-05",
+      "2026-10-30T19:00:00-03:00",
+    )).toBe("2026-10-05");
+    expect(clampDateToPeriodSchedule(
+      "2026-10-12",
+      "2026-10-05",
+      "2026-10-30T19:00:00-03:00",
+    )).toBe("2026-10-12");
+    expect(clampDateToPeriodSchedule(
+      "2026-11-01",
+      "2026-10-05",
+      "2026-10-30T19:00:00-03:00",
+    )).toBe("2026-10-30");
   });
 });

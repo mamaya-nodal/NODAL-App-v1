@@ -1,5 +1,19 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-137 - Fechas válidas en altas y movimientos contables
+
+- **Fecha:** 2026-10-03. Corrección del alta manual de billeteras.
+- **Hallazgo:** al cambiar el período contable el viernes a las 19:00, la app
+  proponía la fecha calendario del fin de semana aunque la actividad del período
+  siguiente comienza el primer lunes. El servidor rechazaba correctamente la
+  fecha, pero la interfaz ocultaba el motivo.
+- **Resolución:** los formularios contables proponen y limitan la fecha al rango
+  operativo del período seleccionado. Antes del primer lunes usan ese lunes;
+  después del cierre usan la última fecha válida. El alta informa expresamente
+  cuando una fecha queda fuera del período.
+- **Alcance:** aplica al alta de billeteras, movimientos, payouts y cobros. No
+  modifica períodos, saldos ni registros económicos existentes.
+
 ### APP-136 - Alta de billeteras por proveedor y modalidad
 
 - **Fecha:** 2026-10-03. Flujo visual definido por Mauricio mediante boceto.

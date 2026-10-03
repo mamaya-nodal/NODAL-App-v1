@@ -20,9 +20,14 @@ const PROVIDERS: ReadonlyArray<{ id: Provider; label: string; mode: "Automática
 ];
 
 const amount = (cents: number) => new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
-const today = () => new Intl.DateTimeFormat("en-CA", { day: "2-digit", month: "2-digit", timeZone: "America/Argentina/Buenos_Aires", year: "numeric" }).format(new Date());
 
-export function WalletConnections({ periodId, wallets }: { periodId: string; wallets: WalletView[] }) {
+export function WalletConnections({ defaultDate, maxDate, minDate, periodId, wallets }: {
+  defaultDate: string;
+  maxDate?: string;
+  minDate?: string;
+  periodId: string;
+  wallets: WalletView[];
+}) {
   const router = useRouter();
   const [data, setData] = useState<State | null>(null);
   const [busy, setBusy] = useState(false);
@@ -67,7 +72,7 @@ export function WalletConnections({ periodId, wallets }: { periodId: string; wal
     setBusy(true);
     try {
       const created = await createWallet({
-        date: String(form.get("date") ?? today()),
+        date: String(form.get("date") ?? defaultDate),
         name,
         openingBalance: provider === "metamask" ? "0" : String(form.get("opening_balance") ?? ""),
         periodId,
@@ -117,14 +122,14 @@ export function WalletConnections({ periodId, wallets }: { periodId: string; wal
             {data?.identities.map((identity) => <option key={identity.id} value={identity.id}>{identity.first_name} {identity.last_name}</option>)}
           </select>
           <input name="address" placeholder="Dirección pública 0x…" maxLength={42} required />
-          <input name="date" type="hidden" value={today()} />
+          <input name="date" type="hidden" value={defaultDate} />
           <button disabled={busy || !data?.configured}>{busy ? "Conectando…" : "Conectar"}</button>
           <small>Solo dirección pública. Nunca ingreses claves privadas.</small>
           <details className="wallet-network-help"><summary>Ver redes compatibles</summary>
             <span>{NETWORKS.map((network) => network.name).join(" · ")} · USDT/USDC</span>
           </details>
         </> : <>
-          <input defaultValue={today()} name="date" required type="date" />
+          <input defaultValue={defaultDate} max={maxDate} min={minDate} name="date" required type="date" />
           <input inputMode="decimal" name="opening_balance" placeholder="Saldo inicial USD" />
           <button disabled={busy}>{busy ? "Creando…" : "Crear billetera"}</button>
         </>}

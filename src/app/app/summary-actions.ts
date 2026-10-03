@@ -51,7 +51,14 @@ export async function createWallet(input: Readonly<{ date: string; name: string;
   if (!uuid(input.periodId) || !input.date || !input.name.trim() || opening === null) return { ok: false, message: "Revisá el nombre y el saldo inicial." };
   const { supabase, user } = await client(); if (!user) return { ok: false, message: "La sesión venció." };
   const { data, error } = await supabase.rpc("create_nodal_wallet", { target_name: input.name.trim(), target_opened_on: input.date, target_opening_balance_cents: opening, target_period_id: input.periodId });
-  if (error) return { ok: false, message: error.message.includes("duplicate") ? "Ya existe una billetera con ese nombre." : "No se pudo crear la billetera." };
+  if (error) {
+    const message = error.message.includes("duplicate")
+      ? "Ya existe una billetera con ese nombre."
+      : error.message.includes("Wallet period is invalid")
+        ? "La fecha no pertenece al período operativo seleccionado."
+        : "No se pudo crear la billetera.";
+    return { ok: false, message };
+  }
   revalidatePath("/app"); return { ok: true, message: opening > 0 ? "Billetera creada. El saldo inicial quedó registrado como aporte trader." : "Billetera creada.", walletId: typeof data === "string" ? data : undefined };
 }
 

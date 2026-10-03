@@ -1472,6 +1472,8 @@ async function renderPrivateAppPage({
             ninjaOnline={connectorOnline}
             periodId={selection.period.id}
             periodLabel={formatPeriodLabel(selection.period.periodMonth)}
+            periodOperationalStartOn={selection.period.operationalStartOn}
+            periodScheduledCloseAt={selection.period.scheduledCloseAt}
             periods={accountingPeriods}
             summary={operationalSummary}
             wallets={walletViews}
