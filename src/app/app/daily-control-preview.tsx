@@ -714,7 +714,7 @@ export function DailyControlPreview({
 
 
       {ninjaBrokerBalanceHistory.length > 0 && (
-        <details className="broker-balance-history" open>
+        <details className="broker-balance-history">
           <summary>
             <span>Evolución del saldo</span>
             <strong>{ninjaBrokerBalanceHistory.length}</strong>
