@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { parsePurchasePriceToCents } from "@/modules/purchases/domain/purchase-rules";
 
-type Result = Readonly<{ ok: boolean; message: string }>;
+type Result = Readonly<{ ok: boolean; message: string; walletId?: string }>;
 const uuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const walletKinds = ["external_contribution", "personal_withdrawal", "broker_to_wallet", "wallet_to_broker"] as const;
 
@@ -50,9 +50,9 @@ export async function createWallet(input: Readonly<{ date: string; name: string;
   const opening = input.openingBalance.trim() ? amount(input.openingBalance) : 0;
   if (!uuid(input.periodId) || !input.date || !input.name.trim() || opening === null) return { ok: false, message: "Revisá el nombre y el saldo inicial." };
   const { supabase, user } = await client(); if (!user) return { ok: false, message: "La sesión venció." };
-  const { error } = await supabase.rpc("create_nodal_wallet", { target_name: input.name.trim(), target_opened_on: input.date, target_opening_balance_cents: opening, target_period_id: input.periodId });
+  const { data, error } = await supabase.rpc("create_nodal_wallet", { target_name: input.name.trim(), target_opened_on: input.date, target_opening_balance_cents: opening, target_period_id: input.periodId });
   if (error) return { ok: false, message: error.message.includes("duplicate") ? "Ya existe una billetera con ese nombre." : "No se pudo crear la billetera." };
-  revalidatePath("/app"); return { ok: true, message: opening > 0 ? "Billetera creada. El saldo inicial quedó registrado como aporte trader." : "Billetera creada sin movimientos iniciales. Podés asignarle una identidad y conectar su dirección pública." };
+  revalidatePath("/app"); return { ok: true, message: opening > 0 ? "Billetera creada. El saldo inicial quedó registrado como aporte trader." : "Billetera creada.", walletId: typeof data === "string" ? data : undefined };
 }
 
 export async function renameWallet(input: Readonly<{ name: string; walletId: string }>): Promise<Result> {

@@ -9,7 +9,6 @@ import { buildSummaryAlerts } from "@/modules/summary/domain/summary-alerts";
 import { buildConciliationBreakdown, sumConciliationLines } from "@/modules/summary/domain/conciliation-breakdown";
 import {
   collectFundingWithdrawal,
-  createWallet,
   createFundingWithdrawal,
   createWalletMovement,
   createWalletTransfer,
@@ -148,21 +147,6 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       setMovementKind("external_contribution");
       router.refresh();
     }
-  }
-
-  async function addWallet(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setSaving(true);
-    const result = await createWallet({
-      date: String(form.get("date") ?? ""),
-      name: String(form.get("name") ?? ""),
-      openingBalance: String(form.get("opening_balance") ?? ""),
-      periodId,
-    });
-    setSaving(false);
-    setMessage(result.message);
-    if (result.ok) { event.currentTarget.reset(); router.refresh(); }
   }
 
   async function updateWalletName(event: FormEvent<HTMLFormElement>, walletId: string) {
@@ -386,15 +370,6 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           <p><span>Total billeteras</span><strong>{money(summary.walletBalanceInCents)}</strong></p>
           <p><span>Payouts pendientes</span><strong>{money(summary.fundingPendingInCents)}</strong></p>
           <p><span>Capital neto aportado</span><strong>{money(summary.capitalNetInCents)}</strong></p>
-          <details className="wallet-create-inline">
-            <summary>+ Agregar billetera</summary>
-            <form className="summary-form" onSubmit={addWallet}>
-              <input name="name" placeholder="Nombre de la billetera" required />
-              <input defaultValue={today()} name="date" required type="date" />
-              <input inputMode="decimal" name="opening_balance" placeholder="Saldo inicial USD (opcional)" />
-              <button disabled={saving}>Crear billetera</button>
-            </form>
-          </details>
           <WalletConnections key={periodId} periodId={periodId} wallets={wallets} />
         </div>
       </details>

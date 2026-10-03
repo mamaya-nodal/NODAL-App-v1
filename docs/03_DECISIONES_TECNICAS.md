@@ -1,5 +1,24 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-136 - Alta de billeteras por proveedor y modalidad
+
+- **Fecha:** 2026-10-03. Flujo visual definido por Mauricio mediante boceto.
+- **Entrada:** `Agregar billetera` comienza con una única selección de empresa:
+  ARQ, GrabrFi, Global66, MetaMask u Otra. La misma selección informa si el
+  registro será manual o automático.
+- **Billeteras manuales:** ARQ, GrabrFi y Global66 solicitan nombre de la
+  billetera, fecha y saldo inicial. `Otra` agrega el nombre de la empresa. El
+  proveedor queda incorporado en el nombre visible para distinguir cuentas sin
+  ampliar silenciosamente el modelo contable.
+- **MetaMask:** solicita nombre, identidad y dirección pública, crea la
+  billetera sin saldo inicial y configura la lectura automática ya aprobada.
+  Varias subcuentas se registran como billeteras separadas.
+- **Interfaz:** se retiran del recorrido principal las explicaciones técnicas,
+  los estados vacíos y las instrucciones de conciliación. Las redes compatibles
+  y la advertencia de seguridad quedan disponibles de forma breve y contextual.
+- **Integridad:** el alta manual conserva el asiento inicial vigente; la lectura
+  automática no crea aportes, resultados ni movimientos contables.
+
 ### APP-135 - Cuentas como vista unica del resultado individual
 
 - **Fecha:** 2026-10-02. Simplificacion funcional confirmada por Mauricio.

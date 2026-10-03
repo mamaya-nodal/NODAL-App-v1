@@ -5,7 +5,7 @@ Fecha: 2026-10-03. Implementación autorizada por Mauricio y publicada en Produc
 ## Alcance implementado
 
 - Se conservan billeteras, movimientos, cobros y saldos contables existentes.
-- En Otros saldos, «Identidades y conexión de billeteras» asigna una identidad y, opcionalmente, una dirección pública EVM a una billetera existente. Para una cuenta nueva, crear otra billetera sin saldo inicial y conectar su dirección. No se solicita firma, contraseña, seed ni permisos de gasto.
+- En Otros saldos, «Agregar billetera» comienza eligiendo ARQ, GrabrFi, Global66, MetaMask u Otra. Las tres primeras y Otra usan registro manual; Otra agrega el nombre de la empresa. MetaMask abre directamente la conexión automática con nombre, identidad y dirección pública EVM. No se solicita firma, contraseña, seed ni permisos de gasto.
 - Una dirección por billetera; varias cuentas de MetaMask/Trust Wallet son billeteras distintas si tienen distintas direcciones. La misma dirección en dos aplicaciones no se cuenta dos veces dentro del workspace.
 - La dirección se fija al conectar, para no mezclar historiales; la identidad puede cambiar con auditoría. No se convierten observaciones en aportes ni beneficios.
 - Lecturas de saldo y entradas/salidas de contratos admitidos. La suma es **nominal en tokens**, no cotización USD ni totalidad del patrimonio cripto. El saldo contable USD sigue separado. No se introduce una regla contable de paridad ni revaluación.

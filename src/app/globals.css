@@ -8598,25 +8598,33 @@ html[data-theme="day"] .nodal-workspace .real-telemetry-overview {
   .prior-period-adjustment { grid-template-columns: 1fr; }
   .prior-period-adjustment small { grid-column: auto; }
 }
-.wallet-connections .wallet-connection-card {
-  margin-block: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--border, #cddcd3);
-  border-radius: 16px;
-}
-.wallet-connections .wallet-connection-card small {
-  display: block;
-  overflow-wrap: anywhere;
-  margin-block: .5rem;
-}
-.wallet-connections .wallet-reading {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .75rem 1.5rem;
-  margin-block: 1rem;
-}
-.wallet-connections .summary-form label {
-  display: grid;
-  gap: .4rem;
-  min-width: 0;
+.wallet-add-flow { border-style: solid; }
+.wallet-provider-picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 10px; }
+.wallet-provider-picker select,
+.wallet-provider-form :is(input, select),
+.wallet-observation-list select { min-height: 38px; padding: 0 11px; border: 1px solid var(--app-border); border-radius: 9px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 10px; font-weight: 750; }
+.wallet-provider-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wallet-provider-form > small,
+.wallet-provider-form > .wallet-network-help { grid-column: 1 / -1; }
+.wallet-provider-form > small { color: var(--app-subtle); font-size: 9px; }
+.wallet-flow-back { border-color: var(--app-border) !important; color: var(--app-copy) !important; background: transparent !important; box-shadow: none !important; }
+.wallet-flow-message { display: block; margin-top: 8px; color: var(--app-positive); font-size: 9px; font-weight: 750; }
+.wallet-network-help { color: var(--app-subtle); font-size: 9px; }
+.wallet-network-help summary { width: max-content; cursor: pointer; }
+.wallet-network-help span { display: block; margin-top: 5px; }
+.wallet-connected-list,
+.wallet-observation-list { display: grid; gap: 7px; margin-top: 10px; }
+.wallet-observation-list h4 { margin: 4px 0 2px; color: var(--app-title); font-size: 11px; }
+.wallet-connection-card { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 11px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-input); }
+.wallet-connection-card > div { display: grid; gap: 3px; }
+.wallet-connection-card strong { color: var(--app-title); font-size: 10px; }
+.wallet-connection-card span,
+.wallet-connection-card small { color: var(--app-subtle); font-size: 9px; }
+.wallet-connection-card form { display: flex; align-items: center; gap: 7px; }
+.wallet-connection-card button,
+.wallet-observation-list button { min-height: 32px; padding: 0 11px; border: 1px solid var(--action-green-border); border-radius: 8px; color: var(--action-green-color); background: var(--action-green-background); box-shadow: var(--action-green-shadow); font: inherit; font-size: 9px; font-weight: 800; }
+@media (max-width: 760px) {
+  .wallet-provider-form { grid-template-columns: 1fr; }
+  .wallet-provider-form > small,
+  .wallet-provider-form > .wallet-network-help { grid-column: auto; }
 }
