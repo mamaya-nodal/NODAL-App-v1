@@ -1,6 +1,6 @@
 # Billeteras manuales y lectura cripto
 
-Fecha: 2026-10-03. Implementación local autorizada por Mauricio. **No activada ni publicada.**
+Fecha: 2026-10-03. Implementación autorizada por Mauricio. La clave de Alchemy quedó configurada como secreto en Vercel para Producción y Preview; la activación funcional sigue condicionada a la migración y prueba remota de Supabase.
 
 ## Alcance implementado
 
@@ -36,7 +36,7 @@ Fuentes verificadas:
 
 ## Operación y seguridad
 
-`ALCHEMY_API_KEY` sólo en servidor. Sin clave, la interfaz indica pendiente y el cron no consulta al proveedor. Mauricio ya creó una cuenta gratuita de Alchemy; todavía falta configurar su clave en el entorno de la aplicación. No se contrató un plan pago.
+`ALCHEMY_API_KEY` sólo en servidor. Sin clave, la interfaz indica pendiente y el cron no consulta al proveedor. Mauricio creó una cuenta gratuita de Alchemy y la clave se configuró en Vercel como secreto para Producción y Preview, sin guardarla en Git. No se contrató un plan pago.
 
 Cron `/api/cron/wallets`, cada hora, autorizado con `CRON_SECRET`. Hasta 10 billeteras por ejecución, empezando por el último intento más antiguo para repartir el cupo incluso si alguna falla; más de 10 billeteras pueden requerir varios ciclos. No prometer tiempo real. Cada billetera tiene lease y cooldown, máximo 20 segundos de consulta y paginación acotada. Si alguna red falla no se publica un total parcial ni se reemplaza por cero la última lectura. La frecuencia y cantidad de direcciones deben compararse con los 30 millones de unidades de consumo gratuitas al mes; no hay garantía de que un número arbitrario de subcuentas entre en ese cupo.
 
@@ -50,7 +50,7 @@ RLS para lectura por propietario activo; configuración y vínculo por funciones
 
 1. Renovar sesión de administración Supabase: la CLI devolvió 401 Unauthorized. No se aplicó la migración remota.
 2. Ejecutar migración y prueba SQL en entorno de desarrollo, siempre dentro de transacción con rollback para fixtures. No considerar autorizaciones/SQL verificados hasta pasar esta prueba.
-3. Abrir la app por defecto de Alchemy o crear «NODAL» con Ethereum, Base, Arbitrum y Polygon Mainnet habilitadas; configurar su API key en Vercel sin compartirla por chat ni Git. Medir el consumo real de unidades antes de ampliar frecuencia o redes.
+3. Medir el consumo real de unidades de Alchemy antes de ampliar frecuencia o redes. La app «Nodal app» ya tiene Ethereum, Base, Arbitrum y Polygon Mainnet habilitadas, y su API key ya está configurada en Vercel sin compartirla por chat ni Git.
 4. Probar una dirección de prueba con saldo y transferencias conocidas, incluyendo error de una red, repetición, ambos extremos y payout ya cobrado; revisar interfaz autenticada.
 5. Publicar sólo tras la validación. No migrar usuarios de la planilla con esta entrega.
 
