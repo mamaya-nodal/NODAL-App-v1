@@ -452,9 +452,10 @@ async function renderPrivateAppPage({
         supabase
           .from("ninja_broker_account_aliases")
           .select("connection_name,account_name,display_name"),
-        supabase
+        (privileged ?? supabase)
           .from("ninja_unclaimed_broker_accounts")
-          .select("physical_connector_id,connection_name,account_name,proposed_destination_connector_id"),
+          .select("physical_connector_id,connection_name,account_name,proposed_destination_connector_id")
+          .in("proposed_destination_connector_id", ninjaConnectors.filter((connector) => connector.status === "active").map((connector) => connector.connectorId)),
         supabase
           .from("purchases")
           .select("id, account_id, period_id, purchase_number, purchased_on, price_cents, funds_origin, wallet_id")
