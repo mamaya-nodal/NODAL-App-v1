@@ -1469,7 +1469,7 @@ async function renderPrivateAppPage({
 export default function PrivateAppPage(props: PrivateAppPageProps) {
   return resolveWithDeadline(
     renderPrivateAppPage(props).catch((error: unknown) => {
-      if (error instanceof DataReadError) return <ConnectionRecovery subject="data" />;
+      if (error instanceof DataReadError) return <ConnectionRecovery subject="data" reference={error.reference} />;
       throw error;
     }),
     90_000,
