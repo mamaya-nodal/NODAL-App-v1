@@ -7638,7 +7638,7 @@ html[data-theme="day"] .accounting-history {
 .demo-wallets span { color: var(--app-title); font-size: 11px; }
 .demo-review-list span,
 .demo-wallets strong { color: var(--app-copy); font-size: 10px; }
-.named-wallet-row { min-height: 76px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(150px, .7fr) minmax(112px, auto) auto; align-items: center; gap: 12px; margin-bottom: 8px; padding: 12px 14px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-input); }
+.named-wallet-row { min-height: 76px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(160px, .75fr) 120px 148px; align-items: center; gap: 12px; margin-bottom: 8px; padding: 12px 14px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-input); }
 .named-wallet-row form,
 .named-wallet-display { min-width: 0; flex: 1; display: grid; gap: 6px; }
 .named-wallet-row form > label,
@@ -7662,7 +7662,7 @@ html[data-theme="day"] .accounting-history {
 .named-wallet-owner { display: grid; gap: 5px; }
 .named-wallet-owner > span { color: var(--app-subtle); font-size: 9px; font-weight: 750; }
 .named-wallet-owner select { min-height: 34px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 10px; font-weight: 750; }
-.named-wallet-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.named-wallet-actions { width: 148px; display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
 .named-wallet-row .wallet-refresh-button,
 .named-wallet-row .wallet-delete-button { min-height: 32px; padding: 0 11px; border-radius: 8px; font-size: 9px; }
 .named-wallet-row .wallet-delete-button { border-color: #efb2ad; color: #b9433a; background: transparent; box-shadow: none; }
