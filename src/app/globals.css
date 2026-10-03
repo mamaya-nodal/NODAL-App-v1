@@ -7035,6 +7035,13 @@ html[data-theme="day"] .nodal-workspace .accounting-exception {
 .accounting-view .accounting-action-card > :not(summary) { margin-inline: 16px; }
 .accounting-view .accounting-action-card > .summary-form { margin-top: 0; }
 .accounting-view .accounting-action-card > .summary-list { margin-bottom: 16px; }
+.accounting-view .accounting-action-card > .wallet-movement-history { margin: 8px 16px 14px; border-top: 1px solid var(--app-border); }
+.wallet-movement-history > summary { min-height: 38px; display: flex; align-items: center; gap: 8px; color: var(--app-copy); font-size: 10px; font-weight: 750; list-style: none; cursor: pointer; }
+.wallet-movement-history > summary::-webkit-details-marker { display: none; }
+.wallet-movement-history > summary strong { margin-left: auto; color: var(--app-subtle); font-size: 9px; }
+.wallet-movement-history > summary::after { color: var(--app-subtle); content: "+"; font-size: 14px; font-weight: 500; }
+.wallet-movement-history[open] > summary::after { content: "−"; }
+.wallet-movement-history > .summary-list { margin: 0; padding: 1px 0 4px; }
 
 html[data-theme="day"] .accounting-view :is(.accounting-disclosure, .accounting-action-card) {
   border-color: #d1ddd3;

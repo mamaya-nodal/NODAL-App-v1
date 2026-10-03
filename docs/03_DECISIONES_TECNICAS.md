@@ -1628,4 +1628,7 @@ vigente sin aprobacion y evidencia suficiente.
 - **Interfaz:** la actualización manual de una fuente automática pertenece a la
   tarjeta principal de esa billetera. No se repite la billetera en un bloque
   técnico separado debajo del alta.
+- **Historial:** el formulario de movimientos permanece como acción principal;
+  los movimientos del período se agrupan en `Ver historial de movimientos`,
+  cerrado inicialmente para no extender la tarjeta a medida que crece el mes.
 

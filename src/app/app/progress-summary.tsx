@@ -560,13 +560,16 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <button disabled={saving}>Guardar movimiento</button>
           </form>
           {summary.walletMovements.length > 0 && (
-            <div className="summary-list">
-              {summary.walletMovements.map((movement) => (
-                <p key={movement.id}>
-                  <strong>{date(movement.occurredOn)}</strong> · {wallets.find((wallet) => wallet.id === movement.walletId)?.name ?? "Billetera"}{movement.kind === "wallet_to_wallet" ? ` → ${wallets.find((wallet) => wallet.id === movement.destinationWalletId)?.name ?? "Billetera"}` : ""} · {labels[movement.kind as keyof typeof labels] ?? "Movimiento de billetera"} · {money(movement.amountInCents)}{(movement.feeInCents ?? 0) > 0 ? ` · Fee ${money(movement.feeInCents ?? 0)}` : ""}
-                </p>
-              ))}
-            </div>
+            <details className="wallet-movement-history">
+              <summary><span>Ver historial de movimientos</span><strong>{summary.walletMovements.length}</strong></summary>
+              <div className="summary-list">
+                {summary.walletMovements.map((movement) => (
+                  <p key={movement.id}>
+                    <strong>{date(movement.occurredOn)}</strong> · {wallets.find((wallet) => wallet.id === movement.walletId)?.name ?? "Billetera"}{movement.kind === "wallet_to_wallet" ? ` → ${wallets.find((wallet) => wallet.id === movement.destinationWalletId)?.name ?? "Billetera"}` : ""} · {labels[movement.kind as keyof typeof labels] ?? "Movimiento de billetera"} · {money(movement.amountInCents)}{(movement.feeInCents ?? 0) > 0 ? ` · Fee ${money(movement.feeInCents ?? 0)}` : ""}
+                  </p>
+                ))}
+              </div>
+            </details>
           )}
         </details>
 
