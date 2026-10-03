@@ -70,6 +70,23 @@ export async function renameWallet(input: Readonly<{ name: string; walletId: str
   revalidatePath("/app"); return { ok: true, message: "Nombre de billetera actualizado." };
 }
 
+export async function removeWallet(walletId: string): Promise<Result> {
+  if (!uuid(walletId)) return { ok: false, message: "Billetera no disponible." };
+  const { supabase, user } = await client();
+  if (!user) return { ok: false, message: "La sesión venció." };
+  const { data, error } = await supabase.rpc("retire_nodal_wallet", { target_wallet_id: walletId });
+  if (error) {
+    return {
+      ok: false,
+      message: error.message.includes("balance must be zero")
+        ? "Para eliminarla, primero su saldo debe quedar en US$ 0,00."
+        : "No se pudo eliminar la billetera.",
+    };
+  }
+  revalidatePath("/app");
+  return { ok: true, message: data === "archived" ? "Billetera eliminada. Su historial contable quedó preservado." : "Billetera eliminada." };
+}
+
 export async function createFundingWithdrawal(input: Readonly<{ accountId: string; amount: string; approvedOn: string; periodId: string }>): Promise<Result> {
   const cents = amount(input.amount);
   if (!uuid(input.periodId) || !uuid(input.accountId) || !input.approvedOn || !cents) return { ok: false, message: "Revisá cuenta, fecha e importe del payout." };

@@ -144,6 +144,16 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, signalSt
                 </button>
               </div>
 
+              <div className="identity-subsection-title"><strong>Billeteras</strong><span>{identity.wallets.length}</span></div>
+              <div className="identity-wallet-list">
+                {identity.wallets.length === 0 ? <p>Sin billeteras asignadas.</p> : identity.wallets.map((wallet) => (
+                  <div className="identity-wallet-row" key={wallet.id}>
+                    <strong>{wallet.name}</strong>
+                    <span>{money(wallet.balanceInCents)}</span>
+                  </div>
+                ))}
+              </div>
+
               <div className="identity-subsection-title"><strong>Cuentas</strong><span>{identity.accounts.length}</span></div>
               <div className="identity-assigned-accounts">
                 {identity.accounts.length === 0 ? <p>Sin cuentas asignadas.</p> : identity.accounts.map((account) => (

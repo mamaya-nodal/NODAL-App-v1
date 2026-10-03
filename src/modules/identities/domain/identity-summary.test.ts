@@ -19,12 +19,18 @@ describe("buildIdentitySummaries", () => {
       { balanceInCents: 50_500_00, currentIdentityId: "identity-1", history: [], id: "a", label: "LUCID 1", operationalState: "Evaluation", payoutInCents: 100_000, resultInCents: 25_000, state: "live", tradeCount: 1 },
       { balanceInCents: null, currentIdentityId: "identity-1", history: [], id: "b", label: "LUCID 2", operationalState: "Funded", payoutInCents: 50_000, resultInCents: -10_000, state: "closed", tradeCount: 2 },
       { balanceInCents: 50_000_00, currentIdentityId: null, history: [], id: "c", label: "LUCID 3", operationalState: "Evaluation", payoutInCents: 999_999, resultInCents: 999_999, state: "virgin", tradeCount: 0 },
+    ], [], [
+      { balanceInCents: 125_000, id: "wallet-1", identityId: "identity-1", name: "ARQ · Ana" },
+      { balanceInCents: 50_000, id: "wallet-owner", identityId: null, name: "GrabrFi · Titular" },
     ]);
 
     expect(summary.accounts.map((account) => account.id)).toEqual(["a", "b"]);
     expect(summary.connectorInstallation).toBeNull();
     expect(summary.payoutTotalInCents).toBe(150_000);
     expect(summary.resultTotalInCents).toBe(15_000);
+    expect(summary.wallets).toEqual([
+      { balanceInCents: 125_000, id: "wallet-1", identityId: "identity-1", name: "ARQ · Ana" },
+    ]);
   });
 
   it("conserva solo el envio mas reciente del conector por identidad", () => {

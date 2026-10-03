@@ -4161,6 +4161,10 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-subsection-title { display: flex; align-items: center; gap: 7px; margin: 16px 0 6px; }
 .identity-subsection-title span { color: var(--app-subtle); font-size: 10px; }
 .identity-assigned-accounts > p { color: var(--app-subtle); font-size: 11px; }
+.identity-wallet-list > p { color: var(--app-subtle); font-size: 11px; }
+.identity-wallet-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 42px; padding: 8px 0; border-top: 1px solid var(--app-border); }
+.identity-wallet-row strong { color: var(--app-title); font-size: 11px; }
+.identity-wallet-row span { color: var(--app-copy); font-size: 11px; font-weight: 800; }
 .identity-account-card { border-top: 1px solid var(--app-border); }
 .identity-account-card > summary { display: grid; grid-template-columns: minmax(0, 1.4fr) auto auto auto; align-items: center; gap: 15px; min-height: 56px; padding: 8px 0; cursor: pointer; list-style: none; }
 .identity-account-card > summary::-webkit-details-marker { display: none; }
@@ -7634,7 +7638,7 @@ html[data-theme="day"] .accounting-history {
 .demo-wallets span { color: var(--app-title); font-size: 11px; }
 .demo-review-list span,
 .demo-wallets strong { color: var(--app-copy); font-size: 10px; }
-.named-wallet-row { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 8px; padding: 12px 14px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-input); }
+.named-wallet-row { min-height: 76px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(150px, .65fr) auto auto; align-items: center; gap: 14px; margin-bottom: 8px; padding: 12px 14px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-input); }
 .named-wallet-row form,
 .named-wallet-display { min-width: 0; flex: 1; display: grid; gap: 6px; }
 .named-wallet-row form > label,
@@ -7652,6 +7656,11 @@ html[data-theme="day"] .accounting-history {
 .named-wallet-row form > small { color: var(--app-positive); font-size: 9px; font-weight: 750; }
 .named-wallet-balance { min-width: 120px; display: flex; align-items: flex-end; flex-direction: column; gap: 5px; }
 .named-wallet-balance strong { color: var(--app-title); font-size: 13px; }
+.named-wallet-owner { display: grid; gap: 5px; }
+.named-wallet-owner > span { color: var(--app-subtle); font-size: 9px; font-weight: 750; }
+.named-wallet-owner select { min-height: 34px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 10px; font-weight: 750; }
+.named-wallet-row .wallet-delete-button { min-height: 34px; border-color: #efb2ad; color: #b9433a; background: transparent; box-shadow: none; }
+.named-wallet-feedback { grid-column: 1 / -1; color: var(--app-subtle); font-size: 9px; font-weight: 750; }
 .purchase-wallet-help { grid-column: 1 / -1; margin-top: -3px; color: var(--app-subtle); font-size: 9px; }
 .wallet-create-inline { margin-top: 8px; padding: 10px 12px; border: 1px dashed var(--app-border); border-radius: 10px; }
 .wallet-create-inline > summary { color: var(--app-positive); font-size: 10px; font-weight: 800; list-style: none; cursor: pointer; }
@@ -7829,6 +7838,7 @@ html[data-theme="day"] .demo-stage.live {
   .manual-account-edit { grid-template-columns: 1fr; }
   .named-wallet-row,
   .payout-list-row { align-items: stretch; flex-direction: column; }
+  .named-wallet-row { display: grid; grid-template-columns: 1fr; }
   .named-wallet-row form,
   .named-wallet-display,
   .payout-collection-form { width: 100%; }

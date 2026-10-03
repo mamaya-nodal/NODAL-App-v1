@@ -12,7 +12,8 @@ import { IdentitiesWorkspace } from "./identities-workspace";
 
 const identity: IdentitySummary = { id: "identity", firstName: "Test", lastName: "Identity", contactEmail: "test@example.com",
   onboardingStatus: "approved", credentialsStatus: "pending", documentationStatus: "pending", driveFolderUrl: null,
-  accounts: [], connectorInstallation: null, resultTotalInCents: 0, payoutTotalInCents: 0 };
+  accounts: [], connectorInstallation: null, resultTotalInCents: 0, payoutTotalInCents: 0,
+  wallets: [{ balanceInCents: 125_000, id: "wallet", identityId: "identity", name: "ARQ · Test" }] };
 function render(value = identity) {
   return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], connectors: [], identities: [value], signalStates: {}, workspaceId: "workspace" }));
 }
@@ -27,5 +28,10 @@ describe("identity pairing is independent of email delivery", () => {
   });
   it("does not offer a code for an unapproved identity", () => {
     expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Generar código");
+  });
+  it("shows wallets assigned to the identity without changing its economic totals", () => {
+    expect(render()).toContain("Billeteras");
+    expect(render()).toContain("ARQ · Test");
+    expect(render()).toContain("US$\u00a01.250");
   });
 });

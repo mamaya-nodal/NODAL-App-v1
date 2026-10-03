@@ -39,6 +39,19 @@ export async function configureWalletSource(walletId: string, identityId: string
   return { ok: true, message: canonical ? "Dirección vinculada. El saldo detectado no se registrará como aporte ni ganancia." : "Identidad guardada. Movimientos manuales." };
 }
 
+export async function assignWalletIdentity(walletId: string, identityId: string) {
+  const db = await createClient();
+  const { data: { user } } = await db.auth.getUser();
+  if (!user) return { ok: false, message: "La sesión venció." };
+  const { error } = await db.rpc("assign_nodal_wallet_identity", {
+    target_identity_id: identityId || null,
+    target_wallet_id: walletId,
+  });
+  if (error) return { ok: false, message: "No se pudo cambiar la asignación de la billetera." };
+  revalidatePath("/app");
+  return { ok: true, message: identityId ? "Billetera asignada a la identidad." : "Billetera asignada al titular." };
+}
+
 export async function refreshWalletSource(walletId: string) {
   const db = await createClient();
   const { data: { user } } = await db.auth.getUser();

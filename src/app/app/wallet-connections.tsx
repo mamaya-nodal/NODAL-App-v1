@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { NETWORKS } from "@/modules/wallets/domain/stablecoins";
 import { evidenceDate, movementMatches } from "@/modules/wallets/domain/matching";
 import { createWallet } from "./summary-actions";
-import { configureWalletSource, linkWalletObservation, loadWalletSources, refreshWalletSource } from "./wallet-source-actions";
+import { assignWalletIdentity, configureWalletSource, linkWalletObservation, loadWalletSources, refreshWalletSource } from "./wallet-source-actions";
 import type { WalletView } from "./progress-summary";
 
 type State = Awaited<ReturnType<typeof loadWalletSources>>;
@@ -85,7 +85,8 @@ export function WalletConnections({ defaultDate, maxDate, minDate, periodId, wal
         const connected = await configureWalletSource(created.walletId, String(form.get("identity") ?? ""), String(form.get("address") ?? ""));
         setMessage(connected.ok ? "MetaMask conectada." : `La billetera se creó, pero no pudo conectarse. ${connected.message}`);
       } else {
-        setMessage(created.message);
+        const assigned = await assignWalletIdentity(created.walletId, String(form.get("identity") ?? ""));
+        setMessage(assigned.ok ? created.message : `La billetera se creó, pero no pudo asignarse. ${assigned.message}`);
       }
       setProvider(null);
       setProviderDraft("");
@@ -131,6 +132,10 @@ export function WalletConnections({ defaultDate, maxDate, minDate, periodId, wal
         </> : <>
           <input defaultValue={defaultDate} max={maxDate} min={minDate} name="date" required type="date" />
           <input inputMode="decimal" name="opening_balance" placeholder="Saldo inicial USD" />
+          <select name="identity" defaultValue="" aria-label="Asignación de la billetera">
+            <option value="">Titular</option>
+            {data?.identities.map((identity) => <option key={identity.id} value={identity.id}>{identity.first_name} {identity.last_name}</option>)}
+          </select>
           <button disabled={busy}>{busy ? "Creando…" : "Crear billetera"}</button>
         </>}
         <button className="wallet-flow-back" onClick={() => setProvider(null)} type="button">Volver</button>

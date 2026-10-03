@@ -1,5 +1,18 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-138 - Asignación informativa y retiro seguro de billeteras
+
+- **Fecha:** 2026-10-03. Decisión de Producto y Contabilidad implementada.
+- **Asignación:** toda billetera manual o automática puede quedar asociada al
+  titular o a una identidad del mismo workspace. La asociación sólo organiza la
+  información y permite mostrarla en la tarjeta de la identidad; saldos,
+  movimientos, payouts y conciliaciones continúan perteneciendo a la única
+  contabilidad del titular.
+- **Eliminación:** una billetera sólo puede retirarse con saldo contable cero.
+  Si nunca tuvo actividad se elimina. Si tiene historia económica u
+  observaciones se desactiva y se oculta, conservando registros y auditoría.
+  No se borran movimientos para hacer posible la eliminación.
+
 ### APP-137 - Fechas válidas en altas y movimientos contables
 
 - **Fecha:** 2026-10-03. Corrección del alta manual de billeteras.

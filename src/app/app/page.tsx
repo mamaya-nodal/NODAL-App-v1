@@ -82,7 +82,7 @@ import {
 } from "./daily-control-preview";
 import { HomeOverview } from "./home-overview";
 import type { RegisterAccount } from "./operation-register";
-import { ProgressSummary, type WalletView } from "./progress-summary";
+import { ProgressSummary, type WalletIdentityView, type WalletView } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
 import { AccountsOverview, type AccountOverviewAccount, type AccountOverviewPayout } from "./accounts-overview";
@@ -347,6 +347,7 @@ async function renderPrivateAppPage({
   let approvedPayoutHistory: AccountOverviewPayout[] = [];
   let walletMovements: WalletMovement[] = [];
   let walletViews: WalletView[] = [];
+  let walletIdentities: WalletIdentityView[] = [];
   let fundingWithdrawals: FundingWithdrawal[] = [];
   let operationalSummary: OperationalSummary = buildOperationalSummary({
     accounts: [], controls: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [], walletMovements: [],
@@ -397,6 +398,7 @@ async function renderPrivateAppPage({
       { data: historicalWalletMovementRows },
       { data: historicalFundingWithdrawalRows },
       { data: walletRows },
+      { data: walletSourceRows },
       { data: openingSnapshotRows },
       { data: openingBatchRows },
       { data: openingWalletRows },
@@ -506,6 +508,10 @@ async function renderPrivateAppPage({
           .eq("is_active", true)
           .order("created_at"),
         supabase
+          .from("nodal_wallet_sources")
+          .select("wallet_id,identity_id")
+          .eq("workspace_id", selection.workspace.id),
+        supabase
           .from("period_opening_snapshots")
           .select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
@@ -516,9 +522,10 @@ async function renderPrivateAppPage({
           .from("period_opening_wallets")
           .select("opening_snapshot_id,wallet_id,balance_cents,nodal_wallets(name)"),
       ]);
+    const walletIdentityById = new Map((walletSourceRows ?? []).map((source) => [source.wallet_id, source.identity_id]));
     walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
       const { data } = await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id });
-      return { balanceInCents: Number(data ?? 0), id: wallet.id, name: wallet.name };
+      return { balanceInCents: Number(data ?? 0), id: wallet.id, identityId: walletIdentityById.get(wallet.id) ?? null, name: wallet.name };
     }));
     const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -1031,7 +1038,12 @@ async function renderPrivateAppPage({
         sentAt: installation.sent_at,
         status: installation.status as IdentityConnectorInstallation["status"],
       })),
+      walletViews,
     );
+    walletIdentities = (identityRows ?? []).map((identity) => ({
+      id: identity.id,
+      name: `${identity.first_name} ${identity.last_name}`,
+    }));
     const walletNamesById = new Map((walletRows ?? []).map((wallet) => [wallet.id, wallet.name]));
     economicTrace = [
       ...(dailyControlRows ?? []).flatMap((control): EconomicTraceItem[] =>
@@ -1468,6 +1480,7 @@ async function renderPrivateAppPage({
             })}
             economicTrace={economicTrace}
             embedded
+            identities={walletIdentities}
             liveBrokerBalance={liveNinjaBrokerBalance}
             ninjaOnline={connectorOnline}
             periodId={selection.period.id}

@@ -13,8 +13,10 @@ import {
   createFundingWithdrawal,
   createWalletMovement,
   createWalletTransfer,
+  removeWallet,
   renameWallet,
 } from "./summary-actions";
+import { assignWalletIdentity } from "./wallet-source-actions";
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 import { WalletConnections } from "./wallet-connections";
 
@@ -29,12 +31,19 @@ type Props = Readonly<{
   periodId: string;
   periodOperationalStartOn?: string;
   periodScheduledCloseAt?: string;
+  identities?: WalletIdentityView[];
   summary: OperationalSummary;
   wallets: WalletView[];
 }>;
 
 export type WalletView = Readonly<{
   balanceInCents: number;
+  id: string;
+  identityId: string | null;
+  name: string;
+}>;
+
+export type WalletIdentityView = Readonly<{
   id: string;
   name: string;
 }>;
@@ -85,7 +94,7 @@ const labels = {
   wallet_to_wallet: "Transferencia entre billeteras",
 } as const;
 
-export function ProgressSummary({ accounts, economicTrace = [], embedded = false, liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, wallets }: Props) {
+export function ProgressSummary({ accounts, economicTrace = [], embedded = false, identities = [], liveBrokerBalance = null, ninjaOnline = false, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, wallets }: Props) {
   const router = useRouter();
   const payoutAccounts = accounts.filter((account) => account.eligibleForPayout);
   const [message, setMessage] = useState<string | null>(null);
@@ -97,6 +106,9 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const [walletFeedback, setWalletFeedback] = useState<Record<string, string>>({});
   const [walletNames, setWalletNames] = useState<Record<string, string>>(() =>
     Object.fromEntries(wallets.map((wallet) => [wallet.id, wallet.name])),
+  );
+  const [walletIdentityIds, setWalletIdentityIds] = useState<Record<string, string>>(() =>
+    Object.fromEntries(wallets.map((wallet) => [wallet.id, wallet.identityId ?? ""])),
   );
   const [movementKind, setMovementKind] = useState<keyof typeof labels>("external_contribution");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
@@ -172,6 +184,28 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       return;
     }
     setWalletFeedback((current) => ({ ...current, [walletId]: result.message }));
+  }
+
+  async function updateWalletIdentity(walletId: string, identityId: string) {
+    const previous = walletIdentityIds[walletId] ?? "";
+    setWalletIdentityIds((current) => ({ ...current, [walletId]: identityId }));
+    setWalletSavingId(walletId);
+    setWalletFeedback((current) => ({ ...current, [walletId]: "" }));
+    const result = await assignWalletIdentity(walletId, identityId);
+    setWalletSavingId(null);
+    if (!result.ok) setWalletIdentityIds((current) => ({ ...current, [walletId]: previous }));
+    setWalletFeedback((current) => ({ ...current, [walletId]: result.message }));
+    if (result.ok) router.refresh();
+  }
+
+  async function deleteWallet(wallet: WalletView) {
+    if (!window.confirm(`¿Eliminar ${walletNames[wallet.id] ?? wallet.name}?`)) return;
+    setWalletSavingId(wallet.id);
+    setWalletFeedback((current) => ({ ...current, [wallet.id]: "" }));
+    const result = await removeWallet(wallet.id);
+    setWalletSavingId(null);
+    setWalletFeedback((current) => ({ ...current, [wallet.id]: result.message }));
+    if (result.ok) router.refresh();
   }
 
   async function withdrawal(event: FormEvent<HTMLFormElement>) {
@@ -371,7 +405,26 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                   </div>
                 </div>
               )}
+              <label className="named-wallet-owner">
+                <span>Asignada a</span>
+                <select
+                  aria-label={`Asignación de ${wallet.name}`}
+                  disabled={walletSavingId === wallet.id}
+                  onChange={(event) => void updateWalletIdentity(wallet.id, event.target.value)}
+                  value={walletIdentityIds[wallet.id] ?? ""}
+                >
+                  <option value="">Titular</option>
+                  {identities.map((identity) => <option key={identity.id} value={identity.id}>{identity.name}</option>)}
+                </select>
+              </label>
               <div className="named-wallet-balance"><span>Saldo contable</span><strong>{money(wallet.balanceInCents)}</strong></div>
+              <button
+                className="wallet-delete-button"
+                disabled={walletSavingId === wallet.id}
+                onClick={() => void deleteWallet(wallet)}
+                type="button"
+              >Eliminar</button>
+              {walletFeedback[wallet.id] && walletEditingId !== wallet.id && <small className="named-wallet-feedback" role="status">{walletFeedback[wallet.id]}</small>}
             </div>
           ))}
           <p><span>Total billeteras</span><strong>{money(summary.walletBalanceInCents)}</strong></p>

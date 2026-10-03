@@ -56,17 +56,26 @@ export type IdentityAccountHistoryRow = Readonly<{
   tradeNumber: number | null;
 }>;
 
+export type IdentityWallet = Readonly<{
+  balanceInCents: number;
+  id: string;
+  identityId: string | null;
+  name: string;
+}>;
+
 export type IdentitySummary = ManagedIdentity & Readonly<{
   accounts: IdentityAccount[];
   connectorInstallation: IdentityConnectorInstallation | null;
   payoutTotalInCents: number;
   resultTotalInCents: number;
+  wallets: IdentityWallet[];
 }>;
 
 export function buildIdentitySummaries(
   identities: readonly ManagedIdentity[],
   accounts: readonly IdentityAccount[],
   connectorInstallations: readonly IdentityConnectorInstallation[] = [],
+  wallets: readonly IdentityWallet[] = [],
 ): IdentitySummary[] {
   return [...identities]
     .sort((left, right) =>
@@ -83,6 +92,7 @@ export function buildIdentitySummaries(
           .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] ?? null,
         payoutTotalInCents: assigned.reduce((total, account) => total + account.payoutInCents, 0),
         resultTotalInCents: assigned.reduce((total, account) => total + account.resultInCents, 0),
+        wallets: wallets.filter((wallet) => wallet.identityId === identity.id),
       };
     });
 }
