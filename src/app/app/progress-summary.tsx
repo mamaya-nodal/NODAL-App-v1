@@ -124,6 +124,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     ? liveBalance.balanceInCents - summary.brokerBalanceInCents
     : 0;
   const brokerTransferKind = brokerDifferenceInCents > 0 ? "wallet_to_broker" : "broker_to_wallet";
+  const hasBrokerTransferToReconcile = brokerDifferenceInCents !== 0 && !hasPendingNinjaOperation;
   const walletBalances = presentWalletBalances(wallets.map((wallet) => ({
     accountingInCents: wallet.balanceInCents,
     automatic: wallet.automatic,
@@ -512,29 +513,6 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
         </details>
       )}
 
-      {brokerDifferenceInCents !== 0 && !hasPendingNinjaOperation && (
-        <div className="broker-transfer-reconciliation" role="status">
-          <div>
-            <strong>Movimiento broker pendiente de conciliar</strong>
-            <span>
-              Ninja informa {money(Math.abs(brokerDifferenceInCents))} {brokerDifferenceInCents > 0 ? "más" : "menos"} que el saldo contable.
-            </span>
-            <small>Como no hay una operación pendiente, se trata como una transferencia {brokerDifferenceInCents > 0 ? "billetera → broker" : "broker → billetera"}.</small>
-          </div>
-          <form className="summary-form broker-transfer-form" onSubmit={reconcileBrokerTransfer}>
-            <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required>
-              <option disabled value="">Billetera relacionada</option>
-              {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
-            </select>
-            <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
-            <input aria-label="Importe detectado" disabled value={money(Math.abs(brokerDifferenceInCents))} />
-            <input inputMode="decimal" min="0" name="fee" placeholder="Fee USD (opcional)" />
-            <input name="observation" placeholder="Observación (opcional)" />
-            <button disabled={saving || wallets.length === 0}>Conciliar transferencia</button>
-          </form>
-        </div>
-      )}
-
       <details className="accounting-disclosure demo-operation-disclosure" open={hasConciliationDifference || hasUnverifiedConciliation ? true : undefined}>
         <summary>
           <span>Conciliaciones</span>
@@ -578,11 +556,33 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       </details>
 
       <div className="accounting-actions">
-        <details className="accounting-action-card demo-operation-disclosure">
+        <details className="accounting-action-card demo-operation-disclosure" open={hasBrokerTransferToReconcile ? true : undefined}>
           <summary>
-            <span>Movimientos de billetera</span>
-            <strong>{summary.walletMovements.length}</strong>
+            <span>Movimientos de fondos</span>
+            <strong>{hasBrokerTransferToReconcile ? "1 pendiente" : summary.walletMovements.length}</strong>
           </summary>
+          {hasBrokerTransferToReconcile && (
+            <div className="broker-transfer-reconciliation" role="status">
+              <div>
+                <strong>Movimiento de broker pendiente</strong>
+                <span>
+                  Transferencia {brokerDifferenceInCents > 0 ? "billetera → broker" : "broker → billetera"} por {money(Math.abs(brokerDifferenceInCents))}.
+                </span>
+                <small>El importe surge del cambio detectado por Ninja. Elegí la billetera relacionada e informá el fee, si lo hubo.</small>
+              </div>
+              <form className="summary-form broker-transfer-form" onSubmit={reconcileBrokerTransfer}>
+                <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required>
+                  <option disabled value="">Billetera relacionada</option>
+                  {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
+                </select>
+                <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
+                <input aria-label="Importe detectado" disabled value={money(Math.abs(brokerDifferenceInCents))} />
+                <input inputMode="decimal" min="0" name="fee" placeholder="Fee USD (opcional)" />
+                <input name="observation" placeholder="Observación (opcional)" />
+                <button disabled={saving || wallets.length === 0}>Conciliar movimiento</button>
+              </form>
+            </div>
+          )}
           <form className="summary-form" onSubmit={wallet}>
             <select name="wallet" onChange={(event) => setMovementWalletId(event.target.value)} required value={movementWalletId}>
               <option disabled value="">Billetera</option>

@@ -7034,6 +7034,7 @@ html[data-theme="day"] .nodal-workspace .accounting-exception {
 .accounting-view .accounting-disclosure > .conciliation-grid { padding: 0 16px 16px; }
 .accounting-view .accounting-action-card > :not(summary) { margin-inline: 16px; }
 .accounting-view .accounting-action-card > .summary-form { margin-top: 0; }
+.accounting-view .accounting-action-card > .broker-transfer-reconciliation { margin: 0 16px 14px; }
 .accounting-view .accounting-action-card > .summary-list { margin-bottom: 16px; }
 .accounting-view .accounting-action-card > .payout-registration-form { align-items: end; margin-bottom: 16px; }
 .payout-registration-form > label { min-width: 0; display: grid; gap: 5px; color: var(--app-subtle); font-size: 9px; font-weight: 750; }
