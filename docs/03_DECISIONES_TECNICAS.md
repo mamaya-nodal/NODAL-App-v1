@@ -1631,4 +1631,8 @@ vigente sin aprobacion y evidencia suficiente.
 - **Historial:** el formulario de movimientos permanece como acción principal;
   los movimientos del período se agrupan en `Ver historial de movimientos`,
   cerrado inicialmente para no extender la tarjeta a medida que crece el mes.
+- **Sin duplicación:** `Movimientos económicos` no repite movimientos de
+  billetera ni payouts, porque ambos conservan su historial específico. La
+  cronología general queda reservada para registros económicos que no poseen
+  otra vista propia.
 

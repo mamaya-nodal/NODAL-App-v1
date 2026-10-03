@@ -1054,7 +1054,6 @@ async function renderPrivateAppPage({
       id: identity.id,
       name: `${identity.first_name} ${identity.last_name}`,
     }));
-    const walletNamesById = new Map((walletRows ?? []).map((wallet) => [wallet.id, wallet.name]));
     economicTrace = [
       ...(dailyControlRows ?? []).flatMap((control): EconomicTraceItem[] =>
         control.kind === "balance_update" || control.movement_cents === null ? [] : [{
@@ -1066,41 +1065,6 @@ async function renderPrivateAppPage({
           status: control.origin_destination,
         }],
       ),
-      ...(walletMovementRows ?? []).map((movement): EconomicTraceItem => ({
-        amountInCents: Number(movement.amount_cents),
-        date: movement.occurred_on,
-        id: `wallet-${movement.id}`,
-        label: movement.kind === "external_contribution"
-          ? "Aporte a billetera"
-          : movement.kind === "personal_withdrawal"
-            ? "Retiro de billetera"
-            : movement.kind === "broker_to_wallet"
-              ? "Transferencia broker → billetera"
-              : movement.kind === "wallet_to_broker"
-                ? "Transferencia billetera → broker"
-                : movement.kind === "wallet_to_wallet"
-                  ? "Transferencia entre billeteras"
-                  : "Cobro pendiente anterior",
-        source: "Manual",
-        status: movement.kind === "wallet_to_wallet"
-          ? `${walletNamesById.get(movement.wallet_id) ?? "Billetera"} → ${walletNamesById.get(movement.destination_wallet_id ?? "") ?? "Billetera"}`
-          : null,
-      })),
-      ...(fundingWithdrawalRows ?? []).flatMap((withdrawal): EconomicTraceItem[] => [{
-        amountInCents: Number(withdrawal.amount_cents),
-        date: withdrawal.approved_on,
-        id: `payout-approved-${withdrawal.id}`,
-        label: "Payout aprobado",
-        source: "Manual",
-        status: withdrawal.collected_on ? "Cobrado" : "Pendiente",
-      }, ...(withdrawal.collected_on ? [{
-        amountInCents: Number(withdrawal.amount_cents),
-        date: withdrawal.collected_on,
-        id: `payout-collected-${withdrawal.id}`,
-        label: "Payout cobrado",
-        source: "Manual" as const,
-        status: null,
-      }] : [])]),
     ].sort((left, right) => right.date.localeCompare(left.date) || right.id.localeCompare(left.id));
     const openingRecords: (PeriodOpeningRecord & { periodId: string })[] = (openingSnapshotRows ?? []).map((row) => ({
       batches: (openingBatchRows ?? []).filter((batch) => batch.opening_snapshot_id === row.id).map((batch) => ({
