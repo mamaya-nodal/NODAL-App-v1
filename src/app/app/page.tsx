@@ -366,6 +366,11 @@ async function renderPrivateAppPage({
   };
 
   if (allowed && selection?.period) {
+    const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const privileged = serviceUrl && serviceKey ? createServiceClient(serviceUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    }) : null;
     const [
       { data: companyRows },
       { data: accountRows },
@@ -432,9 +437,10 @@ async function renderPrivateAppPage({
         supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),
         supabase.rpc("get_current_user_ninja_reconciliation_details", { target_limit: 100 }),
         supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
-        supabase
+        (privileged ?? supabase)
           .from("ninja_account_change_events")
           .select("connector_id,occurred_at,connection_name,event_type,resolution_status,to_account_name")
+          .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
           .order("occurred_at", { ascending: false })
           .limit(500),
         supabase
@@ -517,11 +523,6 @@ async function renderPrivateAppPage({
           : Number(source.observed_cents),
       };
     }));
-    const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const privileged = serviceUrl && serviceKey ? createServiceClient(serviceUrl, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    }) : null;
     const accountIds = (historicalAccountRows ?? []).map((account) => account.id);
     const [historicalManualAccountBalanceRows, technicalMemberRows] = privileged ? await Promise.all([
       privileged.from("manual_account_balance_observations")
