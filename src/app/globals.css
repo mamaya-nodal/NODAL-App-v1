@@ -7654,7 +7654,8 @@ html[data-theme="day"] .accounting-history {
 .named-wallet-balance strong { color: var(--app-title); font-size: 13px; }
 .purchase-wallet-help { grid-column: 1 / -1; margin-top: -3px; color: var(--app-subtle); font-size: 9px; }
 .wallet-create-inline { margin-top: 8px; padding: 10px 12px; border: 1px dashed var(--app-border); border-radius: 10px; }
-.wallet-create-inline > summary { color: var(--app-positive); font-size: 10px; font-weight: 800; cursor: pointer; }
+.wallet-create-inline > summary { color: var(--app-positive); font-size: 10px; font-weight: 800; list-style: none; cursor: pointer; }
+.wallet-create-inline > summary::-webkit-details-marker { display: none; }
 .wallet-create-inline .summary-form { margin-top: 10px; }
 .payout-list-row { min-height: 50px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 11px; border-radius: 9px; background: var(--app-input); }
 .payout-list-row + .payout-list-row { margin-top: 6px; }
@@ -8603,6 +8604,7 @@ html[data-theme="day"] .nodal-workspace .real-telemetry-overview {
 .wallet-provider-picker select,
 .wallet-provider-form :is(input, select),
 .wallet-observation-list select { min-height: 38px; padding: 0 11px; border: 1px solid var(--app-border); border-radius: 9px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 10px; font-weight: 750; }
+.wallet-create-inline button:disabled { box-shadow: none; cursor: default; opacity: .45; }
 .wallet-provider-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .wallet-provider-form > small,
 .wallet-provider-form > .wallet-network-help { grid-column: 1 / -1; }
