@@ -1621,6 +1621,8 @@ vigente sin aprobacion y evidencia suficiente.
   automática reemplaza visualmente el saldo contable por la observación; nunca
   suma ambos importes.
 - **Trazabilidad:** el saldo contable continúa visible por separado y cualquier
-  diferencia se expone como pendiente de conciliar. La observación no crea ni
-  modifica movimientos, aportes, ganancias o payouts.
+  diferencia se expone como pendiente de conciliar y hace que la conciliación
+  general requiera revisión. Si una billetera automática todavía no tiene una
+  lectura válida, la conciliación queda pendiente de verificar. La observación
+  no crea ni modifica movimientos, aportes, ganancias o payouts.
 

@@ -11,6 +11,7 @@ describe("presentWalletBalances", () => {
       accountingInCents: 5_000,
       availableInCents: 6_289,
       differenceInCents: 1_289,
+      verified: true,
     });
   });
 
@@ -21,6 +22,7 @@ describe("presentWalletBalances", () => {
       accountingInCents: 1_000,
       availableInCents: 1_289,
       differenceInCents: 289,
+      verified: true,
     });
   });
 
@@ -31,6 +33,7 @@ describe("presentWalletBalances", () => {
       accountingInCents: 750,
       availableInCents: 750,
       differenceInCents: 0,
+      verified: false,
     });
   });
 });

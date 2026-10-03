@@ -8,6 +8,7 @@ export type WalletBalancePresentation = Readonly<{
   accountingInCents: number;
   availableInCents: number;
   differenceInCents: number;
+  verified: boolean;
 }>;
 
 export function presentWalletBalances(
@@ -30,5 +31,6 @@ export function presentWalletBalances(
     accountingInCents,
     availableInCents,
     differenceInCents: availableInCents - accountingInCents,
+    verified: wallets.every((wallet) => !wallet.automatic || wallet.observedInCents !== null),
   };
 }

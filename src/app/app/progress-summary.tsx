@@ -125,8 +125,9 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const conciliation = buildConciliationBreakdown(summary);
   const hasConciliationDifference =
     conciliation.capital.differenceInCents !== 0 ||
-    conciliation.gains.differenceInCents !== 0;
-  const hasUnverifiedConciliation = !conciliation.capital.verified || !conciliation.gains.verified;
+    conciliation.gains.differenceInCents !== 0 ||
+    walletBalances.differenceInCents !== 0;
+  const hasUnverifiedConciliation = !conciliation.capital.verified || !conciliation.gains.verified || !walletBalances.verified;
   const recentPeriods = periods.slice(0, 2);
   const archivedPeriods = periods.slice(2);
   const defaultBusinessDate = periodOperationalStartOn && periodScheduledCloseAt
@@ -497,6 +498,17 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             rightTotal={conciliation.gains.reconstructedTotal}
             title="Resultado del período"
           />
+          {wallets.some((wallet) => wallet.automatic) && <ConciliationCard
+            difference={walletBalances.differenceInCents}
+            verified={walletBalances.verified}
+            leftLines={[{ href: "#contabilidad", label: "Saldo disponible", valueInCents: walletBalances.availableInCents }]}
+            leftTitle="Lectura actual"
+            leftTotal={walletBalances.availableInCents}
+            rightLines={[{ href: "#contabilidad", label: "Saldo contable", valueInCents: walletBalances.accountingInCents }]}
+            rightTitle="Según movimientos registrados"
+            rightTotal={walletBalances.accountingInCents}
+            title="Billeteras"
+          />}
         </div>
       </details>
 
