@@ -7005,6 +7005,8 @@ html[data-theme="day"] .nodal-workspace .accounting-exception {
   margin-top: 10px;
 }
 
+.demo-filter-row .account-filter-operational-start { margin-left: 16px; }
+
 .accounting-view :is(.accounting-disclosure, .accounting-action-card) > summary {
   min-height: 52px;
   display: flex;

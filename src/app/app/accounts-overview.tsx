@@ -23,10 +23,11 @@ import {
 import type { RegisterAccount } from "./operation-register";
 import { deleteRegisteredAccount, updateRegisteredAccountPurchase } from "./purchase-actions";
 
-type AccountFilter = "active" | "all" | "closed" | "evaluation" | "funded" | "operational-live";
+type AccountFilter = "active" | "virgin" | "all" | "closed" | "evaluation" | "funded" | "operational-live";
 
 type Props = Readonly<{
   accounts: AccountOverviewAccount[];
+  currentPeriodMonth: string;
   entries: OperationRegisterEntry[];
   payouts: AccountOverviewPayout[];
   wallets: PurchaseWalletOption[];
@@ -355,7 +356,7 @@ function AccountCard({ item, wallets }: Readonly<{
   );
 }
 
-export function AccountsOverview({ accounts, entries, payouts, wallets, withdrawals }: Props) {
+export function AccountsOverview({ accounts, currentPeriodMonth, entries, payouts, wallets, withdrawals }: Props) {
   const [filter, setFilter] = useState<AccountFilter>("all");
   const [closedLimit, setClosedLimit] = useState(8);
   const items = useMemo(
@@ -368,18 +369,22 @@ export function AccountsOverview({ accounts, entries, payouts, wallets, withdraw
       ),
     [accounts, entries, payouts, withdrawals],
   );
+  const currentItems = items.filter((item) => item.account.state !== "closed" || item.account.periodMonth === currentPeriodMonth);
   const counts: Record<AccountFilter, number> = {
     active: items.filter((item) => item.account.state === "live").length,
-    all: items.length,
+    virgin: items.filter((item) => item.account.state === "virgin").length,
+    all: currentItems.length,
     closed: items.filter((item) => item.account.state === "closed").length,
-    evaluation: items.filter((item) => item.operationalState === "Evaluation").length,
-    funded: items.filter((item) => item.operationalState === "Funded").length,
-    "operational-live": items.filter((item) => item.operationalState === "Live").length,
+    evaluation: currentItems.filter((item) => item.operationalState === "Evaluation").length,
+    funded: currentItems.filter((item) => item.operationalState === "Funded").length,
+    "operational-live": currentItems.filter((item) => item.operationalState === "Live").length,
   };
   const visible = items.filter((item) => {
     if (filter === "all") return true;
     if (filter === "active") return item.account.state === "live";
+    if (filter === "virgin") return item.account.state === "virgin";
     if (filter === "closed") return item.account.state === "closed";
+    if (!currentItems.includes(item)) return false;
     if (filter === "operational-live") return item.operationalState === "Live";
     return item.operationalState.toLowerCase() === filter;
   });
@@ -387,12 +392,12 @@ export function AccountsOverview({ accounts, entries, payouts, wallets, withdraw
   const virgin = visible.filter((item) => item.account.state === "virgin");
   const closed = visible.filter((item) => item.account.state === "closed");
   const closedPeriodCount = new Set(closed.map((item) => item.account.periodMonth)).size;
-  const invested = accounts.reduce((total, account) => total + (account.priceInCents ?? 0), 0);
+  const invested = currentItems.reduce((total, item) => total + (item.account.priceInCents ?? 0), 0);
 
   return (
     <>
       <div className="demo-account-kpis">
-        <article><span>Total</span><strong>{accounts.length}</strong></article>
+        <article><span>Total</span><strong>{currentItems.length}</strong></article>
         <article><span>Vivas</span><strong>{counts.active}</strong></article>
         <article><span>Vírgenes</span><strong>{items.filter((item) => item.account.state === "virgin").length}</strong></article>
         <article><span>Invertido</span><strong>{money(invested)}</strong></article>
@@ -400,11 +405,12 @@ export function AccountsOverview({ accounts, entries, payouts, wallets, withdraw
 
       <div className="demo-filter-row" aria-label="Filtrar cuentas">
         {([
-          ["all", "Todas"], ["active", "Vivas"], ["evaluation", "Evaluation"],
-          ["funded", "Funded"], ["operational-live", "Live"], ["closed", "Cerradas"],
+          ["all", "Todas"], ["active", "Vivas"], ["virgin", "Vírgenes"], ["closed", "Cerradas"],
+          ["evaluation", "Evaluation"], ["funded", "Funded"], ["operational-live", "Live"],
         ] as const).map(([value, label]) => (
           <button
             aria-pressed={filter === value}
+            className={value === "evaluation" ? "account-filter-operational-start" : undefined}
             key={value}
             onClick={() => { setFilter(value); setClosedLimit(8); }}
             type="button"

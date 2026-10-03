@@ -5,7 +5,7 @@ type RecoverySubject = "access" | "connector" | "data";
 const recoveryTitles: Record<RecoverySubject, string> = {
   access: "No pudimos verificar tu acceso",
   connector: "No pudimos consultar tu conexión",
-  data: "La aplicación está tardando más de lo normal",
+  data: "No pudimos cargar los datos",
 };
 
 export function ConnectionRecovery({ subject }: { subject: RecoverySubject }) {

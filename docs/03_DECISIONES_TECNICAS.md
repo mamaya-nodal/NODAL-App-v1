@@ -1642,7 +1642,7 @@ vigente sin aprobacion y evidencia suficiente.
 ### APP-140 - Transferencias con broker y cobro efectivo de payouts
 
 - **Fecha:** 2026-10-03. Circuito confirmado por Mauricio e implementado en la app.
-- **Entrada y salida del circuito:** todo aporte externo ingresa primero a una billetera y todo retiro personal sale desde una billetera. No se registran aportes o retiros externos directos en el broker.
+- **Entrada y salida del broker:** todo aporte externo destinado al broker pasa primero por una billetera y todo retiro personal del broker pasa por una billetera. Las compras de cuentas prop pueden pagarse directamente con tarjeta u otros fondos del trader; conservan `Aporte nuevo del trader`.
 - **Billetera y broker:** una variación de saldo broker sin operación Ninja pendiente se concilia como transferencia interna `billetera → broker` o `broker → billetera`. La app toma el importe de la diferencia detectada; el usuario elige la billetera, fecha y fee. Un único acto guarda ambos extremos con vínculo auditable y no duplica el saldo.
 - **Comisiones:** la transferencia interna conserva el capital total únicamente cuando no existe fee. El fee real reduce el saldo del circuito y se registra como gasto del período.
 - **Prioridad operativa:** si Ninja detectó una operación abierta, en asentamiento o todavía no contabilizada, la diferencia continúa en Operaciones. Contabilidad no ofrece simultáneamente la conciliación como transferencia.
@@ -1650,4 +1650,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **Cobro del payout:** `Confirmar cobro` exige billetera, fecha efectiva y fee. En una única transacción acredita el importe neto a la billetera, reduce el flotante de la cuenta por el importe bruto y registra el fee como gasto. El cobro puede ocurrir en un período posterior al de aprobación.
 - **Históricos:** los payouts anteriores a esta decisión conservan su tratamiento original mediante una marca de compatibilidad. No se reescriben resultados ni cierres ya emitidos.
 - **Trazabilidad:** transferencias, cobros, fechas, billeteras, fees y períodos quedan auditados. Las lecturas automáticas de una wallet siguen siendo evidencia y no crean movimientos por sí solas.
+
+### APP-141 - Auditoría de vistas personales y lecturas verificadas
+
+- **Fecha:** 2026-10-03. Correcciones confirmadas por Mauricio.
+- **Cuentas:** el resumen incluye vivas y vírgenes trasladadas y cuentas del período actual; excluye cerradas de períodos anteriores. El archivo de cerradas conserva su historial y conteo. Se retira el contador de compras junto al título. Los filtros contables preceden a los operativos con separación visual y sin encabezados adicionales.
+- **Operaciones:** saldo broker primero, indicadores después. Se retira `Último cierre`, cuya fuente no representaba el historial actual, y el mensaje vacío heredado. Automatización conserva sólo pendientes; las conciliadas aparecen en Historial. El indicador de posiciones se llama `Posiciones prop abiertas`.
+- **Inicio y Contabilidad:** importes con centavos; `Billeteras y otros saldos`; selector vacío `Sin cuentas Funded vivas`. Se unifica `Ganancia por operativa propia` en cabecera y períodos.
+- **Lecturas:** las consultas necesarias para presentar datos financieros deben completarse correctamente. Una consulta fallida o sin respuesta exige reintentar y no se convierte en cero ni en historial vacío. Un cero o una colección vacía recibidos correctamente continúan siendo válidos.
+- **Fondos:** se aclara APP-140: el tránsito obligatorio por billeteras se refiere al broker, no a compras directas de cuentas prop.
 

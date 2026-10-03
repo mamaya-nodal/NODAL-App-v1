@@ -641,7 +641,6 @@ export function DailyControlPreview({
     }
   }
 
-  const latestAutomaticBalance = ninjaBrokerBalanceHistory[0]?.balanceInCents ?? null;
 
   return (
     <section
@@ -655,6 +654,31 @@ export function DailyControlPreview({
           <h2 id="daily-preview-title">Control diario</h2>
         </div>
       )}
+
+      <div className="balance-summary broker-live-summary" aria-live="polite">
+        <div className="broker-live-heading">
+          <span>Saldo broker</span>
+          <em className={liveNinjaOnline ? "online" : "offline"}>
+            {liveNinjaOnline ? "En vivo" : "Último dato"}
+          </em>
+        </div>
+        <strong>
+          {liveNinjaBalance ? formatMoney(liveNinjaBalance.balanceInCents) : "Sin datos de Ninja"}
+        </strong>
+        <div className="broker-live-meta">
+          <span>Contabilidad <b>{balanceInCents === null ? "Pendiente" : formatMoney(balanceInCents)}</b></span>
+          {liveNinjaBalance && (
+            <span>
+              {liveNinjaBalance.sourceAccounts.length > 1
+                ? `${liveNinjaBalance.sourceAccounts.length} cuentas`
+                : liveNinjaBalance.sourceAccounts[0]?.displayName ?? liveNinjaBalance.sourceAccounts[0]?.accountName}
+              {" · "}
+              {new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit" }).format(new Date(liveNinjaBalance.observedAt))}
+            </span>
+          )}
+        </div>
+        {liveNinjaBalance ? <BrokerAccountBreakdown accounts={liveNinjaBalance.sourceAccounts} /> : null}
+      </div>
 
       <TradeTelemetryProbe
         brokerAccountNames={brokerAccountNames}
@@ -688,31 +712,6 @@ export function DailyControlPreview({
         </div>
       )}
 
-      <div className="balance-summary broker-live-summary" aria-live="polite">
-        <div className="broker-live-heading">
-          <span>Saldo broker</span>
-          <em className={liveNinjaOnline ? "online" : "offline"}>
-            {liveNinjaOnline ? "En vivo" : "Último dato"}
-          </em>
-        </div>
-        <strong>
-          {liveNinjaBalance ? formatMoney(liveNinjaBalance.balanceInCents) : "Sin datos de Ninja"}
-        </strong>
-        <div className="broker-live-meta">
-          <span>Último cierre <b>{latestAutomaticBalance === null ? "—" : formatMoney(latestAutomaticBalance)}</b></span>
-          <span>Contabilidad <b>{balanceInCents === null ? "Pendiente" : formatMoney(balanceInCents)}</b></span>
-          {liveNinjaBalance && (
-            <span>
-              {liveNinjaBalance.sourceAccounts.length > 1
-                ? `${liveNinjaBalance.sourceAccounts.length} cuentas`
-                : liveNinjaBalance.sourceAccounts[0]?.displayName ?? liveNinjaBalance.sourceAccounts[0]?.accountName}
-              {" · "}
-              {new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit" }).format(new Date(liveNinjaBalance.observedAt))}
-            </span>
-          )}
-        </div>
-        {liveNinjaBalance ? <BrokerAccountBreakdown accounts={liveNinjaBalance.sourceAccounts} /> : null}
-      </div>
 
       {ninjaBrokerBalanceHistory.length > 0 && (
         <details className="broker-balance-history" open>
@@ -749,12 +748,8 @@ export function DailyControlPreview({
         </p>
       )}
 
-      <div className="preview-history" aria-label="Historial de operaciones">
-        {rows.length === 0 ? (
-          <p className="empty-state">
-            Las operaciones aparecerán aquí cuando NinjaTrader confirme su cierre.
-          </p>
-        ) : (
+      {rows.length > 0 && <div className="preview-history" aria-label="Historial de operaciones">
+        {(
           rows.map((row) => (
             <article className="preview-row" key={row.id}>
               <div>
@@ -786,7 +781,7 @@ export function DailyControlPreview({
             </article>
           ))
         )}
-      </div>
+      </div>}
 
       {correctionRow && (
         <div className="sync-dialog-backdrop">

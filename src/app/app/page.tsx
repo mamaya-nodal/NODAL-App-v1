@@ -7,6 +7,7 @@ import { resolveWithDeadline } from "@/lib/async/resolve-with-deadline";
 import { currentAppRelease } from "@/lib/app-release";
 import { createClient } from "@/lib/supabase/server";
 import { readWithRetry, reportReadFailure } from "@/lib/supabase/read-with-retry";
+import { DataReadError, requireReadData, requireSuccessfulReads } from "@/lib/supabase/require-read";
 import { ConnectionRecovery } from "./connection-recovery";
 import { buildManualAccountEconomicHistory } from "@/modules/operations/domain/manual-account-economic-history";
 import { buildDetectedAccountEconomicHistory } from "@/modules/operations/domain/detected-account-economic-history";
@@ -128,18 +129,6 @@ const resetMessages: Record<string, string> = {
 const connectorMessages: Record<string, string> = {
   revoked: "El conector fue desvinculado. Dejó de tener autorización para enviar datos.",
   not_revoked: "No se pudo desvincular el conector.",
-};
-
-type PurchaseView = {
-  companyCode: string;
-  externalName: string | null;
-  fundsOrigin: string;
-  id: string;
-  priceCents: number;
-  purchaseNumber: number;
-  purchasedOn: string;
-  referenceNumber: number;
-  state: string;
 };
 
 type AccountView = RegisterAccount;
@@ -343,7 +332,6 @@ async function renderPrivateAppPage({
           .map((workspacePeriod) => workspacePeriod.id),
       )
     : Promise.resolve(new Map());
-  let purchases: PurchaseView[] = [];
   let accountOptions: AccountView[] = [];
   let accountHistory: AccountOverviewAccount[] = [];
   let dailyControls: PersistedDailyControl[] = [];
@@ -381,7 +369,6 @@ async function renderPrivateAppPage({
     const [
       { data: companyRows },
       { data: accountRows },
-      { data: purchaseRows },
       { data: dailyControlRows },
       { data: dailyControlParticipantRows },
       { data: walletMovementRows },
@@ -418,13 +405,6 @@ async function renderPrivateAppPage({
           .from("accounts")
           .select("id, company_id, reference_number, state, state_origin")
           .eq("period_id", selection.period.id),
-        supabase
-          .from("purchases")
-          .select(
-            "id, account_id, purchase_number, purchased_on, price_cents, funds_origin, wallet_id",
-          )
-          .eq("period_id", selection.period.id)
-          .order("purchase_number", { ascending: false }),
         supabase
           .from("daily_controls")
           .select(
@@ -521,10 +501,10 @@ async function renderPrivateAppPage({
         supabase
           .from("period_opening_wallets")
           .select("opening_snapshot_id,wallet_id,balance_cents,nodal_wallets(name)"),
-      ]);
+      ]).then(requireSuccessfulReads);
     const walletSourceById = new Map((walletSourceRows ?? []).map((source) => [source.wallet_id, source]));
     walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
-      const { data } = await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id });
+      const data = requireReadData(await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id }));
       const source = walletSourceById.get(wallet.id);
       return {
         automatic: Boolean(source?.address),
@@ -548,23 +528,23 @@ async function renderPrivateAppPage({
         .select("account_id, period_id, initial_balance_cents, cash_value_cents, trade_number, observed_at, created_at")
         .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id))
         .order("observed_at", { ascending: false }).order("created_at", { ascending: false })
-        .then(({ data }) => data ?? []),
+        .then(requireReadData),
       accountIds.length ? privileged.from("ninja_operation_batch_members")
         .select("account_id,batch_id,session_id,allocated_broker_result_cents,role")
         .in("account_id", accountIds).eq("role", "prop")
-        .then(({ data }) => data ?? []) : Promise.resolve([]),
+        .then(requireReadData) : Promise.resolve([]),
     ]) : [[], []];
     const technicalSessionIds = technicalMemberRows.map((row) => row.session_id);
     const technicalBatchIds = [...new Set(technicalMemberRows.map((row) => row.batch_id))];
     const technicalSessionRows = privileged && technicalSessionIds.length
-      ? (await privileged.from("ninja_operation_probe_sessions")
+      ? requireReadData(await privileged.from("ninja_operation_probe_sessions")
           .select("id,account_name,result,opened_at")
-          .in("id", technicalSessionIds).order("opened_at")).data ?? []
+          .in("id", technicalSessionIds).order("opened_at"))
       : [];
     const technicalBatchRows = privileged && technicalBatchIds.length
-      ? (await privileged.from("ninja_operation_batches")
+      ? requireReadData(await privileged.from("ninja_operation_batches")
           .select("id,daily_control_id")
-          .in("id", technicalBatchIds).not("daily_control_id", "is", null)).data ?? []
+          .in("id", technicalBatchIds).not("daily_control_id", "is", null))
       : [];
 
     companies = (companyRows ?? []).map((company) => ({
@@ -746,25 +726,6 @@ async function renderPrivateAppPage({
       ];
     });
 
-    purchases = (purchaseRows ?? []).flatMap((purchase) => {
-      const account = accountsById.get(purchase.account_id);
-      const company = account ? companiesById.get(account.company_id) : null;
-      if (!account || !company) return [];
-
-      return [
-        {
-          companyCode: company.code,
-          externalName: ninjaNamesByAccountId.get(account.id) ?? null,
-          fundsOrigin: purchase.funds_origin,
-          id: purchase.id,
-          priceCents: Number(purchase.price_cents),
-          purchaseNumber: purchase.purchase_number,
-          purchasedOn: purchase.purchased_on,
-          referenceNumber: account.reference_number,
-          state: account.state,
-        },
-      ];
-    });
     const participantsByControlId = new Map<string, PersistedDailyControl["participants"]>();
     for (const participant of dailyControlParticipantRows ?? []) {
       const account = accountsById.get(participant.account_id);
@@ -1027,7 +988,7 @@ async function renderPrivateAppPage({
       supabase
         .from("ninja_identity_signal_controls")
         .select("identity_id,is_enabled"),
-    ]);
+    ]).then(requireSuccessfulReads);
     identitySignalStates = Object.fromEntries((identitySignalRows ?? []).map((row) => [row.identity_id, row.is_enabled]));
     const identityByAccountId = new Map(
       (identityAssignmentRows ?? []).map((assignment) => [assignment.account_id, assignment.identity_id]),
@@ -1302,9 +1263,6 @@ async function renderPrivateAppPage({
         <section className="purchase-panel" id="cuentas" aria-labelledby="purchase-title">
           <div className="purchase-heading">
             <h2 id="purchase-title">Cuentas</h2>
-            <p className="purchase-count">
-              {purchases.length} {purchases.length === 1 ? "cuenta" : "cuentas"}
-            </p>
           </div>
 
           {singleValue(purchaseResult) &&
@@ -1350,6 +1308,7 @@ async function renderPrivateAppPage({
 
           <AccountsOverview
             accounts={accountHistory}
+            currentPeriodMonth={selection.period.periodMonth}
             entries={operationEntryHistory}
             payouts={approvedPayoutHistory}
             wallets={walletViews}
@@ -1509,7 +1468,10 @@ async function renderPrivateAppPage({
 
 export default function PrivateAppPage(props: PrivateAppPageProps) {
   return resolveWithDeadline(
-    renderPrivateAppPage(props),
+    renderPrivateAppPage(props).catch((error: unknown) => {
+      if (error instanceof DataReadError) return <ConnectionRecovery subject="data" />;
+      throw error;
+    }),
     90_000,
     () => <ConnectionRecovery subject="data" />,
   );

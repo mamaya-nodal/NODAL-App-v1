@@ -312,11 +312,11 @@ export function TradeTelemetryProbe({
   const historyMonthKeys = new Set(currentAndPreviousMonthKeys(new Date()));
   const reconciliationMonths = new Map<string, AutomaticBatchRow[]>();
   for (const batch of batches.filter((candidate) =>
-    candidate.settled_at !== null && historyMonthKeys.has(candidate.opened_at.slice(0, 7)))) {
+    candidate.accounting_status === "committed" && candidate.settled_at !== null && historyMonthKeys.has(candidate.opened_at.slice(0, 7)))) {
     const key = batch.opened_at.slice(0, 7);
     reconciliationMonths.set(key, [...(reconciliationMonths.get(key) ?? []), batch]);
   }
-  const automationBatches = batches.slice(0, 30);
+  const automationBatches = batches.filter((batch) => batch.accounting_status !== "committed").slice(0, 30);
   const activeGroups = [
     activeProps.length > 0 ? { label: "Cuentas prop", probes: activeProps } : null,
     activeBroker.length > 0 ? { label: "Cobertura", probes: activeBroker } : null,
@@ -341,7 +341,7 @@ export function TradeTelemetryProbe({
   return (
     <section className="telemetry-probe real-telemetry-overview" aria-labelledby="telemetry-probe-title">
       <div className="demo-operation-grid">
-        <article className="demo-broker-balance"><span>Cuentas prop en curso</span><strong>{activeProps.length}</strong></article>
+        <article className="demo-broker-balance"><span>Posiciones prop abiertas</span><strong>{activeProps.length}</strong></article>
         <article className="demo-broker-balance"><span>Cobertura broker</span><strong className={brokerFloating >= 0 ? "positive" : "negative"}>{formatMoney(brokerFloating)}</strong></article>
         <article className="demo-today-result"><span>Resultado de hoy</span><strong>{formatMoney(todayResultInCents / 100)}</strong><small>{todayOperationCount} cerradas</small></article>
       </div>
@@ -358,7 +358,7 @@ export function TradeTelemetryProbe({
         <details className="demo-operation-disclosure automatic-batch-status operations-disclosure-card" open={automationBatches.some((batch) => batch.accounting_status === "blocked") || undefined}>
           <summary>
             <span>Automatización</span>
-            <strong>{automationBatches.filter((batch) => batch.accounting_status === "committed").length} conciliadas</strong>
+            <strong>{automationBatches.length} pendientes</strong>
             <i aria-hidden="true" />
           </summary>
           <div className="automatic-batch-list">
@@ -378,7 +378,7 @@ export function TradeTelemetryProbe({
                       <div>
                         <strong className={(moneyNumber(batch.broker_result_cents) ?? 0) < 0 ? "negative" : ""}>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
                         <span className={batch.accounting_status === "blocked" ? "blocked" : "ready"}>
-                          {batch.accounting_status === "blocked" ? batch.blocking_reason ?? "Revisar" : "Conciliada"}
+                          {batch.accounting_status === "blocked" ? batch.blocking_reason ?? "Revisar" : "Pendiente"}
                         </span>
                       </div>
                       <i aria-hidden="true" />

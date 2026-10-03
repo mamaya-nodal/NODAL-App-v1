@@ -39,7 +39,8 @@ type ChartPoint = Readonly<{ label: string; valueInCents: number }>;
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat("es-AR", {
     currency: "USD",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
     style: "currency",
   }).format(cents / 100);
 }

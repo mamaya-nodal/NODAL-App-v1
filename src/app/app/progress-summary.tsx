@@ -351,7 +351,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                 <dl>
                   <div><dt>Facturación</dt><dd>{money(period.summary.realizedGainInCents)}</dd></div>
                   <div><dt>Comisión</dt><dd>{money(period.summary.commissionInCents)}</dd></div>
-                  <div><dt>Ganancia usuario</dt><dd>{money(period.summary.traderGainInCents)}</dd></div>
+                  <div><dt>Ganancia por operativa propia</dt><dd>{money(period.summary.traderGainInCents)}</dd></div>
                   <div><dt>Resultado período</dt><dd>{money(period.summary.periodResultInCents)}</dd></div>
                 </dl>
               </article>
@@ -367,7 +367,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                     <dl>
                       <div><dt>Facturación</dt><dd>{money(period.summary.realizedGainInCents)}</dd></div>
                       <div><dt>Comisión</dt><dd>{money(period.summary.commissionInCents)}</dd></div>
-                      <div><dt>Ganancia usuario</dt><dd>{money(period.summary.traderGainInCents)}</dd></div>
+                      <div><dt>Ganancia por operativa propia</dt><dd>{money(period.summary.traderGainInCents)}</dd></div>
                       <div><dt>Resultado período</dt><dd>{money(period.summary.periodResultInCents)}</dd></div>
                     </dl>
                   </article>
@@ -396,7 +396,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       )}
 
       <details className="demo-operation-disclosure accounting-balances">
-        <summary><span>Otros saldos</span><strong>{money(walletBalances.availableInCents)}</strong><i aria-hidden="true" /></summary>
+        <summary><span>Billeteras y otros saldos</span><strong>{money(walletBalances.availableInCents)}</strong><i aria-hidden="true" /></summary>
         <div className="demo-wallets">
           {wallets.map((wallet) => (
             <div className="named-wallet-row" key={wallet.id}>
@@ -630,7 +630,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <label>
               <span>Cuenta Funded viva</span>
               <select defaultValue="" disabled={payoutAccounts.length === 0} name="account" required>
-                <option disabled value="">{payoutAccounts.length === 0 ? "Sin cuentas disponibles" : "Seleccionar cuenta"}</option>
+                <option disabled value="">{payoutAccounts.length === 0 ? "Sin cuentas Funded vivas" : "Seleccionar cuenta"}</option>
                 {payoutAccounts.map((account) => (
                   <option key={account.id} value={account.id}>{account.label}</option>
                 ))}
