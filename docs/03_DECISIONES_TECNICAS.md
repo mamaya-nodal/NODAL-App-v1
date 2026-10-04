@@ -18,16 +18,17 @@
 - **Regla:** se conserva la información operativa y contable previa únicamente
   de Mauricio, Alfred y Sebastián. Ivo y cualquier otro usuario existente
   comienzan la aplicación desde cero.
-- **Permisos separados de los datos:** durante la prueba integral inicial Ivo
-  permanece como alumno común, sin acceso a Admin Master ni privilegios
-  especiales. Su eventual promoción se evaluará únicamente después de terminar
-  la prueba y reiniciar nuevamente su entorno. El rol administrativo no
-  autoriza conservar datos de prueba y, como todo administrador, requiere su
-  propio factor MFA.
-- **Estado relevado:** Ivo parte sin cuentas, compras, controles, billeteras ni
-  conectores y conserva el rol `student` durante la prueba. Su eventual
-  promoción a administrador queda fuera de este ensayo y requiere una decisión
-  posterior al reinicio final.
+- **Permisos separados de los datos:** la prueba operativa de Ivo como alumno se
+  canceló porque requería instalar un segundo conector Ninja. Mauricio confirmó
+  entonces su promoción a Admin Master sin conservar datos de prueba. El rol
+  administrativo no autoriza recuperar actividad descartada y, como todo
+  administrador, requiere su propio factor MFA.
+- **Estado ejecutado:** el 2026-10-04 Ivo quedó `active` con rol `admin`. Conserva
+  exclusivamente su fundación vacía: dos espacios de trabajo y dos períodos,
+  sin cuentas, compras, controles, billeteras ni conectores. La promoción quedó
+  registrada como `admin_role_granted` en `audit_events` y se ejecutó con las
+  precondiciones reproducibles de
+  `supabase/repairs/20261004_promote_ivo_admin.sql`.
 - **Identidad de Mauricio:** el acceso administrativo
   `mamaya@nodaltrading.com` y el historial personal anterior pertenecen hoy a
   dos identidades técnicas distintas. Ambas quedan excluidas de cualquier
