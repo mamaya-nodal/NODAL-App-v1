@@ -1,5 +1,48 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-148 - Panel Admin, jerarquía y distribución económica por mesa
+
+- **Fecha:** 2026-10-04. Definición funcional confirmada por Mauricio a partir
+  del mockup de la pestaña `Admin`.
+- **Alcance visual:** el resumen separa la mesa directa de la estructura total
+  descendiente. La estructura total es el indicador principal e incluye toda la
+  rama ubicada debajo del administrador; la mesa directa permanece visible como
+  desglose.
+- **Altas:** el administrador de mesa puede invitar a una persona, pero aceptar
+  la invitación no activa el acceso por sí solo. Toda alta requiere aprobación
+  de Admin Master.
+- **Gestión delegada:** dentro de su rama autorizada, el administrador de mesa
+  gestiona los porcentajes comerciales, roles, bajas lógicas y movimientos de
+  usuarios o mesas previstos en el mockup. Esta decisión sustituye el límite de
+  solo lectura de APP-089 y la reserva exclusiva a Master de los acuerdos
+  descrita en APP-077. La implementación deberá mantener autorización de
+  servidor por alcance, auditoría completa y protección contra modificar ramas
+  ajenas.
+- **Bajas e identidad técnica:** una baja desactiva el acceso y conserva todo el
+  historial. Un traslado cambia la pertenencia y el código visible de mesa,
+  pero nunca el identificador técnico inmutable del usuario ni sus registros.
+- **Asignaciones:** un administrador subordinado puede recibir múltiples
+  integrantes; la selección no se limita a una sola persona.
+- **Acuerdo de operativa propia:** el porcentaje personal del administrador se
+  aplica al resultado positivo de sus operaciones propias, incluidas sus
+  identidades. Ejemplo confirmado: con USD 10.000 y acuerdo NODAL del 40%, la
+  comisión NODAL es USD 4.000.
+- **Acuerdo por administración:** cada usuario y cada mesa dependiente puede
+  tener un porcentaje distinto en favor del administrador superior. La suma de
+  esas participaciones forma el ingreso bruto por administración. Sobre ese
+  ingreso se aplica después el acuerdo `Admin mesa` entre el administrador y
+  NODAL. Ejemplo confirmado: una estructura factura USD 40.000; con reparto
+  uniforme del 50%, USD 20.000 corresponden a los usuarios y USD 20.000 son
+  participación bruta de Alfred. Con acuerdo `Admin mesa` del 25%, NODAL recibe
+  USD 5.000 y Alfred conserva USD 15.000.
+- **Ranking:** se ordena por facturación del período anterior.
+- **Pendiente de definición:** cuando existen dos o más administradores
+  anidados, debe fijarse sobre qué base se aplica el porcentaje del
+  administrador superior: la facturación original de la rama, la participación
+  bruta obtenida por el administrador hijo u otra base contractual. Hasta
+  confirmarlo no se implementa una recursión económica ni se inventa un reparto.
+- **Estado:** definición de producto registrada; implementación pendiente.
+
 ### APP-147 - Conciliación visual de transferencias broker-billetera
 
 - **Fecha:** 2026-10-04. Ajuste solicitado tras observar una diferencia broker
