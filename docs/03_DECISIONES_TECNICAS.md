@@ -1,5 +1,20 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-144 - Actualizaciones críticas antes del ingreso de alumnos
+
+- **Fecha:** 2026-10-04. Corrección preventiva de seguridad.
+- **Hallazgo:** la versión fijada de Next.js y su procesador de imágenes
+  incluían vulnerabilidades críticas y altas publicadas, aunque no existe
+  evidencia de explotación en NODAL.
+- **Resolución:** se fija Next.js 16.3.8, que incorpora las correcciones, y se
+  actualiza la dependencia de imágenes incluida. El inventario de producción
+  queda sin vulnerabilidades conocidas por `npm audit` en este corte.
+- **Validación:** lint sin errores, tipos correctos, 435 pruebas aprobadas y
+  compilación de producción completa antes del despliegue.
+- **Regla operativa:** las dependencias de producción se auditan antes de cada
+  incorporación de alumnos y toda alerta crítica bloquea el despliegue hasta
+  aplicar y validar su corrección.
+
 ### APP-143 - Promoción controlada del entorno con historial real
 
 - **Fecha:** 2026-10-04. Decisión operativa para el inicio de la migración de
