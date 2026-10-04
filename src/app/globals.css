@@ -8707,6 +8707,11 @@ html .nodal-workspace .demo-accounting-primary > small {
     letter-spacing: -2.7px !important;
   }
 }
+html .nodal-workspace .accounting-view .demo-accounting-primary > strong {
+  font-size: clamp(30px, 3vw, 36px) !important;
+  letter-spacing: -1.2px !important;
+  line-height: 1.05;
+}
 .wallet-connection-card button,
 .wallet-observation-list button { min-height: 32px; padding: 0 11px; border: 1px solid var(--action-green-border); border-radius: 8px; color: var(--action-green-color); background: var(--action-green-background); box-shadow: var(--action-green-shadow); font: inherit; font-size: 9px; font-weight: 800; }
 @media (max-width: 760px) {
