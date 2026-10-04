@@ -363,11 +363,6 @@ begin
     delete from public.manual_account_balance_observations
     where period_id = selected_period.id;
 
-    delete from public.ninja_detected_purchases
-    where account_id in (
-      select id from public.accounts where period_id = selected_period.id
-    );
-
     delete from public.purchases
     where period_id = selected_period.id;
 

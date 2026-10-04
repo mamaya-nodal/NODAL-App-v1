@@ -27,6 +27,21 @@
   `service_role` no tienen permiso de uso sobre el esquema. El procedimiento
   reproducible queda en
   `supabase/repairs/20261004_prelaunch_logical_snapshot.sql`.
+- **Ejecución completada:** el 2026-10-04 se reinició en Producción la
+  información previa de Ivo, Julián y Martín. Cada usuario conserva su acceso
+  activo de alumno y recibió dos espacios de trabajo y dos períodos vacíos de
+  octubre de 2026; quedaron en cero sus cuentas, controles diarios, billeteras
+  y conectores.
+- **Preservación verificada:** Mauricio —incluidas sus dos identidades
+  técnicas—, Alfred y Sebastián coinciden con el respaldo privado en espacios
+  de trabajo, períodos, cuentas, compras, controles diarios, billeteras,
+  conectores e identidades. Alfred conserva específicamente sus 7 identidades,
+  además de 34 cuentas y 34 compras.
+- **Trazabilidad del corte:** el primer intento encontró una referencia a la
+  tabla obsoleta `ninja_detected_purchases` y PostgreSQL revirtió la transacción
+  completa. Se corrigió el procedimiento antes de repetirlo; el segundo intento
+  finalizó correctamente y registró el evento auditable
+  `prelaunch_history_reset` para cada usuario reiniciado.
 
 ### APP-145 - MFA obligatorio para administración
 
