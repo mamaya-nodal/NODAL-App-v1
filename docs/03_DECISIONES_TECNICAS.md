@@ -27,6 +27,12 @@
   aplica al resultado positivo de sus operaciones propias, incluidas sus
   identidades. Ejemplo confirmado: con USD 10.000 y acuerdo NODAL del 40%, la
   comisión NODAL es USD 4.000.
+- **Cierre único:** operativa propia y administración de estructura no son
+  escenarios alternativos. En cada cierre de período se calculan juntas las
+  comisiones de todas las personas y mesas alcanzadas. El resultado neto de un
+  administrador integra su operativa propia neta y su participación neta por
+  administración; la comisión total NODAL integra los importes correspondientes
+  a ambos conceptos.
 - **Acuerdo por administración:** cada usuario y cada mesa dependiente puede
   tener un porcentaje distinto en favor del administrador superior. La suma de
   esas participaciones forma el ingreso bruto por administración. Sobre ese
@@ -35,12 +41,18 @@
   uniforme del 50%, USD 20.000 corresponden a los usuarios y USD 20.000 son
   participación bruta de Alfred. Con acuerdo `Admin mesa` del 25%, NODAL recibe
   USD 5.000 y Alfred conserva USD 15.000.
+- **Ejemplo conjunto de cierre:** con los dos ejemplos anteriores en el mismo
+  período, NODAL recibe USD 9.000, Alfred recibe USD 21.000 netos y los usuarios
+  de la estructura reciben USD 20.000. Los USD 50.000 originales quedan
+  distribuidos una sola vez.
+- **Cascada confirmada:** el porcentaje de una mesa superior se aplica a la
+  participación bruta obtenida por el administrador inmediatamente inferior,
+  nunca nuevamente a la facturación original de toda la rama. Ejemplo: Javier
+  factura USD 100; un reparto del 50% deja USD 50 para Javier y USD 50 de
+  participación administrativa para Juana. Si Alfred tiene 50% sobre la mesa
+  de Juana, recibe USD 25 de esos USD 50 y Juana conserva USD 25 antes de aplicar
+  los acuerdos NODAL que correspondan a cada administrador.
 - **Ranking:** se ordena por facturación del período anterior.
-- **Pendiente de definición:** cuando existen dos o más administradores
-  anidados, debe fijarse sobre qué base se aplica el porcentaje del
-  administrador superior: la facturación original de la rama, la participación
-  bruta obtenida por el administrador hijo u otra base contractual. Hasta
-  confirmarlo no se implementa una recursión económica ni se inventa un reparto.
 - **Estado:** definición de producto registrada; implementación pendiente.
 
 ### APP-147 - Conciliación visual de transferencias broker-billetera
