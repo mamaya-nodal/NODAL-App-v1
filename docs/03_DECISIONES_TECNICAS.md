@@ -1,5 +1,27 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-146 - Corte inicial y preservación selectiva de historiales
+
+- **Fecha:** 2026-10-04. Decisión de Mauricio para el inicio de alumnos.
+- **Regla:** se conserva la información operativa y contable previa únicamente
+  de Mauricio, Alfred y Sebastián. Ivo y cualquier otro usuario existente
+  comienzan la aplicación desde cero.
+- **Permisos separados de los datos:** Ivo será Admin Master después de limpiar
+  su entorno previo. El rol administrativo no autoriza conservar datos de
+  prueba y, como todo administrador, requiere su propio factor MFA.
+- **Estado relevado:** Ivo no tiene cuentas, compras, controles ni billeteras
+  contables; conserva vínculos técnicos de conectores que deben revocarse en el
+  corte. Su promoción a administrador quedó cancelada hasta completar el
+  reinicio.
+- **Identidad de Mauricio:** el acceso administrativo
+  `mamaya@nodaltrading.com` y el historial personal anterior pertenecen hoy a
+  dos identidades técnicas distintas. Ambas quedan excluidas de cualquier
+  limpieza automática hasta consolidarlas de forma controlada y verificable.
+- **Ejecución segura:** el corte será una operación única, versionada y
+  auditable, basada en una lista explícita de identidades preservadas. Antes de
+  aplicarlo se obtendrá un respaldo verificable y un informe de filas afectadas;
+  la eliminación en Producción requiere confirmación final de Mauricio.
+
 ### APP-145 - MFA obligatorio para administración
 
 - **Fecha:** 2026-10-04. Refuerzo previo al ingreso de alumnos.
