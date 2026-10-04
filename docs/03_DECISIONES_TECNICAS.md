@@ -1571,6 +1571,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **Referencia:** el menú también informa la última versión de conector publicada por NODAL. Esta referencia no sustituye la versión instalada recibida desde NinjaTrader.
 - **Alcance inicial:** Configuración queda como espacio reservado y Ayuda ofrece contacto por `contacto@nodaltrading.com`; sus funciones adicionales se definirán posteriormente.
 
+### 2026-10-03 — Ayuda y tickets de soporte
+
+- **Configuración:** permanece sin nuevas opciones hasta definir una necesidad concreta del alumno.
+- **Ayuda:** presenta `Preguntas frecuentes` como función futura y `Contacto` como acceso a una página independiente abierta en una pestaña nueva.
+- **Ticket:** sólo un usuario autenticado y activo puede crear una solicitud. Se conservan categoría, asunto, descripción, identidad solicitante, fecha, estado y código de seguimiento; se limita la creación reiterada y se registra el alta y el envío en auditoría.
+- **Correo:** el servidor crea un token temporal de un solo propósito y el puente autorizado de Google Apps Script consulta el ticket, envía el mensaje exclusivamente a `contacto@nodaltrading.com` y confirma el despacho. No se exponen credenciales de correo ni se permite elegir un destinatario arbitrario desde el cliente.
+
 ### APP-134 - Trazabilidad de actualización del conector
 
 - **Fecha:** 2026-10-02. Implementado desde el conector 0.9.

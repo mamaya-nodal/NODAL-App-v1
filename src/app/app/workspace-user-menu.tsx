@@ -143,8 +143,16 @@ export function WorkspaceUserMenu({
           {section === "help" ? (
             <div className="workspace-user-section">
               <strong>Ayuda</strong>
-              <p>Si necesitás asistencia, escribinos a:</p>
-              <a href="mailto:contacto@nodaltrading.com">contacto@nodaltrading.com</a>
+              <div className="workspace-help-options">
+                <button disabled type="button">
+                  <span>Preguntas frecuentes</span>
+                  <small>Próximamente</small>
+                </button>
+                <a href="/app/help/contact" rel="noopener noreferrer" target="_blank">
+                  <span>Contacto</span>
+                  <small>Abrir ticket ↗</small>
+                </a>
+              </div>
             </div>
           ) : null}
 

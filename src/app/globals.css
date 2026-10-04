@@ -4029,6 +4029,17 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   font-weight: 750;
   text-decoration: none;
 }
+.workspace-help-options { display: grid; gap: 7px; margin-top: 10px; }
+.workspace-help-options :is(a, button) {
+  width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin: 0; padding: 9px 11px; border: 1px solid var(--app-border);
+  border-radius: 10px; color: var(--app-title); background: var(--app-input); font: inherit;
+  text-align: left; text-decoration: none;
+}
+.workspace-help-options :is(a, button) span { font-size: 11px; font-weight: 750; }
+.workspace-help-options :is(a, button) small { color: var(--app-subtle); font-size: 9px; font-weight: 650; }
+.workspace-help-options a:hover { border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border)); }
+.workspace-help-options button:disabled { cursor: default; opacity: .65; }
 
 .workspace-version-section dl {
   display: grid;
@@ -8718,4 +8729,55 @@ html .nodal-workspace .accounting-view .demo-accounting-primary > strong {
   .wallet-provider-form { grid-template-columns: 1fr; }
   .wallet-provider-form > small,
   .wallet-provider-form > .wallet-network-help { grid-column: auto; }
+}
+
+.support-contact-page {
+  min-height: 100vh;
+  padding: 24px;
+  color: var(--app-title);
+  background: var(--app-shell);
+  font-family: Arial, Helvetica, sans-serif;
+}
+.support-contact-page > header {
+  width: min(760px, 100%); display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; margin: 0 auto 20px;
+}
+.support-contact-page > header > a:last-child { color: var(--app-copy); font-size: 12px; font-weight: 700; text-decoration: none; }
+.support-contact-card {
+  width: min(760px, 100%); margin: 0 auto; padding: clamp(22px, 4vw, 38px);
+  border: 1px solid var(--app-border); border-radius: 22px; background: var(--app-panel);
+  box-shadow: 0 18px 55px rgb(0 0 0 / 10%);
+}
+.support-contact-card > span { color: var(--app-accent); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.support-contact-card h1 { margin: 8px 0 6px; font-size: clamp(28px, 5vw, 42px); letter-spacing: -1.7px; }
+.support-contact-card > p { margin: 0; color: var(--app-subtle); font-size: 12px; line-height: 1.55; }
+.support-ticket-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 26px; }
+.support-ticket-form label { display: grid; gap: 7px; color: var(--app-copy); font-size: 10px; font-weight: 750; }
+.support-ticket-form :is(input, select, textarea) {
+  width: 100%; border: 1px solid var(--app-border); border-radius: 11px; color: var(--app-title);
+  background: var(--app-input); font: inherit; font-size: 12px; outline: none;
+}
+.support-ticket-form :is(input, select) { min-height: 44px; padding: 0 12px; }
+.support-ticket-form textarea { min-height: 150px; padding: 12px; resize: vertical; line-height: 1.5; }
+.support-ticket-form :is(input, select, textarea):focus { border-color: var(--app-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 13%, transparent); }
+.support-ticket-form input:disabled { color: var(--app-subtle); opacity: 1; }
+.support-ticket-wide { grid-column: 1 / -1; }
+.support-ticket-privacy { grid-column: 1 / -1; margin: -2px 0 0; color: var(--app-subtle); font-size: 10px; }
+.support-ticket-error { grid-column: 1 / -1; margin: 0; color: #ff766d; font-size: 11px; font-weight: 700; }
+.support-ticket-form > button {
+  grid-column: 1 / -1; min-height: 46px; border: 1px solid var(--action-green-border); border-radius: 11px;
+  color: var(--action-green-color); background: var(--action-green-background); box-shadow: var(--action-green-shadow);
+  font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+}
+.support-ticket-form > button:disabled { cursor: wait; opacity: .6; }
+.support-ticket-success { display: grid; justify-items: start; gap: 10px; margin-top: 28px; padding: 22px; border: 1px solid color-mix(in srgb, var(--app-accent) 45%, var(--app-border)); border-radius: 15px; background: color-mix(in srgb, var(--app-accent) 8%, var(--app-input)); }
+.support-ticket-success span { color: var(--app-subtle); font-size: 11px; }
+.support-ticket-success strong { color: var(--app-title); font-size: 24px; letter-spacing: -.7px; }
+.support-ticket-success p { margin: 0; color: var(--app-copy); font-size: 12px; }
+.support-ticket-success a { color: var(--app-accent); font-size: 11px; font-weight: 800; text-decoration: none; }
+@media (max-width: 620px) {
+  .support-contact-page { padding: 16px; }
+  .support-contact-page > header img { width: 145px; height: auto; }
+  .support-ticket-form { grid-template-columns: 1fr; }
+  .support-ticket-wide, .support-ticket-privacy, .support-ticket-error, .support-ticket-form > button { grid-column: auto; }
 }
