@@ -14,6 +14,12 @@
 - **Regla operativa:** las dependencias de producción se auditan antes de cada
   incorporación de alumnos y toda alerta crítica bloquea el despliegue hasta
   aplicar y validar su corrección.
+- **Control permanente:** GitHub ejecuta auditoría de dependencias de
+  producción, lint, tipos, pruebas y compilación en cada cambio de `main` y en
+  cada propuesta de cambio. Dependabot revisa semanalmente nuevas versiones y
+  abre propuestas revisables; no publica actualizaciones por sí solo. Queda
+  pendiente activar la protección de `main` para impedir la integración de una
+  propuesta mientras estos controles estén fallando.
 
 ### APP-143 - Promoción controlada del entorno con historial real
 
