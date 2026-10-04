@@ -1,5 +1,17 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-147 - Conciliación visual de transferencias broker-billetera
+
+- **Fecha:** 2026-10-04. Ajuste solicitado tras observar una diferencia broker
+  pendiente en Producción.
+- **Jerarquía:** el aviso conserva dirección e importe detectados, pero presenta
+  en filas legibles la billetera relacionada, fecha, importe, comisión y
+  observación. Ninguno de estos cambios modifica el asiento ni su cálculo.
+- **Texto:** se elimina la explicación redundante sobre el origen del importe.
+  El encabezado ya informa que es una transferencia pendiente, su dirección y
+  el monto detectado; el usuario sólo completa la evidencia necesaria para
+  conciliarla.
+
 ### APP-146 - Corte inicial y preservación selectiva de historiales
 
 - **Fecha:** 2026-10-04. Decisión de Mauricio para el inicio de alumnos.

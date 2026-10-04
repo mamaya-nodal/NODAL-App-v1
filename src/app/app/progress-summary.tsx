@@ -560,22 +560,34 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           </summary>
           {hasBrokerTransferToReconcile && (
             <div className="broker-transfer-reconciliation" role="status">
-              <div>
-                <strong>Movimiento de broker pendiente</strong>
-                <span>
-                  Transferencia {brokerDifferenceInCents > 0 ? "billetera → broker" : "broker → billetera"} por {money(Math.abs(brokerDifferenceInCents))}.
-                </span>
-                <small>El importe surge del cambio detectado por Ninja. Elegí la billetera relacionada e informá el fee, si lo hubo.</small>
+              <div className="broker-transfer-heading">
+                <strong>Transferencia pendiente</strong>
+                <span>{brokerDifferenceInCents > 0 ? "Billetera → broker" : "Broker → billetera"} · {money(Math.abs(brokerDifferenceInCents))}</span>
               </div>
               <form className="summary-form broker-transfer-form" onSubmit={reconcileBrokerTransfer}>
-                <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required>
-                  <option disabled value="">Billetera relacionada</option>
-                  {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
-                </select>
-                <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
-                <input aria-label="Importe detectado" disabled value={money(Math.abs(brokerDifferenceInCents))} />
-                <input inputMode="decimal" min="0" name="fee" placeholder="Fee USD (opcional)" />
-                <input name="observation" placeholder="Observación (opcional)" />
+                <label>
+                  <span>Billetera relacionada</span>
+                  <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required>
+                    <option disabled value="">Seleccionar billetera</option>
+                    {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Fecha</span>
+                  <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
+                </label>
+                <label>
+                  <span>Importe detectado</span>
+                  <input disabled value={money(Math.abs(brokerDifferenceInCents))} />
+                </label>
+                <label>
+                  <span>Comisión (opcional)</span>
+                  <input inputMode="decimal" min="0" name="fee" placeholder="US$ 0,00" />
+                </label>
+                <label className="broker-transfer-observation">
+                  <span>Observación (opcional)</span>
+                  <input name="observation" placeholder="Agregar una nota" />
+                </label>
                 <button disabled={saving || wallets.length === 0}>Conciliar movimiento</button>
               </form>
             </div>
