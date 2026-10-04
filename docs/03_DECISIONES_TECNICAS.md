@@ -21,6 +21,12 @@
   auditable, basada en una lista explícita de identidades preservadas. Antes de
   aplicarlo se obtendrá un respaldo verificable y un informe de filas afectadas;
   la eliminación en Producción requiere confirmación final de Mauricio.
+- **Respaldo previo:** el 2026-10-04 se creó en Producción el esquema privado
+  `private_prelaunch_20261004`. Copia las 65 tablas públicas y 205.814 filas;
+  los 65 conteos de origen y copia coinciden. `anon`, `authenticated` y
+  `service_role` no tienen permiso de uso sobre el esquema. El procedimiento
+  reproducible queda en
+  `supabase/repairs/20261004_prelaunch_logical_snapshot.sql`.
 
 ### APP-145 - MFA obligatorio para administración
 
