@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { readWithRetry, reportReadFailure } from "@/lib/supabase/read-with-retry";
 import { DataReadError, requireReadData, requireSuccessfulReads } from "@/lib/supabase/require-read";
 import { ConnectionRecovery } from "./connection-recovery";
+import { PurchaseFeedback } from "./purchase-feedback";
 import { buildManualAccountEconomicHistory } from "@/modules/operations/domain/manual-account-economic-history";
 import { buildDetectedAccountEconomicHistory } from "@/modules/operations/domain/detected-account-economic-history";
 import {
@@ -1270,14 +1271,11 @@ async function renderPrivateAppPage({
 
           {singleValue(purchaseResult) &&
             purchaseMessages[singleValue(purchaseResult) ?? ""] && (
-              <p
-                className={`purchase-message ${
-                  singleValue(purchaseResult) === "created" ? "success" : "error"
-                }`}
-                role="status"
-              >
-                {purchaseMessages[singleValue(purchaseResult) ?? ""]}
-              </p>
+              <PurchaseFeedback
+                key={singleValue(purchaseResult)}
+                success={singleValue(purchaseResult) === "created"}
+                message={purchaseMessages[singleValue(purchaseResult) ?? ""]}
+              />
             )}
 
           {singleValue(resetResult) === "completed" ? (

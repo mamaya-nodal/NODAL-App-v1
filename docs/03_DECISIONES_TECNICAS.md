@@ -1660,3 +1660,9 @@ vigente sin aprobacion y evidencia suficiente.
 - **Lecturas:** las consultas necesarias para presentar datos financieros deben completarse correctamente. Una consulta fallida o sin respuesta exige reintentar y no se convierte en cero ni en historial vacío. Un cero o una colección vacía recibidos correctamente continúan siendo válidos.
 - **Fondos:** se aclara APP-140: el tránsito obligatorio por billeteras se refiere al broker, no a compras directas de cuentas prop.
 
+### APP-142 - Tarjetas destacadas y confirmación transitoria
+
+- **Fecha:** 2026-10-03. Solicitud de Mauricio.
+- **Estética:** Inicio es la referencia de degradado, Arial, peso, tamaño y color del importe para Saldo broker y Facturación. Se conservan las distribuciones compactas de cada vista y ambos temas.
+- **Registro de cuentas:** la confirmación de compra desaparece a los cinco segundos y elimina sólo `purchase_result=created` de la URL, conservando navegación y demás parámetros. Los errores no desaparecen automáticamente. No cambia el registro económico.
+

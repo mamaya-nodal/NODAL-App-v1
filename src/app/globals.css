@@ -6183,6 +6183,14 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   .connector-recovery-panel { right: auto; left: 0; }
 }
 
+/* Highlight cards share Inicio's palette and typography across views. */
+:root {
+  --financial-highlight-background: linear-gradient(128deg, #d4ff60 0%, #93ff3b 53%, #4aa71c 100%);
+}
+html[data-theme="day"] {
+  --financial-highlight-background: linear-gradient(128deg, #e6fac9 0%, #bff878 52%, #78d94f 100%);
+}
+
 /* Inicio financiero: jerarquía validada en el mockup de contenido. */
 .home-overview-panel {
   --home-label-size: 12px;
@@ -6238,7 +6246,7 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   overflow: hidden;
   padding: 26px 30px;
   color: #0b160c;
-  background: linear-gradient(128deg, #d4ff60 0%, #93ff3b 53%, #4aa71c 100%);
+  background: var(--financial-highlight-background);
 }
 
 .home-net-result::before,
@@ -6408,7 +6416,7 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
 .home-performance-grid i.negative { color: #ff7d72; background: rgb(255 80 70 / 10%); }
 
 html[data-theme="day"] .home-net-result {
-  background: linear-gradient(128deg, #e6fac9 0%, #bff878 52%, #78d94f 100%);
+  background: var(--financial-highlight-background);
 }
 html[data-theme="day"] .home-net-result,
 html[data-theme="day"] .home-financial-metric,
@@ -8664,6 +8672,41 @@ html[data-theme="day"] .nodal-workspace .real-telemetry-overview {
 .wallet-connection-card span,
 .wallet-connection-card small { color: var(--app-subtle); font-size: 9px; }
 .wallet-connection-card form { display: flex; align-items: center; gap: 7px; }
+/* Compact variants retain Inicio's financial highlight identity, not its height. */
+html .nodal-workspace :is(.broker-live-summary, .demo-accounting-primary),
+html[data-theme="day"] .nodal-workspace :is(.broker-live-summary, .demo-accounting-primary) {
+  background: var(--financial-highlight-background);
+  border: 1px solid var(--app-border);
+  border-radius: 22px;
+  color: #0b160c;
+  font-family: Arial, Helvetica, sans-serif;
+  box-shadow: 0 10px 30px rgb(31 69 41 / 5%), inset 0 1px 0 rgb(255 255 255 / 70%);
+}
+html .nodal-workspace :is(.broker-live-summary, .demo-accounting-primary) > strong {
+  color: #0b160c !important;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(44px, 5vw, 56px) !important;
+  font-weight: 700;
+  letter-spacing: -2.6px !important;
+  line-height: .95;
+}
+html .nodal-workspace .broker-live-heading > span,
+html .nodal-workspace .demo-accounting-primary > span {
+  color: #345220 !important;
+  font-size: 12px;
+  font-weight: 700;
+}
+html .nodal-workspace .broker-live-meta :is(span, b),
+html .nodal-workspace .demo-accounting-primary > small {
+  color: #285523 !important;
+  font-size: 11px;
+}
+@media (max-width: 760px) {
+  html .nodal-workspace :is(.broker-live-summary, .demo-accounting-primary) > strong {
+    font-size: 43px !important;
+    letter-spacing: -2.7px !important;
+  }
+}
 .wallet-connection-card button,
 .wallet-observation-list button { min-height: 32px; padding: 0 11px; border: 1px solid var(--action-green-border); border-radius: 8px; color: var(--action-green-color); background: var(--action-green-background); box-shadow: var(--action-green-shadow); font: inherit; font-size: 9px; font-weight: 800; }
 @media (max-width: 760px) {
