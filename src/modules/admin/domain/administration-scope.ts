@@ -9,6 +9,17 @@ export type AdministrationScopeRow = Readonly<{
   scope: string;
 }>;
 
+export function visibleAdministrationScope(
+  accessRole: string | null | undefined,
+  protectedScope: AdministrationScope,
+): AdministrationScope {
+  // La entrada al panel debe ser visible para un administrador activo aunque
+  // su sesión todavía sea AAL1. La ruta administrativa exige AAL2 y deriva al
+  // desafío MFA antes de entregar cualquier dato o acción protegida.
+  if (accessRole === "admin") return { kind: "master" };
+  return protectedScope;
+}
+
 export function parseAdministrationScope(
   row: AdministrationScopeRow | null | undefined,
 ): AdministrationScope {

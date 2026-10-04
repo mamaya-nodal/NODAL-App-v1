@@ -1531,12 +1531,15 @@ vigente sin aprobacion y evidencia suficiente.
 - **Alcance:** el acceso principal de Mauricio Amaya conserva su app, sus
   cuentas y su contabilidad personal, y suma el alcance `master` en el servidor.
   No se crea una segunda app ni se trasladan datos entre usuarios.
-- **Interfaz:** la navegación lateral y móvil muestran la orejeta
-  `Admin Master` únicamente cuando `get_my_administration_scope` devuelve
-  `master`. La pantalla de conexión también conserva ese acceso.
+- **Interfaz:** la navegación lateral, móvil y la pantalla de conexión muestran
+  `Admin Master` a todo usuario activo cuyo rol persistido sea `admin`, incluso
+  si la sesión todavía está en `aal1`. Al ingresar, la ruta deriva al desafío
+  MFA y sólo después habilita el panel protegido. Los administradores de mesa
+  continúan resolviendo su alcance mediante `get_my_administration_scope`.
 - **Seguridad:** la visibilidad no concede permisos por sí sola. `/app/admin`,
   sus consultas y sus acciones continúan exigiendo usuario activo con rol
-  `admin` en el servidor. El cambio de rol queda registrado en `audit_events`.
+  `admin` y una sesión `aal2` en el servidor. El cambio de rol queda registrado
+  en `audit_events`.
 
 ### APP-127 - Calendario contable NODAL y rectificación de períodos cerrados
 

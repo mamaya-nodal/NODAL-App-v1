@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { parseAdministrationScope } from "./administration-scope";
+import {
+  parseAdministrationScope,
+  visibleAdministrationScope,
+} from "./administration-scope";
 
 describe("administration scope", () => {
   it("keeps Master administration separate from desk administration", () => {
@@ -26,6 +29,22 @@ describe("administration scope", () => {
       .toEqual({ kind: "none" });
     expect(parseAdministrationScope({ desk_id: null, desk_name: null, scope: "other" }))
       .toEqual({ kind: "none" });
+  });
+
+  it("shows the Master entry before MFA without granting protected access", () => {
+    expect(visibleAdministrationScope("admin", { kind: "none" }))
+      .toEqual({ kind: "master" });
+    expect(visibleAdministrationScope("student", { kind: "none" }))
+      .toEqual({ kind: "none" });
+  });
+
+  it("keeps desk administration for a student manager", () => {
+    const desk = {
+      deskId: "1660185d-9f28-4bf0-b931-b8f25eef5580",
+      deskName: "Mesa Carlos",
+      kind: "desk" as const,
+    };
+    expect(visibleAdministrationScope("student", desk)).toEqual(desk);
   });
 });
 

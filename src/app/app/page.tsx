@@ -20,6 +20,7 @@ import {
   type ManagedIdentity,
 } from "@/modules/identities/domain/identity-summary";
 import { decideAccess } from "@/modules/access/domain/access-decision";
+import { visibleAdministrationScope } from "@/modules/admin/domain/administration-scope";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
@@ -303,7 +304,10 @@ async function renderPrivateAppPage({
   }
 
   const connectorOnline = Boolean(ninjaConnector?.isOnline && ninjaConnector.status === "active");
-  const administrationScope = await administrationScopePromise;
+  const administrationScope = visibleAdministrationScope(
+    nodalUser?.access_role,
+    await administrationScopePromise,
+  );
   const { purchase_result: purchaseResult, reset_result: resetResult, connector_result: connectorResult, transition_result: transitionResult } = await searchParamsPromise;
 
   if (allowed && (!ninjaConnector || ninjaConnector.status !== "active")) {
