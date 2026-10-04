@@ -1,5 +1,30 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-143 - Promoción controlada del entorno con historial real
+
+- **Fecha:** 2026-10-04. Decisión operativa para el inicio de la migración de
+  alumnos.
+- **Contexto:** el único proyecto Supabase disponible ya conserva los
+  historiales reales de Mauricio, Alfred y Sebastián. Crear una base nueva para
+  el lunes habría exigido una migración de datos y conectores todavía no
+  validada, con riesgo de perder continuidad.
+- **Resolución:** se promueve en el lugar el stack existente y se conserva su
+  base. La aplicación productiva queda publicada en
+  `https://app.nodaltrading.com`; el dominio anterior permanece disponible por
+  compatibilidad transitoria con conectores instalados. No se reinician ni se
+  reescriben historiales.
+- **Configuración:** Vercel identifica el despliegue como `production`, la URL
+  base es `https://app.nodaltrading.com` y Supabase autoriza el retorno OAuth a
+  `https://app.nodaltrading.com/**`. El endpoint de salud y el inicio de sesión
+  se verifican desde el dominio definitivo.
+- **Excepción temporal:** esta promoción reemplaza, para el lanzamiento
+  inicial, la exigencia previa de crear proyectos nuevos e independientes de
+  Supabase y Vercel. La separación de Desarrollo/Preview deberá reconstruirse
+  después del lanzamiento sin mover ni modificar la base productiva.
+- **Pendiente:** las vistas Preview comparten temporalmente la variable pública
+  de entorno productivo; no deben utilizarse para ensayos destructivos ni con
+  datos ficticios hasta recuperar un ambiente de desarrollo separado.
+
 ### APP-138 - Asignación informativa y retiro seguro de billeteras
 
 - **Fecha:** 2026-10-03. Decisión de Producto y Contabilidad implementada.
