@@ -1,5 +1,29 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-145 - MFA obligatorio para administración
+
+- **Fecha:** 2026-10-04. Refuerzo previo al ingreso de alumnos.
+- **Alcance:** los alumnos mantienen su acceso habitual. El rol Admin Master
+  requiere una sesión Supabase `aal2`, obtenida con un código TOTP de una app
+  autenticadora, antes de leer datos globales o ejecutar acciones
+  administrativas.
+- **Defensa en profundidad:** la exigencia se aplica en la pantalla, las rutas
+  y acciones del servidor y `is_current_user_admin()` en PostgreSQL. Conocer una
+  URL o invocar directamente una función no evita el segundo factor.
+- **Enrolamiento:** el primer acceso administrativo muestra un QR y verifica el
+  primer código. Los accesos siguientes solicitan el código temporal. El secreto
+  no se registra en la base de la aplicación ni en los logs.
+- **Recuperación:** la pérdida del autenticador requiere retirar el factor desde
+  la administración segura de Supabase y volver a enrolarlo. Esta acción debe
+  quedar reservada al propietario de la infraestructura.
+- **Lectura personal:** una sesión administrativa `aal1` puede seguir viendo la
+  información personal del titular, pero no recibe el agregado maestro hasta
+  completar MFA.
+- **Activación progresiva:** primero se publica el enrolamiento y el control de
+  servidor. La barrera equivalente en PostgreSQL se activa después de que el
+  propietario complete su primer enrolamiento, para evitar un bloqueo
+  administrativo accidental.
+
 ### APP-144 - Actualizaciones críticas antes del ingreso de alumnos
 
 - **Fecha:** 2026-10-04. Corrección preventiva de seguridad.

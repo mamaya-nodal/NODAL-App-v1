@@ -807,3 +807,15 @@
   .authContent h1 { font-size: 2.35rem; }
   .profileCard { padding: 34px 24px; }
 }
+
+.mfaContent { display: grid; gap: 20px; margin-top: 24px; }
+.mfaEnrollment { display: grid; justify-items: center; gap: 14px; }
+.mfaEnrollment > p,
+.mfaStatus { margin: 0; color: #aab7ad; font-size: 0.8rem; line-height: 1.55; }
+.mfaQr { width: 190px; height: 190px; padding: 10px; border-radius: 16px; background: #fff; }
+.mfaSecret { width: 100%; color: #91a096; font-size: 0.74rem; text-align: left; }
+.mfaSecret summary { cursor: pointer; }
+.mfaSecret p { margin: 10px 0 6px; }
+.mfaSecret code { display: block; padding: 10px; overflow-wrap: anywhere; border-radius: 9px; color: #d9ffd0; background: rgba(0, 0, 0, 0.3); }
+.mfaSecondary { margin-top: 20px; border: 0; color: #829086; background: transparent; font: inherit; font-size: 0.75rem; cursor: pointer; }
+.mfaSecondary:hover { color: #b8c5bb; }

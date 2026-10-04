@@ -37,7 +37,11 @@ function privilegedClient() {
   });
 }
 
-export async function loadPersonalDeskDashboard(selectedMonth: string, verifiedUserId?: string) {
+export async function loadPersonalDeskDashboard(
+  selectedMonth: string,
+  verifiedUserId?: string,
+  allowMaster = false,
+) {
   let userId = verifiedUserId;
   if (!userId) {
     const session = await createClient();
@@ -97,7 +101,7 @@ export async function loadPersonalDeskDashboard(selectedMonth: string, verifiedU
           gross: summary?.realizedGainInCents ?? 0,
           id: profile.id,
           legacyCommission: summary?.commissionInCents ?? 0,
-          master: profile.access_role === "admin",
+          master: profile.access_role === "admin" && allowMaster,
           name: profile.display_name || profile.email,
         };
       });

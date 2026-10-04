@@ -323,7 +323,11 @@ async function renderPrivateAppPage({
   );
   const currentPeriod = selection?.period;
   const personalDashboardPromise = currentPeriod
-    ? loadPersonalDeskDashboard(currentPeriod.periodMonth, userId)
+    ? loadPersonalDeskDashboard(
+        currentPeriod.periodMonth,
+        userId,
+        nodalUser?.access_role === "admin" && claimsData?.claims.aal === "aal2",
+      )
     : Promise.resolve(null);
   const accountingPeriodSummariesPromise = currentPeriod && selection
     ? loadPeriodSummaries(

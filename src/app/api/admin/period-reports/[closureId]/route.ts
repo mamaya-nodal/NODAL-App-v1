@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createServiceClient } from "@/lib/supabase/service";
-import { requireNodalAdmin } from "@/modules/admin/server/admin-access";
+import { inspectNodalAdminAccess } from "@/modules/admin/server/admin-access";
 
 export const runtime = "nodejs";
 
@@ -9,7 +9,10 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ closureId: string }> },
 ) {
-  await requireNodalAdmin();
+  const access = await inspectNodalAdminAccess();
+  if (access.status === "missing_session") return NextResponse.json({ error: "Sesión vencida." }, { status: 401 });
+  if (access.status === "mfa_required") return NextResponse.json({ error: "MFA_REQUIRED" }, { status: 403 });
+  if (access.status !== "allowed") return NextResponse.json({ error: "Sin autorización." }, { status: 403 });
   const { closureId } = await context.params;
   const db = createServiceClient();
   const { data: report, error } = await db
