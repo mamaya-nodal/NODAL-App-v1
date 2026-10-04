@@ -1665,4 +1665,5 @@ vigente sin aprobacion y evidencia suficiente.
 - **Fecha:** 2026-10-03. Solicitud de Mauricio.
 - **Estética:** Inicio es la referencia de degradado, Arial, peso, tamaño y color del importe para Saldo broker y Facturación. Se conservan las distribuciones compactas de cada vista y ambos temas.
 - **Registro de cuentas:** la confirmación de compra desaparece a los cinco segundos y elimina sólo `purchase_result=created` de la URL, conservando navegación y demás parámetros. Los errores no desaparecen automáticamente. No cambia el registro económico.
+- **Estado del conector:** `En vivo` aparece sólo junto al saldo broker de Operaciones, donde informa la frescura del dato. Inicio muestra el saldo sin repetir el estado y Contabilidad diferencia saldo contable de saldo detectado.
 

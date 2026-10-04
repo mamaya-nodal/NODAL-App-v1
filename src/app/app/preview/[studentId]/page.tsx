@@ -152,8 +152,8 @@ export default async function AdminUserPreview({ params }: Props) {
 
       <section aria-label="Inicio" className="home-overview-panel" id="inicio">
         <div className="home-live-status">
-          <span className={connectorOnline ? "online" : undefined}><i aria-hidden="true" />NinjaTrader {connectorOnline ? "en vivo" : "último dato"}</span>
-          <strong>Saldo broker {money(summary.brokerBalanceInCents)}</strong>
+          <span>Saldo broker</span>
+          <strong>{money(summary.brokerBalanceInCents)}</strong>
         </div>
         <div className="home-financial-grid">
           <article className="home-net-result">

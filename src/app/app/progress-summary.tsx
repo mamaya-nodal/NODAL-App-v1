@@ -27,7 +27,6 @@ type Props = Readonly<{
   embedded?: boolean;
   economicTrace?: EconomicTraceItem[];
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
-  ninjaOnline?: boolean;
   hasPendingNinjaOperation?: boolean;
   periodLabel?: string;
   periods?: AccountingPeriodView[];
@@ -100,7 +99,7 @@ const labels = {
   wallet_to_wallet: "Transferencia entre billeteras",
 } as const;
 
-export function ProgressSummary({ accounts, economicTrace = [], embedded = false, hasPendingNinjaOperation = false, identities = [], liveBrokerBalance = null, ninjaOnline = false, payouts, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, wallets }: Props) {
+export function ProgressSummary({ accounts, economicTrace = [], embedded = false, hasPendingNinjaOperation = false, identities = [], liveBrokerBalance = null, payouts, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, wallets }: Props) {
   const router = useRouter();
   const payoutAccounts = accounts.filter((account) => account.eligibleForPayout);
   const [message, setMessage] = useState<string | null>(null);
@@ -118,7 +117,6 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   );
   const [movementKind, setMovementKind] = useState<keyof typeof labels>("external_contribution");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
-  const [liveOnline, setLiveOnline] = useState(ninjaOnline);
   const displayedPayouts = payouts ?? summary.fundingWithdrawals;
   const brokerDifferenceInCents = liveBalance && summary.brokerBalanceInCents !== null
     ? liveBalance.balanceInCents - summary.brokerBalanceInCents
@@ -147,7 +145,6 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   useEffect(() => {
     const receiveStatus = (event: Event) => {
       const detail = (event as CustomEvent<NinjaStatusEventDetail>).detail;
-      setLiveOnline(detail.online);
       setLiveBalance(detail.liveBrokerBalance);
     };
     window.addEventListener(NINJA_STATUS_EVENT, receiveStatus);
@@ -310,7 +307,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
         <article>
           <span>Saldo broker contable</span>
           <strong>{summary.brokerBalanceInCents === null ? "—" : money(summary.brokerBalanceInCents)}</strong>
-          <small>{liveBalance ? `Ninja: ${money(liveBalance.balanceInCents)} · ${liveOnline ? "En vivo" : "Último dato"}` : "Sin datos de Ninja"}</small>
+          <small>{liveBalance ? `Detectado: ${money(liveBalance.balanceInCents)}` : "Sin saldo detectado"}</small>
         </article>
         <article><span>Comisión sobre tu operativa</span><strong>{money(summary.commissionInCents)}</strong><small>{summary.commissionRateLabel}</small></article>
         <article><span>Ganancia por operativa propia</span><strong>{money(summary.traderGainInCents)}</strong></article>

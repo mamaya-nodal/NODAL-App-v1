@@ -24,7 +24,6 @@ type HomeOverviewProps = Readonly<{
   dashboard?: PersonalDashboardData;
   dailyHistory?: HomeDailyHistoryPoint[];
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
-  ninjaOnline?: boolean;
   openingSetupPreview?: boolean;
   openingSnapshot?: PeriodOpeningRecord | null;
   periodId?: string;
@@ -96,11 +95,10 @@ function EarningsItem({ label, valueInCents }: Readonly<{ label: string; valueIn
   return <div><span>{label}</span><strong>{formatMoney(valueInCents)}</strong></div>;
 }
 
-export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liveBrokerBalance = null, ninjaOnline = false, openingSetupPreview = false, openingSnapshot = null, performance, periodId, periodLabel, summary }: HomeOverviewProps) {
+export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liveBrokerBalance = null, openingSetupPreview = false, openingSnapshot = null, performance, periodId, periodLabel, summary }: HomeOverviewProps) {
   const [chartMetric, setChartMetric] = useState<ChartMetric>(dashboard ? "earnings" : "billing");
   const [chartScale, setChartScale] = useState<"day" | "month">("month");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
-  const [liveOnline, setLiveOnline] = useState(ninjaOnline);
   const earnings = dashboard?.earnings ?? buildPeriodEarnings({ ownOperationsInCents: summary.traderGainInCents });
   const billingInCents = dashboard?.billingInCents ?? summary.realizedGainInCents;
   const payout = payoutDashboardSummary(summary.fundingWithdrawals);
@@ -126,7 +124,6 @@ export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liv
     const receiveStatus = (event: Event) => {
       const detail = (event as CustomEvent<NinjaStatusEventDetail>).detail;
       setLiveBalance(detail.liveBrokerBalance);
-      setLiveOnline(detail.online);
     };
     window.addEventListener(NINJA_STATUS_EVENT, receiveStatus);
     return () => window.removeEventListener(NINJA_STATUS_EVENT, receiveStatus);
@@ -138,8 +135,8 @@ export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liv
       {openingSnapshot ? <OpeningSnapshotHome opening={openingSnapshot} /> : null}
       {liveBalance && (
         <div className="home-live-status">
-          <span className={liveOnline ? "online" : undefined}><i aria-hidden="true" />NinjaTrader {liveOnline ? "en vivo" : "último dato"}</span>
-          <strong>Saldo broker {formatMoney(liveBalance.balanceInCents)}</strong>
+          <span>Saldo broker</span>
+          <strong>{formatMoney(liveBalance.balanceInCents)}</strong>
         </div>
       )}
       <div className="home-financial-grid">

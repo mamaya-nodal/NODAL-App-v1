@@ -1251,7 +1251,6 @@ async function renderPrivateAppPage({
           dashboard={personalDashboard}
           dailyHistory={homeDailyHistory}
           liveBrokerBalance={liveNinjaBrokerBalance}
-          ninjaOnline={connectorOnline}
           openingSetupPreview={openingSetupEligible}
           openingSnapshot={openingSnapshot}
           performance={homePerformance}
@@ -1434,7 +1433,6 @@ async function renderPrivateAppPage({
             identities={walletIdentities}
             hasPendingNinjaOperation={hasPendingNinjaOperation}
             liveBrokerBalance={liveNinjaBrokerBalance}
-            ninjaOnline={connectorOnline}
             periodId={selection.period.id}
             periodLabel={formatPeriodLabel(selection.period.periodMonth)}
             periodOperationalStartOn={selection.period.operationalStartOn}
