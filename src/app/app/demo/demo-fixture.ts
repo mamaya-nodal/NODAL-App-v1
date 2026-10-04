@@ -3,7 +3,6 @@ import type { OperationRegisterEntry } from "@/modules/operations/domain/operati
 import { buildCapitalHistory, buildHomePerformance, type CapitalHistoryPoint, type HomePerformance } from "@/modules/summary/domain/home-dashboard";
 import { applyIndividualCommission } from "@/modules/summary/domain/individual-commission";
 import {
-  bonusBps,
   calculateDeskOverview,
   ROOT_DESK,
   type Desk,
@@ -372,7 +371,7 @@ function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childMe
   ];
   const effectiveMonth = "2026-01-01";
   const userTerms: UserTerms[] = people.map((person) => ({
-    bonus_enabled: person.id === demoUserId,
+    bonus_enabled: false,
     commission_bps: 5_000,
     desk_id: person.id === demoUserId
       ? ROOT_DESK
@@ -400,11 +399,9 @@ function demoDeskEconomy(period: DemoPeriod, memberGrossInCents: number, childMe
       deskAdministrationInCents: user.mesaIncome,
       level: user.terms?.level ?? null,
       ownOperationsInCents: user.ownIncome,
-      referredDesksInCents: user.bonus,
     }),
     managedBillingInCents: managedDesk?.gross ?? 0,
     managedUsers: managedDesk?.members.length ?? 0,
-    referredDesks: managedDesk?.children.length ?? 0,
   };
 }
 
@@ -416,7 +413,6 @@ export const demoHomeDashboard: PersonalDashboardData = {
   capabilities: {
     identities: { active: identityPayouts.length, capacity: 20, payoutTotalInCents: identityPayouts.reduce((total, amount) => total + amount, 0) },
     managedDesk: { billingInCents: augustDeskEconomy.managedBillingInCents, capacity: 10, users: augustDeskEconomy.managedUsers },
-    referredDesks: { bonusBps: bonusBps(augustDeskEconomy.referredDesks), capacity: 10, desks: augustDeskEconomy.referredDesks },
   },
   billingInCents: augustDemo.summary.realizedGainInCents,
   earnings: augustDeskEconomy.earnings,

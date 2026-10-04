@@ -7,6 +7,7 @@ begin
  if owner is null then raise exception 'Test needs existing master'; end if;
  perform set_config('request.jwt.claim.sub',owner::text,true);
  perform public.admin_save_user_terms(owner,m,root,2,'active',3000,true);
+ if (select bonus_enabled from public.nodal_user_terms where user_id=owner and effective_month=m) then raise exception 'Deprecated bonus remained active'; end if;
  target:=public.admin_save_desk(null,'TEST ROLLBACK',root,owner,m,3000,true);
  if (select desk_id from public.nodal_user_terms where user_id=owner and effective_month=m)<>root then raise exception 'Manager moved automatically'; end if;
  begin

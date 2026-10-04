@@ -6,18 +6,16 @@ import {
 } from "./personal-dashboard";
 
 describe("personal dashboard", () => {
-  it("adds only the income streams enabled for the user", () => {
+  it("adds own operations and desk administration", () => {
     expect(buildPeriodEarnings({
       deskAdministrationInCents: 1_050_000,
       level: 2,
       ownOperationsInCents: 600_000,
-      referredDesksInCents: 157_500,
     })).toEqual({
       deskAdministrationInCents: 1_050_000,
       level: 2,
       ownOperationsInCents: 600_000,
-      referredDesksInCents: 157_500,
-      totalInCents: 1_807_500,
+      totalInCents: 1_650_000,
     });
     expect(buildPeriodEarnings({ ownOperationsInCents: 525_000 }).totalInCents).toBe(525_000);
   });

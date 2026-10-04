@@ -34,7 +34,7 @@ export async function saveUserTerms(
     p_level: Number(value(form, "level")),
     p_state: value(form, "state"),
     p_commission: bps(form, "commission"),
-    p_bonus: form.get("bonus") === "on",
+    p_bonus: false,
   });
   if (error)
     return {

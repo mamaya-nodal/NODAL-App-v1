@@ -118,7 +118,7 @@ export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liv
     : "Capital histórico acumulado";
   const chartTitle = chartScale === "day" ? "Resultado por día" : monthChartTitle;
   const capabilities = dashboard?.capabilities;
-  const hasCapabilities = Boolean(capabilities?.managedDesk || capabilities?.referredDesks || capabilities?.identities);
+  const hasCapabilities = Boolean(capabilities?.managedDesk || capabilities?.identities);
 
   useEffect(() => {
     const receiveStatus = (event: Event) => {
@@ -155,9 +155,6 @@ export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liv
               {earnings.deskAdministrationInCents !== null && (
                 <EarningsItem label="Administración de mesa" valueInCents={earnings.deskAdministrationInCents} />
               )}
-              {earnings.referredDesksInCents !== null && (
-                <EarningsItem label="Mesas referidas" valueInCents={earnings.referredDesksInCents} />
-              )}
             </div>
           </> : <>
             <span>Resultado neto</span>
@@ -189,14 +186,6 @@ export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liv
               <strong>{capabilities.managedDesk.users} / {capabilities.managedDesk.capacity}</strong>
               <small>Facturación de la mesa</small>
               <b>{formatMoney(capabilities.managedDesk.billingInCents)}</b>
-            </article>
-          )}
-          {capabilities?.referredDesks && (
-            <article>
-              <span>Mesas referidas</span>
-              <strong>{capabilities.referredDesks.desks} / {capabilities.referredDesks.capacity}</strong>
-              <small>Bonus vigente</small>
-              <b>{capabilities.referredDesks.bonusBps / 100}%</b>
             </article>
           )}
           {capabilities?.identities && (

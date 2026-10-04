@@ -239,7 +239,6 @@ export function DeskPanel({ data }: { data: DeskPanelData }) {
                   label="Participación de mesa"
                   value={money(manager.mesaIncome)}
                 />
-                <Metric label="Bonus de mesas" value={money(manager.bonus)} />
               </div>
             </section>
           )}
@@ -447,14 +446,6 @@ function UserEditor({
             />
           </label>
           <MonthInput month={data.currentMonth} />
-          <label className="desk-check">
-            <input
-              type="checkbox"
-              name="bonus"
-              defaultChecked={p.terms?.bonus_enabled ?? true}
-            />
-            Percibe bonus de mesas
-          </label>
         </div>
         <p>
           Los cambios se aplican al período actual. El historial anterior se
@@ -482,9 +473,7 @@ function UserEditor({
           records.map((h) => (
             <article key={h.id}>
               <strong>
-                {h.action === "bonus_threshold"
-                  ? "Bonus de mesas"
-                  : h.action === "user_terms"
+                {h.action === "user_terms"
                     ? "Cambio de condiciones"
                     : h.action === "manager_replaced"
                       ? "Reemplazo de administrador"
@@ -527,12 +516,10 @@ const fieldLabel = (key: string) =>
     level: "Nivel",
     state: "Estado",
     commission_bps: "Comisión usuario",
-    bonus_enabled: "Bonus",
     manager_id: "Administrador",
     nodal_bps: "Comisión mesa",
     active: "Activa",
     direct_desks: "Mesas directas",
-    bonus_bps: "Porcentaje de bonus",
   })[key] ?? key;
 function displayHistory(
   value: unknown,

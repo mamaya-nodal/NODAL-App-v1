@@ -142,7 +142,6 @@ export function MyDeskPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
             <Metric label="Total" value={money(manager.totalIncome)} />
             <Metric label="Operaciones propias" value={money(manager.ownIncome)} />
             <Metric label="Administración de mesa" value={money(manager.mesaIncome)} />
-            <Metric label="Mesas referidas" value={money(manager.bonus)} />
           </div>
         </section>
       )}

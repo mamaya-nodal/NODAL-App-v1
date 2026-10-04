@@ -4,7 +4,6 @@ export type PeriodEarnings = Readonly<{
   deskAdministrationInCents: number | null;
   level: number | null;
   ownOperationsInCents: number;
-  referredDesksInCents: number | null;
   totalInCents: number;
 }>;
 
@@ -25,11 +24,6 @@ export type PersonalDashboardCapabilities = Readonly<{
     capacity: number;
     users: number;
   }>;
-  referredDesks?: Readonly<{
-    bonusBps: number;
-    capacity: number;
-    desks: number;
-  }>;
 }>;
 
 export type PersonalDashboardData = Readonly<{
@@ -47,22 +41,17 @@ export function buildPeriodEarnings(input: Readonly<{
   deskAdministrationInCents?: number | null;
   level?: number | null;
   ownOperationsInCents: number;
-  referredDesksInCents?: number | null;
 }>): PeriodEarnings {
   const deskAdministrationInCents = input.deskAdministrationInCents ?? null;
-  const referredDesksInCents = input.referredDesksInCents ?? null;
   assertMoney(input.ownOperationsInCents);
   if (deskAdministrationInCents !== null) assertMoney(deskAdministrationInCents);
-  if (referredDesksInCents !== null) assertMoney(referredDesksInCents);
   return {
     deskAdministrationInCents,
     level: input.level ?? null,
     ownOperationsInCents: input.ownOperationsInCents,
-    referredDesksInCents,
     totalInCents:
       input.ownOperationsInCents +
-      (deskAdministrationInCents ?? 0) +
-      (referredDesksInCents ?? 0),
+      (deskAdministrationInCents ?? 0),
   };
 }
 

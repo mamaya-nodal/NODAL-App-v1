@@ -50,7 +50,7 @@ function snapshot(month: string, grossByUser: Record<string, number>) {
 }
 
 describe("personal dashboard with desk economics", () => {
-  it("combines own income, desk administration and direct referral bonus", () => {
+  it("combines own income and desk administration without an automatic bonus", () => {
     const dashboard = buildPersonalDeskDashboard({
       currentMonth: "2026-08-01",
       snapshots: [
@@ -66,15 +66,13 @@ describe("personal dashboard with desk economics", () => {
       deskAdministrationInCents: 700_000,
       level: 2,
       ownOperationsInCents: 700_000,
-      referredDesksInCents: 26_250,
-      totalInCents: 1_426_250,
+      totalInCents: 1_400_000,
     });
     expect(dashboard?.capabilities).toEqual({
       managedDesk: { billingInCents: 2_000_000, capacity: 10, users: 2 },
-      referredDesks: { bonusBps: 1_500, capacity: 10, desks: 1 },
     });
     expect(dashboard?.history).toHaveLength(2);
-    expect(dashboard?.history.at(-1)?.earningsInCents).toBe(1_426_250);
+    expect(dashboard?.history.at(-1)?.earningsInCents).toBe(1_400_000);
   });
 
   it("hides desk concepts from a user who does not receive them", () => {
@@ -86,6 +84,5 @@ describe("personal dashboard with desk economics", () => {
 
     expect(dashboard?.capabilities).toBeUndefined();
     expect(dashboard?.earnings.deskAdministrationInCents).toBeNull();
-    expect(dashboard?.earnings.referredDesksInCents).toBeNull();
   });
 });

@@ -11,6 +11,11 @@
 - **Altas:** el administrador de mesa puede invitar a una persona, pero aceptar
   la invitación no activa el acceso por sí solo. Toda alta requiere aprobación
   de Admin Master.
+- **Usuarios e identidades:** la aprobación de Admin Master corresponde
+  exclusivamente a usuarios NODAL, es decir, personas con su propia cuenta, app
+  y contabilidad. Las identidades no siguen ese circuito: cada usuario crea,
+  administra y da de baja sus propias identidades desde su panel, porque forman
+  parte de su organización contable personal.
 - **Gestión delegada:** dentro de su rama autorizada, el administrador de mesa
   gestiona los porcentajes comerciales, roles, bajas lógicas y movimientos de
   usuarios o mesas previstos en el mockup. Esta decisión sustituye el límite de
@@ -21,12 +26,23 @@
 - **Bajas e identidad técnica:** una baja desactiva el acceso y conserva todo el
   historial. Un traslado cambia la pertenencia y el código visible de mesa,
   pero nunca el identificador técnico inmutable del usuario ni sus registros.
+- **Administradores con dependencias:** antes de bajar o degradar a un
+  administrador, sus usuarios y mesas dependientes deben reasignarse o darse de
+  baja de forma explícita. No se permiten dependencias huérfanas.
 - **Asignaciones:** un administrador subordinado puede recibir múltiples
   integrantes; la selección no se limita a una sola persona.
 - **Acuerdo de operativa propia:** el porcentaje personal del administrador se
-  aplica al resultado positivo de sus operaciones propias, incluidas sus
-  identidades. Ejemplo confirmado: con USD 10.000 y acuerdo NODAL del 40%, la
+  aplica al resultado bruto de sus cuentas cerradas, incluidas sus identidades,
+  sin compensaciones, reinterpretaciones ni bases alternativas. Ejemplo
+  confirmado: con USD 10.000 y acuerdo NODAL del 40%, la
   comisión NODAL es USD 4.000.
+- **Ventanas de edición:** los porcentajes pueden definirse al crear el usuario
+  NODAL y durante las 48 horas posteriores al cierre del período anterior. La
+  apertura automática del período siguiente no cambia. Cumplidas las 48 horas,
+  los porcentajes quedan en modo de solo lectura para administradores de mesa
+  durante el resto del período. Admin Master conserva la facultad excepcional
+  de modificarlos dentro del período; su interfaz se definirá con el futuro
+  mockup de Admin Master. Los cierres anteriores permanecen inmutables.
 - **Cierre único:** operativa propia y administración de estructura no son
   escenarios alternativos. En cada cierre de período se calculan juntas las
   comisiones de todas las personas y mesas alcanzadas. El resultado neto de un
@@ -53,7 +69,13 @@
   de Juana, recibe USD 25 de esos USD 50 y Juana conserva USD 25 antes de aplicar
   los acuerdos NODAL que correspondan a cada administrador.
 - **Ranking:** se ordena por facturación del período anterior.
-- **Estado:** definición de producto registrada; implementación pendiente.
+- **Bonus anterior:** se elimina la escala automática de 15/30/40/50% por
+  cantidad de mesas directas. No participa en cálculos nuevos ni se ofrece en
+  la interfaz. Sus columnas históricas se conservan únicamente para no
+  reescribir cierres previos.
+- **Estado:** definición de producto registrada. La eliminación del bonus
+  automático quedó implementada; el nuevo panel y la cascada permanecen
+  pendientes de implementación.
 
 ### APP-147 - Conciliación visual de transferencias broker-billetera
 
@@ -638,10 +660,17 @@ vigente sin aprobacion y evidencia suficiente.
 - **Decisión de producto:** Confirmada por Mauricio en este hilo. El administrador de mesa siempre conserva su condición de operador y su mesa de pertenencia hasta un traslado explícito. Administrar una mesa no concede el rol global `admin`.
 - **Relaciones separadas:** Pertenencia operativa versionada por usuario, administración versionada de mesa y origen permanente de la mesa. Trasladar a una persona no mueve su workspace, cuentas ni registros históricos.
 - **Comisiones:** Acuerdo individual y acuerdo de mesa independientes, establecidos por Master. El acuerdo individual reemplaza los tramos/topes históricos solamente desde su vigencia; los períodos anteriores y usuarios sin acuerdo explícito conservan el cálculo anterior. Se comparte el cálculo entre admin, ficha y resumen operativo. Esta decisión sustituye las propuestas anteriores incompatibles sobre exención del administrador o comisión uniforme; no modifica las fuentes ni planillas de producción.
-- **Bonus:** Solo mesas directas activas. 1–2: 15%; 3–4: 30%; 5–9: 40%; 10 o más: 50%. Sustituye el porcentaje anterior, no se acumula, y se descuenta de la participación NODAL de cada mesa hija. La ganancia bruta global no suma distribuciones internas nuevamente.
-- **Ingreso total:** Participación de operativa propia + participación de mesa + bonus. Es ingreso calculado, no certificación de cobro. Se presenta en la tarjeta de la persona que administra la mesa.
+- **Bonus (regla histórica sustituida):** la escala automática por cantidad de
+  mesas directas dejó de regir por APP-148. Se conservan sus datos únicamente
+  para no reescribir períodos cerrados.
+- **Ingreso total vigente:** participación de operativa propia más participación
+  de mesa. Es ingreso calculado, no certificación de cobro.
 - **Gestión:** Guardar aplica al período calendario actual en Buenos Aires; no hay edición de períodos anteriores ni programación futura desde esta interfaz. La pantalla de períodos históricos es de consulta. No se inventa una política de cierre contable.
-- **Historial:** Registros automáticos con actor, fecha, vigencia y valores anteriores/nuevos para condiciones personales, reemplazo de administrador y cambios de escala de bonus. La interfaz carga los 500 eventos globales más recientes; la tabla conserva todos.
+- **Historial:** Registros automáticos con actor, fecha, vigencia y valores
+  anteriores/nuevos para condiciones personales y reemplazo de administrador.
+  Los eventos históricos del bonus eliminado se conservan, pero no se generan
+  nuevos. La interfaz carga los 500 eventos globales más recientes; la tabla
+  conserva todos.
 - **Interfaz:** Totales y mesa principal arriba, mesas derivadas en grilla debajo y gráfico por período. Tocar la tarjeta abre su mesa; `Ver` despliega la rama sin navegar. Árbol de altura acotada con scroll vertical e indentación adaptable. Colores heredados del tema día/noche; diálogos nativos con foco y Escape.
 - **Navegación Master:** `Usuarios` y `Conectores Ninja` dejan de ser secciones principales. La tabla y las fichas de usuario viven en `Vista general`; altas/bajas y excepciones del conector se conservarán como funciones internas hasta integrarlas de forma contextual, sin perder sus rutas ni datos durante la transición.
 - **Sin datos ficticios:** Solo se crea la mesa principal vacía. No se asignan porcentajes a usuarios existentes ni se crean Carlos/Pepito como datos reales.
@@ -798,11 +827,10 @@ vigente sin aprobacion y evidencia suficiente.
 ### APP-084 - Dashboard personal de ingresos y capacidades
 
 - **Estado:** Implementado el 2026-09-08 en la simulación para validación visual.
-- **Ganancias del período:** Reemplaza `Resultado neto`. Es la suma de la
-  participación del usuario en su operativa propia después de comisión, su
-  participación por administrar una mesa y su bonus por mesas directas
-  referidas. Los dos últimos componentes sólo se muestran cuando están
-  habilitados para esa persona. El nivel vigente aparece en la misma tarjeta.
+- **Ganancias del período:** Reemplaza `Resultado neto`. Según la regla vigente
+  de APP-148, suma la participación del usuario en su operativa propia después
+  de comisión y su participación por administrar una mesa. El nivel vigente
+  aparece en la misma tarjeta.
 - **Facturación del período:** Es la suma del resultado bruto de las cuentas
   cerradas y corresponde a `Resumen operativo!O6` en la planilla. La simulación
   lo obtiene de `realizedGainInCents`: USD 10.500 en julio y USD 12.000 en
@@ -810,22 +838,18 @@ vigente sin aprobacion y evidencia suficiente.
   aportes propios menos retiros personales.
 - **Payouts:** Presenta cantidad registrada, importe total y cantidad pendiente
   como tres datos diferenciados.
-- **Capacidades:** Mesa administrada, mesas referidas e identidades son tarjetas
-  opcionales e independientes. La simulación habilita las tres para revisar su
-  convivencia; la aplicación real deberá recibir permisos y agregados desde el
-  servidor y no inferirlos desde el rol visible.
+- **Capacidades:** Mesa administrada e identidades son tarjetas opcionales e
+  independientes. La capacidad histórica `mesas referidas`, ligada al bonus
+  eliminado, dejó de mostrarse por APP-148. La aplicación real recibe permisos
+  y agregados desde el servidor y no los infiere desde el rol visible.
 - **Histórico:** El gráfico permite alternar, sin cambiar de página, entre
   ganancias totales por período y facturación por período.
   Cada punto expone mes e importe al enfocarlo o apoyar el cursor.
-- **Escenario económico de validación:** En agosto el usuario factura USD
-  12.000 y conserva USD 6.000 tras su comisión individual del 50%. Su mesa
-  directa tiene tres usuarios que facturan USD 10.000 cada uno: generan USD
-  15.000 de comisión y el administrador recibe el 70%, USD 10.500. Existen dos
-  mesas hijas directas con tres usuarios de USD 10.000 cada una. Cada mesa hija
-  genera USD 15.000 de comisión; el 35% son USD 5.250 y el bonus del 15% paga
-  USD 787,50 por mesa, USD 1.575 en total. La ganancia total del período es USD
-  18.075. Los administradores de las mesas hijas permanecen como usuarios de la
-  mesa de origen.
+- **Escenario económico histórico:** el escenario original incluía el bonus
+  automático por mesas referidas. Quedó sustituido por la cascada definida en
+  APP-148 y no debe utilizarse para cálculos nuevos. Los administradores de las
+  mesas hijas permanecen como usuarios de su mesa de origen hasta un traslado
+  explícito.
 - **Alcance:** Sustituye para Inicio la presentación aprobada en APP-075. Las
   métricas contables originales siguen disponibles en Contabilidad y conservan
   sus reglas de conciliación.
@@ -936,13 +960,13 @@ vigente sin aprobacion y evidencia suficiente.
 
 ### APP-090 - El dashboard personal usa la economía real de mesas
 
-- **Decisión:** `Ganancias del período` se calcula con la estructura vigente del
-  período: ganancia propia luego de comisión, ingreso por administración de la
-  mesa y bonus por mesas directas referidas. Los dos últimos conceptos sólo se
-  muestran cuando corresponden al usuario.
+- **Decisión vigente:** `Ganancias del período` se calcula con la estructura
+  vigente del período: ganancia propia luego de comisión e ingreso por
+  administración de la mesa. El bonus por mesas referidas quedó eliminado por
+  APP-148.
 - **Capacidades:** La tarjeta de mesa administrada muestra usuarios y facturación
-  real de esa mesa. La tarjeta de mesas referidas muestra únicamente las mesas
-  hijas directas y el tramo de bonus vigente.
+  real de esa mesa. La antigua tarjeta de mesas referidas dejó de existir al
+  eliminarse el bonus automático.
 - **Historial:** El gráfico reconstruye facturación y ganancia total para cada
   período real disponible del usuario, aplicando los términos históricos de ese
   mes.

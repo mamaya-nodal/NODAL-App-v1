@@ -62,17 +62,6 @@ export function portion(cents: number, bps: number) {
     throw new Error("Invalid amount or percentage");
   return Math.round((cents * bps) / 10000);
 }
-export function bonusBps(count: number) {
-  return count >= 10
-    ? 5000
-    : count >= 5
-      ? 4000
-      : count >= 3
-        ? 3000
-        : count >= 1
-          ? 1500
-          : 0;
-}
 export function suggestLevel(
   current: number,
   closedPeriods: readonly { month: string; gross: number }[],
@@ -110,7 +99,6 @@ export function calculateDeskOverview(
       commission,
       ownIncome: Math.max(0, user.gross) - commission,
       mesaIncome: 0,
-      bonus: 0,
       totalIncome: 0,
     };
   });
@@ -129,7 +117,6 @@ export function calculateDeskOverview(
         generated,
         nodalShare,
         managerShare: generated - nodalShare,
-        bonusPaid: 0,
         children: desks
           .filter((c) => c.parent_id === d.id && agreements.get(c.id)?.active)
           .map((c) => c.id),
@@ -138,27 +125,13 @@ export function calculateDeskOverview(
   for (const desk of rows) {
     const manager = people.find((p) => p.id === desk.terms.manager_id);
     if (manager) manager.mesaIncome += desk.managerShare;
-    const parent = rows.find((p) => p.id === desk.parent_id);
-    const beneficiary = people.find((p) => p.id === parent?.terms.manager_id);
-    if (
-      parent?.terms.active &&
-      beneficiary &&
-      beneficiary.terms?.bonus_enabled &&
-      desk.terms.active
-    ) {
-      desk.bonusPaid = portion(
-        desk.nodalShare,
-        bonusBps(parent.children.length),
-      );
-      beneficiary.bonus += desk.bonusPaid;
-    }
   }
   for (const person of people)
-    person.totalIncome = person.ownIncome + person.mesaIncome + person.bonus;
+    person.totalIncome = person.ownIncome + person.mesaIncome;
   return {
     people,
     desks: rows,
     gross: people.reduce((s, p) => s + p.gross, 0),
-    nodalIncome: rows.reduce((s, d) => s + d.nodalShare - d.bonusPaid, 0),
+    nodalIncome: rows.reduce((s, d) => s + d.nodalShare, 0),
   };
 }
