@@ -75,6 +75,10 @@ export async function sendDeskUserInvitation(input: Readonly<{
     });
     const result = response.ok ? await response.json() as { ok?: boolean } : null;
     if (!response.ok || !result?.ok) throw new Error("Invitation automation rejected request");
+    const { error: sentError } = await supabase.rpc("mark_nodal_user_invitation_sent", {
+      target_invitation_id: invitationId,
+    });
+    if (sentError) throw sentError;
   } catch (sendError) {
     console.error("NODAL user invitation dispatch failed", sendError);
     await supabase.rpc("fail_nodal_user_invitation", { target_invitation_id: invitationId });
