@@ -10,6 +10,11 @@ describe("admin panel demo", () => {
     expect(data.preview).toBe(false);
     expect(data.overview.people).toHaveLength(7);
     expect(data.overview.desks).toHaveLength(3);
+    expect(data.overview.desks.map((desk) => desk.name)).toEqual([
+      "MESA DE MAURICIO",
+      "MESA DE SOFÍA",
+      "MESA DE DIEGO",
+    ]);
     expect(root.structureMembers).toHaveLength(6);
     expect(data.history).toHaveLength(3);
     expect(data.deskName).toBe("MESA DE MAURICIO");
