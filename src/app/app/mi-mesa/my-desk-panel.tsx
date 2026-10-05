@@ -440,7 +440,7 @@ function Ranking({ data, people }: Readonly<{ data: MyDeskPanelData; people: Per
     {ranking.length === 0 ? <p className="desk-empty">Sin integrantes para ordenar.</p> : null}</>;
 }
 
-export function MyDeskPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
+export function MyDeskPanel({ data, demoAvailable = false }: Readonly<{ data: MyDeskPanelData; demoAvailable?: boolean }>) {
   const desk = data.deskId ? data.overview.desks.find((row) => row.id === data.deskId) ?? null : null;
   const manager = data.overview.people.find((person) => person.id === data.userId);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
@@ -457,6 +457,7 @@ export function MyDeskPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
   return <div className="admin-page admin-shell desk-admin my-desk-admin">
     <header className="desk-heading my-desk-heading"><div><p className="status">PANEL ADMIN</p><h1>{data.deskName ?? "MESA DE MAURICIO"}</h1></div><span className="calculated-badge">{monthLabel(data.month)}</span></header>
     {data.preview ? <p className="desk-preview-notice" role="status"><span>Vista de comprobación · sin mesa asignada. Sólo se muestran tus propios datos.</span><Link href="/app/mi-mesa?demo=1">Abrir escenario ficticio</Link></p> : null}
+    {!data.preview && !data.demo && demoAvailable ? <p className="desk-preview-notice" role="status"><span>Comprobación de diseño disponible para tu cuenta.</span><Link href="/app/mi-mesa?demo=1">Abrir escenario ficticio</Link></p> : null}
     {data.demo ? <p className="desk-preview-notice demo" role="status"><span>Escenario ficticio · los cambios quedan sólo en esta prueba.</span><Link href="/app/mi-mesa">Volver a mis datos</Link></p> : null}
     <section className="my-desk-summary" aria-label="Resumen administrativo"><article className="my-desk-hero"><span>Ganancia del período</span><strong>{money(manager.totalIncome)}</strong><small>{money(manager.ownIncome)} propias · {money(manager.mesaIncome)} administración</small></article><article className="my-desk-summary-card"><Metric label="Ganancia histórica" value={money(historicGain)} /></article><article className="my-desk-summary-card"><Metric label="Facturación del período" value={money(structureBilling)} /></article><article className="my-desk-summary-card"><Metric label="Integrantes mesa principal" value={String(directMembers.length)} /></article><article className="my-desk-summary-card"><Metric label="Mesas dependientes" value={String(dependentDeskCount)} /></article></section>
     <section className="my-desk-structure-summary"><article className="my-desk-structure-primary"><span>Toda la estructura</span><strong>{money(structureBilling)}</strong><small>{desk?.structureMembers.length ?? 0} integrantes · {dependentDeskCount} mesas dependientes</small></article><article><Metric label="Mesa directa" value={money(directBilling)} note={`${directMembers.length} integrantes`} /></article></section>

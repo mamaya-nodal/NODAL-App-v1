@@ -2055,3 +2055,12 @@ vigente sin aprobacion y evidencia suficiente.
 - **Limpieza preproductiva:** se revocaron de forma lógica y auditada `mamaya@nodaltrading.com`, Martin Mainardi y Julián Seco. No se eliminaron perfiles, autenticaciones ni historiales. Continúan activos Mauricio Gmail, Alfred, Sebastián, Ivo y Rodolfo; las altas nuevas permanecen pendientes hasta aprobación explícita.
 - **IDs iniciales:** la nómina activa confirmada recibió los correlativos `USERND-MP-01` a `USERND-MP-05` según fecha de ingreso a la Mesa Principal. La asignación quedó registrada en el historial de gestión y no creó ni alteró acuerdos económicos.
 
+### APP-154 - Escenarios aislados de comprobación administrativa
+
+- **Fecha:** 2026-10-05. Solicitud de Mauricio para validar la adaptación del diseño antes de operar sobre datos reales.
+- **Alcance:** Panel Admin y Admin Master disponen de escenarios ficticios completos, accesibles mediante `?demo=1` únicamente para `mauriciosebastianamaya@gmail.com`.
+- **Aislamiento:** los escenarios se construyen en memoria y no crean usuarios, mesas, identidades, invitaciones, solicitudes, operaciones ni registros económicos. Los controles simulados nunca llaman acciones de servidor productivas.
+- **Panel Admin:** conserva el árbol ficticio aprobado, fichas, ranking, invitaciones y edición visual de roles, estados y porcentajes. Guardar o invitar sólo modifica el estado local de la vista.
+- **Admin Master:** presenta métricas, alertas, filtros, ranking, usuarios, IDs, conectores, identidades y pizarra jerárquica ficticios. Los enlaces que podrían abrir registros reales quedan deshabilitados dentro del escenario.
+- **Identificación visual:** ambas vistas indican de forma persistente que se trata de datos ficticios y ofrecen volver a los datos reales.
+

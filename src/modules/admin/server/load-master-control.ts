@@ -91,6 +91,7 @@ export async function loadMasterControl(
 
   return {
     ...deskData,
+    demo: false,
     connectorByUser,
     identitiesByUser,
     identifiersByUser: Object.fromEntries((identifiersResult.data ?? [])
