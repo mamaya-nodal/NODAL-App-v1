@@ -168,7 +168,12 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
   if (timingError) return { persistedBatches: 0 };
   const controlTimes = new Map((timedBatches ?? []).map((batch) => [batch.daily_control_id, batch.opened_at]));
   const expectedBalanceByPeriod = new Map<string, number | null>();
-  const loadExpectedBalance = async (periodId: string, openedAt: string) => {
+  const loadExpectedBalance = async (
+    periodId: string,
+    openedAt: string,
+    brokerAccountName: string,
+    brokerConnectionName: string,
+  ) => {
     if (expectedBalanceByPeriod.has(periodId)) return expectedBalanceByPeriod.get(periodId) ?? null;
     const [{ data: currentControl }, { data: excludedSession }] = await Promise.all([
       supabase.from("daily_controls")
@@ -178,16 +183,20 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
         .order("control_number", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase.from("ninja_operation_probe_sessions")
-        .select("closing_balance,settled_at")
-        .eq("connector_id", connectorId)
-        .not("excluded_at", "is", null)
-        .not("closing_balance", "is", null)
-        .not("settled_at", "is", null)
-        .lte("settled_at", openedAt)
-        .order("settled_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+      aggregateBrokerBalance
+        ? Promise.resolve({ data: null })
+        : supabase.from("ninja_operation_probe_sessions")
+          .select("closing_balance,settled_at")
+          .eq("connector_id", connectorId)
+          .eq("account_name", brokerAccountName)
+          .eq("connection_name", brokerConnectionName)
+          .not("excluded_at", "is", null)
+          .not("closing_balance", "is", null)
+          .not("settled_at", "is", null)
+          .lte("settled_at", openedAt)
+          .order("settled_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
     ]);
     if (excludedSession && (!currentControl || Date.parse(excludedSession.settled_at) > Date.parse(currentControl.created_at))) {
       const value = roundLikeSheets(Number(excludedSession.closing_balance) * 100);
@@ -308,7 +317,12 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
     const uniquePeriod = new Set(projectionMembers.map((member) => member.periodId));
     const projectionPeriodId = uniquePeriod.size === 1 ? projectionMembers[0]?.periodId ?? null : null;
     const expectedOpeningBalanceInCents = projectionPeriodId
-      ? await loadExpectedBalance(projectionPeriodId, batch.broker.openedAt)
+      ? await loadExpectedBalance(
+        projectionPeriodId,
+        batch.broker.openedAt,
+        batch.broker.accountName,
+        batch.broker.connectionName,
+      )
       : null;
     const brokerOpeningBalanceInCents = batch.broker.openingBalance === null ? null : roundLikeSheets(batch.broker.openingBalance * 100);
     const brokerClosingBalanceInCents = batch.broker.closingBalance === null ? null : roundLikeSheets(batch.broker.closingBalance * 100);

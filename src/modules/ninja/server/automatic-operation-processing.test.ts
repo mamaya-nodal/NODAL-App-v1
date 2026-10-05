@@ -1,11 +1,23 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-const { rows, rpc } = vi.hoisted(() => ({ rows: vi.fn(), rpc: vi.fn() }));
+const { rows, rpc, state } = vi.hoisted(() => ({
+  rows: vi.fn(),
+  rpc: vi.fn(),
+  state: { previousCommitted: true },
+}));
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc, from: (table: string) => {
   const filters: Record<string, unknown> = {};
   const query = {
     select: () => query, eq: (key: string, value: unknown) => { filters[key] = value; return query; },
-    is: () => query, in: () => query, not: () => query, order: () => query, limit: () => query,
+    is: (key: string, value: unknown) => { filters[`is:${key}`] = value; return query; },
+    in: () => query,
+    lt: (key: string, value: unknown) => { filters[`lt:${key}`] = value; return query; },
+    lte: (key: string, value: unknown) => { filters[`lte:${key}`] = value; return query; },
+    not: (key: string, operator: string, value: unknown) => {
+      filters[`not:${key}`] = { operator, value };
+      return query;
+    },
+    order: () => query, limit: () => query,
     maybeSingle: async () => rows(table, filters, true),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(rows(table, filters, false)).then(resolve),
   };
@@ -27,9 +39,18 @@ const previous = { ...current, id: 10, opening_event_id: 100, opened_at: "2026-0
 
 beforeEach(() => {
   vi.resetAllMocks();
+  state.previousCommitted = true;
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-only");
   rows.mockImplementation((table, filters, single) => {
+    if (table === "ninja_operation_probe_sessions" && single && filters["not:excluded_at"]) {
+      return {
+        data: filters.account_name === current.account_name && filters.connection_name === current.connection_name
+          ? null
+          : { closing_balance: 47_969.5, settled_at: "2026-09-28T15:25:36Z" },
+        error: null,
+      };
+    }
     const data: Record<string, unknown> = {
       ninja_connectors: null,
       ninja_operation_probe_sessions: [previous, current, prop],
@@ -39,10 +60,14 @@ beforeEach(() => {
       purchases: [{ account_id: "account", purchased_on: "2026-09-30" }],
       ninja_account_change_events: [],
       accounts: [{ id: "account", period_id: "period", company_id: "company" }],
-      periods: [{ id: "period", operational_start_on: "2026-09-07", scheduled_close_at: "2026-10-02T22:00:00Z" }],
+      periods: single
+        ? { id: "period", workspace_id: "workspace", period_month: "2026-09-01" }
+        : [],
+      daily_controls: null,
+      ninja_broker_balance_events: { balance_cents: 538_474 },
       operation_entries: [],
       funding_withdrawals: [],
-      ninja_operation_batches: single && filters.broker_session_id === 10
+      ninja_operation_batches: state.previousCommitted && single && filters.broker_session_id === 10
         ? { accounting_status: "committed", daily_control_id: "previous-control", accounting_period_id: "period" }
         : null,
     };
@@ -65,4 +90,13 @@ it("does not rewrite an operation already committed", async () => {
   const result = await persistAutomaticOperationBatches("connector", 10);
   expect(result.previews).toEqual([]);
   expect(rpc).not.toHaveBeenCalled();
+});
+
+it("never uses an excluded prop session as the expected broker balance", async () => {
+  state.previousCommitted = false;
+  const result = await persistAutomaticOperationBatches("connector", 20, true);
+  expect(result.previews?.find((preview) => preview.brokerSessionId === 20)?.projection).toMatchObject({
+    reason: null,
+    status: "shadow_ready",
+  });
 });

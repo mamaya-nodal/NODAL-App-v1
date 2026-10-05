@@ -1,5 +1,11 @@
 # Decisiones tecnicas de NODAL App
 
+### Recuperación segura del saldo broker previo (2026-10-05)
+
+- Una sesión técnica excluida sólo puede aportar continuidad de saldo si pertenece a la misma cuenta y conexión broker del lote que se está conciliando.
+- Las sesiones excluidas de cuentas prop nunca se usan como saldo broker esperado.
+- Cuando el saldo broker se administra de forma agregada, no se infiere el total desde una única sesión excluida; se conserva la fuente contable o el evento agregado verificado.
+
 ### Fecha operativa visible en el historial (2026-10-05)
 
 - Cada conciliación del historial de Operaciones muestra fecha operativa y hora de apertura en Buenos Aires.
