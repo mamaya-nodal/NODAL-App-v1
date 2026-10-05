@@ -33,7 +33,7 @@ security definer
 set search_path = ''
 as $$
   with active_user as (
-    select users.id
+    select users.id, users.access_role
     from public.nodal_users as users
     where users.id = (select auth.uid())
       and users.access_state = 'active'
@@ -61,6 +61,9 @@ as $$
     select
       public.is_current_user_admin() as is_master,
       exists (
+        select 1 from active_user where access_role = 'admin'
+      ) as has_master_role,
+      exists (
         select 1
         from public.nodal_admin_panel_previews as previews
         join active_user as users on users.id = previews.user_id
@@ -71,7 +74,7 @@ as $$
   select
     case
       when access.is_master and access.has_desk then 'combined'
-      when access.is_master and access.has_preview then 'master_preview'
+      when access.has_master_role and access.has_preview then 'master_preview'
       when access.is_master then 'master'
       when access.has_desk then 'desk'
       else 'none'
