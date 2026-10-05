@@ -27,7 +27,7 @@ const DESK = {
 const months = ["2026-08-01", "2026-09-01", "2026-10-01"] as const;
 
 const desks: Desk[] = [
-  { created_at: "2026-08-01T12:00:00Z", id: DESK.root, name: "Mesa de prueba Mauricio", parent_id: ROOT_DESK },
+  { created_at: "2026-08-01T12:00:00Z", id: DESK.root, name: "MESA DE MAURICIO", parent_id: ROOT_DESK },
   { created_at: "2026-08-05T12:00:00Z", id: DESK.growth, name: "Mesa Crecimiento", parent_id: DESK.root },
   { created_at: "2026-08-10T12:00:00Z", id: DESK.south, name: "Mesa Sur", parent_id: DESK.growth },
 ];

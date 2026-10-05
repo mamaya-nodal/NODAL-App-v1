@@ -291,6 +291,7 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const viewportRef = useRef<HTMLDivElement>(null);
   const hoverRef = useRef(false);
   const dragRef = useRef<{ originX: number; originY: number; panX: number; panY: number } | null>(null);
 
@@ -300,6 +301,20 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
     window.addEventListener("keydown", down); window.addEventListener("keyup", up);
     return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
   }, []);
+
+  useEffect(() => {
+    const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+    const root = layout.nodes[0];
+    if (!root || viewportWidth === 0) return;
+    setPan({ x: (viewportWidth / 2) - root.x - 83, y: 0 });
+  }, [layout]);
+
+  function centerBoard() {
+    const viewportWidth = viewportRef.current?.clientWidth ?? 0;
+    const root = layout.nodes[0];
+    if (!root || viewportWidth === 0) return;
+    setPan({ x: (viewportWidth / 2) - root.x - 83, y: 0 });
+  }
 
   function pointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     if (!spaceHeld && event.button !== 1) return;
@@ -315,8 +330,8 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
     dragRef.current = null; event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  return <div className="desk-board-shell"><div className="desk-board-toolbar"><span>Espacio + arrastrar para explorar</span><button onClick={() => setPan({ x: 0, y: 0 })} type="button">Centrar</button></div>
-    <div className={`desk-board-viewport ${spaceHeld ? "ready" : ""}`} onMouseEnter={() => { hoverRef.current = true; }} onMouseLeave={() => { hoverRef.current = false; setSpaceHeld(false); }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onWheel={(event) => { event.preventDefault(); setPan((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY })); }}>
+  return <div className="desk-board-shell"><div className="desk-board-toolbar"><span>Espacio + arrastrar para explorar</span><button onClick={centerBoard} type="button">Centrar</button></div>
+    <div className={`desk-board-viewport ${spaceHeld ? "ready" : ""}`} onMouseEnter={() => { hoverRef.current = true; }} onMouseLeave={() => { hoverRef.current = false; setSpaceHeld(false); }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onWheel={(event) => { event.preventDefault(); setPan((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY })); }} ref={viewportRef}>
       <div className="desk-board-canvas" style={{ height: layout.canvasHeight, transform: `translate(${pan.x}px, ${pan.y}px)`, width: layout.canvasWidth }}>
         <svg aria-hidden="true" className="desk-board-lines" height={layout.canvasHeight} width={layout.canvasWidth}>{layout.edges.map(({ child, parent }) => { const startX = parent.x + 83; const startY = parent.y + 64; const endX = child.x + 83; const endY = child.y; const middleY = startY + (endY - startY) / 2; return <path d={`M ${startX} ${startY} V ${middleY} H ${endX} V ${endY}`} key={`${parent.id}-${child.id}`} />; })}</svg>
         {layout.nodes.map((node) => <article className={`desk-board-node ${node.tone} ${expanded.has(node.id) ? "expanded" : ""}`} key={node.id} style={{ left: node.x, top: node.y }}>
