@@ -79,6 +79,14 @@ export async function loadMasterControl(
     };
   }
 
+  const identifierHistoryByUser: Record<string, typeof identifiersResult.data> = {};
+  for (const identifier of identifiersResult.data ?? []) {
+    identifierHistoryByUser[identifier.user_id] = [
+      ...(identifierHistoryByUser[identifier.user_id] ?? []),
+      identifier,
+    ];
+  }
+
   return {
     ...deskData,
     connectorByUser,
@@ -86,10 +94,7 @@ export async function loadMasterControl(
     identifiersByUser: Object.fromEntries((identifiersResult.data ?? [])
       .filter((identifier) => identifier.valid_to === null)
       .map((identifier) => [identifier.user_id, identifier.display_id])),
-    identifierHistoryByUser: Object.groupBy(
-      identifiersResult.data ?? [],
-      (identifier) => identifier.user_id,
-    ),
+    identifierHistoryByUser,
     profilesByUser: Object.fromEntries((profilesResult.data ?? []).map((profile) => [profile.id, profile])),
     units: (unitsResult.data ?? []) as UnitRow[],
   };
