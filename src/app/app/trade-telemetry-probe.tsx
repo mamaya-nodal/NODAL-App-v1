@@ -115,7 +115,25 @@ function moneyNumber(value: number | string | null) {
 }
 
 function formatTime(value: string) {
-  return new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "America/Argentina/Buenos_Aires",
+  }).format(new Date(value));
+}
+
+function formatHistoryMoment(openedAt: string, operatedOn: string | null) {
+  const operationalDate = operatedOn?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = operationalDate
+    ? `${operationalDate[3]}/${operationalDate[2]}/${operationalDate[1]}`
+    : new Intl.DateTimeFormat("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      timeZone: "America/Argentina/Buenos_Aires",
+      year: "numeric",
+    }).format(new Date(openedAt));
+  return `${date} · ${formatTime(openedAt)}`;
 }
 
 function formatDateTime(value: string) {
@@ -510,7 +528,7 @@ export function TradeTelemetryProbe({
                 {monthBatches.map((batch, index) => (
                   <details className="demo-history-day" key={batch.id} open={monthIndex === 0 && index === 0}>
                     <summary>
-                      <span>{formatTime(batch.opened_at)}</span>
+                      <span>{formatHistoryMoment(batch.opened_at, batch.operated_on)}</span>
                       <small>{reconciliationPairLabel(batch.broker?.account_name ?? null, batch.prop_accounts.map((account) => account.account_name))}</small>
                       <strong className={(moneyNumber(batch.broker_result_cents) ?? 0) < 0 ? "negative" : ""}>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
                       <i aria-hidden="true" />

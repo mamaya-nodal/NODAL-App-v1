@@ -1,5 +1,10 @@
 # Decisiones tecnicas de NODAL App
 
+### Fecha operativa visible en el historial (2026-10-05)
+
+- Cada conciliación del historial de Operaciones muestra fecha operativa y hora de apertura en Buenos Aires.
+- Se prioriza `operated_on`, que representa el día contable del trade; si falta, se deriva la fecha desde `opened_at` con la zona horaria operativa.
+
 ### Espacio personal limitado al titular (2026-10-05)
 
 - La consulta de espacios en `/app` filtra por el usuario autenticado, también para Admin Master. El permiso administrativo no selecciona implícitamente otro titular.

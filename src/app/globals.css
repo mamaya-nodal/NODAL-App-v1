@@ -7786,7 +7786,7 @@ html[data-theme="day"] .accounting-history {
 .demo-period-history .demo-history-day > div p { background: color-mix(in srgb, var(--app-panel) 80%, var(--app-input)); }
 .demo-history-day { margin-top: 7px; }
 .demo-history-day > summary { min-height: 58px; }
-.demo-history-day > summary > span { min-width: 66px; color: var(--app-title); font-size: 12px; font-weight: 800; }
+.demo-history-day > summary > span { min-width: 164px; color: var(--app-title); font-size: 12px; font-weight: 800; }
 .demo-history-day > summary > small { flex: 1; color: var(--app-subtle); font-size: 10px; }
 .demo-history-day > summary > strong { min-width: 85px; color: var(--app-positive); font-size: 11px; text-align: right; }
 .demo-history-day > div { padding: 0 10px 10px; }
