@@ -2053,4 +2053,5 @@ vigente sin aprobacion y evidencia suficiente.
 - **Acceso global:** Admin Master puede consultar cualquier usuario y sus registros. La conexión Ninja conserva versión, última transmisión y actividad derivada de las últimas 24 horas; no es un selector editable.
 - **Navegación:** la consola se organiza en `Panel control`, `Registros` y `Estadísticas`. Las aprobaciones se acceden desde el indicador de altas y alertas del Panel control.
 - **Limpieza preproductiva:** se revocaron de forma lógica y auditada `mamaya@nodaltrading.com`, Martin Mainardi y Julián Seco. No se eliminaron perfiles, autenticaciones ni historiales. Continúan activos Mauricio Gmail, Alfred, Sebastián, Ivo y Rodolfo; las altas nuevas permanecen pendientes hasta aprobación explícita.
+- **IDs iniciales:** la nómina activa confirmada recibió los correlativos `USERND-MP-01` a `USERND-MP-05` según fecha de ingreso a la Mesa Principal. La asignación quedó registrada en el historial de gestión y no creó ni alteró acuerdos económicos.
 
