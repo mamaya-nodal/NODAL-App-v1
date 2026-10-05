@@ -83,6 +83,11 @@
   tarjetas simples conectadas sobre un lienzo punteado. El lienzo puede
   recorrerse con la rueda o manteniendo Espacio y arrastrando; cada tarjeta
   despliega su resumen y las tarjetas de personas abren la ficha completa.
+  Una tarjeta verde de persona ya representa simultáneamente al administrador
+  y a su mesa: sus integrantes cuelgan directamente debajo y no se agrega una
+  segunda tarjeta con el nombre de esa mesa. Al desplegar una persona se ven
+  fecha de alta, acuerdo de operativa propia, acuerdo de administración cuando
+  corresponda e identidades activas.
 - **Identificadores visibles:** el código NODAL es distinto del UUID técnico y
   puede cambiar al trasladar a la persona de mesa. Los códigos mostrados en el
   escenario ficticio son datos de prueba y no fijan todavía el algoritmo

@@ -61,12 +61,6 @@ function dateLabel(value: string | null | undefined) {
     .format(new Date(`${value}T00:00:00Z`));
 }
 
-function roleFor(data: MyDeskPanelData, person: PersonRow) {
-  const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id);
-  if (person.id === data.userId) return "Titular";
-  return managedDesk ? "Admin" : "Alumno";
-}
-
 function stateLabel(state: EditablePerson["state"]) {
   if (state === "paused") return "Pausa";
   if (state === "inactive") return "Baja";
@@ -252,11 +246,10 @@ function buildBoardTree(data: MyDeskPanelData, rootDesk: DeskRow | null, manager
   }
   function personNode(person: PersonRow): BoardNode {
     const managed = desks.filter((desk) => desk.terms.manager_id === person.id && desk.id !== rootDesk?.id);
-    return { children: managed.map(deskNode), detail: `${roleFor(data, person)} · ${money(person.totalIncome)}`, id: `person-${person.id}`, kind: "person", label: person.name, personId: person.id, tone: managed.length > 0 || person.id === data.userId ? "lime" : "gray" };
+    const managedMembers = managed.flatMap((desk) => people.filter((candidate) => candidate.deskId === desk.id));
+    return { children: managedMembers.map(personNode), detail: "", id: `person-${person.id}`, kind: "person", label: person.name, personId: person.id, tone: managed.length > 0 || person.id === data.userId ? "lime" : "gray" };
   }
-  const deskTree = rootDesk ? deskNode(rootDesk) : personNode(manager);
-  if (rootDesk && !deskTree.children.some((node) => node.personId === manager.id)) deskTree.children.unshift(personNode(manager));
-  return { children: [deskTree], detail: "Estructura completa", id: "system-root", kind: "system", label: "SISTEMA NODAL", tone: "lime" };
+  return rootDesk ? deskNode(rootDesk) : personNode(manager);
 }
 
 function layoutBoard(root: BoardNode) {
@@ -334,11 +327,22 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
     <div className={`desk-board-viewport ${spaceHeld ? "ready" : ""}`} onMouseEnter={() => { hoverRef.current = true; }} onMouseLeave={() => { hoverRef.current = false; setSpaceHeld(false); }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onWheel={(event) => { event.preventDefault(); setPan((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY })); }} ref={viewportRef}>
       <div className="desk-board-canvas" style={{ height: layout.canvasHeight, transform: `translate(${pan.x}px, ${pan.y}px)`, width: layout.canvasWidth }}>
         <svg aria-hidden="true" className="desk-board-lines" height={layout.canvasHeight} width={layout.canvasWidth}>{layout.edges.map(({ child, parent }) => { const startX = parent.x + 83; const startY = parent.y + 64; const endX = child.x + 83; const endY = child.y; const middleY = startY + (endY - startY) / 2; return <path d={`M ${startX} ${startY} V ${middleY} H ${endX} V ${endY}`} key={`${parent.id}-${child.id}`} />; })}</svg>
-        {layout.nodes.map((node) => <article className={`desk-board-node ${node.tone} ${expanded.has(node.id) ? "expanded" : ""}`} key={node.id} style={{ left: node.x, top: node.y }}>
+        {layout.nodes.map((node) => {
+          const person = node.personId ? data.overview.people.find((candidate) => candidate.id === node.personId) : null;
+          const managedDesk = person ? data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id) : null;
+          const identities = person ? data.identitiesByUser[person.id] ?? { active: 0, total: 0 } : { active: 0, total: 0 };
+          const profile = person ? data.profilesByUser[person.id] : null;
+          return <article className={`desk-board-node ${node.tone} ${expanded.has(node.id) ? "expanded" : ""}`} key={node.id} style={{ left: node.x, top: node.y }}>
           {node.personId ? <button className="desk-board-node-name" onClick={() => onOpenUser(node.personId!)} type="button">{node.label}</button> : <strong>{node.label}</strong>}
           <button aria-expanded={expanded.has(node.id)} aria-label={`Ver información de ${node.label}`} className="desk-board-node-toggle" onClick={() => setExpanded((current) => { const next = new Set(current); if (next.has(node.id)) next.delete(node.id); else next.add(node.id); return next; })} type="button">{expanded.has(node.id) ? "−" : "+"}</button>
-          {expanded.has(node.id) ? <small>{node.detail}{node.personId ? <><br />{data.displayIdByUser[node.personId] || "ID pendiente"}</> : null}</small> : null}
-        </article>)}
+          {expanded.has(node.id) ? person ? <small className="desk-board-person-detail">
+            <span>Alta: {profile?.created_at ? dateLabel(profile.created_at.slice(0, 10)) : "Sin fecha"}</span>
+            <span>% op. propias: {person.terms?.commission_bps === null || person.terms?.commission_bps === undefined ? "Sin acuerdo" : `${person.terms.commission_bps / 100}%`}</span>
+            {managedDesk ? <span>% Admin. mesa: {managedDesk.terms.nodal_bps / 100}%</span> : null}
+            <span>Identidades: {identities.total > 0 ? "activadas" : "no habilitadas"} | {identities.active}</span>
+          </small> : <small>{node.detail}</small> : null}
+        </article>;
+        })}
       </div>
     </div>
   </div>;

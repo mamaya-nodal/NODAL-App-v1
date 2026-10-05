@@ -1143,6 +1143,14 @@ dialog.desk-dialog::backdrop {
   line-height: 1.35;
   margin-top: 6px;
 }
+.desk-board-node.expanded {
+  min-height: 112px;
+  z-index: 2;
+}
+.desk-board-person-detail span {
+  display: block;
+  margin-top: 2px;
+}
 
 .desk-ranking-surface {
   overflow: hidden;
