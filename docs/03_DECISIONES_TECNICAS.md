@@ -73,9 +73,20 @@
   cantidad de mesas directas. No participa en cálculos nuevos ni se ofrece en
   la interfaz. Sus columnas históricas se conservan únicamente para no
   reescribir cierres previos.
-- **Estado:** definición de producto registrada. La eliminación del bonus
-  automático quedó implementada; el nuevo panel y la cascada permanecen
-  pendientes de implementación.
+- **Accesos acumulables:** `Admin` y `Admin Master` son capacidades separadas.
+  Una misma persona puede reunir ambas y ve dos entradas independientes. Tener
+  rol Master no elimina una mesa administrada ni convierte el panel de mesa en
+  el panel global.
+- **Vista excepcional de comprobación:** Mauricio puede abrir `Admin` sin crear
+  una mesa ficticia. Esa vista informa que no existe una mesa asignada y se
+  limita estrictamente a sus propios datos; no enumera ramas ni usuarios
+  ajenos. La excepción queda persistida y revocable en una tabla protegida.
+- **Estado:** implementados la eliminación del bonus automático, el cálculo en
+  cascada, el panel Admin de lectura, la separación mesa directa/estructura
+  total, historial, detalle técnico, árbol y ranking. Las mutaciones delegadas
+  de altas, roles, traslados, bajas y porcentajes continúan pendientes de una
+  capa transaccional con autorización de rama y auditoría; no se simulan con
+  controles visuales sin respaldo de servidor.
 
 ### APP-147 - Conciliación visual de transferencias broker-billetera
 

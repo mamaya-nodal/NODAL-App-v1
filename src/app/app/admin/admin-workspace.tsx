@@ -22,7 +22,7 @@ type Props = Readonly<{
 export function AdminWorkspace({ children, scope = "master", userLabel, versionInfo }: Props) {
   const pathname = usePathname();
   const panelHref = scope === "desk" ? "/app/mi-mesa" : "/app/admin";
-  const panelLabel = scope === "desk" ? "Mi mesa" : "Vista general";
+  const panelLabel = scope === "desk" ? "Panel Admin" : "Vista general";
   const scopedNavigation = [
     { href: panelHref, icon: "summary" as WorkspaceIconName, label: panelLabel },
     ...(scope === "master" ? [{ href: "/app/admin/periods", icon: "daily" as WorkspaceIconName, label: "Cierres" }] : []),
@@ -53,14 +53,14 @@ export function AdminWorkspace({ children, scope = "master", userLabel, versionI
         </nav>
 
         <div className="workspace-sidebar-footer">
-          <p>{scope === "desk" ? "ADMINISTRACIÓN DE MESA" : "ADMINISTRACIÓN NODAL"}</p>
+          <p>{scope === "desk" ? "PANEL ADMIN" : "ADMINISTRACIÓN NODAL"}</p>
           <form action="/auth/logout" method="post"><button type="submit"><WorkspaceIcon name="logout" />Cerrar sesión</button></form>
         </div>
       </aside>
 
       <div className="workspace-stage">
         <header className="workspace-topbar">
-          <div><span>{scope === "desk" ? "Administración de mesa" : "Panel de administración"}</span><strong>{activeLabel}</strong></div>
+          <div><span>{scope === "desk" ? "Administración de estructura" : "Panel de administración"}</span><strong>{activeLabel}</strong></div>
           <div className="workspace-top-actions">
             <ThemeToggle />
             <WorkspaceUserMenu userLabel={userLabel} versionInfo={versionInfo} />
@@ -68,7 +68,7 @@ export function AdminWorkspace({ children, scope = "master", userLabel, versionI
         </header>
         <div className="app-page-shell workspace-content admin-page-shell">{children}</div>
         <nav className="workspace-mobile-navigation" aria-label="Navegación móvil de administración">
-          {scopedNavigation.map((item) => <Link aria-current={isActive(item.href) ? "page" : undefined} href={item.href} key={item.href}><WorkspaceIcon name={item.icon} />{scope === "desk" ? "Mi mesa" : "Panel"}</Link>)}
+          {scopedNavigation.map((item) => <Link aria-current={isActive(item.href) ? "page" : undefined} href={item.href} key={item.href}><WorkspaceIcon name={item.icon} />{scope === "desk" ? "Admin" : "Panel"}</Link>)}
           <Link href="/app#inicio"><WorkspaceIcon name="home" />Mi espacio</Link>
         </nav>
       </div>

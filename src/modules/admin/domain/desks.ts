@@ -114,14 +114,42 @@ export function calculateDeskOverview(
         terms,
         members: members.map((p) => p.id),
         gross: members.reduce((s, p) => s + p.gross, 0),
+        directGenerated: generated,
         generated,
         nodalShare,
         managerShare: generated - nodalShare,
+        structureGross: members.reduce((s, p) => s + p.gross, 0),
+        structureMembers: members.map((p) => p.id),
         children: desks
           .filter((c) => c.parent_id === d.id && agreements.get(c.id)?.active)
           .map((c) => c.id),
       };
     });
+  const rowsById = new Map(rows.map((row) => [row.id, row]));
+  const resolved = new Set<string>();
+  const resolving = new Set<string>();
+  const resolveDesk = (deskId: string) => {
+    const desk = rowsById.get(deskId);
+    if (!desk || resolved.has(deskId)) return desk;
+    if (resolving.has(deskId)) throw new Error("Invalid desk hierarchy");
+    resolving.add(deskId);
+    const childRows = desk.children.flatMap((childId) => {
+      const child = resolveDesk(childId);
+      return child ? [child] : [];
+    });
+    desk.generated = desk.directGenerated + childRows.reduce((sum, child) => sum + child.nodalShare, 0);
+    desk.nodalShare = portion(desk.generated, desk.terms.nodal_bps);
+    desk.managerShare = desk.generated - desk.nodalShare;
+    desk.structureGross = desk.gross + childRows.reduce((sum, child) => sum + child.structureGross, 0);
+    desk.structureMembers = [
+      ...desk.members,
+      ...childRows.flatMap((child) => child.structureMembers),
+    ];
+    resolving.delete(deskId);
+    resolved.add(deskId);
+    return desk;
+  };
+  for (const desk of rows) resolveDesk(desk.id);
   for (const desk of rows) {
     const manager = people.find((p) => p.id === desk.terms.manager_id);
     if (manager) manager.mesaIncome += desk.managerShare;
@@ -132,6 +160,8 @@ export function calculateDeskOverview(
     people,
     desks: rows,
     gross: people.reduce((s, p) => s + p.gross, 0),
-    nodalIncome: rows.reduce((s, d) => s + d.nodalShare, 0),
+    nodalIncome: rows
+      .filter((desk) => desk.parent_id === null)
+      .reduce((sum, desk) => sum + desk.nodalShare, 0),
   };
 }

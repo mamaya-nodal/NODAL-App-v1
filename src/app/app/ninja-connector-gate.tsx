@@ -1,7 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import type { AdministrationScope } from "@/modules/admin/domain/administration-scope";
+import {
+  canOpenDeskAdmin,
+  canOpenMasterAdmin,
+  type AdministrationScope,
+} from "@/modules/admin/domain/administration-scope";
 
 import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
 import { ThemeToggle } from "./theme-toggle";
@@ -14,11 +18,14 @@ type Props = Readonly<{
 }>;
 
 export function NinjaConnectorGate({ administrationScope, connector, message }: Props) {
-  const administration = administrationScope.kind === "master"
-    ? { href: "/app/admin", label: "Admin Master" }
-    : administrationScope.kind === "desk"
-      ? { href: "/app/mi-mesa", label: "Mi mesa" }
-      : null;
+  const administration = [
+    ...(canOpenDeskAdmin(administrationScope)
+      ? [{ href: "/app/mi-mesa", label: "Admin" }]
+      : []),
+    ...(canOpenMasterAdmin(administrationScope)
+      ? [{ href: "/app/admin", label: "Admin Master" }]
+      : []),
+  ];
   return (
     <main className="connector-gate-shell">
       <div className="connector-gate-preview" aria-hidden="true">
@@ -63,7 +70,7 @@ export function NinjaConnectorGate({ administrationScope, connector, message }: 
 
         <footer>
           <span>Conexión segura y de solo lectura</span>
-          {administration ? <Link href={administration.href}>{administration.label}</Link> : null}
+          {administration.map((item) => <Link href={item.href} key={item.href}>{item.label}</Link>)}
         </footer>
       </section>
     </main>

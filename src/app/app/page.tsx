@@ -20,7 +20,11 @@ import {
   type ManagedIdentity,
 } from "@/modules/identities/domain/identity-summary";
 import { decideAccess } from "@/modules/access/domain/access-decision";
-import { visibleAdministrationScope } from "@/modules/admin/domain/administration-scope";
+import {
+  canOpenDeskAdmin,
+  canOpenMasterAdmin,
+  visibleAdministrationScope,
+} from "@/modules/admin/domain/administration-scope";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
@@ -1229,9 +1233,8 @@ async function renderPrivateAppPage({
             <a href="#operaciones">Operaciones</a>
             <a href="#contabilidad">Contabilidad</a>
             <a href="#identidades">Identidades</a>
-            {nodalUser?.access_role === "admin" && (
-              <Link href="/app/admin">Admin Master</Link>
-            )}
+            {canOpenDeskAdmin(administrationScope) ? <Link href="/app/mi-mesa">Admin</Link> : null}
+            {canOpenMasterAdmin(administrationScope) ? <Link href="/app/admin">Admin Master</Link> : null}
             <form action="/auth/logout" className="logout-form" method="post">
               <button type="submit">Cerrar sesión</button>
             </form>

@@ -4,13 +4,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { currentAppRelease } from "@/lib/app-release";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
+import { canOpenDeskAdmin } from "@/modules/admin/domain/administration-scope";
 
 import { AdminWorkspace } from "../admin/admin-workspace";
 
 export default async function MyDeskLayout({ children }: Readonly<{ children: ReactNode }>) {
   const scope = await loadMyAdministrationScope();
-  if (scope.kind === "master") redirect("/app/admin");
-  if (scope.kind !== "desk") redirect("/app");
+  if (!canOpenDeskAdmin(scope)) redirect("/app");
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

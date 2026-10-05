@@ -63,16 +63,16 @@ describe("personal dashboard with desk economics", () => {
     expect(dashboard).not.toBeNull();
     expect(dashboard?.billingInCents).toBe(1_000_000);
     expect(dashboard?.earnings).toEqual({
-      deskAdministrationInCents: 700_000,
+      deskAdministrationInCents: 822_500,
       level: 2,
       ownOperationsInCents: 700_000,
-      totalInCents: 1_400_000,
+      totalInCents: 1_522_500,
     });
     expect(dashboard?.capabilities).toEqual({
       managedDesk: { billingInCents: 2_000_000, capacity: 10, users: 2 },
     });
     expect(dashboard?.history).toHaveLength(2);
-    expect(dashboard?.history.at(-1)?.earningsInCents).toBe(1_400_000);
+    expect(dashboard?.history.at(-1)?.earningsInCents).toBe(1_522_500);
   });
 
   it("hides desk concepts from a user who does not receive them", () => {

@@ -5,7 +5,11 @@ import Link from "next/link";
 import type { MouseEvent, ReactNode } from "react";
 import { useRef, useSyncExternalStore } from "react";
 
-import type { AdministrationScope } from "@/modules/admin/domain/administration-scope";
+import {
+  canOpenDeskAdmin,
+  canOpenMasterAdmin,
+  type AdministrationScope,
+} from "@/modules/admin/domain/administration-scope";
 
 import { ThemeToggle } from "./theme-toggle";
 import { WorkspaceIcon, type WorkspaceIconName } from "./workspace-icon";
@@ -89,11 +93,14 @@ export function AppWorkspace({
     window.scrollTo({ behavior: "smooth", top: 0 });
   }
 
-  const administration = administrationScope.kind === "master"
-    ? { href: "/app/admin", label: "Admin Master" }
-    : administrationScope.kind === "desk"
-      ? { href: "/app/mi-mesa", label: "Mi mesa" }
-      : null;
+  const administration = [
+    ...(canOpenDeskAdmin(administrationScope)
+      ? [{ href: "/app/mi-mesa", label: "Admin" }]
+      : []),
+    ...(canOpenMasterAdmin(administrationScope)
+      ? [{ href: "/app/admin", label: "Admin Master" }]
+      : []),
+  ];
 
   return (
     <main className="nodal-workspace" data-active-view={activeView} onClick={navigateWithinWorkspace}>
@@ -113,12 +120,12 @@ export function AppWorkspace({
               {view.label}
             </a>
           ))}
-          {administration && (
-            <Link href={administration.href}>
+          {administration.map((item) => (
+            <Link href={item.href} key={item.href}>
               <WorkspaceIcon name="admin" />
-              {administration.label}
+              {item.label}
             </Link>
-          )}
+          ))}
         </nav>
 
         <div className="workspace-sidebar-footer">
@@ -154,9 +161,9 @@ export function AppWorkspace({
               {view.label}
             </a>
           ))}
-          {administration && (
-            <Link href={administration.href}><WorkspaceIcon name="admin" />{administration.label}</Link>
-          )}
+          {administration.map((item) => (
+            <Link href={item.href} key={item.href}><WorkspaceIcon name="admin" />{item.label}</Link>
+          ))}
         </nav>
       </div>
     </main>

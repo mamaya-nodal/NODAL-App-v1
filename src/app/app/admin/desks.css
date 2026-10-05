@@ -273,6 +273,219 @@ dialog.desk-dialog::backdrop {
   border-radius: 14px;
   background: color-mix(in srgb, var(--brand-soft) 45%, var(--surface));
 }
+.my-desk-heading > div {
+  display: block;
+}
+.my-desk-heading .status,
+.admin-section-heading .status {
+  color: var(--brand);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 0 0 5px;
+}
+.desk-preview-notice {
+  background: color-mix(in srgb, var(--brand) 9%, var(--app-panel, var(--surface)));
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line));
+  border-radius: 13px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin: 0 0 16px;
+  padding: 11px 14px;
+}
+.my-desk-summary {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.7fr) repeat(2, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.my-desk-hero,
+.my-desk-summary-card,
+.my-desk-structure-summary > article {
+  background: var(--app-panel, var(--surface));
+  border: 1px solid var(--app-border, var(--line));
+  border-radius: 19px;
+  min-width: 0;
+  padding: 20px;
+}
+.my-desk-hero {
+  background: linear-gradient(120deg, #caff8a, #80ed36);
+  color: #10200f;
+  grid-row: span 2;
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.my-desk-hero span,
+.my-desk-summary-card span,
+.my-desk-structure-summary span {
+  display: block;
+  font-size: 0.76rem;
+  margin-bottom: 8px;
+}
+.my-desk-hero strong {
+  display: block;
+  font-size: clamp(2.3rem, 5vw, 4rem);
+  letter-spacing: -0.065em;
+  line-height: 0.96;
+  font-variant-numeric: tabular-nums;
+}
+.my-desk-hero small {
+  margin-top: 22px;
+  color: #294c22;
+}
+.my-desk-summary-card {
+  display: flex;
+  align-items: center;
+}
+.my-desk-summary-card strong,
+.my-desk-structure-summary strong {
+  display: block;
+  font-size: 1.45rem;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+.my-desk-summary-card small,
+.my-desk-structure-summary small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  margin-top: 6px;
+}
+.my-desk-structure-summary {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.my-desk-structure-summary > article {
+  padding: 18px 20px;
+}
+.my-desk-structure-primary {
+  background: color-mix(in srgb, var(--brand) 10%, var(--app-panel, var(--surface))) !important;
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line)) !important;
+}
+.desk-status {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 750;
+  padding: 5px 9px;
+}
+.desk-status.active {
+  background: color-mix(in srgb, var(--brand) 16%, transparent);
+  color: var(--ink);
+}
+.desk-status.inactive {
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  color: var(--muted);
+}
+.desk-user-profile {
+  background: color-mix(in srgb, var(--brand-soft) 35%, var(--app-panel, var(--surface)));
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px;
+}
+.desk-user-profile-heading {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.desk-user-profile-heading strong,
+.desk-user-profile-heading span {
+  display: block;
+}
+.desk-user-profile-heading div > span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+.desk-user-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+.desk-user-detail-grid span,
+.desk-user-detail-grid small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.7rem;
+  margin-bottom: 4px;
+}
+.desk-user-detail-grid strong {
+  display: block;
+  font-size: 0.86rem;
+  white-space: normal;
+}
+.desk-terms-note {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.72rem;
+  margin: 16px 0 0;
+  padding-top: 12px;
+}
+.desk-history-chart {
+  min-width: 0;
+}
+.desk-chart-billing,
+.desk-chart-billing-line {
+  background: var(--brand);
+  stroke: var(--brand) !important;
+}
+.desk-chart-income,
+.desk-chart-income-line {
+  background: #87958c;
+  stroke: #87958c !important;
+}
+.my-desk-lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.8fr);
+  gap: 16px;
+}
+.my-desk-lower-grid .desk-surface {
+  height: fit-content;
+}
+.my-desk-lower-grid .desk-tree-grid {
+  grid-template-columns: 1fr;
+}
+.desk-ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.desk-ranking li {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 12px;
+  padding: 13px 0;
+}
+.desk-ranking li:first-child {
+  border-top: 0;
+}
+.desk-ranking li > span {
+  align-items: center;
+  background: color-mix(in srgb, var(--brand) 14%, transparent);
+  border-radius: 50%;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  height: 27px;
+  justify-content: center;
+  width: 27px;
+}
+.desk-ranking strong,
+.desk-ranking small {
+  display: block;
+}
+.desk-ranking small {
+  color: var(--muted);
+  font-size: 0.73rem;
+  margin-top: 3px;
+}
 .desk-empty {
   color: var(--muted);
   padding: 15px 0;
@@ -387,6 +600,18 @@ dialog.desk-dialog::backdrop {
   .desk-metrics strong {
     font-size: 1rem;
   }
+  .my-desk-summary,
+  .my-desk-structure-summary,
+  .my-desk-lower-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .my-desk-hero,
+  .my-desk-lower-grid > :first-child {
+    grid-column: 1 / -1;
+  }
+  .desk-user-detail-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 @media (max-width: 480px) {
   .desk-form-grid {
@@ -409,5 +634,15 @@ dialog.desk-dialog::backdrop {
   .desk-open {
     padding-left: 12px !important;
     padding-right: 12px !important;
+  }
+  .my-desk-summary,
+  .my-desk-structure-summary,
+  .my-desk-lower-grid,
+  .desk-user-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .my-desk-hero,
+  .my-desk-lower-grid > :first-child {
+    grid-column: auto;
   }
 }
