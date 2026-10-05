@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createServiceClient } from "@/lib/supabase/service";
 import { transmittedWithinLast24Hours } from "../domain/connector-activity";
 import { requireNodalAdmin } from "./admin-access";
 import { loadDesks } from "./load-desks";
@@ -15,10 +16,11 @@ type UnitRow = Readonly<{
 export async function loadMasterControl(
   requestedMonth?: string,
 ) {
-  const [deskData, db] = await Promise.all([
+  const [deskData] = await Promise.all([
     loadDesks("real", requestedMonth),
     requireNodalAdmin(),
   ]);
+  const db = createServiceClient();
   const userIds = deskData.overview.people.map((person) => person.id);
   const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult] = await Promise.all([
     db.from("nodal_units").select("id,ordinal,name,code,root_desk_id").order("ordinal"),
