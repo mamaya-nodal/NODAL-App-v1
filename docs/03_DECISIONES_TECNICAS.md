@@ -81,6 +81,12 @@
   una mesa ficticia. Esa vista informa que no existe una mesa asignada y se
   limita estrictamente a sus propios datos; no enumera ramas ni usuarios
   ajenos. La excepción queda persistida y revocable en una tabla protegida.
+- **Escenario ficticio de revisión:** desde esa vista puede abrirse una
+  estructura sintética con tres mesas anidadas, siete personas, estados,
+  acuerdos, identidades, conectores y tres períodos. Se calcula con el mismo
+  dominio económico que Producción, pero no crea usuarios, asientos, períodos
+  ni saldos reales y se identifica visualmente en todo momento. Su retiro no
+  requiere borrar historial contable.
 - **Estado:** implementados la eliminación del bonus automático, el cálculo en
   cascada, el panel Admin de lectura, la separación mesa directa/estructura
   total, historial, detalle técnico, árbol y ranking. Las mutaciones delegadas

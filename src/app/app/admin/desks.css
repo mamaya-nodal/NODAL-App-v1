@@ -292,6 +292,21 @@ dialog.desk-dialog::backdrop {
   font-size: 0.78rem;
   margin: 0 0 16px;
   padding: 11px 14px;
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.desk-preview-notice.demo {
+  background: color-mix(in srgb, #e4a456 12%, var(--app-panel, var(--surface)));
+  border-color: color-mix(in srgb, #e4a456 38%, var(--line));
+}
+.desk-preview-notice a {
+  color: var(--brand);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-decoration: none;
 }
 .my-desk-summary {
   display: grid;

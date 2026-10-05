@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import type { MyDeskPanelData } from "@/modules/admin/server/load-my-desk";
 
@@ -191,7 +192,12 @@ export function MyDeskPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
     </header>
 
     {data.preview ? <p className="desk-preview-notice" role="status">
-      Vista de comprobación · sin mesa asignada. Sólo se muestran tus propios datos.
+      <span>Vista de comprobación · sin mesa asignada. Sólo se muestran tus propios datos.</span>
+      <Link href="/app/mi-mesa?demo=1">Abrir escenario ficticio</Link>
+    </p> : null}
+    {data.demo ? <p className="desk-preview-notice demo" role="status">
+      <span>Escenario ficticio · no modifica usuarios, mesas ni contabilidad real.</span>
+      <Link href="/app/mi-mesa">Volver a mis datos</Link>
     </p> : null}
 
     <section className="my-desk-summary" aria-label="Resumen administrativo">

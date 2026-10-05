@@ -88,6 +88,7 @@ export type MyDeskPanelData = Readonly<{
   connectorByUser: Readonly<Record<string, DeskPanelConnectorSummary>>;
   deskId: string | null;
   deskName: string | null;
+  demo: boolean;
   historicalBillingByUser: Readonly<Record<string, number>>;
   history: readonly DeskPanelHistoryPoint[];
   identitiesByUser: Readonly<Record<string, DeskPanelIdentitySummary>>;
@@ -278,6 +279,7 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
     connectorByUser,
     deskId,
     deskName,
+    demo: false,
     historicalBillingByUser,
     history: snapshots.map((snapshot) => {
       const snapshotDesk = deskId ? snapshot.overview.desks.find((desk) => desk.id === deskId) : null;
