@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
+  useTransition,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
 import type { MyDeskPanelData } from "@/modules/admin/server/load-my-desk";
+import { saveDeskUser, sendDeskUserInvitation, type DeskActionResult } from "./actions";
 
 import "../admin/desks.css";
 
@@ -20,7 +23,7 @@ type EditablePerson = {
   adminBps: number | null;
   assignedUserIds: string[];
   commissionBps: number | null;
-  email: string;
+  contactEmail: string;
   identitiesEnabled: boolean;
   role: "admin" | "student";
   state: "active" | "paused" | "inactive";
@@ -139,7 +142,7 @@ function buildEditablePeople(data: MyDeskPanelData) {
       adminBps: managedDesk?.terms.nodal_bps ?? null,
       assignedUserIds: [...(managedDesk?.members ?? [])],
       commissionBps: person.terms?.commission_bps ?? null,
-      email: data.profilesByUser[person.id]?.email ?? person.email,
+      contactEmail: data.profilesByUser[person.id]?.contact_email ?? data.profilesByUser[person.id]?.email ?? person.email,
       identitiesEnabled: identities.total > 0,
       role: managedDesk ? "admin" : "student",
       state: (person.terms?.state ?? "active") as EditablePerson["state"],
@@ -151,15 +154,17 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
   data: MyDeskPanelData;
   editable: EditablePerson;
   onClose: () => void;
-  onSave: (next: EditablePerson) => void;
+  onSave: (next: EditablePerson) => Promise<DeskActionResult>;
   person: PersonRow;
 }>) {
   const [draft, setDraft] = useState(editable);
-  const [saved, setSaved] = useState(false);
+  const [result, setResult] = useState<DeskActionResult | null>(null);
+  const [pending, startTransition] = useTransition();
   const details = data.detailByUser[person.id];
   const identities = details?.identities ?? [];
   const connector = data.connectorByUser[person.id];
-  const canEdit = data.demo || data.termsEditable;
+  const canEdit = data.demo || (!data.preview && person.id !== data.userId);
+  const canEditPercentages = canEdit && (data.demo || data.termsEditable);
   const identifier = data.displayIdByUser[person.id] || "ID pendiente";
 
   useEffect(() => {
@@ -172,8 +177,7 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
 
   function save() {
     if (draft.state === "inactive" && !window.confirm(`¿Está seguro de que quiere dar de baja a ${person.name}?`)) return;
-    onSave(draft);
-    setSaved(true);
+    startTransition(async () => setResult(await onSave(draft)));
   }
 
   return <div aria-labelledby="desk-user-dialog-title" aria-modal="true" className="desk-modal-backdrop" role="dialog" onMouseDown={onClose}>
@@ -189,7 +193,8 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
       </div>
       <div className="desk-user-fields">
         <label>Estado<select disabled={!canEdit} value={draft.state} onChange={(event) => setDraft({ ...draft, state: event.target.value as EditablePerson["state"] })}><option value="active">Activo</option><option value="paused">Pausa</option><option value="inactive">Baja</option></select></label>
-        <label>Email<input disabled={!canEdit} value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></label>
+        <label>Email de acceso<input disabled value={data.profilesByUser[person.id]?.email ?? person.email} /><small>La cuenta de Google no se cambia desde este panel.</small></label>
+        <label>Email de contacto<input disabled={!canEdit} type="email" value={draft.contactEmail} onChange={(event) => setDraft({ ...draft, contactEmail: event.target.value })} /></label>
         <label>Rol<select disabled={!canEdit || person.id === data.userId} value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value as EditablePerson["role"] })}><option value="student">Usuario</option><option value="admin">Admin</option></select></label>
       </div>
       {draft.role === "admin" ? <fieldset className="desk-assigned-users">
@@ -200,8 +205,8 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
       </fieldset> : null}
       <section className="desk-agreement-block">
         <h3>Acuerdo % NODAL</h3>
-        <label>Operaciones propias<div><input disabled={!canEdit} max="100" min="0" step="0.01" type="number" value={(draft.commissionBps ?? 0) / 100} onChange={(event) => setDraft({ ...draft, commissionBps: Math.round(Number(event.target.value) * 100) })} /><span>%</span></div></label>
-        {draft.role === "admin" ? <label>Admin mesa<div><input disabled={!canEdit} max="100" min="0" step="0.01" type="number" value={(draft.adminBps ?? 0) / 100} onChange={(event) => setDraft({ ...draft, adminBps: Math.round(Number(event.target.value) * 100) })} /><span>%</span></div></label> : null}
+        <label>Operaciones propias<div><input disabled={!canEditPercentages} max="100" min="0" step="0.01" type="number" value={(draft.commissionBps ?? 0) / 100} onChange={(event) => setDraft({ ...draft, commissionBps: Math.round(Number(event.target.value) * 100) })} /><span>%</span></div></label>
+        {draft.role === "admin" ? <label>Admin mesa<div><input disabled={!canEditPercentages} max="100" min="0" step="0.01" type="number" value={(draft.adminBps ?? 0) / 100} onChange={(event) => setDraft({ ...draft, adminBps: Math.round(Number(event.target.value) * 100) })} /><span>%</span></div></label> : null}
         <small>{data.termsEditable || data.demo ? "Ventana de edición habilitada." : "Solo lectura durante el período."}</small>
       </section>
       <div className="desk-user-switches">
@@ -209,35 +214,53 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
         <label><span>Identidades<small>{identities.length} registradas</small></span><select disabled={!canEdit} value={draft.identitiesEnabled ? "enabled" : "disabled"} onChange={(event) => setDraft({ ...draft, identitiesEnabled: event.target.value === "enabled" })}><option value="enabled">Habilitadas</option><option value="disabled">No habilitadas</option></select></label>
       </div>
       {draft.identitiesEnabled ? <div className="desk-identities-table"><table><thead><tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Ganancia período</th><th>Facturación</th></tr></thead><tbody>{identities.map((identity) => <tr key={identity.id}><td>{identity.id}</td><td>{identity.name}</td><td>{identity.state}</td><td>{money(identity.periodGain)}</td><td>{money(identity.billing)}</td></tr>)}</tbody></table>{identities.length === 0 ? <p>Este usuario no tiene identidades registradas.</p> : null}</div> : null}
-      {saved ? <p className="desk-modal-saved" role="status">Cambios aplicados al escenario de prueba.</p> : null}
-      <footer><button className="secondary-action" onClick={onClose} type="button">Cancelar</button><button className="primary-action" disabled={!canEdit} onClick={save} type="button">Guardar cambios</button></footer>
+      {result ? <p className={`desk-modal-saved ${result.ok ? "" : "error"}`} role="status">{result.message}</p> : null}
+      <footer><button className="secondary-action" onClick={onClose} type="button">Cancelar</button><button className="primary-action" disabled={!canEdit || pending} onClick={save} type="button">{pending ? "Guardando…" : "Guardar cambios"}</button></footer>
     </section>
   </div>;
 }
 
 function InvitationPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [inviter, setInviter] = useState(data.userId);
-  const [sent, setSent] = useState<readonly { approved: boolean; email: string; inviter: string }[]>([{ approved: true, email: "demo.aprobado@nodal.test", inviter: data.userId }]);
+  const [demoSent, setDemoSent] = useState(data.invitations);
+  const [result, setResult] = useState<DeskActionResult | null>(null);
+  const [pending, startTransition] = useTransition();
   const people = data.overview.people;
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!email.trim()) return;
-    setSent((current) => [{ approved: false, email: email.trim(), inviter }, ...current]);
-    setEmail("");
+    if (data.demo) {
+      setDemoSent((current) => [{ createdAt: new Date().toISOString(), email: email.trim(), id: `demo-${Date.now()}`, referredByUserId: inviter, status: "pending_approval" }, ...current]);
+      setEmail("");
+      setResult({ ok: true, message: "Invitación simulada en el escenario de prueba." });
+      return;
+    }
+    startTransition(async () => {
+      const next = await sendDeskUserInvitation({ email, referredByUserId: inviter });
+      setResult(next);
+      if (next.ok) { setEmail(""); router.refresh(); }
+    });
   }
+
+  const invitations = data.demo ? demoSent : data.invitations;
+  const invitationStatus = (status: string) => status === "approved" ? "Aprobado como usuario NODAL"
+    : status === "rejected" ? "Rechazado por Admin Master"
+      : status === "failed" ? "No se pudo enviar el correo"
+        : "Pendiente de aprobación de Admin Master";
 
   return <section className="desk-surface desk-invitation-panel">
     <button aria-expanded={open} className="desk-add-user" onClick={() => setOpen((value) => !value)} type="button"><span>+ Agregar usuario</span><span>{open ? "−" : "+"}</span></button>
     {open ? <div className="desk-invitation-content"><form onSubmit={submit}>
       <label>Email<input placeholder="persona@correo.com" required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
       <label>Invitación enviada por<select value={inviter} onChange={(event) => setInviter(event.target.value)}>{people.map((person) => <option key={person.id} value={person.id}>{person.id === data.userId ? "Titular · " : ""}{person.name}</option>)}</select></label>
-      <button className="primary-action" type="submit">Enviar invitación</button>
-    </form><div className="desk-invitation-statuses">{sent.map((invitation, index) => {
-      const sender = people.find((person) => person.id === invitation.inviter)?.name ?? "Titular";
-      return <article key={`${invitation.email}-${index}`}><span>{invitation.approved ? "✓" : "→"}</span><div><strong>{invitation.email}</strong><small>{invitation.approved ? `Aprobado como usuario NODAL · invitado por ${sender}` : `Invitación enviada por ${sender}`}</small></div></article>;
+      <button className="primary-action" disabled={pending || data.preview} type="submit">{pending ? "Enviando…" : "Enviar invitación"}</button>
+    </form>{result ? <p className={`desk-modal-saved ${result.ok ? "" : "error"}`} role="status">{result.message}</p> : null}<div className="desk-invitation-statuses">{invitations.map((invitation) => {
+      const sender = people.find((person) => person.id === invitation.referredByUserId)?.name ?? "Titular";
+      return <article key={invitation.id}><span>{invitation.status === "approved" ? "✓" : invitation.status === "failed" || invitation.status === "rejected" ? "!" : "→"}</span><div><strong>{invitation.email}</strong><small>{invitationStatus(invitation.status)} · invitado por {sender}</small></div></article>;
     })}</div>{data.demo ? <p className="desk-demo-footnote">En este escenario el envío es simulado y no genera correos ni altas reales.</p> : null}</div> : null}
   </section>;
 }
@@ -393,6 +416,17 @@ export function MyDeskPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
     <section className="desk-surface"><div className="admin-section-heading"><div><h2>Usuarios</h2></div><span className="calculated-badge">{people.length}</span></div><div className="desk-table-scroll"><table className="desk-table my-desk-user-table"><thead><tr><th>ID</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Ganancia período</th><th>Facturación histórica</th></tr></thead><tbody>{people.map((person) => { const editable = editableByUser[person.id]; return <tr key={person.id}><td><span className="desk-user-id">{data.displayIdByUser[person.id] || "ID pendiente"}</span></td><td><button className="desk-person" onClick={() => setSelectedPersonId(person.id)} type="button">{person.name}</button></td><td>{person.id === data.userId ? "Titular" : editable?.role === "admin" ? "Admin" : "Usuario"}</td><td><span className={`desk-status ${editable?.state === "active" ? "active" : "inactive"}`}>{stateLabel(editable?.state ?? "active")}</span></td><td>{money(person.totalIncome)}</td><td>{money(data.historicalBillingByUser[person.id] ?? 0)}</td></tr>; })}</tbody></table></div></section>
     <section className="desk-surface desk-board-section"><div className="admin-section-heading"><div><h2>Estructura completa</h2></div></div><StructureBoard data={data} manager={manager} onOpenUser={setSelectedPersonId} rootDesk={desk} /></section>
     <section className="desk-surface desk-ranking-surface"><div className="admin-section-heading"><div><h2>Ranking de la mesa</h2></div></div><Ranking data={data} people={people} /></section>
-    {selectedPerson && editableByUser[selectedPerson.id] ? <UserDetailModal data={data} editable={editableByUser[selectedPerson.id]} onClose={() => setSelectedPersonId(null)} onSave={(next) => setEditableByUser((current) => ({ ...current, [selectedPerson.id]: next }))} person={selectedPerson} /> : null}
+    {selectedPerson && editableByUser[selectedPerson.id] ? <UserDetailModal data={data} editable={editableByUser[selectedPerson.id]} onClose={() => setSelectedPersonId(null)} onSave={async (next) => {
+      if (data.demo) {
+        setEditableByUser((current) => ({ ...current, [selectedPerson.id]: next }));
+        return { ok: true, message: "Cambios aplicados al escenario de prueba." };
+      }
+      const result = await saveDeskUser({ ...next, userId: selectedPerson.id });
+      if (result.ok) {
+        setEditableByUser((current) => ({ ...current, [selectedPerson.id]: next }));
+        window.location.reload();
+      }
+      return result;
+    }} person={selectedPerson} /> : null}
   </div>;
 }

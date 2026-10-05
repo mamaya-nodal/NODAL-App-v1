@@ -883,8 +883,13 @@ dialog.desk-dialog::backdrop {
 .desk-user-fields {
   display: grid;
   gap: 12px;
-  grid-template-columns: 0.8fr 1.5fr 0.8fr;
+  grid-template-columns: 0.75fr 1.25fr 1.25fr 0.75fr;
   margin-bottom: 18px;
+}
+.desk-user-fields label small {
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 .desk-assigned-users {
   border: 1px solid var(--line);
@@ -1044,6 +1049,9 @@ dialog.desk-dialog::backdrop {
   color: var(--brand);
   font-size: 0.72rem;
   font-weight: 800;
+}
+.desk-modal-saved.error {
+  color: #d65e55;
 }
 .desk-user-modal > footer {
   display: flex;

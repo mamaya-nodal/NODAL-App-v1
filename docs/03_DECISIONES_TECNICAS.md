@@ -1,5 +1,32 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-150 - Flujos reales y alcance del panel Admin
+
+- **Fecha:** 2026-10-04. Implementación solicitada tras aprobar el diseño del
+  panel Admin.
+- **Invitaciones:** el administrador de mesa registra el correo, la persona que
+  refiere y la mesa de destino. El correo se envía mediante la automatización
+  del servidor y el pedido queda pendiente hasta que Admin Master lo aprueba.
+  La aprobación prepara los espacios Real y Práctica, crea el acuerdo inicial y
+  conserva actor, fechas, estados y motivo.
+- **Permisos:** el rol Admin de mesa no reutiliza el rol técnico Admin Master.
+  La autorización se resuelve en base de datos sobre la rama administrada; no
+  se aceptan mutaciones sobre usuarios o mesas ajenos a esa rama.
+- **Persistencia:** rol, estado, email de contacto, habilitación de identidades,
+  porcentajes y adjudicaciones se guardan en servidor y generan historial. Los
+  porcentajes respetan la ventana de 48 horas de APP-148; Admin Master mantiene
+  su excepción auditada.
+- **Bajas y degradaciones:** no se puede degradar ni dar de baja a un
+  administrador mientras conserve integrantes o mesas dependientes. Los
+  subordinados deben reasignarse primero y ningún registro histórico se borra.
+- **Ficha real:** mejor trade y ruta de mayor ganancia se leen de lotes Ninja
+  comprometidos. El detalle económico de identidades se reconstruye desde las
+  cuentas explícitamente asignadas y las mismas reglas deterministas de fases
+  usadas por Contabilidad.
+- **Correos:** `nodal_users.email` es el correo de acceso sincronizado con
+  Google y permanece en solo lectura. `contact_email` es el correo operativo
+  editable. Cambiar el segundo nunca cambia silenciosamente la autenticación.
+
 ### APP-149 - Unidades del Sistema NODAL e identificadores visibles
 
 - **Fecha:** 2026-10-04. Regla funcional confirmada por Mauricio.

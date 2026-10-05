@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { accountingPeriodMonthAt } from "@/modules/accounting/domain/period-calendar";
 import type { OperationalSummary } from "@/modules/summary/domain/operational-summary";
+import { calculateAccountResult, type AccountPhaseWithdrawal } from "@/modules/operations/domain/account-phase-results";
+import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 
 import {
   calculateDeskOverview,
@@ -26,10 +28,12 @@ import { readAll } from "./read-all";
 type ProfileRow = Readonly<{
   access_role: "admin" | "student";
   access_state: string;
+  contact_email: string | null;
   created_at: string;
   display_name: string | null;
   email: string;
   id: string;
+  identities_enabled: boolean;
 }>;
 type PeriodRow = Readonly<{ id: string; period_month: string }>;
 type WorkspaceRow = Readonly<{
@@ -37,9 +41,16 @@ type WorkspaceRow = Readonly<{
   owner_user_id: string;
   periods: PeriodRow[];
 }>;
-type IdentityRow = Readonly<{ onboarding_status: string; workspace_id: string }>;
+type IdentityRow = Readonly<{
+  first_name: string;
+  id: string;
+  last_name: string;
+  onboarding_status: string;
+  workspace_id: string;
+}>;
 type ConnectorRow = Readonly<{
   connector_version: string;
+  id: string;
   last_seen_at: string | null;
   owner_user_id: string;
 }>;
@@ -62,6 +73,13 @@ export type DeskPanelIdentityRow = Readonly<{
   name: string;
   periodGain: number;
   state: string;
+}>;
+export type DeskPanelInvitation = Readonly<{
+  createdAt: string;
+  email: string;
+  id: string;
+  referredByUserId: string;
+  status: string;
 }>;
 export type DeskPanelUserDetail = Readonly<{
   bestTrade: Readonly<{ amount: number; date: string }> | null;
@@ -107,6 +125,7 @@ export type MyDeskPanelData = Readonly<{
   historicalBillingByUser: Readonly<Record<string, number>>;
   history: readonly DeskPanelHistoryPoint[];
   identitiesByUser: Readonly<Record<string, DeskPanelIdentitySummary>>;
+  invitations: readonly DeskPanelInvitation[];
   lastOperatedOnByUser: Readonly<Record<string, string | null>>;
   month: string;
   overview: ReturnType<typeof calculateDeskOverview>;
@@ -160,7 +179,7 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
 
   const [{ data: profiles, error: profileError }, { data: workspaces, error: workspaceError }] = await Promise.all([
     service.from("nodal_users")
-      .select("id,email,display_name,access_state,access_role,created_at")
+      .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled")
       .in("id", [...relevantUserIds]).order("display_name").order("id"),
     service.from("workspaces")
       .select("id,owner_user_id,periods(id,period_month)")
@@ -187,10 +206,10 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
   const workspaceIds = workspaceRows.map((workspace) => workspace.id);
   const [identityResult, connectorResult, termsWindowResult] = await Promise.all([
     workspaceIds.length > 0
-      ? service.from("nodal_identities").select("workspace_id,onboarding_status").in("workspace_id", workspaceIds)
+      ? service.from("nodal_identities").select("id,workspace_id,first_name,last_name,onboarding_status").in("workspace_id", workspaceIds)
       : Promise.resolve({ data: [], error: null }),
     service.from("ninja_connectors")
-      .select("owner_user_id,connector_version,last_seen_at")
+      .select("id,owner_user_id,connector_version,last_seen_at")
       .in("owner_user_id", [...relevantUserIds])
       .order("paired_at", { ascending: false }),
     session.rpc("nodal_desk_terms_window_open"),
@@ -198,6 +217,53 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
   if (identityResult.error || connectorResult.error || termsWindowResult.error) {
     throw new Error("No se pudo completar el estado de la estructura.");
   }
+
+  const invitationResult = deskId
+    ? await service.from("nodal_user_invitations")
+      .select("id,recipient_email,referred_by_user_id,status,created_at")
+      .eq("desk_id", deskId).order("created_at", { ascending: false })
+    : { data: [], error: null };
+  if (invitationResult.error) throw new Error("No se pudieron cargar las invitaciones de la mesa.");
+
+  const currentPeriodIds = workspaceRows.flatMap((workspace) => workspace.periods
+    .filter((period) => period.period_month === month).map((period) => period.id));
+  const accountResult = currentPeriodIds.length > 0
+    ? await service.from("accounts")
+      .select("id,period_id,company_id,reference_number,state,state_origin")
+      .in("period_id", currentPeriodIds)
+    : { data: [], error: null };
+  if (accountResult.error) throw new Error("No se pudo cargar el detalle operativo de la mesa.");
+  const accountRows = accountResult.data ?? [];
+  const accountIds = accountRows.map((account) => account.id);
+  const connectorRows = (connectorResult.data ?? []) as ConnectorRow[];
+  const connectorIds = connectorRows.map((connector) => connector.id);
+  const [assignmentResult, purchaseResult, entryResult, withdrawalResult, batchResult, companyResult] = await Promise.all([
+    accountIds.length > 0
+      ? service.from("identity_account_assignments")
+        .select("account_id,identity_id,assigned_at,unassigned_at").in("account_id", accountIds)
+      : Promise.resolve({ data: [], error: null }),
+    accountIds.length > 0
+      ? service.from("purchases").select("account_id,price_cents").in("account_id", accountIds)
+      : Promise.resolve({ data: [], error: null }),
+    accountIds.length > 0
+      ? service.from("operation_entries")
+        .select("id,daily_control_id,account_id,operated_on,phase,participant_role,destination,magnitude_cents")
+        .in("account_id", accountIds)
+      : Promise.resolve({ data: [], error: null }),
+    accountIds.length > 0
+      ? service.from("account_phase_withdrawals")
+        .select("account_id,phase,total_withdrawal_cents").in("account_id", accountIds)
+      : Promise.resolve({ data: [], error: null }),
+    connectorIds.length > 0
+      ? service.from("ninja_operation_batches")
+        .select("id,connector_id,broker_result_cents,opened_at,operated_on,accounting_company_id,accounting_phase,accounting_period_id,accounting_status")
+        .in("connector_id", connectorIds).in("accounting_period_id", currentPeriodIds)
+        .eq("accounting_status", "committed")
+      : Promise.resolve({ data: [], error: null }),
+    service.from("companies").select("id,display_name"),
+  ]);
+  if ([assignmentResult, purchaseResult, entryResult, withdrawalResult, batchResult, companyResult]
+    .some((result) => result.error)) throw new Error("No se pudo reconstruir la ficha económica de los usuarios.");
 
   const profilesById = new Map(profileRows.map((profile) => [profile.id, profile]));
   const periodsByUser = new Map(workspaceRows.map((workspace) => [workspace.owner_user_id, workspace.periods]));
@@ -282,7 +348,7 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
   }
 
   const connectorByUser: Record<string, DeskPanelConnectorSummary> = {};
-  for (const connector of (connectorResult.data ?? []) as ConnectorRow[]) {
+  for (const connector of connectorRows) {
     if (connectorByUser[connector.owner_user_id]) continue;
     connectorByUser[connector.owner_user_id] = {
       active: transmittedWithinLast24Hours(connector.last_seen_at),
@@ -291,19 +357,109 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
     };
   }
 
-  return {
-    connectorByUser,
-    deskId,
-    deskName,
-    detailByUser: Object.fromEntries(overview.people.map((person) => [person.id, {
-      bestTrade: null,
-      identities: [],
-      largestGainRoute: null,
+  const currentPeriodOwner = new Map(workspaceRows.flatMap((workspace) => workspace.periods
+    .filter((period) => period.period_month === month)
+    .map((period) => [period.id, workspace.owner_user_id] as const)));
+  const purchaseByAccount = new Map((purchaseResult.data ?? [])
+    .map((purchase) => [purchase.account_id, Number(purchase.price_cents)] as const));
+  const rawEntries = entryResult.data ?? [];
+  const rawWithdrawals = withdrawalResult.data ?? [];
+  const accountGain = new Map<string, number>();
+  for (const account of accountRows) {
+    const operationEntries: OperationRegisterEntry[] = rawEntries
+      .filter((entry) => entry.account_id === account.id)
+      .map((entry) => ({
+        accountId: account.id,
+        accountReference: account.reference_number,
+        companyId: account.company_id,
+        companyName: "",
+        dailyControlId: entry.daily_control_id,
+        destination: entry.destination as OperationRegisterEntry["destination"],
+        id: entry.id,
+        magnitudeInCents: Number(entry.magnitude_cents),
+        operatedOn: entry.operated_on,
+        participantRole: entry.participant_role as OperationRegisterEntry["participantRole"],
+        phase: entry.phase as OperationRegisterEntry["phase"],
+      }));
+    const phaseWithdrawals: AccountPhaseWithdrawal[] = rawWithdrawals
+      .filter((withdrawal) => withdrawal.account_id === account.id && withdrawal.phase !== "Evaluacion")
+      .map((withdrawal) => ({
+        accountId: account.id,
+        phase: withdrawal.phase as AccountPhaseWithdrawal["phase"],
+        totalWithdrawalInCents: Number(withdrawal.total_withdrawal_cents),
+      }));
+    const calculated = calculateAccountResult(
+      operationEntries,
+      phaseWithdrawals,
+      (account.state_origin ?? "automatic") as "automatic" | "manual_closed" | "manual_live",
+      purchaseByAccount.get(account.id) ?? 0,
+    );
+    accountGain.set(account.id,
+      [...calculated.phaseResults].reverse().find((phase) => phase.totalGainInCents !== 0)?.totalGainInCents ?? 0);
+  }
+  const currentAssignmentByAccount = new Map((assignmentResult.data ?? [])
+    .filter((assignment) => !assignment.unassigned_at)
+    .map((assignment) => [assignment.account_id, assignment.identity_id] as const));
+  const accountsByOwner = new Map<string, typeof accountRows>();
+  for (const account of accountRows) {
+    const ownerId = currentPeriodOwner.get(account.period_id);
+    if (!ownerId) continue;
+    accountsByOwner.set(ownerId, [...(accountsByOwner.get(ownerId) ?? []), account]);
+  }
+  const connectorOwner = new Map(connectorRows.map((connector) => [connector.id, connector.owner_user_id]));
+  const companies = new Map((companyResult.data ?? []).map((company) => [company.id, company.display_name]));
+  const batchesByOwner = new Map<string, typeof batchResult.data>();
+  for (const batch of batchResult.data ?? []) {
+    const ownerId = connectorOwner.get(batch.connector_id);
+    if (!ownerId) continue;
+    batchesByOwner.set(ownerId, [...(batchesByOwner.get(ownerId) ?? []), batch]);
+  }
+  const identitiesByWorkspace = new Map<string, IdentityRow[]>();
+  for (const identity of (identityResult.data ?? []) as IdentityRow[]) {
+    identitiesByWorkspace.set(identity.workspace_id, [...(identitiesByWorkspace.get(identity.workspace_id) ?? []), identity]);
+  }
+  const workspaceByOwner = new Map(workspaceRows.map((workspace) => [workspace.owner_user_id, workspace]));
+  const detailByUser: Record<string, DeskPanelUserDetail> = {};
+  for (const person of overview.people) {
+    const userBatches = [...(batchesByOwner.get(person.id) ?? [])]
+      .sort((left, right) => Number(right.broker_result_cents) - Number(left.broker_result_cents));
+    const best = userBatches[0];
+    const userAccounts = accountsByOwner.get(person.id) ?? [];
+    const workspace = workspaceByOwner.get(person.id);
+    const userIdentities = workspace ? identitiesByWorkspace.get(workspace.id) ?? [] : [];
+    detailByUser[person.id] = {
+      bestTrade: best ? {
+        amount: Number(best.broker_result_cents),
+        date: best.operated_on ?? best.opened_at.slice(0, 10),
+      } : null,
+      identities: userIdentities.map((identity) => {
+        const assigned = userAccounts.filter((account) => currentAssignmentByAccount.get(account.id) === identity.id);
+        return {
+          billing: assigned.filter((account) => account.state === "closed")
+            .reduce((total, account) => total + (accountGain.get(account.id) ?? 0), 0),
+          id: identity.id,
+          name: `${identity.first_name} ${identity.last_name}`,
+          periodGain: assigned.reduce((total, account) => total + (accountGain.get(account.id) ?? 0), 0),
+          state: identity.onboarding_status === "approved" ? "Activa"
+            : identity.onboarding_status === "inactive" ? "Inactiva" : "Pendiente",
+        };
+      }),
+      largestGainRoute: best
+        ? [companies.get(best.accounting_company_id ?? ""), best.accounting_phase]
+          .filter(Boolean).join(" · ") || "Operación sin clasificación"
+        : null,
       performance: snapshots.map((snapshot) => ({
         amount: snapshot.overview.people.find((candidate) => candidate.id === person.id)?.gross ?? 0,
         label: snapshot.month.slice(0, 7),
       })),
-    }])),
+    };
+  }
+
+  return {
+    connectorByUser,
+    deskId,
+    deskName,
+    detailByUser,
     demo: false,
     displayIdByUser: Object.fromEntries(overview.people.map((person) => [
       person.id,
@@ -321,6 +477,13 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
       };
     }),
     identitiesByUser,
+    invitations: (invitationResult.data ?? []).map((invitation) => ({
+      createdAt: invitation.created_at,
+      email: invitation.recipient_email,
+      id: invitation.id,
+      referredByUserId: invitation.referred_by_user_id,
+      status: invitation.status,
+    })),
     lastOperatedOnByUser,
     month,
     overview,
@@ -329,7 +492,7 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
     profilesByUser: Object.fromEntries(profileRows.map((profile) => [profile.id, profile])),
     summaries: summaryRecord,
     suggestions,
-    termsEditable: Boolean(termsWindowResult.data),
+    termsEditable: scope.kind === "combined" || Boolean(termsWindowResult.data),
     userId: user.id,
   };
 }

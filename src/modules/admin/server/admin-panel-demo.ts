@@ -114,10 +114,12 @@ export function buildAdminPanelDemo(): MyDeskPanelData {
   const profilesByUser = Object.fromEntries(peopleData.map(([id, name, email, master], index) => [id, {
     access_role: master ? ("admin" as const) : ("student" as const),
     access_state: "active",
+    contact_email: email,
     created_at: `2026-08-${String(index + 2).padStart(2, "0")}T12:00:00Z`,
     display_name: name,
     email,
     id,
+    identities_enabled: true,
   }]));
   const historicalBillingByUser = Object.fromEntries(peopleData.map(([id]) => [id,
     months.reduce((total, month) => total + (grossByMonth[month][id] ?? 0), 0),
@@ -178,6 +180,13 @@ export function buildAdminPanelDemo(): MyDeskPanelData {
       [USER.camila]: { active: 1, total: 1 },
       [USER.nicolas]: { active: 1, total: 2 },
     },
+    invitations: [{
+      createdAt: "2026-09-18T12:00:00Z",
+      email: "demo.aprobado@nodal.test",
+      id: "demo-invitation-approved",
+      referredByUserId: USER.mauricio,
+      status: "approved",
+    }],
     lastOperatedOnByUser: {
       [USER.mauricio]: "2026-10-03", [USER.laura]: "2026-10-02", [USER.sofia]: "2026-10-03",
       [USER.pablo]: "2026-10-01", [USER.diego]: "2026-10-03", [USER.camila]: "2026-09-29", [USER.nicolas]: "2026-10-02",
