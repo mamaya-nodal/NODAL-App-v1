@@ -69,6 +69,27 @@
   de Juana, recibe USD 25 de esos USD 50 y Juana conserva USD 25 antes de aplicar
   los acuerdos NODAL que correspondan a cada administrador.
 - **Ranking:** se ordena por facturación del período anterior.
+- **Ficha de usuario:** la tabla conserva ID visible, nombre, rol, estado y
+  resultados resumidos. Seleccionar una persona abre una ventana superpuesta,
+  no una página ni una fila expandida. La ficha reúne desempeño, mejor trade,
+  última operación, ruta de mayor ganancia, estado, email, rol, adjudicaciones
+  múltiples, acuerdos, conector Ninja e identidades. Una baja exige
+  confirmación antes de guardarse.
+- **Invitaciones:** `Agregar usuario` despliega email, persona que invita y el
+  estado de cada invitación o aprobación. La persona que invita se elige entre
+  los integrantes de la mesa, incluido el titular. La aprobación real continúa
+  reservada a Admin Master.
+- **Pizarra:** la estructura completa se representa como árbol sinóptico de
+  tarjetas simples conectadas sobre un lienzo punteado. El lienzo puede
+  recorrerse con la rueda o manteniendo Espacio y arrastrando; cada tarjeta
+  despliega su resumen y las tarjetas de personas abren la ficha completa.
+- **Identificadores visibles:** el código NODAL es distinto del UUID técnico y
+  puede cambiar al trasladar a la persona de mesa. Los códigos mostrados en el
+  escenario ficticio son datos de prueba y no fijan todavía el algoritmo
+  productivo de asignación.
+- **Escenario ficticio:** invitaciones, cambios de rol, estados, acuerdos,
+  adjudicaciones, conector e identidades se pueden ensayar localmente en la
+  interfaz, sin escribir usuarios, mesas, correos ni contabilidad real.
 - **Bonus anterior:** se elimina la escala automática de 15/30/40/50% por
   cantidad de mesas directas. No participa en cálculos nuevos ni se ofrece en
   la interfaz. Sus columnas históricas se conservan únicamente para no

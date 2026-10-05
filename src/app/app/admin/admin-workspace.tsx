@@ -60,7 +60,7 @@ export function AdminWorkspace({ children, scope = "master", userLabel, versionI
 
       <div className="workspace-stage">
         <header className="workspace-topbar">
-          <div><span>{scope === "desk" ? "Administración de estructura" : "Panel de administración"}</span><strong>{activeLabel}</strong></div>
+          {scope === "master" ? <div><span>Panel de administración</span><strong>{activeLabel}</strong></div> : <div />}
           <div className="workspace-top-actions">
             <ThemeToggle />
             <WorkspaceUserMenu userLabel={userLabel} versionInfo={versionInfo} />

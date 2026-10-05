@@ -73,6 +73,26 @@ const grossByMonth: Record<string, Record<string, number>> = {
   },
 };
 
+const displayIdByUser: Record<string, string> = {
+  [USER.mauricio]: "USERND-M01",
+  [USER.laura]: "USERND-M01-01",
+  [USER.sofia]: "USERND-M01-02",
+  [USER.pablo]: "USERND-M02-01",
+  [USER.diego]: "USERND-M02-02",
+  [USER.camila]: "USERND-M03-01",
+  [USER.nicolas]: "USERND-M03-02",
+};
+
+const identityNamesByUser: Record<string, readonly string[]> = {
+  [USER.mauricio]: ["Mauricio Trading"],
+  [USER.laura]: ["Leonardo König", "Clara Peralta"],
+  [USER.sofia]: ["Sofía Capital", "Norte Futuros"],
+  [USER.pablo]: [],
+  [USER.diego]: ["Diego Personal", "Delta Trading", "Luna Capital"],
+  [USER.camila]: ["Camila Prop"],
+  [USER.nicolas]: ["Nicolás Trading", "Vera Markets"],
+};
+
 function overview(month: string) {
   const people: Person[] = peopleData.map(([id, name, email, master]) => ({
     access: "active",
@@ -114,9 +134,28 @@ export function buildAdminPanelDemo(): MyDeskPanelData {
       [USER.camila]: { online: false, version: null },
       [USER.nicolas]: { online: false, version: "0.9" },
     },
+    detailByUser: Object.fromEntries(peopleData.map(([id], personIndex) => [id, {
+      bestTrade: {
+        amount: 82_500 + (personIndex * 13_700),
+        date: `2026-09-${String(12 + personIndex).padStart(2, "0")}`,
+      },
+      identities: (identityNamesByUser[id] ?? []).map((name, identityIndex) => ({
+        billing: 290_000 + (personIndex * 61_000) + (identityIndex * 47_000),
+        id: `ID-${displayIdByUser[id].replace("USERND-", "")}-${identityIndex + 1}`,
+        name,
+        periodGain: 95_000 + (personIndex * 28_000) + (identityIndex * 19_000),
+        state: identityIndex === 1 && id === USER.sofia ? "Pausada" : "Activa",
+      })),
+      largestGainRoute: ["Lucida", "NQ Apertura", "MNQ Reversa", "Prop A", "Ninja 2", "GC Tendencia", "ES Cierre"][personIndex],
+      performance: months.map((month) => ({
+        amount: grossByMonth[month][id] ?? 0,
+        label: month.slice(0, 7),
+      })),
+    }])),
     demo: true,
+    displayIdByUser,
     deskId: DESK.root,
-    deskName: "Mesa de prueba Mauricio",
+    deskName: "MESA DE MAURICIO",
     historicalBillingByUser,
     history: snapshots.map((snapshot) => {
       const root = snapshot.overview.desks.find((desk) => desk.id === DESK.root)!;

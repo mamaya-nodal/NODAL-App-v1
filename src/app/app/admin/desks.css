@@ -661,3 +661,589 @@ dialog.desk-dialog::backdrop {
     grid-column: auto;
   }
 }
+
+/* Panel Admin: ficha de usuario, invitaciones, ranking y pizarra de estructura. */
+.desk-user-id {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.my-desk-user-table .desk-person {
+  color: var(--ink);
+  text-decoration-color: var(--brand);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.desk-invitation-panel {
+  padding: 0;
+  overflow: hidden;
+}
+.desk-add-user {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  display: flex;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 850;
+  justify-content: space-between;
+  padding: 18px 20px;
+  text-align: left;
+  width: 100%;
+}
+.desk-invitation-content {
+  border-top: 1px solid var(--line);
+  padding: 20px;
+}
+.desk-invitation-content form {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) auto;
+}
+.desk-invitation-content label,
+.desk-user-fields label {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.7rem;
+  font-weight: 750;
+  gap: 7px;
+}
+.desk-invitation-content input,
+.desk-invitation-content select,
+.desk-user-modal input,
+.desk-user-modal select {
+  background: var(--app-panel, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 42px;
+  padding: 0 12px;
+}
+.desk-invitation-content .primary-action {
+  min-height: 42px;
+  white-space: nowrap;
+}
+.desk-invitation-statuses {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.desk-invitation-statuses article {
+  align-items: center;
+  background: color-mix(in srgb, var(--brand) 7%, transparent);
+  border-radius: 12px;
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.desk-invitation-statuses article > span {
+  color: var(--brand);
+  font-size: 1rem;
+  font-weight: 900;
+}
+.desk-invitation-statuses strong,
+.desk-invitation-statuses small {
+  display: block;
+}
+.desk-invitation-statuses strong {
+  font-size: 0.76rem;
+}
+.desk-invitation-statuses small,
+.desk-demo-footnote {
+  color: var(--muted);
+  font-size: 0.68rem;
+  margin-top: 3px;
+}
+.desk-demo-footnote {
+  margin-bottom: 0;
+}
+
+.desk-modal-backdrop {
+  align-items: flex-start;
+  backdrop-filter: blur(10px);
+  background: rgb(0 0 0 / 58%);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 30px 18px;
+  position: fixed;
+  z-index: 220;
+}
+.desk-user-modal {
+  background: var(--app-panel, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: 0 30px 90px rgb(0 0 0 / 38%);
+  color: var(--ink);
+  padding: 24px;
+  width: min(760px, 100%);
+}
+.desk-user-modal > header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.desk-user-modal > header span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  margin-bottom: 5px;
+}
+.desk-user-modal h2 {
+  font-size: clamp(1rem, 2.4vw, 1.35rem);
+  margin: 0;
+}
+.desk-modal-close {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--ink);
+  display: inline-flex;
+  font-size: 1.3rem;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
+  width: 34px;
+}
+.desk-user-chart {
+  background: color-mix(in srgb, var(--muted) 8%, transparent);
+  border-radius: 15px;
+  display: block;
+  height: auto;
+  margin-bottom: 14px;
+  width: 100%;
+}
+.desk-user-chart line {
+  stroke: var(--line);
+}
+.desk-user-chart polyline {
+  fill: none;
+  stroke: #8b72ff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+.desk-user-chart circle {
+  fill: var(--brand);
+  stroke: var(--app-panel, var(--surface));
+  stroke-width: 2;
+}
+.desk-user-chart text {
+  fill: var(--muted);
+  font-size: 10px;
+}
+.desk-user-highlight-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(180px, 0.85fr) 1.3fr;
+  margin-bottom: 18px;
+}
+.desk-best-trade {
+  background: #00b96b;
+  border-radius: 16px;
+  color: #fff;
+  display: grid;
+  gap: 5px;
+  padding: 15px;
+  text-align: center;
+}
+.desk-best-trade span,
+.desk-best-trade small {
+  font-size: 0.7rem;
+}
+.desk-best-trade strong {
+  font-size: 1rem;
+}
+.desk-user-quick-data {
+  align-content: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+.desk-user-quick-data span {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+.desk-user-quick-data strong {
+  color: var(--ink);
+  display: block;
+  font-size: 0.86rem;
+  margin-top: 5px;
+}
+.desk-user-fields {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 0.8fr 1.5fr 0.8fr;
+  margin-bottom: 18px;
+}
+.desk-assigned-users {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  margin: 0 0 18px;
+  padding: 14px;
+}
+.desk-assigned-users legend {
+  font-size: 0.75rem;
+  font-weight: 850;
+  padding: 0 6px;
+}
+.desk-assigned-users p {
+  color: var(--muted);
+  font-size: 0.68rem;
+  margin: 0 0 10px;
+}
+.desk-assigned-users > div {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+.desk-assigned-users label {
+  align-items: center;
+  display: flex;
+  font-size: 0.72rem;
+  gap: 7px;
+}
+.desk-assigned-users input {
+  min-height: auto;
+  width: auto;
+}
+.desk-agreement-block {
+  background: color-mix(in srgb, var(--brand) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand) 25%, var(--line));
+  border-radius: 15px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 18px;
+  padding: 14px;
+}
+.desk-agreement-block h3,
+.desk-agreement-block > small {
+  grid-column: 1 / -1;
+}
+.desk-agreement-block h3 {
+  font-size: 0.78rem;
+  margin: 0;
+}
+.desk-agreement-block label {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.desk-agreement-block label > div {
+  align-items: center;
+  display: flex;
+  margin-top: 6px;
+}
+.desk-agreement-block input {
+  border-radius: 10px 0 0 10px;
+  min-width: 0;
+  width: 100%;
+}
+.desk-agreement-block label > div span {
+  align-items: center;
+  background: var(--app-panel, var(--surface));
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  display: flex;
+  height: 42px;
+  padding: 0 12px;
+}
+.desk-agreement-block > small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+.desk-user-switches {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 18px;
+}
+.desk-user-switches > label {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  display: flex;
+  justify-content: space-between;
+  padding: 11px 12px;
+}
+.desk-user-switches span {
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+.desk-user-switches small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 500;
+  margin-top: 3px;
+}
+.desk-user-switches select {
+  min-height: 36px;
+}
+.desk-identities-table {
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+}
+.desk-identities-table table {
+  border-collapse: collapse;
+  min-width: 620px;
+  width: 100%;
+}
+.desk-identities-table th,
+.desk-identities-table td {
+  border-bottom: 1px solid var(--line);
+  font-size: 0.68rem;
+  padding: 9px 10px;
+  text-align: left;
+}
+.desk-identities-table th {
+  background: var(--brand);
+  color: #10200f;
+  font-weight: 850;
+}
+.desk-identities-table p {
+  color: var(--muted);
+  font-size: 0.7rem;
+  padding: 0 10px;
+}
+.desk-modal-saved {
+  color: var(--brand);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.desk-user-modal > footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.desk-board-section {
+  overflow: hidden;
+}
+.desk-board-shell {
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  overflow: hidden;
+}
+.desk-board-toolbar {
+  align-items: center;
+  background: var(--app-panel, var(--surface));
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 0 12px;
+}
+.desk-board-toolbar span {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+.desk-board-toolbar button {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.desk-board-viewport {
+  background-color: #fbfcfb;
+  background-image: radial-gradient(#cfd9d0 1.2px, transparent 1.2px);
+  background-size: 17px 17px;
+  height: 610px;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+}
+.desk-board-viewport.ready {
+  cursor: grab;
+}
+.desk-board-viewport.ready:active {
+  cursor: grabbing;
+}
+.desk-board-canvas {
+  position: absolute;
+  transform-origin: 0 0;
+}
+.desk-board-lines {
+  inset: 0;
+  overflow: visible;
+  position: absolute;
+}
+.desk-board-lines path {
+  fill: none;
+  stroke: #91a096;
+  stroke-width: 1.5;
+}
+.desk-board-node {
+  align-items: center;
+  border: 1px solid rgb(28 40 31 / 12%);
+  border-radius: 11px;
+  box-shadow: 0 5px 14px rgb(33 53 38 / 10%);
+  color: #1b221d;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  min-height: 64px;
+  padding: 11px 10px 10px 13px;
+  position: absolute;
+  width: 166px;
+}
+.desk-board-node.lime {
+  background: #a8ff63;
+}
+.desk-board-node.gray {
+  background: #d7d8d7;
+}
+.desk-board-node strong,
+.desk-board-node-name {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 0.69rem;
+  font-weight: 850;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+.desk-board-node-name {
+  text-decoration: underline;
+  text-decoration-color: rgb(27 34 29 / 30%);
+  text-underline-offset: 3px;
+}
+.desk-board-node-toggle {
+  align-items: center;
+  background: rgb(255 255 255 / 55%);
+  border: 0;
+  border-radius: 50%;
+  color: #1b221d;
+  display: flex;
+  font-size: 0.9rem;
+  height: 22px;
+  justify-content: center;
+  padding: 0;
+  width: 22px;
+}
+.desk-board-node small {
+  color: #4b554e;
+  font-size: 0.57rem;
+  grid-column: 1 / -1;
+  line-height: 1.35;
+  margin-top: 6px;
+}
+
+.desk-ranking-surface {
+  overflow: hidden;
+}
+.desk-podium {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 12px auto 24px;
+  max-width: 760px;
+}
+.desk-podium article {
+  align-items: center;
+  background: color-mix(in srgb, var(--muted) 8%, var(--app-panel, var(--surface)));
+  border: 1px solid var(--line);
+  border-radius: 18px 18px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  min-height: 145px;
+  padding: 18px 10px 12px;
+  position: relative;
+  text-align: center;
+}
+.desk-podium article.place-1 {
+  background: linear-gradient(150deg, #ddff98, #84ed3c);
+  border-color: #78d934;
+  color: #142510;
+  min-height: 185px;
+  padding-top: 24px;
+}
+.desk-podium article > span {
+  font-size: 1.8rem;
+  margin-bottom: 9px;
+}
+.desk-podium strong {
+  font-size: 0.82rem;
+}
+.desk-podium small {
+  color: inherit;
+  font-size: 0.72rem;
+  margin-top: 6px;
+  opacity: 0.72;
+}
+.desk-podium b {
+  align-items: center;
+  background: var(--app-panel, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  bottom: -13px;
+  color: var(--ink);
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  position: absolute;
+  width: 28px;
+}
+.desk-ranking-rest {
+  list-style-position: inside;
+  margin: 0 auto;
+  max-width: 760px;
+  padding: 0;
+}
+.desk-ranking-rest li {
+  border-top: 1px solid var(--line);
+  font-size: 0.75rem;
+  padding: 12px 8px;
+}
+.desk-ranking-rest li strong {
+  margin-left: 8px;
+}
+.desk-ranking-rest li span {
+  color: var(--muted);
+  float: right;
+}
+
+@media (max-width: 720px) {
+  .desk-invitation-content form,
+  .desk-user-fields,
+  .desk-user-highlight-row,
+  .desk-user-switches {
+    grid-template-columns: 1fr;
+  }
+  .desk-assigned-users > div {
+    grid-template-columns: 1fr;
+  }
+  .desk-modal-backdrop {
+    padding: 10px;
+  }
+  .desk-user-modal {
+    border-radius: 18px;
+    padding: 16px;
+  }
+  .desk-board-viewport {
+    height: 520px;
+  }
+  .desk-podium {
+    gap: 6px;
+  }
+  .desk-podium article {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+}

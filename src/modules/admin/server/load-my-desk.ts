@@ -52,6 +52,19 @@ export type DeskPanelHistoryPoint = Readonly<{
   structureBilling: number;
   totalIncome: number;
 }>;
+export type DeskPanelIdentityRow = Readonly<{
+  billing: number;
+  id: string;
+  name: string;
+  periodGain: number;
+  state: string;
+}>;
+export type DeskPanelUserDetail = Readonly<{
+  bestTrade: Readonly<{ amount: number; date: string }> | null;
+  identities: readonly DeskPanelIdentityRow[];
+  largestGainRoute: string | null;
+  performance: readonly Readonly<{ amount: number; label: string }>[];
+}>;
 
 function privilegedClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -88,7 +101,9 @@ export type MyDeskPanelData = Readonly<{
   connectorByUser: Readonly<Record<string, DeskPanelConnectorSummary>>;
   deskId: string | null;
   deskName: string | null;
+  detailByUser: Readonly<Record<string, DeskPanelUserDetail>>;
   demo: boolean;
+  displayIdByUser: Readonly<Record<string, string>>;
   historicalBillingByUser: Readonly<Record<string, number>>;
   history: readonly DeskPanelHistoryPoint[];
   identitiesByUser: Readonly<Record<string, DeskPanelIdentitySummary>>;
@@ -279,7 +294,20 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
     connectorByUser,
     deskId,
     deskName,
+    detailByUser: Object.fromEntries(overview.people.map((person) => [person.id, {
+      bestTrade: null,
+      identities: [],
+      largestGainRoute: null,
+      performance: snapshots.map((snapshot) => ({
+        amount: snapshot.overview.people.find((candidate) => candidate.id === person.id)?.gross ?? 0,
+        label: snapshot.month.slice(0, 7),
+      })),
+    }])),
     demo: false,
+    displayIdByUser: Object.fromEntries(overview.people.map((person) => [
+      person.id,
+      person.id === user.id ? "TITULAR" : "",
+    ])),
     historicalBillingByUser,
     history: snapshots.map((snapshot) => {
       const snapshotDesk = deskId ? snapshot.overview.desks.find((desk) => desk.id === deskId) : null;
