@@ -13,6 +13,14 @@ type UnitRow = Readonly<{
   root_desk_id: string;
 }>;
 
+export type MasterUnitSummary = Readonly<{
+  deskCount: number;
+  gross: number;
+  id: string;
+  nodalIncome: number;
+  userCount: number;
+}>;
+
 export async function loadMasterControl(
   requestedMonth?: string,
 ) {
@@ -89,6 +97,42 @@ export async function loadMasterControl(
     ];
   }
 
+  const units = (unitsResult.data ?? []) as UnitRow[];
+  const deskById = new Map(deskData.overview.desks.map((desk) => [desk.id, desk]));
+  const unitByDesk: Record<string, string> = {};
+  const resolveUnitId = (deskId: string) => {
+    if (unitByDesk[deskId]) return unitByDesk[deskId];
+    const visited = new Set<string>();
+    let currentId: string | null = deskId;
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const unit = units.find((candidate) => candidate.root_desk_id === currentId);
+      if (unit) {
+        for (const id of visited) unitByDesk[id] = unit.id;
+        return unit.id;
+      }
+      currentId = deskById.get(currentId)?.parent_id ?? null;
+    }
+    return units[0]?.id ?? "";
+  };
+  for (const desk of deskData.overview.desks) resolveUnitId(desk.id);
+  const unitByUser = Object.fromEntries(deskData.overview.people.map((person) => [
+    person.id,
+    resolveUnitId(person.deskId),
+  ]));
+  const unitSummaries: MasterUnitSummary[] = units.map((unit) => {
+    const people = deskData.overview.people.filter((person) => unitByUser[person.id] === unit.id);
+    const desks = deskData.overview.desks.filter((desk) => resolveUnitId(desk.id) === unit.id && desk.terms.active);
+    const root = desks.find((desk) => desk.id === unit.root_desk_id);
+    return {
+      deskCount: desks.length,
+      gross: people.reduce((sum, person) => sum + person.gross, 0),
+      id: unit.id,
+      nodalIncome: root?.nodalShare ?? 0,
+      userCount: people.filter((person) => person.access === "active").length,
+    };
+  });
+
   return {
     ...deskData,
     demo: false,
@@ -99,7 +143,10 @@ export async function loadMasterControl(
       .map((identifier) => [identifier.user_id, identifier.display_id])),
     identifierHistoryByUser,
     profilesByUser: Object.fromEntries((profilesResult.data ?? []).map((profile) => [profile.id, profile])),
-    units: (unitsResult.data ?? []) as UnitRow[],
+    unitByDesk,
+    unitByUser,
+    unitSummaries,
+    units,
   };
 }
 

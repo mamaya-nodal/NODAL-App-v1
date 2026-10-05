@@ -2061,6 +2061,6 @@ vigente sin aprobacion y evidencia suficiente.
 - **Alcance:** Panel Admin y Admin Master disponen de escenarios ficticios completos, accesibles mediante `?demo=1` únicamente para `mauriciosebastianamaya@gmail.com`.
 - **Aislamiento:** los escenarios se construyen en memoria y no crean usuarios, mesas, identidades, invitaciones, solicitudes, operaciones ni registros económicos. Los controles simulados nunca llaman acciones de servidor productivas.
 - **Panel Admin:** conserva el árbol ficticio aprobado, fichas, ranking, invitaciones y edición visual de roles, estados y porcentajes. Guardar o invitar sólo modifica el estado local de la vista.
-- **Admin Master:** presenta métricas, alertas, filtros, ranking, usuarios, IDs, conectores, identidades y pizarra jerárquica ficticios. Los enlaces que podrían abrir registros reales quedan deshabilitados dentro del escenario.
+- **Admin Master:** presenta cuatro unidades completas con mesas principales y dependientes, usuarios, administradores, identidades, IDs por unidad, métricas, alertas, ranking y pizarra jerárquica ficticios. Los filtros de unidad y mesa afectan la tabla, el ranking y la pizarra. Los enlaces que podrían abrir registros reales quedan deshabilitados dentro del escenario.
 - **Identificación visual:** ambas vistas indican de forma persistente que se trata de datos ficticios y ofrecen volver a los datos reales.
 
