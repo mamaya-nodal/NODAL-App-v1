@@ -6,6 +6,7 @@ import {
   type Person,
   type UserTerms,
 } from "../domain/desks";
+import { formatNodalUserIdentifier } from "../domain/nodal-identifiers";
 import type { MyDeskPanelData } from "./load-my-desk";
 
 const USER = {
@@ -74,13 +75,13 @@ const grossByMonth: Record<string, Record<string, number>> = {
 };
 
 const displayIdByUser: Record<string, string> = {
-  [USER.mauricio]: "USERND-MP-01",
-  [USER.laura]: "USERND-MP-02",
-  [USER.sofia]: "USERND-MP-03",
-  [USER.pablo]: "USERND-M01-01",
-  [USER.diego]: "USERND-M01-02",
-  [USER.camila]: "USERND-M02-01",
-  [USER.nicolas]: "USERND-M02-02",
+  [USER.mauricio]: formatNodalUserIdentifier("ND", "MP", 1),
+  [USER.laura]: formatNodalUserIdentifier("ND", "MP", 2),
+  [USER.sofia]: formatNodalUserIdentifier("ND", "MP", 3),
+  [USER.pablo]: formatNodalUserIdentifier("ND", "M01", 1),
+  [USER.diego]: formatNodalUserIdentifier("ND", "M01", 2),
+  [USER.camila]: formatNodalUserIdentifier("ND", "M02", 1),
+  [USER.nicolas]: formatNodalUserIdentifier("ND", "M02", 2),
 };
 
 const identityNamesByUser: Record<string, readonly string[]> = {
@@ -180,6 +181,13 @@ export function buildAdminPanelDemo(): MyDeskPanelData {
       [USER.camila]: { active: 1, total: 1 },
       [USER.nicolas]: { active: 1, total: 2 },
     },
+    identifierHistoryByUser: Object.fromEntries(peopleData.map(([id]) => [id, [{
+      deskId: userTerms.find((term) => term.user_id === id)?.desk_id ?? DESK.root,
+      displayId: displayIdByUser[id],
+      reason: "Asignación de prueba",
+      validFrom: "2026-08-01T12:00:00Z",
+      validTo: null,
+    }]])),
     invitations: [{
       createdAt: "2026-09-18T12:00:00Z",
       email: "demo.aprobado@nodal.test",

@@ -24,7 +24,9 @@ type EditablePerson = {
   assignedUserIds: string[];
   commissionBps: number | null;
   contactEmail: string;
+  dependencyDestinationDeskId: string | null;
   identitiesEnabled: boolean;
+  membershipDeskId: string;
   role: "admin" | "student";
   state: "active" | "paused" | "inactive";
 };
@@ -143,7 +145,9 @@ function buildEditablePeople(data: MyDeskPanelData) {
       assignedUserIds: [...(managedDesk?.members ?? [])],
       commissionBps: person.terms?.commission_bps ?? null,
       contactEmail: data.profilesByUser[person.id]?.contact_email ?? data.profilesByUser[person.id]?.email ?? person.email,
+      dependencyDestinationDeskId: managedDesk?.parent_id ?? null,
       identitiesEnabled: identities.total > 0,
+      membershipDeskId: person.terms?.desk_id ?? person.deskId,
       role: managedDesk ? "admin" : "student",
       state: (person.terms?.state ?? "active") as EditablePerson["state"],
     } satisfies EditablePerson];
@@ -166,6 +170,25 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
   const canEdit = data.demo || (!data.preview && person.id !== data.userId);
   const canEditPercentages = canEdit && (data.demo || data.termsEditable);
   const identifier = data.displayIdByUser[person.id] || "ID pendiente";
+  const identifierHistory = data.identifierHistoryByUser[person.id] ?? [];
+  const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id) ?? null;
+  const managedSubtreeIds = useMemo(() => {
+    if (!managedDesk) return new Set<string>();
+    const ids = new Set<string>();
+    const pending = [managedDesk.id];
+    while (pending.length > 0) {
+      const current = pending.shift()!;
+      if (ids.has(current)) continue;
+      ids.add(current);
+      for (const desk of data.overview.desks) if (desk.parent_id === current) pending.push(desk.id);
+    }
+    return ids;
+  }, [data.overview.desks, managedDesk]);
+  const destinationDesks = data.overview.desks.filter((desk) => desk.terms.active && !managedSubtreeIds.has(desk.id));
+  const dependencyCount = managedDesk
+    ? managedDesk.members.filter((id) => id !== person.id).length + managedDesk.children.length
+    : 0;
+  const removesAdministration = Boolean(managedDesk) && (draft.role !== "admin" || draft.state === "inactive");
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -176,7 +199,19 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
   }, [onClose]);
 
   function save() {
-    if (draft.state === "inactive" && !window.confirm(`¿Está seguro de que quiere dar de baja a ${person.name}?`)) return;
+    if (removesAdministration && dependencyCount > 0 && !draft.dependencyDestinationDeskId) {
+      setResult({ ok: false, message: "Elegí la mesa que recibirá a sus usuarios y mesas dependientes." });
+      return;
+    }
+    const movesManagedStructure = Boolean(managedDesk) && draft.membershipDeskId !== editable.membershipDeskId;
+    const warning = draft.state === "inactive"
+      ? `¿Está seguro de que quiere dar de baja a ${person.name}?`
+      : removesAdministration && dependencyCount > 0
+        ? `Se trasladarán ${dependencyCount} dependencias antes de quitar el rol Admin. ¿Continuar?`
+        : movesManagedStructure
+          ? `El usuario y toda su mesa dependiente se trasladarán juntos. ¿Continuar?`
+          : null;
+    if (warning && !window.confirm(warning)) return;
     startTransition(async () => setResult(await onSave(draft)));
   }
 
@@ -186,6 +221,7 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
         <div><span>USUARIO NODAL</span><h2 id="desk-user-dialog-title">{identifier} / {person.name}</h2></div>
         <button aria-label="Cerrar ficha" className="desk-modal-close" onClick={onClose} type="button">×</button>
       </header>
+      {identifierHistory.length > 1 ? <details className="desk-id-history"><summary>Ver historial de ID</summary>{identifierHistory.map((entry) => <div key={`${entry.displayId}-${entry.validFrom}`}><strong>{entry.displayId}</strong><span>{entry.validTo ? "Anterior" : "Vigente"} · {entry.reason}</span></div>)}</details> : null}
       <UserPerformanceChart data={details?.performance ?? []} />
       <div className="desk-user-highlight-row">
         <article className="desk-best-trade"><span>Mejor trade</span><strong>🏆 {details?.bestTrade ? money(details.bestTrade.amount) : "Sin datos"}</strong><small>{details?.bestTrade ? dateLabel(details.bestTrade.date) : "—"}</small></article>
@@ -197,9 +233,22 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
         <label>Email de contacto<input disabled={!canEdit} type="email" value={draft.contactEmail} onChange={(event) => setDraft({ ...draft, contactEmail: event.target.value })} /></label>
         <label>Rol<select disabled={!canEdit || person.id === data.userId} value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value as EditablePerson["role"] })}><option value="student">Usuario</option><option value="admin">Admin</option></select></label>
       </div>
+      {person.id !== data.userId ? <section className="desk-structure-move">
+        <div><h3>Mesa de pertenencia</h3><p>{managedDesk ? "Si cambia, su mesa completa y todos sus dependientes se trasladan con el administrador." : "Define en qué mesa participa este usuario."}</p></div>
+        <select disabled={!canEdit} value={draft.membershipDeskId} onChange={(event) => setDraft({ ...draft, membershipDeskId: event.target.value })}>
+          {destinationDesks.map((desk) => <option key={desk.id} value={desk.id}>{desk.name}</option>)}
+        </select>
+      </section> : null}
+      {removesAdministration && dependencyCount > 0 ? <section className="desk-structure-move warning">
+        <div><h3>Destino de dependencias</h3><p>Antes de quitar el rol Admin, elegí dónde conservar sus {dependencyCount} usuarios o mesas dependientes.</p></div>
+        <select disabled={!canEdit} value={draft.dependencyDestinationDeskId ?? ""} onChange={(event) => setDraft({ ...draft, dependencyDestinationDeskId: event.target.value || null })}>
+          <option value="">Elegir mesa de destino</option>
+          {destinationDesks.map((desk) => <option key={desk.id} value={desk.id}>{desk.name}</option>)}
+        </select>
+      </section> : null}
       {draft.role === "admin" ? <fieldset className="desk-assigned-users">
-        <legend>Usuarios adjudicados</legend><p>Un administrador puede tener más de un usuario a cargo.</p>
-        <div>{data.overview.people.filter((candidate) => candidate.id !== person.id).map((candidate) => <label key={candidate.id}>
+        <legend>Usuarios adjudicados</legend><p>Si adjudicás otro administrador, su mesa y toda su estructura se trasladan con él.</p>
+        <div>{data.overview.people.filter((candidate) => candidate.id !== person.id && candidate.id !== data.userId).map((candidate) => <label key={candidate.id}>
           <input checked={draft.assignedUserIds.includes(candidate.id)} disabled={!canEdit} onChange={(event) => setDraft({ ...draft, assignedUserIds: event.target.checked ? [...draft.assignedUserIds, candidate.id] : draft.assignedUserIds.filter((id) => id !== candidate.id) })} type="checkbox" />{data.displayIdByUser[candidate.id] || "Sin ID"} · {candidate.name}
         </label>)}</div>
       </fieldset> : null}
@@ -416,7 +465,7 @@ export function MyDeskPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
     <section className="desk-surface"><div className="admin-section-heading"><div><h2>Usuarios</h2></div><span className="calculated-badge">{people.length}</span></div><div className="desk-table-scroll"><table className="desk-table my-desk-user-table"><thead><tr><th>ID</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Ganancia período</th><th>Facturación histórica</th></tr></thead><tbody>{people.map((person) => { const editable = editableByUser[person.id]; return <tr key={person.id}><td><span className="desk-user-id">{data.displayIdByUser[person.id] || "ID pendiente"}</span></td><td><button className="desk-person" onClick={() => setSelectedPersonId(person.id)} type="button">{person.name}</button></td><td>{person.id === data.userId ? "Titular" : editable?.role === "admin" ? "Admin" : "Usuario"}</td><td><span className={`desk-status ${editable?.state === "active" ? "active" : "inactive"}`}>{stateLabel(editable?.state ?? "active")}</span></td><td>{money(person.totalIncome)}</td><td>{money(data.historicalBillingByUser[person.id] ?? 0)}</td></tr>; })}</tbody></table></div></section>
     <section className="desk-surface desk-board-section"><div className="admin-section-heading"><div><h2>Estructura completa</h2></div></div><StructureBoard data={data} manager={manager} onOpenUser={setSelectedPersonId} rootDesk={desk} /></section>
     <section className="desk-surface desk-ranking-surface"><div className="admin-section-heading"><div><h2>Ranking de la mesa</h2></div></div><Ranking data={data} people={people} /></section>
-    {selectedPerson && editableByUser[selectedPerson.id] ? <UserDetailModal data={data} editable={editableByUser[selectedPerson.id]} onClose={() => setSelectedPersonId(null)} onSave={async (next) => {
+    {selectedPerson && editableByUser[selectedPerson.id] ? <UserDetailModal key={selectedPerson.id} data={data} editable={editableByUser[selectedPerson.id]} onClose={() => setSelectedPersonId(null)} onSave={async (next) => {
       if (data.demo) {
         setEditableByUser((current) => ({ ...current, [selectedPerson.id]: next }));
         return { ok: true, message: "Cambios aplicados al escenario de prueba." };

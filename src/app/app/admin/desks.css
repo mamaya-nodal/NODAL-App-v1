@@ -802,6 +802,30 @@ dialog.desk-dialog::backdrop {
   font-size: clamp(1rem, 2.4vw, 1.35rem);
   margin: 0;
 }
+.desk-id-history {
+  background: color-mix(in srgb, var(--muted) 7%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+}
+.desk-id-history summary {
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.desk-id-history div {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  font-size: 0.68rem;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.desk-id-history span {
+  color: var(--muted);
+}
 .desk-modal-close {
   align-items: center;
   background: transparent;
@@ -896,6 +920,30 @@ dialog.desk-dialog::backdrop {
   border-radius: 15px;
   margin: 0 0 18px;
   padding: 14px;
+}
+.desk-structure-move {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 0.75fr);
+  margin: 0 0 18px;
+  padding: 14px;
+}
+.desk-structure-move.warning {
+  background: color-mix(in srgb, #f0b44d 10%, transparent);
+  border-color: color-mix(in srgb, #f0b44d 55%, var(--line));
+}
+.desk-structure-move h3 {
+  font-size: 0.78rem;
+  margin: 0 0 4px;
+}
+.desk-structure-move p {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  margin: 0;
 }
 .desk-assigned-users legend {
   font-size: 0.75rem;
@@ -1289,6 +1337,7 @@ dialog.desk-dialog::backdrop {
   .desk-invitation-content form,
   .desk-user-fields,
   .desk-user-highlight-row,
+  .desk-structure-move,
   .desk-user-switches {
     grid-template-columns: 1fr;
   }

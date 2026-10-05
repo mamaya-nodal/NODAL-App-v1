@@ -25,6 +25,15 @@ function mutationError(message: string): DeskActionResult {
   if (message.includes("NESTED_ADMIN_MOVE_FORBIDDEN")) {
     return { ok: false, message: "Ese usuario administra otra mesa. Primero debés resolver su estructura dependiente." };
   }
+  if (message.includes("DEPENDENCY_DESTINATION_REQUIRED")) {
+    return { ok: false, message: "Elegí a qué mesa se trasladarán los usuarios y mesas dependientes." };
+  }
+  if (message.includes("DESK_MOVE_CYCLE")) {
+    return { ok: false, message: "Ese traslado formaría un círculo dentro de la estructura. Elegí otra mesa de destino." };
+  }
+  if (message.includes("DESTINATION_DESK_INACTIVE")) {
+    return { ok: false, message: "La mesa elegida como destino no está activa." };
+  }
   if (message.includes("OUTSIDE_BRANCH") || message.includes("FORBIDDEN")) {
     return { ok: false, message: "No tenés permiso para modificar usuarios fuera de tu estructura." };
   }
@@ -96,11 +105,15 @@ export async function saveDeskUser(input: Readonly<{
   commissionBps: number | null;
   contactEmail: string;
   identitiesEnabled: boolean;
+  dependencyDestinationDeskId: string | null;
+  membershipDeskId: string;
   role: "admin" | "student";
   state: "active" | "paused" | "inactive";
   userId: string;
 }>): Promise<DeskActionResult> {
   if (!isUuid(input.userId)
+    || !isUuid(input.membershipDeskId)
+    || (input.dependencyDestinationDeskId !== null && !isUuid(input.dependencyDestinationDeskId))
     || input.assignedUserIds.length > 250
     || input.assignedUserIds.some((id) => !isUuid(id))
     || !Number.isInteger(input.commissionBps)
@@ -113,13 +126,15 @@ export async function saveDeskUser(input: Readonly<{
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
-  const { error } = await supabase.rpc("desk_admin_save_user", {
+  const { error } = await supabase.rpc("desk_admin_save_user_v2", {
     target_admin_bps: input.role === "admin" && input.state !== "inactive" ? input.adminBps : null,
     target_assigned_user_ids: [...new Set(input.assignedUserIds)],
     target_commission_bps: input.commissionBps,
     target_contact_email: input.contactEmail,
+    target_dependency_destination_desk_id: input.dependencyDestinationDeskId,
     target_identities_enabled: input.identitiesEnabled,
     target_is_admin: input.role === "admin" && input.state !== "inactive",
+    target_membership_desk_id: input.membershipDeskId,
     target_state: input.state,
     target_user_id: input.userId,
   });

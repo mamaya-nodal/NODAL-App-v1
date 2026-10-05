@@ -1,5 +1,29 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-151 - IDs reales y traslado guiado de estructuras
+
+- **Fecha:** 2026-10-05. Implementación solicitada por Mauricio para completar
+  los dos pendientes finales del panel Admin.
+- **Persistencia de identidad:** cada unidad y mesa posee un código persistido.
+  Los usuarios reciben un ID visible mediante un correlativo transaccional por
+  mesa. El UUID de autenticación y todos los registros económicos permanecen
+  inmutables.
+- **Historial:** un cambio de mesa cierra el ID vigente y crea el siguiente del
+  destino; no actualiza ni reutiliza el anterior. La migración inicial asigna
+  IDs a la estructura vigente sin inventar traslados históricos que el sistema
+  anterior no registró.
+- **Movimiento de administradores:** trasladar a un administrador cambia su
+  pertenencia y mueve su mesa administrada completa bajo el nuevo destino. Los
+  integrantes y submesas conservan sus relaciones internas e IDs porque ellos
+  no cambian de mesa.
+- **Baja o degradación:** si el administrador tiene dependencias, la interfaz
+  exige una mesa de destino. Usuarios y submesas se reasignan dentro de una
+  única transacción antes de desactivar su mesa. No puede formarse un ciclo ni
+  quedar una dependencia huérfana.
+- **Seguridad y trazabilidad:** la base valida rama administrada, estado de los
+  destinos, ciclos y ventana de porcentajes. Cada ID y movimiento estructural
+  registra actor, fecha, motivo y estado anterior/posterior.
+
 ### APP-150 - Flujos reales y alcance del panel Admin
 
 - **Fecha:** 2026-10-04. Implementación solicitada tras aprobar el diseño del

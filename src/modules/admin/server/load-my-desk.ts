@@ -54,6 +54,14 @@ type ConnectorRow = Readonly<{
   last_seen_at: string | null;
   owner_user_id: string;
 }>;
+type IdentifierRow = Readonly<{
+  desk_id: string;
+  display_id: string;
+  reason: string;
+  user_id: string;
+  valid_from: string;
+  valid_to: string | null;
+}>;
 
 export type DeskPanelIdentitySummary = Readonly<{ active: number; total: number }>;
 export type DeskPanelConnectorSummary = Readonly<{
@@ -80,6 +88,13 @@ export type DeskPanelInvitation = Readonly<{
   id: string;
   referredByUserId: string;
   status: string;
+}>;
+export type DeskPanelIdentifierHistory = Readonly<{
+  deskId: string;
+  displayId: string;
+  reason: string;
+  validFrom: string;
+  validTo: string | null;
 }>;
 export type DeskPanelUserDetail = Readonly<{
   bestTrade: Readonly<{ amount: number; date: string }> | null;
@@ -125,6 +140,7 @@ export type MyDeskPanelData = Readonly<{
   historicalBillingByUser: Readonly<Record<string, number>>;
   history: readonly DeskPanelHistoryPoint[];
   identitiesByUser: Readonly<Record<string, DeskPanelIdentitySummary>>;
+  identifierHistoryByUser: Readonly<Record<string, readonly DeskPanelIdentifierHistory[]>>;
   invitations: readonly DeskPanelInvitation[];
   lastOperatedOnByUser: Readonly<Record<string, string | null>>;
   month: string;
@@ -177,17 +193,28 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
     : new Set(currentUserTerms.filter((term) => branchIds.has(term.desk_id)).map((term) => term.user_id));
   relevantUserIds.add(user.id);
 
-  const [{ data: profiles, error: profileError }, { data: workspaces, error: workspaceError }] = await Promise.all([
+  const [
+    { data: profiles, error: profileError },
+    { data: workspaces, error: workspaceError },
+    { data: identifiers, error: identifierError },
+  ] = await Promise.all([
     service.from("nodal_users")
       .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled")
       .in("id", [...relevantUserIds]).order("display_name").order("id"),
     service.from("workspaces")
       .select("id,owner_user_id,periods(id,period_month)")
       .eq("modality", "real").in("owner_user_id", [...relevantUserIds]),
+    service.from("nodal_user_identifiers")
+      .select("user_id,desk_id,display_id,valid_from,valid_to,reason")
+      .in("user_id", [...relevantUserIds])
+      .order("valid_from", { ascending: false }),
   ]);
-  if (profileError || workspaceError) throw new Error("No se pudieron cargar los usuarios de la estructura.");
+  if (profileError || workspaceError || identifierError) {
+    throw new Error("No se pudieron cargar los usuarios de la estructura.");
+  }
 
   const profileRows = (profiles ?? []) as ProfileRow[];
+  const identifierRows = (identifiers ?? []) as IdentifierRow[];
   const workspaceRows = (workspaces ?? []) as WorkspaceRow[];
   const periodIds = workspaceRows.flatMap((workspace) => workspace.periods
     .filter((period) => period.period_month <= month)
@@ -357,6 +384,20 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
     };
   }
 
+  const identifierHistoryByUser: Record<string, DeskPanelIdentifierHistory[]> = {};
+  for (const identifier of identifierRows) {
+    identifierHistoryByUser[identifier.user_id] = [
+      ...(identifierHistoryByUser[identifier.user_id] ?? []),
+      {
+        deskId: identifier.desk_id,
+        displayId: identifier.display_id,
+        reason: identifier.reason,
+        validFrom: identifier.valid_from,
+        validTo: identifier.valid_to,
+      },
+    ];
+  }
+
   const currentPeriodOwner = new Map(workspaceRows.flatMap((workspace) => workspace.periods
     .filter((period) => period.period_month === month)
     .map((period) => [period.id, workspace.owner_user_id] as const)));
@@ -461,10 +502,9 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
     deskName,
     detailByUser,
     demo: false,
-    displayIdByUser: Object.fromEntries(overview.people.map((person) => [
-      person.id,
-      person.id === user.id ? "TITULAR" : "",
-    ])),
+    displayIdByUser: Object.fromEntries(identifierRows
+      .filter((identifier) => identifier.valid_to === null)
+      .map((identifier) => [identifier.user_id, identifier.display_id])),
     historicalBillingByUser,
     history: snapshots.map((snapshot) => {
       const snapshotDesk = deskId ? snapshot.overview.desks.find((desk) => desk.id === deskId) : null;
@@ -477,6 +517,7 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
       };
     }),
     identitiesByUser,
+    identifierHistoryByUser,
     invitations: (invitationResult.data ?? []).map((invitation) => ({
       createdAt: invitation.created_at,
       email: invitation.recipient_email,
