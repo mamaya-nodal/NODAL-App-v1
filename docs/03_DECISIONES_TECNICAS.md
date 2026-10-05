@@ -9,6 +9,11 @@
   del servidor y el pedido queda pendiente hasta que Admin Master lo aprueba.
   La aprobación prepara los espacios Real y Práctica, crea el acuerdo inicial y
   conserva actor, fechas, estados y motivo.
+- **Despacho seguro:** la automatización externa recibe únicamente el ID de la
+  invitación y un token efímero. El destinatario y el referente se resuelven en
+  el servidor después de validar ese token; no se acepta una dirección elegida
+  por el webhook. El mismo token confirma el envío y habilita el estado
+  pendiente de aprobación.
 - **Permisos:** el rol Admin de mesa no reutiliza el rol técnico Admin Master.
   La autorización se resuelve en base de datos sobre la rama administrada; no
   se aceptan mutaciones sobre usuarios o mesas ajenos a esa rama.

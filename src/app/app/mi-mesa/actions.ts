@@ -15,13 +15,6 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function applicationUrl() {
-  const configured = process.env.NODAL_APP_BASE_URL?.trim();
-  if (configured) return configured.replace(/\/$/, "");
-  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
-  return productionHost ? `https://${productionHost}` : "https://app.nodaltrading.com";
-}
-
 function mutationError(message: string): DeskActionResult {
   if (message.includes("PERCENTAGE_WINDOW_CLOSED")) {
     return { ok: false, message: "Los porcentajes sólo se pueden cambiar durante las 48 horas posteriores al cierre." };
@@ -73,9 +66,7 @@ export async function sendDeskUserInvitation(input: Readonly<{
     const response = await fetch(automationUrl, {
       body: JSON.stringify({
         action: "send_nodal_user_invitation",
-        appUrl: `${applicationUrl()}/`,
         invitationId,
-        recipientEmail: email,
         token,
       }),
       cache: "no-store",
@@ -84,10 +75,6 @@ export async function sendDeskUserInvitation(input: Readonly<{
     });
     const result = response.ok ? await response.json() as { ok?: boolean } : null;
     if (!response.ok || !result?.ok) throw new Error("Invitation automation rejected request");
-    const { error: sentError } = await supabase.rpc("mark_nodal_user_invitation_sent", {
-      target_invitation_id: invitationId,
-    });
-    if (sentError) throw sentError;
   } catch (sendError) {
     console.error("NODAL user invitation dispatch failed", sendError);
     await supabase.rpc("fail_nodal_user_invitation", { target_invitation_id: invitationId });
