@@ -273,6 +273,7 @@ async function renderPrivateAppPage({
       readWithRetry(() => supabase
         .from("workspaces")
         .select("id, modality, periods(id, period_month, lifecycle_status, operational_start_on, scheduled_close_at)")
+        .eq("owner_user_id", userId)
         .order("modality")),
       readWithRetry(() => supabase.rpc("get_current_user_ninja_connector_status_v2")),
     ]);

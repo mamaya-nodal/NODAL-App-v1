@@ -1,5 +1,11 @@
 # Decisiones tecnicas de NODAL App
 
+### Espacio personal limitado al titular (2026-10-05)
+
+- La consulta de espacios en `/app` filtra por el usuario autenticado, también para Admin Master. El permiso administrativo no selecciona implícitamente otro titular.
+- Las vistas administrativas individuales conservan la selección explícita de usuario.
+- Se corrige la lectura que mostraba cuentas de Alfred bajo el perfil de Mauricio. No se modifican registros económicos ni se trasladan cuentas.
+
 ### APP-151 - IDs reales y traslado guiado de estructuras
 
 - **Fecha:** 2026-10-05. Implementación solicitada por Mauricio para completar
