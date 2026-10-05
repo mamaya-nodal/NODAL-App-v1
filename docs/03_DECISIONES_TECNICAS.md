@@ -1,5 +1,31 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-149 - Unidades del Sistema NODAL e identificadores visibles
+
+- **Fecha:** 2026-10-04. Regla funcional confirmada por Mauricio.
+- **Jerarquía general:** `SISTEMA NODAL` contiene unidades empresariales. La
+  primera es `01 - Unidad NODAL`; futuras empresas incorporadas crean nuevas
+  unidades, por ejemplo `02 - Unidad Highway`. Cada unidad posee una única
+  Mesa Principal y puede generar mesas dependientes.
+- **Código de unidad:** cada unidad recibe una abreviatura única de dos letras
+  mayúsculas, por ejemplo `ND` para NODAL y `HW` para Highway. Admin Master la
+  define al crear la unidad.
+- **Código de mesa:** la Mesa Principal utiliza `MP`. Las mesas dependientes
+  reciben correlativos dentro de su unidad al crearse: `M01`, `M02`, `M03`,
+  etcétera.
+- **ID visible de usuario:** sigue el formato exacto, sin espacios,
+  `USER<UNIDAD>-<MESA>-<ORDEN>`. Ejemplos: `USERND-MP-03` y
+  `USERHW-M03-01`. El último tramo es el orden correlativo de ingreso en esa
+  mesa.
+- **Administradores:** convertirse en administrador no traslada al usuario ni
+  cambia su ID. Un usuario `USERND-MP-04` puede administrar `M01`; los nuevos
+  integrantes de esa mesa reciben `USERND-M01-01`, `USERND-M01-02`, etcétera.
+- **Traslados:** al cambiar de mesa, el usuario recibe el siguiente ID visible
+  disponible del destino. El ID anterior queda preservado en su historial; el
+  UUID técnico inmutable y todos sus registros se conservan.
+- **Correlativos:** números de unidad, mesa y usuario nunca se reutilizan tras
+  bajas, cierres o traslados. Siempre avanzan desde el último valor otorgado.
+
 ### APP-148 - Panel Admin, jerarquía y distribución económica por mesa
 
 - **Fecha:** 2026-10-04. Definición funcional confirmada por Mauricio a partir

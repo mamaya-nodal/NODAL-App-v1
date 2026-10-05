@@ -74,13 +74,13 @@ const grossByMonth: Record<string, Record<string, number>> = {
 };
 
 const displayIdByUser: Record<string, string> = {
-  [USER.mauricio]: "USERND-M01",
-  [USER.laura]: "USERND-M01-01",
-  [USER.sofia]: "USERND-M01-02",
-  [USER.pablo]: "USERND-M02-01",
-  [USER.diego]: "USERND-M02-02",
-  [USER.camila]: "USERND-M03-01",
-  [USER.nicolas]: "USERND-M03-02",
+  [USER.mauricio]: "USERND-MP-01",
+  [USER.laura]: "USERND-MP-02",
+  [USER.sofia]: "USERND-MP-03",
+  [USER.pablo]: "USERND-M01-01",
+  [USER.diego]: "USERND-M01-02",
+  [USER.camila]: "USERND-M02-01",
+  [USER.nicolas]: "USERND-M02-02",
 };
 
 const identityNamesByUser: Record<string, readonly string[]> = {

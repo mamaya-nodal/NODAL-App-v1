@@ -20,6 +20,10 @@ describe("admin panel demo", () => {
     expect(data.deskName).toBe("MESA DE MAURICIO");
     expect(new Set(Object.values(data.displayIdByUser)).size).toBe(7);
     expect(Object.values(data.displayIdByUser).every((id) => id.startsWith("USERND-M"))).toBe(true);
+    expect(data.displayIdByUser["demo-mauricio"]).toBe("USERND-MP-01");
+    expect(data.displayIdByUser["demo-sofia"]).toBe("USERND-MP-03");
+    expect(data.displayIdByUser["demo-diego"]).toBe("USERND-M01-02");
+    expect(data.displayIdByUser["demo-camila"]).toBe("USERND-M02-01");
     expect(data.detailByUser["demo-laura"].identities).toHaveLength(2);
     expect(data.detailByUser["demo-sofia"].performance).toHaveLength(3);
     expect(data.overview.people.filter((person) => person.mesaIncome > 0)).toHaveLength(3);
