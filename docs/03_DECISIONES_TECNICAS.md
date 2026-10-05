@@ -75,6 +75,10 @@
   última operación, ruta de mayor ganancia, estado, email, rol, adjudicaciones
   múltiples, acuerdos, conector Ninja e identidades. Una baja exige
   confirmación antes de guardarse.
+- **Conector Ninja en la ficha:** es un dato observado y no un ajuste manual.
+  Se muestra la versión informada, la última transmisión y el estado `Activo`
+  únicamente cuando hubo señal durante las últimas 24 horas. Sin señal dentro
+  de ese rango se muestra `Desactivado`; el administrador no puede cambiarlo.
 - **Invitaciones:** `Agregar usuario` despliega email, persona que invita y el
   estado de cada invitación o aprobación. La persona que invita se elige entre
   los integrantes de la mesa, incluido el titular. La aprobación real continúa

@@ -107,6 +107,8 @@ function overview(month: string) {
 }
 
 export function buildAdminPanelDemo(): MyDeskPanelData {
+  const recentSignal = new Date(Date.now() - (2 * 60 * 60 * 1_000)).toISOString();
+  const staleSignal = new Date(Date.now() - (30 * 60 * 60 * 1_000)).toISOString();
   const snapshots = months.map((month) => ({ month, overview: overview(month) }));
   const current = snapshots.at(-1)!;
   const profilesByUser = Object.fromEntries(peopleData.map(([id, name, email, master], index) => [id, {
@@ -126,13 +128,13 @@ export function buildAdminPanelDemo(): MyDeskPanelData {
 
   return {
     connectorByUser: {
-      [USER.mauricio]: { online: true, version: "0.10" },
-      [USER.laura]: { online: true, version: "0.10" },
-      [USER.sofia]: { online: false, version: "0.9" },
-      [USER.pablo]: { online: true, version: "0.10" },
-      [USER.diego]: { online: true, version: "0.10" },
-      [USER.camila]: { online: false, version: null },
-      [USER.nicolas]: { online: false, version: "0.9" },
+      [USER.mauricio]: { active: true, lastSeenAt: recentSignal, version: "0.10" },
+      [USER.laura]: { active: true, lastSeenAt: recentSignal, version: "0.10" },
+      [USER.sofia]: { active: false, lastSeenAt: staleSignal, version: "0.9" },
+      [USER.pablo]: { active: true, lastSeenAt: recentSignal, version: "0.10" },
+      [USER.diego]: { active: true, lastSeenAt: recentSignal, version: "0.10" },
+      [USER.camila]: { active: false, lastSeenAt: null, version: null },
+      [USER.nicolas]: { active: false, lastSeenAt: staleSignal, version: "0.9" },
     },
     detailByUser: Object.fromEntries(peopleData.map(([id], personIndex) => [id, {
       bestTrade: {

@@ -20,7 +20,6 @@ type EditablePerson = {
   adminBps: number | null;
   assignedUserIds: string[];
   commissionBps: number | null;
-  connectorActive: boolean;
   email: string;
   identitiesEnabled: boolean;
   role: "admin" | "student";
@@ -59,6 +58,14 @@ function dateLabel(value: string | null | undefined) {
   if (!value) return "Sin operaciones";
   return new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeZone: "UTC" })
     .format(new Date(`${value}T00:00:00Z`));
+}
+
+function dateTimeLabel(value: string | null | undefined) {
+  if (!value) return "Sin transmisiones registradas";
+  return new Intl.DateTimeFormat("es-AR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 function stateLabel(state: EditablePerson["state"]) {
@@ -127,13 +134,11 @@ function UserPerformanceChart({ data }: Readonly<{
 function buildEditablePeople(data: MyDeskPanelData) {
   return Object.fromEntries(data.overview.people.map((person) => {
     const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id);
-    const connector = data.connectorByUser[person.id];
     const identities = data.identitiesByUser[person.id] ?? { active: 0, total: 0 };
     return [person.id, {
       adminBps: managedDesk?.terms.nodal_bps ?? null,
       assignedUserIds: [...(managedDesk?.members ?? [])],
       commissionBps: person.terms?.commission_bps ?? null,
-      connectorActive: connector?.online ?? false,
       email: data.profilesByUser[person.id]?.email ?? person.email,
       identitiesEnabled: identities.total > 0,
       role: managedDesk ? "admin" : "student",
@@ -200,7 +205,7 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
         <small>{data.termsEditable || data.demo ? "Ventana de edición habilitada." : "Solo lectura durante el período."}</small>
       </section>
       <div className="desk-user-switches">
-        <label><span>Conexión Ninja<small>{connector?.version ? `Conector v${connector.version}` : "Sin versión registrada"}</small></span><select disabled={!canEdit} value={draft.connectorActive ? "active" : "inactive"} onChange={(event) => setDraft({ ...draft, connectorActive: event.target.value === "active" })}><option value="active">Activa</option><option value="inactive">Inactiva</option></select></label>
+        <article className="desk-ninja-state"><span>Conexión Ninja<small>Última transmisión: {dateTimeLabel(connector?.lastSeenAt)}</small></span><div><strong className={connector?.active ? "active" : "inactive"}>{connector?.active ? "Activo" : "Desactivado"}</strong><small>{connector?.version ? `Conector v${connector.version}` : "Sin versión registrada"}</small></div></article>
         <label><span>Identidades<small>{identities.length} registradas</small></span><select disabled={!canEdit} value={draft.identitiesEnabled ? "enabled" : "disabled"} onChange={(event) => setDraft({ ...draft, identitiesEnabled: event.target.value === "enabled" })}><option value="enabled">Habilitadas</option><option value="disabled">No habilitadas</option></select></label>
       </div>
       {draft.identitiesEnabled ? <div className="desk-identities-table"><table><thead><tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Ganancia período</th><th>Facturación</th></tr></thead><tbody>{identities.map((identity) => <tr key={identity.id}><td>{identity.id}</td><td>{identity.name}</td><td>{identity.state}</td><td>{money(identity.periodGain)}</td><td>{money(identity.billing)}</td></tr>)}</tbody></table>{identities.length === 0 ? <p>Este usuario no tiene identidades registradas.</p> : null}</div> : null}
@@ -383,11 +388,11 @@ export function MyDeskPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
     {data.demo ? <p className="desk-preview-notice demo" role="status"><span>Escenario ficticio · los cambios quedan sólo en esta prueba.</span><Link href="/app/mi-mesa">Volver a mis datos</Link></p> : null}
     <section className="my-desk-summary" aria-label="Resumen administrativo"><article className="my-desk-hero"><span>Ganancia del período</span><strong>{money(manager.totalIncome)}</strong><small>{money(manager.ownIncome)} propias · {money(manager.mesaIncome)} administración</small></article><article className="my-desk-summary-card"><Metric label="Ganancia histórica" value={money(historicGain)} /></article><article className="my-desk-summary-card"><Metric label="Facturación del período" value={money(structureBilling)} /></article><article className="my-desk-summary-card"><Metric label="Integrantes mesa principal" value={String(directMembers.length)} /></article><article className="my-desk-summary-card"><Metric label="Mesas dependientes" value={String(dependentDeskCount)} /></article></section>
     <section className="my-desk-structure-summary"><article className="my-desk-structure-primary"><span>Toda la estructura</span><strong>{money(structureBilling)}</strong><small>{desk?.structureMembers.length ?? 0} integrantes · {dependentDeskCount} mesas dependientes</small></article><article><Metric label="Mesa directa" value={money(directBilling)} note={`${directMembers.length} integrantes`} /></article></section>
-    <section className="desk-surface"><div className="admin-section-heading"><div><p className="status">EVOLUCIÓN</p><h2>Resultados por período</h2></div></div><HistoryChart data={data.history} /></section>
+    <section className="desk-surface"><div className="admin-section-heading"><div><h2>Resultados por período</h2></div></div><HistoryChart data={data.history} /></section>
     <InvitationPanel data={data} />
-    <section className="desk-surface"><div className="admin-section-heading"><div><p className="status">ESTRUCTURA</p><h2>Usuarios</h2></div><span className="calculated-badge">{people.length}</span></div><div className="desk-table-scroll"><table className="desk-table my-desk-user-table"><thead><tr><th>ID</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Ganancia período</th><th>Facturación histórica</th></tr></thead><tbody>{people.map((person) => { const editable = editableByUser[person.id]; return <tr key={person.id}><td><span className="desk-user-id">{data.displayIdByUser[person.id] || "ID pendiente"}</span></td><td><button className="desk-person" onClick={() => setSelectedPersonId(person.id)} type="button">{person.name}</button></td><td>{person.id === data.userId ? "Titular" : editable?.role === "admin" ? "Admin" : "Alumno"}</td><td><span className={`desk-status ${editable?.state === "active" ? "active" : "inactive"}`}>{stateLabel(editable?.state ?? "active")}</span></td><td>{money(person.totalIncome)}</td><td>{money(data.historicalBillingByUser[person.id] ?? 0)}</td></tr>; })}</tbody></table></div></section>
-    <section className="desk-surface desk-board-section"><div className="admin-section-heading"><div><p className="status">PIZARRA</p><h2>Estructura completa</h2></div></div><StructureBoard data={data} manager={manager} onOpenUser={setSelectedPersonId} rootDesk={desk} /></section>
-    <section className="desk-surface desk-ranking-surface"><div className="admin-section-heading"><div><p className="status">PERÍODO ANTERIOR</p><h2>Ranking de la estructura</h2></div></div><Ranking data={data} people={people} /></section>
+    <section className="desk-surface"><div className="admin-section-heading"><div><h2>Usuarios</h2></div><span className="calculated-badge">{people.length}</span></div><div className="desk-table-scroll"><table className="desk-table my-desk-user-table"><thead><tr><th>ID</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Ganancia período</th><th>Facturación histórica</th></tr></thead><tbody>{people.map((person) => { const editable = editableByUser[person.id]; return <tr key={person.id}><td><span className="desk-user-id">{data.displayIdByUser[person.id] || "ID pendiente"}</span></td><td><button className="desk-person" onClick={() => setSelectedPersonId(person.id)} type="button">{person.name}</button></td><td>{person.id === data.userId ? "Titular" : editable?.role === "admin" ? "Admin" : "Alumno"}</td><td><span className={`desk-status ${editable?.state === "active" ? "active" : "inactive"}`}>{stateLabel(editable?.state ?? "active")}</span></td><td>{money(person.totalIncome)}</td><td>{money(data.historicalBillingByUser[person.id] ?? 0)}</td></tr>; })}</tbody></table></div></section>
+    <section className="desk-surface desk-board-section"><div className="admin-section-heading"><div><h2>Estructura completa</h2></div></div><StructureBoard data={data} manager={manager} onOpenUser={setSelectedPersonId} rootDesk={desk} /></section>
+    <section className="desk-surface desk-ranking-surface"><div className="admin-section-heading"><div><h2>Ranking de la mesa</h2></div></div><Ranking data={data} people={people} /></section>
     {selectedPerson && editableByUser[selectedPerson.id] ? <UserDetailModal data={data} editable={editableByUser[selectedPerson.id]} onClose={() => setSelectedPersonId(null)} onSave={(next) => setEditableByUser((current) => ({ ...current, [selectedPerson.id]: next }))} person={selectedPerson} /> : null}
   </div>;
 }

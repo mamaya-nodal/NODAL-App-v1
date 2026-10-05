@@ -977,6 +977,27 @@ dialog.desk-dialog::backdrop {
   justify-content: space-between;
   padding: 11px 12px;
 }
+.desk-ninja-state {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  display: flex;
+  justify-content: space-between;
+  padding: 11px 12px;
+}
+.desk-ninja-state > div {
+  text-align: right;
+}
+.desk-ninja-state strong {
+  display: block;
+  font-size: 0.74rem;
+}
+.desk-ninja-state strong.active {
+  color: var(--brand);
+}
+.desk-ninja-state strong.inactive {
+  color: var(--muted);
+}
 .desk-user-switches span {
   font-size: 0.74rem;
   font-weight: 800;

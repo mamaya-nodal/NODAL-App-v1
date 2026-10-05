@@ -17,6 +17,7 @@ import {
   type Person,
   type UserTerms,
 } from "../domain/desks";
+import { transmittedWithinLast24Hours } from "../domain/connector-activity";
 import { canOpenDeskAdmin } from "../domain/administration-scope";
 import { loadMyAdministrationScope } from "./administration-scope";
 import { loadPeriodSummaries } from "./load-period-summaries";
@@ -41,11 +42,14 @@ type ConnectorRow = Readonly<{
   connector_version: string;
   last_seen_at: string | null;
   owner_user_id: string;
-  status: string;
 }>;
 
 export type DeskPanelIdentitySummary = Readonly<{ active: number; total: number }>;
-export type DeskPanelConnectorSummary = Readonly<{ online: boolean; version: string | null }>;
+export type DeskPanelConnectorSummary = Readonly<{
+  active: boolean;
+  lastSeenAt: string | null;
+  version: string | null;
+}>;
 export type DeskPanelHistoryPoint = Readonly<{
   administrationIncome: number;
   month: string;
@@ -91,10 +95,6 @@ function branch(
     for (const child of desks) if (child.parent_id === id) pending.push(child.id);
   }
   return ids;
-}
-
-function online(lastSeenAt: string | null) {
-  return lastSeenAt ? Date.now() - Date.parse(lastSeenAt) <= 60_000 : false;
 }
 
 export type MyDeskPanelData = Readonly<{
@@ -190,7 +190,7 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
       ? service.from("nodal_identities").select("workspace_id,onboarding_status").in("workspace_id", workspaceIds)
       : Promise.resolve({ data: [], error: null }),
     service.from("ninja_connectors")
-      .select("owner_user_id,status,connector_version,last_seen_at")
+      .select("owner_user_id,connector_version,last_seen_at")
       .in("owner_user_id", [...relevantUserIds])
       .order("paired_at", { ascending: false }),
     session.rpc("nodal_desk_terms_window_open"),
@@ -285,7 +285,8 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
   for (const connector of (connectorResult.data ?? []) as ConnectorRow[]) {
     if (connectorByUser[connector.owner_user_id]) continue;
     connectorByUser[connector.owner_user_id] = {
-      online: connector.status === "active" && online(connector.last_seen_at),
+      active: transmittedWithinLast24Hours(connector.last_seen_at),
+      lastSeenAt: connector.last_seen_at,
       version: connector.connector_version || null,
     };
   }
