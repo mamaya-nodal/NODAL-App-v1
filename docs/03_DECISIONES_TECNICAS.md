@@ -74,7 +74,8 @@
   no una página ni una fila expandida. La ficha reúne desempeño, mejor trade,
   última operación, ruta de mayor ganancia, estado, email, rol, adjudicaciones
   múltiples, acuerdos, conector Ninja e identidades. Una baja exige
-  confirmación antes de guardarse.
+  confirmación antes de guardarse. En esta interfaz los roles visibles son
+  `Usuario` y `Admin`; `Alumno` no se utiliza como nombre de rol.
 - **Conector Ninja en la ficha:** es un dato observado y no un ajuste manual.
   Se muestra la versión informada, la última transmisión y el estado `Activo`
   únicamente cuando hubo señal durante las últimas 24 horas. Sin señal dentro
