@@ -5,6 +5,7 @@
 - Una sesión técnica excluida nunca se usa para establecer continuidad contable del saldo broker: su exclusión indica precisamente que no es una fuente confiable para el libro.
 - El saldo esperado sólo procede del último control contable confirmado, del cierre del período anterior o de un evento agregado de saldo broker verificado.
 - Si ninguna fuente confiable existe, la automatización se bloquea solicitando el depósito inicial en lugar de inferirlo desde un fragmento técnico.
+- La primera operación Ninja de un período toma como saldo anterior el último control confirmado del período precedente y comienza la numeración del período nuevo en `1`. La misma regla se aplica a trades cubiertos y a trades broker sin cobertura confirmados por el usuario.
 
 ### Fecha operativa visible en el historial (2026-10-05)
 
