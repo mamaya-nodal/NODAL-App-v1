@@ -149,6 +149,13 @@ export function DeskPanel({ data }: { data: DeskPanelData }) {
           </button>
         </div>
       </header>
+      {data.pendingAccessCount > 0 && (
+        <Link className="admin-pending-access" href="/app/admin/users">
+          <span>{data.pendingAccessCount}</span>
+          <strong>{data.pendingAccessCount === 1 ? "solicitud de apertura pendiente" : "solicitudes de apertura pendientes"}</strong>
+          <small>Revisar en Admin Master</small>
+        </Link>
+      )}
       <form className="desk-period" method="get" action="/app/admin">
         <select aria-label="Modalidad" name="mode" defaultValue={data.mode}>
           <option value="real">Real</option>

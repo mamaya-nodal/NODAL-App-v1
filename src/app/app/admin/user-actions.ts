@@ -60,3 +60,31 @@ export async function reviewUserInvitation(formData: FormData) {
   });
   redirect(`/app/admin/users?result=${error ? "invitation_review_failed" : decision === "approve" ? "invitation_approved" : "invitation_rejected"}`);
 }
+
+export async function reviewDirectAccessRequest(formData: FormData) {
+  const targetUserId = text(formData, "target_user_id");
+  const decision = text(formData, "decision");
+  const displayName = text(formData, "display_name");
+  const reason = text(formData, "reason");
+  const period = text(formData, "period_month");
+  const commission = Number(text(formData, "commission_percent"));
+  if (!targetUserId || !reason || !period || !["approve", "reject"].includes(decision)
+    || (decision === "approve" && (!Number.isFinite(commission) || commission < 0 || commission > 100))) {
+    redirect("/app/admin/users?result=invalid_access_request");
+  }
+
+  const supabase = await requireNodalAdmin();
+  const { error } = await supabase.rpc("admin_review_pending_nodal_user", {
+    management_reason: reason,
+    target_approved: decision === "approve",
+    target_commission_bps: decision === "approve" ? Math.round(commission * 100) : 0,
+    target_display_name: displayName || null,
+    target_period_month: period,
+    target_user_id: targetUserId,
+  });
+  redirect(`/app/admin/users?result=${error
+    ? "access_request_review_failed"
+    : decision === "approve"
+      ? "access_request_approved"
+      : "access_request_rejected"}`);
+}

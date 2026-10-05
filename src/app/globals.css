@@ -2605,6 +2605,35 @@ html[data-theme="day"] .ninja-source-notice {
   background: var(--surface);
 }
 
+.admin-pending-access {
+  align-items: center;
+  background: color-mix(in srgb, var(--brand) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--brand) 45%, var(--border));
+  border-radius: 16px;
+  color: var(--text);
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: auto 1fr auto;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+.admin-pending-access > span {
+  align-items: center;
+  background: var(--brand);
+  border-radius: 999px;
+  color: #081108;
+  display: inline-flex;
+  font-weight: 800;
+  height: 30px;
+  justify-content: center;
+  min-width: 30px;
+}
+
+.admin-pending-access > small { color: var(--brand); font-weight: 700; }
+
+.admin-access-requests { margin-bottom: 18px; }
+
 .admin-user-form h2,
 .admin-user-list h2 {
   margin: 0 0 18px;

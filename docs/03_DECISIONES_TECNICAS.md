@@ -2035,3 +2035,12 @@ vigente sin aprobacion y evidencia suficiente.
 - **Estado del conector:** `En vivo` aparece sólo junto al saldo broker de Operaciones, donde informa la frescura del dato. Inicio muestra el saldo sin repetir el estado y Contabilidad diferencia saldo contable de saldo detectado.
 - **Escala tipográfica:** compartir identidad visual no implica igualar tamaños. La Facturación de Contabilidad usa una escala compacta acorde a su tarjeta y conserva más espacio negativo que las tarjetas principales de Inicio y Operaciones.
 
+### APP-152 - Solicitudes directas visibles para Admin Master
+
+- **Fecha:** 2026-10-05. Corrección posterior a las primeras altas reales de alumnos.
+- **Hallazgo:** el ingreso con Google mostraba `Acceso pendiente` al alumno, pero no creaba necesariamente un perfil pendiente en `nodal_users`. Admin Master sólo consultaba invitaciones de mesas y usuarios ya incorporados, por lo que cinco solicitudes del día quedaron únicamente en `auth.users` y no aparecieron en su consola.
+- **Captura:** el primer ingreso y cada autenticación posterior crean de forma idempotente el perfil pendiente cuando todavía no existe. Nunca se modifica un perfil activo o revocado.
+- **Recuperación:** la migración incorpora las solicitudes omitidas el día de activación conservando UUID, correo, nombre de Google y fecha original. No autoriza a nadie automáticamente.
+- **Aprobación:** Admin Master dispone de una sección `Solicitudes de apertura`. Aprobar prepara Real y Práctica, asigna al usuario a la Mesa Principal con su acuerdo inicial y conserva auditoría; rechazar revoca el acceso sin borrar la identidad autenticada.
+- **Visibilidad:** la navegación Master incluye `Solicitudes` y la vista general muestra un aviso con el total pendiente. Los usuarios pendientes quedan fuera de la estructura económica hasta ser aprobados.
+

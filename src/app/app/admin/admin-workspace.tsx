@@ -25,7 +25,10 @@ export function AdminWorkspace({ children, scope = "master", userLabel, versionI
   const panelLabel = scope === "desk" ? "Panel Admin" : "Vista general";
   const scopedNavigation = [
     { href: panelHref, icon: "summary" as WorkspaceIconName, label: panelLabel },
-    ...(scope === "master" ? [{ href: "/app/admin/periods", icon: "daily" as WorkspaceIconName, label: "Cierres" }] : []),
+    ...(scope === "master" ? [
+      { href: "/app/admin/users", icon: "identities" as WorkspaceIconName, label: "Solicitudes" },
+      { href: "/app/admin/periods", icon: "daily" as WorkspaceIconName, label: "Cierres" },
+    ] : []),
   ];
   const isActive = (href: string) => pathname === href;
   const activeLabel = pathname.startsWith("/app/admin/users")

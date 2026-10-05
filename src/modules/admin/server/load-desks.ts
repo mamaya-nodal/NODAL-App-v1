@@ -125,6 +125,7 @@ export async function loadDesks(
   );
   return {
     overview,
+    pendingAccessCount: (users.data ?? []).filter((user) => user.access_state === "pending").length,
     mode,
     month,
     periods,
