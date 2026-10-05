@@ -117,7 +117,11 @@ function UserRow({ data, person }: Readonly<{ data: MyDeskPanelData; person: Per
       : person.terms?.state === "inactive"
         ? "Baja"
         : "Activo";
-  const role = managedDesk ? "Admin" : "Alumno";
+  const role = data.preview && person.id === data.userId
+    ? "Titular"
+    : managedDesk
+      ? "Admin"
+      : "Alumno";
 
   return <>
     <tr>
@@ -172,6 +176,9 @@ export function MyDeskPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
   const historicGain = data.history.reduce((total, point) => total + point.totalIncome, 0);
   const structureBilling = desk?.structureGross ?? manager.gross;
   const directBilling = desk?.gross ?? manager.gross;
+  const dependentDeskCount = data.preview
+    ? 0
+    : Math.max(0, data.overview.desks.length - (desk ? 1 : 0));
   const ranking = people
     .filter((person) => person.id !== data.userId)
     .sort((left, right) => (data.priorPeriodGrossByUser[right.id] ?? 0) - (data.priorPeriodGrossByUser[left.id] ?? 0))
@@ -196,14 +203,14 @@ export function MyDeskPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
       <article className="my-desk-summary-card"><Metric label="Ganancia histórica" value={money(historicGain)} /></article>
       <article className="my-desk-summary-card"><Metric label="Facturación del período" value={money(structureBilling)} /></article>
       <article className="my-desk-summary-card"><Metric label="Integrantes mesa principal" value={String(directMembers.length)} /></article>
-      <article className="my-desk-summary-card"><Metric label="Mesas dependientes" value={String(Math.max(0, data.overview.desks.length - (desk ? 1 : 0)))} /></article>
+      <article className="my-desk-summary-card"><Metric label="Mesas dependientes" value={String(dependentDeskCount)} /></article>
     </section>
 
     <section className="my-desk-structure-summary">
       <article className="my-desk-structure-primary">
         <span>Toda la estructura</span>
         <strong>{money(structureBilling)}</strong>
-        <small>{desk?.structureMembers.length ?? 0} integrantes · {Math.max(0, data.overview.desks.length - (desk ? 1 : 0))} mesas dependientes</small>
+        <small>{desk?.structureMembers.length ?? 0} integrantes · {dependentDeskCount} mesas dependientes</small>
       </article>
       <article><Metric label="Mesa directa" value={money(directBilling)} note={`${directMembers.length} integrantes`} /></article>
     </section>
