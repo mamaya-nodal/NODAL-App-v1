@@ -123,6 +123,16 @@ export async function loadDesks(
       ),
     ]),
   );
+  const historicalGrossByUser = Object.fromEntries(
+    overview.people.map((person) => [
+      person.id,
+      historical.reduce(
+        (sum, snapshot) =>
+          sum + (snapshot.overview.people.find((candidate) => candidate.id === person.id)?.gross ?? 0),
+        0,
+      ),
+    ]),
+  );
   return {
     overview,
     pendingAccessCount: (users.data ?? []).filter((user) => user.access_state === "pending").length,
@@ -132,6 +142,15 @@ export async function loadDesks(
     currentMonth,
     ready: !missing,
     historicCommission,
+    historicalGrossByUser,
+    performanceHistory: historical
+      .slice()
+      .reverse()
+      .map((snapshot) => ({
+        gross: snapshot.overview.gross,
+        month: snapshot.month,
+        nodalIncome: snapshot.overview.nodalIncome,
+      })),
     chart: historical
       .slice(0, 12)
       .reverse()

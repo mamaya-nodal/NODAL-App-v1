@@ -2044,3 +2044,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **Aprobación:** Admin Master dispone de una sección `Solicitudes de apertura`. Aprobar prepara Real y Práctica, asigna al usuario a la Mesa Principal con su acuerdo inicial y conserva auditoría; rechazar revoca el acceso sin borrar la identidad autenticada.
 - **Visibilidad:** la navegación Master incluye `Solicitudes` y la vista general muestra un aviso con el total pendiente. Los usuarios pendientes quedan fuera de la estructura económica hasta ser aprobados.
 
+### APP-153 - Consola global de Admin Master y depuración de accesos
+
+- **Fecha:** 2026-10-05. Diseño funcional basado en el mockup aprobado por Mauricio.
+- **Separación de alcance:** Admin Master representa el Sistema NODAL completo y no reutiliza el concepto de una mesa personal. Panel Admin continúa limitado a la rama de la mesa que administra cada titular.
+- **Jerarquía:** la consola presenta Sistema NODAL, unidades, Mesa Principal, mesas dependientes, usuarios e identidades. Una tarjeta verde de persona representa a un Admin y, por lo tanto, a la mesa que administra; no se duplica con una segunda tarjeta `Mesa de ...`.
+- **Datos:** indicadores, ranking, usuarios, IDs, conectores, identidades y pizarra se alimentan de registros reales. Las solicitudes pendientes se mantienen fuera de los cálculos y aparecen en `Altas y alertas`.
+- **Acceso global:** Admin Master puede consultar cualquier usuario y sus registros. La conexión Ninja conserva versión, última transmisión y actividad derivada de las últimas 24 horas; no es un selector editable.
+- **Navegación:** la consola se organiza en `Panel control`, `Registros` y `Estadísticas`. Las aprobaciones se acceden desde el indicador de altas y alertas del Panel control.
+- **Limpieza preproductiva:** se revocaron de forma lógica y auditada `mamaya@nodaltrading.com`, Martin Mainardi y Julián Seco. No se eliminaron perfiles, autenticaciones ni historiales. Continúan activos Mauricio Gmail, Alfred, Sebastián, Ivo y Rodolfo; las altas nuevas permanecen pendientes hasta aprobación explícita.
+

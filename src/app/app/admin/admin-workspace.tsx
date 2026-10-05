@@ -22,21 +22,23 @@ type Props = Readonly<{
 export function AdminWorkspace({ children, scope = "master", userLabel, versionInfo }: Props) {
   const pathname = usePathname();
   const panelHref = scope === "desk" ? "/app/mi-mesa" : "/app/admin";
-  const panelLabel = scope === "desk" ? "Panel Admin" : "Vista general";
+  const panelLabel = scope === "desk" ? "Panel Admin" : "Panel control";
   const scopedNavigation = [
     { href: panelHref, icon: "summary" as WorkspaceIconName, label: panelLabel },
     ...(scope === "master" ? [
-      { href: "/app/admin/users", icon: "identities" as WorkspaceIconName, label: "Solicitudes" },
-      { href: "/app/admin/periods", icon: "daily" as WorkspaceIconName, label: "Cierres" },
+      { href: "/app/admin/periods", icon: "daily" as WorkspaceIconName, label: "Registros" },
+      { href: "/app/admin/statistics", icon: "operations" as WorkspaceIconName, label: "Estadísticas" },
     ] : []),
   ];
   const isActive = (href: string) => pathname === href;
   const activeLabel = pathname.startsWith("/app/admin/users")
-    ? "Usuarios"
+    ? "Solicitudes"
     : pathname.startsWith("/app/admin/ninja")
       ? "Conectores Ninja"
       : pathname.startsWith("/app/admin/periods")
-        ? "Cierres contables"
+        ? "Registros"
+      : pathname.startsWith("/app/admin/statistics")
+        ? "Estadísticas"
       : pathname === panelHref
         ? panelLabel
         : "Ficha del usuario";
