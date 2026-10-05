@@ -81,8 +81,9 @@
   reservada a Admin Master.
 - **Pizarra:** la estructura completa se representa como árbol sinóptico de
   tarjetas simples conectadas sobre un lienzo punteado. El lienzo puede
-  recorrerse con la rueda o manteniendo Espacio y arrastrando; cada tarjeta
-  despliega su resumen y las tarjetas de personas abren la ficha completa.
+  recorrerse con la rueda o manteniendo Espacio y arrastrando, y ofrece zoom
+  visible entre 60% y 160%; cada tarjeta despliega su resumen y las tarjetas de
+  personas abren la ficha completa.
   Una tarjeta verde de persona ya representa simultáneamente al administrador
   y a su mesa: sus integrantes cuelgan directamente debajo y no se agrega una
   segunda tarjeta con el nombre de esa mesa. Al desplegar una persona se ven

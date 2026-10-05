@@ -1058,6 +1058,35 @@ dialog.desk-dialog::backdrop {
   font-size: 0.7rem;
   font-weight: 800;
 }
+.desk-board-controls {
+  align-items: center;
+  display: flex;
+  gap: 5px;
+}
+.desk-board-controls button {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  min-width: 28px;
+  padding: 0 8px;
+}
+.desk-board-controls button:disabled {
+  opacity: 0.35;
+}
+.desk-board-controls output {
+  color: var(--ink);
+  font-size: 0.67rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 38px;
+  text-align: center;
+}
+.desk-board-controls .desk-board-center {
+  margin-left: 3px;
+  min-width: auto;
+}
 .desk-board-viewport {
   background-color: #fbfcfb;
   background-image: radial-gradient(#cfd9d0 1.2px, transparent 1.2px);
@@ -1246,6 +1275,15 @@ dialog.desk-dialog::backdrop {
   }
   .desk-board-viewport {
     height: 520px;
+  }
+  .desk-board-toolbar > span {
+    max-width: 112px;
+  }
+  .desk-board-controls {
+    gap: 3px;
+  }
+  .desk-board-controls button {
+    padding: 0 6px;
   }
   .desk-podium {
     gap: 6px;

@@ -282,6 +282,7 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
   const tree = useMemo(() => buildBoardTree(data, rootDesk, manager), [data, manager, rootDesk]);
   const layout = useMemo(() => layoutBoard(tree), [tree]);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const [spaceHeld, setSpaceHeld] = useState(false);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -299,14 +300,14 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
     const viewportWidth = viewportRef.current?.clientWidth ?? 0;
     const root = layout.nodes[0];
     if (!root || viewportWidth === 0) return;
-    setPan({ x: (viewportWidth / 2) - root.x - 83, y: 0 });
-  }, [layout]);
+    setPan({ x: (viewportWidth / 2) - ((root.x + 83) * zoom), y: 0 });
+  }, [layout, zoom]);
 
   function centerBoard() {
     const viewportWidth = viewportRef.current?.clientWidth ?? 0;
     const root = layout.nodes[0];
     if (!root || viewportWidth === 0) return;
-    setPan({ x: (viewportWidth / 2) - root.x - 83, y: 0 });
+    setPan({ x: (viewportWidth / 2) - ((root.x + 83) * zoom), y: 0 });
   }
 
   function pointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -323,9 +324,14 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
     dragRef.current = null; event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
-  return <div className="desk-board-shell"><div className="desk-board-toolbar"><span>Espacio + arrastrar para explorar</span><button onClick={centerBoard} type="button">Centrar</button></div>
+  return <div className="desk-board-shell"><div className="desk-board-toolbar"><span>Espacio + arrastrar para explorar</span><div className="desk-board-controls" aria-label="Controles de pizarra">
+    <button aria-label="Alejar pizarra" disabled={zoom <= 0.6} onClick={() => setZoom((value) => Math.max(0.6, Number((value - 0.1).toFixed(1))))} type="button">−</button>
+    <output aria-live="polite">{Math.round(zoom * 100)}%</output>
+    <button aria-label="Acercar pizarra" disabled={zoom >= 1.6} onClick={() => setZoom((value) => Math.min(1.6, Number((value + 0.1).toFixed(1))))} type="button">+</button>
+    <button className="desk-board-center" onClick={centerBoard} type="button">Centrar</button>
+  </div></div>
     <div className={`desk-board-viewport ${spaceHeld ? "ready" : ""}`} onMouseEnter={() => { hoverRef.current = true; }} onMouseLeave={() => { hoverRef.current = false; setSpaceHeld(false); }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onWheel={(event) => { event.preventDefault(); setPan((current) => ({ x: current.x - event.deltaX, y: current.y - event.deltaY })); }} ref={viewportRef}>
-      <div className="desk-board-canvas" style={{ height: layout.canvasHeight, transform: `translate(${pan.x}px, ${pan.y}px)`, width: layout.canvasWidth }}>
+      <div className="desk-board-canvas" style={{ height: layout.canvasHeight, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, width: layout.canvasWidth }}>
         <svg aria-hidden="true" className="desk-board-lines" height={layout.canvasHeight} width={layout.canvasWidth}>{layout.edges.map(({ child, parent }) => { const startX = parent.x + 83; const startY = parent.y + 64; const endX = child.x + 83; const endY = child.y; const middleY = startY + (endY - startY) / 2; return <path d={`M ${startX} ${startY} V ${middleY} H ${endX} V ${endY}`} key={`${parent.id}-${child.id}`} />; })}</svg>
         {layout.nodes.map((node) => {
           const person = node.personId ? data.overview.people.find((candidate) => candidate.id === node.personId) : null;
