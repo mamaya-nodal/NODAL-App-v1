@@ -2062,5 +2062,8 @@ vigente sin aprobacion y evidencia suficiente.
 - **Aislamiento:** los escenarios se construyen en memoria y no crean usuarios, mesas, identidades, invitaciones, solicitudes, operaciones ni registros económicos. Los controles simulados nunca llaman acciones de servidor productivas.
 - **Panel Admin:** conserva el árbol ficticio aprobado, fichas, ranking, invitaciones y edición visual de roles, estados y porcentajes. Guardar o invitar sólo modifica el estado local de la vista.
 - **Admin Master:** presenta cuatro unidades completas con mesas principales y dependientes, usuarios, administradores, identidades, IDs por unidad, métricas, alertas, ranking y pizarra jerárquica ficticios. Los filtros de unidad y mesa afectan la tabla, el ranking y la pizarra. Los enlaces que podrían abrir registros reales quedan deshabilitados dentro del escenario.
+- **Prueba de unidades:** el escenario Admin Master permite agregar y editar unidades y sus Mesas Principales sólo en memoria, con validación de abreviación única de dos letras. La edición actualiza los IDs ficticios de la unidad sin tocar la base productiva.
+- **Lectura del árbol:** al desplegar una persona, la pizarra muestra ID, fecha de alta, acuerdos, identidades y estado/versión del conector, manteniendo el mismo lenguaje informativo aprobado para el árbol del Panel Admin.
+- **Filtros inmediatos:** unidad, mesa y usuario se aplican al seleccionarlos. El período recarga automáticamente el período elegido; no existe un segundo botón de confirmación.
 - **Identificación visual:** ambas vistas indican de forma persistente que se trata de datos ficticios y ofrecen volver a los datos reales.
 

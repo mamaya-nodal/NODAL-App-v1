@@ -24,4 +24,13 @@ describe("Admin Master design demo", () => {
     expect(data.unitSummaries.reduce((sum, unit) => sum + unit.nodalIncome, 0)).toBe(data.overview.nodalIncome);
     expect(data.overview.desks.filter((desk) => desk.terms.manager_id !== null)).toHaveLength(6);
   });
+
+  it("changes the simulated period without inventing later history", () => {
+    const data = buildMasterControlDemo("2026-09-01");
+    expect(data.month).toBe("2026-09-01");
+    expect(data.performanceHistory.map((point) => point.month)).toEqual([
+      "2026-08-01",
+      "2026-09-01",
+    ]);
+  });
 });

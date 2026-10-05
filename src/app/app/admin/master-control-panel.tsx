@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { MasterControlData } from "@/modules/admin/server/load-master-control";
@@ -9,6 +10,15 @@ import "./desks.css";
 import "./master-control.css";
 
 type Person = MasterControlData["overview"]["people"][number];
+type Unit = MasterControlData["units"][number];
+type UnitSummary = MasterControlData["unitSummaries"][number];
+type OverviewDesk = MasterControlData["overview"]["desks"][number];
+type UnitDraft = Readonly<{
+  code: string;
+  id: string | null;
+  name: string;
+  rootDeskName: string;
+}>;
 type BoardNode = Readonly<{
   children: BoardNode[];
   detail: string;
@@ -34,6 +44,10 @@ const monthLabel = (value: string) => new Intl.DateTimeFormat("es-AR", {
 const dateTimeLabel = (value: string | null | undefined) => value
   ? new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value))
   : "Sin transmisiones";
+
+const dateLabel = (value: string | null | undefined) => value
+  ? new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeZone: "UTC" }).format(new Date(value))
+  : "Sin fecha";
 
 function Metric({ label, note, value }: Readonly<{ label: string; note?: string; value: string }>) {
   return <article><span>{label}</span><strong>{value}</strong>{note ? <small>{note}</small> : null}</article>;
@@ -121,7 +135,7 @@ function buildBoardTree(data: MasterControlData, people: Person[], selectedUnitI
 function layoutBoard(root: BoardNode) {
   const nodeWidth = 166;
   const horizontalGap = 38;
-  const verticalGap = 138;
+  const verticalGap = 174;
   const widths = new Map<string, number>();
   let depth = 0;
   const width = (node: BoardNode): number => {
@@ -190,11 +204,29 @@ function SystemBoard({ data, onOpenUser, people, selectedUnitId }: Readonly<{ da
   </div></div><div className={`desk-board-viewport ${spaceHeld ? "ready" : ""}`} onMouseEnter={() => { hoverRef.current = true; }} onMouseLeave={() => { hoverRef.current = false; setSpaceHeld(false); }} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} ref={viewportRef}>
     <div className="desk-board-canvas" style={{ height: layout.canvasHeight, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, width: layout.canvasWidth }}>
       <svg aria-hidden className="desk-board-lines" height={layout.canvasHeight} width={layout.canvasWidth}>{layout.edges.map(({ child, parent }) => { const middleY = parent.y + 64 + (child.y - parent.y - 64) / 2; return <path d={`M ${parent.x + 83} ${parent.y + 64} V ${middleY} H ${child.x + 83} V ${child.y}`} key={`${parent.id}-${child.id}`} />; })}</svg>
-      {layout.nodes.map((node) => <article className={`desk-board-node ${node.tone} ${expanded.has(node.id) ? "expanded" : ""}`} key={node.id} style={{ left: node.x, top: node.y }}>
-        {node.personId ? <button className="desk-board-node-name" onClick={() => onOpenUser(node.personId!)} type="button">{node.label}</button> : <strong>{node.label}</strong>}
-        <button className="desk-board-node-toggle" onClick={() => setExpanded((current) => { const next = new Set(current); if (next.has(node.id)) next.delete(node.id); else next.add(node.id); return next; })} type="button">{expanded.has(node.id) ? "−" : "+"}</button>
-        {expanded.has(node.id) ? <small>{node.detail}</small> : null}
-      </article>)}
+      {layout.nodes.map((node) => {
+        const person = node.personId ? people.find((candidate) => candidate.id === node.personId) : null;
+        const profile = node.personId ? data.profilesByUser[node.personId] : null;
+        const identities = node.personId ? (data.identitiesByUser[node.personId] ?? []) : [];
+        const activeIdentities = identities.filter((identity) => identity.state.toLowerCase() === "activa").length;
+        const managedDesk = node.personId
+          ? data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === node.personId)
+          : null;
+        const connector = node.personId ? data.connectorByUser[node.personId] : null;
+        const isExpanded = expanded.has(node.id);
+        return <article className={`desk-board-node ${node.tone} ${isExpanded ? "expanded" : ""}`} key={node.id} style={{ left: node.x, top: node.y }}>
+          {node.personId ? <button className="desk-board-node-name" onClick={() => onOpenUser(node.personId!)} type="button">{node.label}</button> : <strong>{node.label}</strong>}
+          <button aria-expanded={isExpanded} aria-label={`${isExpanded ? "Ocultar" : "Mostrar"} información de ${node.label}`} className="desk-board-node-toggle" onClick={() => setExpanded((current) => { const next = new Set(current); if (next.has(node.id)) next.delete(node.id); else next.add(node.id); return next; })} type="button">{isExpanded ? "−" : "+"}</button>
+          {isExpanded && person ? <small className="desk-board-person-detail">
+            <span>ID: {data.identifiersByUser[person.id] ?? "Pendiente"}</span>
+            <span>Alta: {dateLabel(profile?.created_at)}</span>
+            <span>% op. propias: {(person.terms?.commission_bps ?? 0) / 100}%</span>
+            {managedDesk ? <span>% Admin mesa: {managedDesk.terms.nodal_bps / 100}%</span> : null}
+            <span>Identidades: {profile?.identities_enabled ? "habilitadas" : "no habilitadas"} · {activeIdentities}/{identities.length}</span>
+            <span>Ninja: {connector?.active ? "Activo" : "Desactivado"}{connector?.version ? ` · v${connector.version}` : " · sin versión"}</span>
+          </small> : isExpanded ? <small>{node.detail}</small> : null}
+        </article>;
+      })}
     </div>
   </div></div>;
 }
@@ -220,36 +252,137 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   </section></div>;
 }
 
+function UnitEditorModal({ draft, existingUnits, onClose, onSave }: Readonly<{
+  draft: UnitDraft;
+  existingUnits: Unit[];
+  onClose: () => void;
+  onSave: (draft: UnitDraft) => void;
+}>) {
+  const [code, setCode] = useState(draft.code);
+  const [name, setName] = useState(draft.name);
+  const [rootDeskName, setRootDeskName] = useState(draft.rootDeskName);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close);
+  }, [onClose]);
+  const save = () => {
+    const normalizedCode = code.trim().toUpperCase();
+    if (!name.trim() || !rootDeskName.trim()) { setError("Completá el nombre de la unidad y de su Mesa Principal."); return; }
+    if (!/^[A-Z]{2}$/.test(normalizedCode)) { setError("La abreviación debe tener exactamente dos letras."); return; }
+    if (existingUnits.some((unit) => unit.code === normalizedCode && unit.id !== draft.id)) { setError("Esa abreviación ya pertenece a otra unidad."); return; }
+    onSave({ code: normalizedCode, id: draft.id, name: name.trim(), rootDeskName: rootDeskName.trim() });
+  };
+  return <div aria-modal="true" className="desk-modal-backdrop" role="dialog" onMouseDown={onClose}><section className="desk-user-modal master-unit-modal" onMouseDown={(event) => event.stopPropagation()}>
+    <header><div><span>ADMIN MASTER</span><h2>{draft.id ? "Editar unidad" : "Agregar unidad"}</h2></div><button className="desk-modal-close" onClick={onClose} type="button">×</button></header>
+    <p className="master-unit-explanation">La unidad conserva una abreviación única de dos letras y nace con su propia Mesa Principal.</p>
+    <div className="desk-user-fields master-unit-fields"><label>Nombre de la unidad<input autoFocus onChange={(event) => setName(event.target.value)} placeholder="Unidad Highway" value={name} /></label><label>Abreviación<input maxLength={2} onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} placeholder="HW" value={code} /></label><label>Nombre de la Mesa Principal<input onChange={(event) => setRootDeskName(event.target.value)} placeholder="Mesa principal Highway" value={rootDeskName} /></label></div>
+    {error ? <p className="master-unit-error" role="alert">{error}</p> : null}
+    <small className="master-unit-local-note">Comprobación visual: este cambio existe sólo en el escenario ficticio y no se guarda en producción.</small>
+    <footer><button className="secondary-action" onClick={onClose} type="button">Cancelar</button><button className="primary-action" onClick={save} type="button">Guardar unidad</button></footer>
+  </section></div>;
+}
+
 export function MasterControlPanel({ data, demoAvailable = false, view = "control" }: Readonly<{ data: MasterControlData; demoAvailable?: boolean; view?: "control" | "statistics" }>) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [selectedDeskId, setSelectedDeskId] = useState("all");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState("all");
-  const activePeople = useMemo(() => data.overview.people.filter((person) => person.access === "active"), [data.overview.people]);
-  const unitDesks = useMemo(() => data.overview.desks.filter((desk) => desk.terms.active && (selectedUnitId === "all" || data.unitByDesk[desk.id] === selectedUnitId)), [data.overview.desks, data.unitByDesk, selectedUnitId]);
+  const [unitDraft, setUnitDraft] = useState<UnitDraft | null>(null);
+  const [demoUnits, setDemoUnits] = useState<Unit[]>([...data.units]);
+  const [demoUnitSummaries, setDemoUnitSummaries] = useState<UnitSummary[]>([...data.unitSummaries]);
+  const [demoDesks, setDemoDesks] = useState<OverviewDesk[]>([...data.overview.desks]);
+  const [demoUnitByDesk, setDemoUnitByDesk] = useState<Record<string, string>>({ ...data.unitByDesk });
+  const [demoIdentifiers, setDemoIdentifiers] = useState<Record<string, string>>({ ...data.identifiersByUser });
+  const displayData = useMemo<MasterControlData>(() => data.demo ? {
+    ...data,
+    identifiersByUser: demoIdentifiers,
+    overview: { ...data.overview, desks: demoDesks },
+    unitByDesk: demoUnitByDesk,
+    unitSummaries: demoUnitSummaries,
+    units: demoUnits,
+  } : data, [data, demoDesks, demoIdentifiers, demoUnitByDesk, demoUnitSummaries, demoUnits]);
+  const activePeople = useMemo(() => displayData.overview.people.filter((person) => person.access === "active"), [displayData.overview.people]);
+  const unitDesks = useMemo(() => displayData.overview.desks.filter((desk) => desk.terms.active && (selectedUnitId === "all" || displayData.unitByDesk[desk.id] === selectedUnitId)), [displayData.overview.desks, displayData.unitByDesk, selectedUnitId]);
   const scopedPeople = useMemo(() => activePeople.filter((person) =>
-    (selectedUnitId === "all" || data.unitByUser[person.id] === selectedUnitId)
+    (selectedUnitId === "all" || displayData.unitByUser[person.id] === selectedUnitId)
     && (selectedDeskId === "all" || person.deskId === selectedDeskId)
-  ), [activePeople, data.unitByUser, selectedDeskId, selectedUnitId]);
+  ), [activePeople, displayData.unitByUser, selectedDeskId, selectedUnitId]);
   const visiblePeople = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return scopedPeople;
-    return scopedPeople.filter((person) => `${person.name} ${person.email} ${data.identifiersByUser[person.id] ?? ""}`.toLowerCase().includes(normalized));
-  }, [data.identifiersByUser, query, scopedPeople]);
-  const visibleUnitSummaries = data.unitSummaries.filter((summary) => selectedUnitId === "all" || summary.id === selectedUnitId);
+    return scopedPeople.filter((person) => `${person.name} ${person.email} ${displayData.identifiersByUser[person.id] ?? ""}`.toLowerCase().includes(normalized));
+  }, [displayData.identifiersByUser, query, scopedPeople]);
+  const visibleUnitSummaries = displayData.unitSummaries.filter((summary) => selectedUnitId === "all" || summary.id === selectedUnitId);
   const selected = activePeople.find((person) => person.id === selectedPersonId) ?? null;
-  const historicNodal = data.performanceHistory.reduce((sum, point) => sum + point.nodalIncome, 0);
-  const historicGross = data.performanceHistory.reduce((sum, point) => sum + point.gross, 0);
+  const historicNodal = displayData.performanceHistory.reduce((sum, point) => sum + point.nodalIncome, 0);
+  const historicGross = displayData.performanceHistory.reduce((sum, point) => sum + point.gross, 0);
+  const changePeriod = (period: string) => {
+    const params = new URLSearchParams();
+    params.set("period", period);
+    if (data.demo) params.set("demo", "1");
+    router.push(`${view === "statistics" ? "/app/admin/statistics" : "/app/admin"}?${params.toString()}`);
+  };
+  const editUnit = (unit: Unit) => {
+    const rootDesk = displayData.overview.desks.find((desk) => desk.id === unit.root_desk_id);
+    setUnitDraft({ code: unit.code, id: unit.id, name: unit.name, rootDeskName: rootDesk?.name ?? "Mesa Principal" });
+  };
+  const saveUnit = (draft: UnitDraft) => {
+    if (draft.id) {
+      const previous = demoUnits.find((unit) => unit.id === draft.id);
+      if (!previous) return;
+      setDemoUnits((current) => current.map((unit) => unit.id === draft.id ? { ...unit, code: draft.code, name: draft.name } : unit));
+      setDemoDesks((current) => current.map((desk) => desk.id === previous.root_desk_id ? { ...desk, name: draft.rootDeskName } : desk));
+      if (previous.code !== draft.code) {
+        setDemoIdentifiers((current) => Object.fromEntries(Object.entries(current).map(([userId, identifier]) => [
+          userId,
+          displayData.unitByUser[userId] === draft.id ? identifier.replace(/^USER[A-Z]{2}-/, `USER${draft.code}-`) : identifier,
+        ])));
+      }
+      setUnitDraft(null);
+      return;
+    }
+    const token = crypto.randomUUID();
+    const unitId = `demo-unit-${token}`;
+    const rootDeskId = `demo-root-${token}`;
+    const ordinal = demoUnits.reduce((maximum, unit) => Math.max(maximum, unit.ordinal), 0) + 1;
+    const unit: Unit = { code: draft.code, id: unitId, name: draft.name, ordinal, root_desk_id: rootDeskId };
+    const rootDesk: OverviewDesk = {
+      children: [],
+      created_at: new Date().toISOString(),
+      directGenerated: 0,
+      generated: 0,
+      gross: 0,
+      id: rootDeskId,
+      managerShare: 0,
+      members: [],
+      name: draft.rootDeskName,
+      nodalShare: 0,
+      parent_id: null,
+      structureGross: 0,
+      structureMembers: [],
+      terms: { active: true, desk_id: rootDeskId, effective_month: displayData.month, manager_id: null, nodal_bps: 10_000 },
+    };
+    setDemoUnits((current) => [...current, unit]);
+    setDemoUnitSummaries((current) => [...current, { deskCount: 1, gross: 0, id: unitId, nodalIncome: 0, userCount: 0 }]);
+    setDemoDesks((current) => [...current, rootDesk]);
+    setDemoUnitByDesk((current) => ({ ...current, [rootDeskId]: unitId }));
+    setSelectedUnitId(unitId);
+    setSelectedDeskId("all");
+    setUnitDraft(null);
+  };
   return <div className="admin-page admin-shell master-control">
-    <header className="desk-heading master-heading"><div><p className="status">ADMIN MASTER</p><h1>{view === "statistics" ? "Estadísticas" : "Panel control"}</h1><small>{monthLabel(data.month)}</small></div>{view === "control" ? data.demo ? <a className={`master-alerts ${data.pendingAccessCount ? "has-alerts" : ""}`} href="#demo-alerts"><span>{data.pendingAccessCount}</span><strong>Altas y alertas</strong></a> : <Link className={`master-alerts ${data.pendingAccessCount ? "has-alerts" : ""}`} href="/app/admin/users"><span>{data.pendingAccessCount}</span><strong>Altas y alertas</strong></Link> : null}</header>
+    <header className="desk-heading master-heading"><div><p className="status">ADMIN MASTER</p><h1>{view === "statistics" ? "Estadísticas" : "Panel control"}</h1><small>{monthLabel(displayData.month)}</small></div>{view === "control" ? data.demo ? <a className={`master-alerts ${displayData.pendingAccessCount ? "has-alerts" : ""}`} href="#demo-alerts"><span>{displayData.pendingAccessCount}</span><strong>Altas y alertas</strong></a> : <Link className={`master-alerts ${displayData.pendingAccessCount ? "has-alerts" : ""}`} href="/app/admin/users"><span>{displayData.pendingAccessCount}</span><strong>Altas y alertas</strong></Link> : null}</header>
     {data.demo ? <p className="master-demo-notice" role="status"><span><strong>Escenario ficticio</strong> · permite comprobar jerarquías, filtros y fichas sin modificar datos reales.</span><Link href="/app/admin">Volver a datos reales</Link></p> : demoAvailable ? <p className="master-demo-notice available"><span>Comprobación de diseño disponible sólo para tu cuenta.</span><Link href="/app/admin?demo=1">Abrir escenario ficticio</Link></p> : null}
-    <form action="/app/admin" className="master-filters" method="get">{data.demo ? <input name="demo" type="hidden" value="1" /> : null}<label>Unidad<select value={selectedUnitId} onChange={(event) => { setSelectedUnitId(event.target.value); setSelectedDeskId("all"); }}><option value="all">Todas las unidades</option>{data.units.map((unit) => <option key={unit.id} value={unit.id}>{String(unit.ordinal).padStart(2, "0")} · {unit.name}</option>)}</select></label><label>Mesa<select value={selectedDeskId} onChange={(event) => setSelectedDeskId(event.target.value)}><option value="all">Todas las mesas</option>{unitDesks.map((desk) => <option key={desk.id} value={desk.id}>{desk.name}</option>)}</select></label><label>ID o nombre de usuario<input onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuario" value={query} /></label><label>Período<select name="period" defaultValue={data.month}>{data.periods.map((period) => <option key={period} value={period}>{monthLabel(period)}</option>)}</select></label><button className="primary-action">Aplicar</button></form>
     {data.demo && view === "control" ? <section className="master-demo-alerts" id="demo-alerts"><article><span>4</span><div><strong>Solicitudes de apertura</strong><small>Distribuidas entre NODAL, Highway y Atlas.</small></div></article><article><span>2</span><div><strong>Alertas de conector</strong><small>Usuarios sin transmitir durante más de 24 horas.</small></div></article><small>Contenido simulado: estos avisos no corresponden a usuarios reales.</small></section> : null}
-    <section className="master-kpis"><Metric label="Ganancia NODAL del período" value={money(data.overview.nodalIncome)} /><Metric label="Ganancia NODAL histórica" value={money(historicNodal)} /><Metric label="Facturación total del período" value={money(data.overview.gross)} /><Metric label="Facturación histórica" value={money(historicGross)} /><Metric label="Unidades operativas" value={String(data.units.length)} /><Metric label="Usuarios activos" value={String(activePeople.length)} /></section>
-    <section className="master-dashboard-grid"><article className="desk-surface"><div className="admin-section-heading"><div><h2>Desempeño del sistema</h2></div></div><SystemChart history={data.performanceHistory} /></article><article className="desk-surface"><div className="admin-section-heading"><div><h2>{selectedUnitId === "all" ? "Ranking NODAL" : "Ranking de la unidad"}</h2></div></div><Ranking people={scopedPeople} /></article></section>
-    {view === "control" ? <section className="master-unit-grid">{visibleUnitSummaries.map((summary) => { const unit = data.units.find((candidate) => candidate.id === summary.id)!; return <button aria-pressed={selectedUnitId === unit.id} className="master-unit-card" key={unit.id} onClick={() => { setSelectedUnitId(unit.id); setSelectedDeskId("all"); }} type="button"><div><span>{String(unit.ordinal).padStart(2, "0")}</span><div><p>UNIDAD</p><h2>{unit.name}</h2></div></div><dl><div><dt>Facturación período</dt><dd>{money(summary.gross)}</dd></div><div><dt>Ganancia NODAL</dt><dd>{money(summary.nodalIncome)}</dd></div><div><dt>Mesas</dt><dd>{summary.deskCount}</dd></div><div><dt>Usuarios</dt><dd>{summary.userCount}</dd></div></dl></button>; })}</section> : null}
-    <section className="desk-surface"><div className="admin-section-heading"><div><h2>{selectedUnitId === "all" ? "Usuarios del sistema" : "Usuarios de la unidad"}</h2></div><span className="calculated-badge">{visiblePeople.length}</span></div><div className="desk-table-scroll"><table className="desk-table"><thead><tr><th>ID</th><th>Nombre</th><th>Unidad</th><th>Rol</th><th>Estado</th><th>Ganancia período</th><th>Facturación histórica</th></tr></thead><tbody>{visiblePeople.map((person) => { const managed = data.overview.desks.some((desk) => desk.terms.active && desk.terms.manager_id === person.id); const master = data.profilesByUser[person.id]?.access_role === "admin"; const unit = data.units.find((candidate) => candidate.id === data.unitByUser[person.id]); return <tr key={person.id}><td><span className="desk-user-id">{data.identifiersByUser[person.id] ?? "ID pendiente"}</span></td><td><button className="desk-person" onClick={() => setSelectedPersonId(person.id)} type="button">{person.name}</button></td><td>{unit?.code ?? "—"}</td><td>{managed ? "Admin" : master ? "Admin Master" : "Usuario"}</td><td><span className="desk-status active">Activo</span></td><td>{money(person.gross)}</td><td>{money(data.historicalGrossByUser[person.id] ?? 0)}</td></tr>; })}</tbody></table>{!visiblePeople.length ? <p className="desk-empty">No hay coincidencias.</p> : null}</div></section>
-    {view === "control" ? <section className="desk-surface desk-board-section"><div className="admin-section-heading"><div><h2>Sistema NODAL</h2></div></div><SystemBoard data={data} onOpenUser={setSelectedPersonId} people={scopedPeople} selectedUnitId={selectedUnitId} /></section> : null}
-    {selected ? <MasterUserModal data={data} onClose={() => setSelectedPersonId(null)} person={selected} /> : null}
+    <section className="master-kpis"><Metric label="Ganancia NODAL del período" value={money(displayData.overview.nodalIncome)} /><Metric label="Ganancia NODAL histórica" value={money(historicNodal)} /><Metric label="Facturación total del período" value={money(displayData.overview.gross)} /><Metric label="Facturación histórica" value={money(historicGross)} /><Metric label="Unidades operativas" value={String(displayData.units.length)} /><Metric label="Usuarios activos" value={String(activePeople.length)} /></section>
+    <section className="master-dashboard-grid"><article className="desk-surface"><div className="admin-section-heading"><div><h2>Desempeño del sistema</h2></div></div><SystemChart history={displayData.performanceHistory} /></article><article className="desk-surface"><div className="admin-section-heading"><div><h2>{selectedUnitId === "all" ? "Ranking NODAL" : "Ranking de la unidad"}</h2></div></div><Ranking people={scopedPeople} /></article></section>
+    <section aria-label="Filtros del sistema" className="master-filters"><label>Unidad<select value={selectedUnitId} onChange={(event) => { setSelectedUnitId(event.target.value); setSelectedDeskId("all"); }}><option value="all">Todas las unidades</option>{displayData.units.map((unit) => <option key={unit.id} value={unit.id}>{String(unit.ordinal).padStart(2, "0")} · {unit.name}</option>)}</select></label><label>Mesa<select value={selectedDeskId} onChange={(event) => setSelectedDeskId(event.target.value)}><option value="all">Todas las mesas</option>{unitDesks.map((desk) => <option key={desk.id} value={desk.id}>{desk.name}</option>)}</select></label><label>ID o nombre de usuario<input onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuario" value={query} /></label><label>Período<select onChange={(event) => changePeriod(event.target.value)} value={displayData.month}>{displayData.periods.map((period) => <option key={period} value={period}>{monthLabel(period)}</option>)}</select></label></section>
+    {view === "control" ? <><div className="master-unit-heading"><div><h2>Unidades del sistema</h2><small>{data.demo ? "Los cambios de esta prueba son locales y temporales." : "Estructura registrada del Sistema NODAL."}</small></div>{data.demo ? <button className="primary-action" onClick={() => setUnitDraft({ code: "", id: null, name: "", rootDeskName: "" })} type="button">+ Agregar unidad</button> : null}</div><section className="master-unit-grid">{visibleUnitSummaries.map((summary) => { const unit = displayData.units.find((candidate) => candidate.id === summary.id)!; return <article className={`master-unit-card ${selectedUnitId === unit.id ? "selected" : ""}`} key={unit.id}><button aria-pressed={selectedUnitId === unit.id} className="master-unit-select" onClick={() => { setSelectedUnitId(unit.id); setSelectedDeskId("all"); }} type="button"><div className="master-unit-identity"><span>{String(unit.ordinal).padStart(2, "0")}</span><div><p>UNIDAD</p><h2>{unit.name}</h2><small>{unit.code}</small></div></div><dl><div><dt>Facturación período</dt><dd>{money(summary.gross)}</dd></div><div><dt>Ganancia NODAL</dt><dd>{money(summary.nodalIncome)}</dd></div><div><dt>Mesas</dt><dd>{summary.deskCount}</dd></div><div><dt>Usuarios</dt><dd>{summary.userCount}</dd></div></dl></button>{data.demo ? <button className="master-unit-edit" onClick={() => editUnit(unit)} type="button">Editar</button> : null}</article>; })}</section></> : null}
+    <section className="desk-surface"><div className="admin-section-heading"><div><h2>{selectedUnitId === "all" ? "Usuarios del sistema" : "Usuarios de la unidad"}</h2></div><span className="calculated-badge">{visiblePeople.length}</span></div><div className="desk-table-scroll"><table className="desk-table"><thead><tr><th>ID</th><th>Nombre</th><th>Unidad</th><th>Rol</th><th>Estado</th><th>Ganancia período</th><th>Facturación histórica</th></tr></thead><tbody>{visiblePeople.map((person) => { const managed = displayData.overview.desks.some((desk) => desk.terms.active && desk.terms.manager_id === person.id); const master = displayData.profilesByUser[person.id]?.access_role === "admin"; const unit = displayData.units.find((candidate) => candidate.id === displayData.unitByUser[person.id]); return <tr key={person.id}><td><span className="desk-user-id">{displayData.identifiersByUser[person.id] ?? "ID pendiente"}</span></td><td><button className="desk-person" onClick={() => setSelectedPersonId(person.id)} type="button">{person.name}</button></td><td>{unit?.code ?? "—"}</td><td>{managed ? "Admin" : master ? "Admin Master" : "Usuario"}</td><td><span className="desk-status active">Activo</span></td><td>{money(person.gross)}</td><td>{money(displayData.historicalGrossByUser[person.id] ?? 0)}</td></tr>; })}</tbody></table>{!visiblePeople.length ? <p className="desk-empty">No hay coincidencias.</p> : null}</div></section>
+    {view === "control" ? <section className="desk-surface desk-board-section"><div className="admin-section-heading"><div><h2>Sistema NODAL</h2></div></div><SystemBoard data={displayData} onOpenUser={setSelectedPersonId} people={scopedPeople} selectedUnitId={selectedUnitId} /></section> : null}
+    {selected ? <MasterUserModal data={displayData} onClose={() => setSelectedPersonId(null)} person={selected} /> : null}
+    {unitDraft ? <UnitEditorModal draft={unitDraft} existingUnits={displayData.units} onClose={() => setUnitDraft(null)} onSave={saveUnit} /> : null}
   </div>;
 }

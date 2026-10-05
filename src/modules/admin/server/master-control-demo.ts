@@ -114,17 +114,22 @@ function identifierFor(userId: string, deskId: string) {
   return formatNodalUserIdentifier(unit.code, deskCode, position);
 }
 
-export function buildMasterControlDemo(): MasterControlData {
+export function buildMasterControlDemo(requestedMonth?: string): MasterControlData {
   const now = Date.now();
   const snapshots = months.map((month, monthIndex) => ({
     month,
     overview: calculateDeskOverview(desks, deskTerms, peopleForMonth(monthIndex), userTerms, month),
   }));
-  const current = snapshots.at(-1)!;
+  const requestedIndex = requestedMonth
+    ? months.findIndex((month) => month === requestedMonth)
+    : -1;
+  const currentIndex = requestedIndex >= 0 ? requestedIndex : snapshots.length - 1;
+  const availableSnapshots = snapshots.slice(0, currentIndex + 1);
+  const current = snapshots[currentIndex]!;
   const identifiersByUser = Object.fromEntries(personSpecs.map(([id, , deskId]) => [id, identifierFor(id, deskId)]));
   const historicalGrossByUser = Object.fromEntries(personSpecs.map(([id]) => [
     id,
-    snapshots.reduce((sum, snapshot) => sum + (snapshot.overview.people.find((person) => person.id === id)?.gross ?? 0), 0),
+    availableSnapshots.reduce((sum, snapshot) => sum + (snapshot.overview.people.find((person) => person.id === id)?.gross ?? 0), 0),
   ]));
   const profilesByUser = Object.fromEntries(personSpecs.map(([id, name, , , master], index) => [id, {
     access_role: master ? ("admin" as const) : ("student" as const),
@@ -187,7 +192,7 @@ export function buildMasterControlDemo(): MasterControlData {
     month: current.month,
     overview: current.overview,
     pendingAccessCount: 6,
-    performanceHistory: snapshots.map((snapshot) => ({
+    performanceHistory: availableSnapshots.map((snapshot) => ({
       gross: snapshot.overview.gross,
       month: snapshot.month,
       nodalIncome: snapshot.overview.nodalIncome,

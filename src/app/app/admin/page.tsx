@@ -10,6 +10,6 @@ export default async function AdminPage({searchParams}:Props){
     loadMasterControl(params.period),
     canUseAdministrationDesignDemo(),
   ]);
-  const data = params.demo === "1" && demoAvailable ? buildMasterControlDemo() : realData;
+  const data = params.demo === "1" && demoAvailable ? buildMasterControlDemo(params.period) : realData;
   return <MasterControlPanel data={data} demoAvailable={demoAvailable} />;
 }
