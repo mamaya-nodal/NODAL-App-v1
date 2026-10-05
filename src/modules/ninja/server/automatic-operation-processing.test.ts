@@ -44,12 +44,7 @@ beforeEach(() => {
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-only");
   rows.mockImplementation((table, filters, single) => {
     if (table === "ninja_operation_probe_sessions" && single && filters["not:excluded_at"]) {
-      return {
-        data: filters.account_name === current.account_name && filters.connection_name === current.connection_name
-          ? null
-          : { closing_balance: 47_969.5, settled_at: "2026-09-28T15:25:36Z" },
-        error: null,
-      };
+      return { data: { closing_balance: 4_345.94, settled_at: "2026-09-28T15:07:30Z" }, error: null };
     }
     const data: Record<string, unknown> = {
       ninja_connectors: null,
@@ -92,11 +87,16 @@ it("does not rewrite an operation already committed", async () => {
   expect(rpc).not.toHaveBeenCalled();
 });
 
-it("never uses an excluded prop session as the expected broker balance", async () => {
+it("never uses an excluded technical session as the expected broker balance", async () => {
   state.previousCommitted = false;
   const result = await persistAutomaticOperationBatches("connector", 20, true);
   expect(result.previews?.find((preview) => preview.brokerSessionId === 20)?.projection).toMatchObject({
     reason: null,
     status: "shadow_ready",
   });
+  expect(rows).not.toHaveBeenCalledWith(
+    "ninja_operation_probe_sessions",
+    expect.objectContaining({ "not:excluded_at": expect.anything() }),
+    true,
+  );
 });

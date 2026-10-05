@@ -2,9 +2,9 @@
 
 ### Recuperación segura del saldo broker previo (2026-10-05)
 
-- Una sesión técnica excluida sólo puede aportar continuidad de saldo si pertenece a la misma cuenta y conexión broker del lote que se está conciliando.
-- Las sesiones excluidas de cuentas prop nunca se usan como saldo broker esperado.
-- Cuando el saldo broker se administra de forma agregada, no se infiere el total desde una única sesión excluida; se conserva la fuente contable o el evento agregado verificado.
+- Una sesión técnica excluida nunca se usa para establecer continuidad contable del saldo broker: su exclusión indica precisamente que no es una fuente confiable para el libro.
+- El saldo esperado sólo procede del último control contable confirmado, del cierre del período anterior o de un evento agregado de saldo broker verificado.
+- Si ninguna fuente confiable existe, la automatización se bloquea solicitando el depósito inicial en lugar de inferirlo desde un fragmento técnico.
 
 ### Fecha operativa visible en el historial (2026-10-05)
 
