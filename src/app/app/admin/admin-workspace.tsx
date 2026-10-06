@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { ThemeToggle } from "../theme-toggle";
@@ -22,16 +22,19 @@ type Props = Readonly<{
 
 export function AdminWorkspace({ avatarUrl, children, scope = "master", userLabel, versionInfo }: Props) {
   const pathname = usePathname();
-  const panelHref = scope === "desk" ? "/app/mi-mesa" : "/app/admin";
+  const searchParams = useSearchParams();
+  const demo = scope === "master" && searchParams.get("demo") === "1";
+  const panelPath = scope === "desk" ? "/app/mi-mesa" : "/app/admin";
+  const panelHref = demo ? `${panelPath}?demo=1` : panelPath;
   const panelLabel = scope === "desk" ? "Panel Admin" : "Panel control";
   const scopedNavigation = [
-    { href: panelHref, icon: "summary" as WorkspaceIconName, label: panelLabel },
+    { href: panelHref, icon: "summary" as WorkspaceIconName, label: panelLabel, path: panelPath },
     ...(scope === "master" ? [
-      { href: "/app/admin/periods", icon: "daily" as WorkspaceIconName, label: "Registros" },
-      { href: "/app/admin/statistics", icon: "operations" as WorkspaceIconName, label: "Estadísticas" },
+      { href: demo ? "/app/admin/periods?demo=1" : "/app/admin/periods", icon: "daily" as WorkspaceIconName, label: "Registros", path: "/app/admin/periods" },
+      { href: "/app/admin/statistics", icon: "operations" as WorkspaceIconName, label: "Estadísticas", path: "/app/admin/statistics" },
     ] : []),
   ];
-  const isActive = (href: string) => pathname === href;
+  const isActive = (path: string) => pathname === path;
   return (
     <main className="nodal-workspace admin-workspace">
       <aside className="workspace-sidebar">
@@ -41,7 +44,7 @@ export function AdminWorkspace({ avatarUrl, children, scope = "master", userLabe
 
         <nav className="workspace-navigation" aria-label="Navegación de administración">
           {scopedNavigation.map((item) => {
-            return <Link aria-current={isActive(item.href) ? "page" : undefined} href={item.href} key={item.href}><WorkspaceIcon name={item.icon} />{item.label}</Link>;
+            return <Link aria-current={isActive(item.path) ? "page" : undefined} href={item.href} key={item.path}><WorkspaceIcon name={item.icon} />{item.label}</Link>;
           })}
           <Link href="/app#inicio"><WorkspaceIcon name="home" />Volver a mi espacio</Link>
         </nav>
@@ -62,7 +65,7 @@ export function AdminWorkspace({ avatarUrl, children, scope = "master", userLabe
         </header>
         <div className="app-page-shell workspace-content admin-page-shell">{children}</div>
         <nav className="workspace-mobile-navigation" aria-label="Navegación móvil de administración">
-          {scopedNavigation.map((item) => <Link aria-current={isActive(item.href) ? "page" : undefined} href={item.href} key={item.href}><WorkspaceIcon name={item.icon} />{scope === "desk" ? "Admin" : "Panel"}</Link>)}
+          {scopedNavigation.map((item) => <Link aria-current={isActive(item.path) ? "page" : undefined} href={item.href} key={item.path}><WorkspaceIcon name={item.icon} />{scope === "desk" ? "Admin" : item.label}</Link>)}
           <Link href="/app#inicio"><WorkspaceIcon name="home" />Mi espacio</Link>
         </nav>
       </div>
