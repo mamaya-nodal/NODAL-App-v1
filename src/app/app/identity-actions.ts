@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { prepareDirectIdentity } from "@/modules/identities/domain/direct-identity";
+import type { IdentityOperationalStatus } from "@/modules/identities/domain/identity-summary";
 
 type ActionResult = Readonly<{ message: string; ok: boolean }>;
 
@@ -150,4 +151,29 @@ export async function setIdentitySignal(identityId: string, enabled: boolean): P
   }
   revalidatePath("/app");
   return { ok: true, message: enabled ? "Recepción activada." : "Recepción pausada." };
+}
+
+const identityOperationalStatuses = new Set<IdentityOperationalStatus>([
+  "unconfigured",
+  "configured",
+  "active",
+  "dead",
+]);
+
+export async function updateIdentityOperationalStatus(
+  identityId: string,
+  status: IdentityOperationalStatus,
+): Promise<ActionResult> {
+  if (!isUuid(identityId) || !identityOperationalStatuses.has(status)) {
+    return { ok: false, message: "El estado elegido no es válido." };
+  }
+  const { supabase, user } = await authenticatedClient();
+  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  const { error } = await supabase.rpc("update_nodal_identity_operational_status", {
+    target_identity_id: identityId,
+    target_status: status,
+  });
+  if (error) return { ok: false, message: "No se pudo guardar el estado de la identidad." };
+  revalidatePath("/app");
+  return { ok: true, message: "Estado de identidad actualizado." };
 }

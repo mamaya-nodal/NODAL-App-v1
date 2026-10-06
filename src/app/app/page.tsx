@@ -986,7 +986,7 @@ async function renderPrivateAppPage({
     ] = await Promise.all([
       supabase
         .from("nodal_identities")
-        .select("id,first_name,last_name,contact_email,onboarding_status,documentation_status,credentials_status,drive_folder_url")
+        .select("id,first_name,last_name,contact_email,onboarding_status,operational_status,documentation_status,credentials_status,drive_folder_url")
         .eq("workspace_id", selection.workspace.id)
         .order("last_name")
         .order("first_name"),
@@ -1012,11 +1012,16 @@ async function renderPrivateAppPage({
     );
     identityAccounts = accountHistory.map((account) => ({
       balanceInCents: account.currentCashValueInCents,
+      companyCode: companies.find((company) => company.id === account.companyId)?.code ?? account.companyName,
+      companyId: account.companyId,
+      companyName: account.companyName,
       currentIdentityId: identityByAccountId.get(account.id) ?? null,
       history: account.economicHistory ?? [],
       id: account.id,
       label: `${account.companyName} · ${account.externalName ?? `Cuenta ${account.referenceNumber}`}`,
       operationalState: account.currentOperationalState,
+      payoutCount: (historicalFundingWithdrawalRows ?? [])
+        .filter((withdrawal) => withdrawal.account_id === account.id).length,
       payoutInCents: (historicalFundingWithdrawalRows ?? [])
         .filter((withdrawal) => withdrawal.account_id === account.id)
         .reduce((total, withdrawal) => total + Number(withdrawal.amount_cents), 0),
@@ -1034,6 +1039,7 @@ async function renderPrivateAppPage({
         id: identity.id,
         lastName: identity.last_name,
         onboardingStatus: identity.onboarding_status,
+        operationalStatus: identity.operational_status,
       })),
       identityAccounts,
       (identityConnectorInstallationRows ?? []).map((installation): IdentityConnectorInstallation => ({
@@ -1044,6 +1050,11 @@ async function renderPrivateAppPage({
         status: installation.status as IdentityConnectorInstallation["status"],
       })),
       walletViews,
+      companies.map((company) => ({
+        code: company.code,
+        id: company.id,
+        name: company.displayName,
+      })),
     );
     walletIdentities = (identityRows ?? []).map((identity) => ({
       id: identity.id,
@@ -1462,6 +1473,7 @@ async function renderPrivateAppPage({
           accounts={identityAccounts}
           connectors={ninjaConnectors.filter((connector) => connector.identityId !== null)}
           identities={identitySummaries}
+          ownerName={nodalUser?.display_name || nodalUser?.email || "Mi espacio"}
           signalStates={identitySignalStates}
           workspaceId={selection.workspace.id}
         />

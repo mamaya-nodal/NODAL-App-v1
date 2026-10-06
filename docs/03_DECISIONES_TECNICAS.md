@@ -2087,3 +2087,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **Estructura visible:** los cálculos, el ranking, la tabla y la pizarra de Admin Master incluyen únicamente usuarios con acceso activo. Un perfil pendiente o revocado nunca integra la estructura económica vigente.
 - **Solicitudes:** las solicitudes directas pendientes se muestran con nombre, correo y fecha dentro de `Panel control`, además de la pantalla de revisión. La tarjeta lleva a las acciones de aprobar o rechazar ya auditadas.
 
+### APP-156 - Estado operativo y deterioro automático de identidades
+
+- **Fecha:** 2026-10-06. Definición funcional de Mauricio para la orejeta Identidades.
+- **Estado manual:** el titular clasifica cada identidad como `Desconfigurada`, `Configurada`, `Activa` o `Muerta`. Esta clasificación se guarda con autorización por espacio y auditoría, separada del onboarding, la documentación, las credenciales y el conector.
+- **Estado inicial:** las identidades existentes comienzan como `Desconfigurada`; no se infiere su estado operativo desde cuentas, señales o datos históricos.
+- **Empresa quemada:** una empresa de fondeo se considera quemada desde su cuarto payout aprobado y vigente. El cálculo usa `funding_withdrawals` activos y las asignaciones explícitas de cuentas a la identidad; no cuenta importes ni movimientos de billetera.
+- **Deterioro:** sólo una identidad en estado `Activa` muestra deterioro. Cero empresas quemadas se presenta como `Sin deterioro`; una, dos o tres o más empresas quemadas corresponden a `Deterioro 1`, `Deterioro 2` y `Deterioro 3` respectivamente.
+- **Círculos de poder:** cada tarjeta muestra todas las empresas de fondeo vigentes, el conteo de payouts y el progreso visual hacia cuatro. La animación es decorativa y respeta la preferencia de movimiento reducido.
+- **Pizarra:** el titular aparece como raíz y sus identidades como nodos. La vista admite zoom, centrado y desplazamiento con espacio; cada identidad despliega estado, deterioro, empresas quemadas y payouts registrados.
+
