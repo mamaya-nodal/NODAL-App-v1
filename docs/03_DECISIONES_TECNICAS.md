@@ -2122,3 +2122,11 @@ vigente sin aprobacion y evidencia suficiente.
 - **Interfaz:** las pantallas de descarga, recuperación y generación de código indican que el ZIP debe extraerse antes de ejecutar cualquiera de los comandos.
 - **Destino:** las instalaciones nuevas usan `https://app.nodaltrading.com` como dirección oficial. Las actualizaciones conservan los vínculos, credenciales, historial, cola y configuración existentes.
 
+### APP-160 - Inventario completo de cuentas conectadas en NinjaTrader
+
+- **Fecha:** 2026-10-06. Corrección general a partir de la apertura real de Ivo.
+- **Hallazgo:** NinjaTrader mostraba cuentas broker conectadas en la grilla `Accounts`, pero la colección de cuentas de la conexión utilizada por el conector no siempre las incluía. El heartbeat seguía activo y transmitía sólo una parte del inventario, por lo que la app mostraba incorrectamente que era necesario conectar NinjaTrader.
+- **Fuente:** el conector v0.11 obtiene el inventario desde la colección global `Account.All`, que es la misma fuente del diagnóstico local, y conserva únicamente cuentas cuya conexión propia está activa. Las cuentas se deduplican por conexión y nombre antes de transmitirlas.
+- **Apertura:** si existe señal e inventario pero todavía no llegó una cuenta broker, la interfaz distingue ese caso de una desconexión y solicita actualizar el conector. No se confirma una apertura con saldo cero inferido ni se elige silenciosamente una cuenta simulada.
+- **Alcance:** la corrección es común a todos los usuarios y no agrega excepciones por persona, cuenta o proveedor.
+

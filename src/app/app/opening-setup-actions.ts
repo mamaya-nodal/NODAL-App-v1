@@ -107,7 +107,14 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
   const { data: inventory, error: inventoryError } = await supabase.rpc("get_current_user_ninja_inventory");
   const liveBroker = inventoryError ? null : buildNinjaLiveBrokerBalance((inventory ?? []) as NinjaInventoryView[]);
   if (!liveBroker) {
-    return { ok: false, message: "Conectá NinjaTrader para que NODAL tome el saldo broker antes de confirmar." };
+    const reportedAccounts = ((inventory ?? []) as NinjaInventoryView[])
+      .reduce((total, item) => total + item.accounts.length, 0);
+    return {
+      ok: false,
+      message: reportedAccounts > 0
+        ? "NinjaTrader está conectado, pero el conector todavía no informó ninguna cuenta broker. Actualizá el conector y volvé a intentar."
+        : "Conectá NinjaTrader para que NODAL tome el saldo broker antes de confirmar.",
+    };
   }
   const { error } = await supabase.rpc("confirm_nodal_period_opening_after_connector", {
     target_batches: batches,

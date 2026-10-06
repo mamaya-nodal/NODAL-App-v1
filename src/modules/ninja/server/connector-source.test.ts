@@ -57,11 +57,20 @@ describe("Ninja connector source", () => {
 
   it("evita la colisión entre el estado de cuenta y el enum de NinjaTrader", () => {
     expect(connectorSource).toContain(
-      "item.Status == NinjaTrader.Cbi.ConnectionStatus.Connected",
+      "account.Connection.Status == NinjaTrader.Cbi.ConnectionStatus.Connected",
     );
     expect(connectorSource).toContain("AccountConnectionStatus(account)");
     expect(connectorSource).not.toContain(
       "private static string ConnectionStatus(Account account)",
     );
+  });
+
+  it("toma el inventario global para no omitir cuentas live visibles en NinjaTrader", () => {
+    expect(connectorSource).toContain("lock (Account.All)");
+    expect(connectorSource).toContain("return Account.All");
+    expect(connectorSource).toContain(
+      "account.Connection.Status == NinjaTrader.Cbi.ConnectionStatus.Connected",
+    );
+    expect(connectorSource).not.toContain("lock (connection.Accounts)");
   });
 });

@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.10
+// NODAL Ninja Connector v0.11
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -23,7 +23,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 {
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.10";
+		private const string ConnectorVersion = "0.11";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
@@ -598,16 +598,23 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		private static List<Account> ConnectedAccounts()
 		{
-			List<Account> accounts = new List<Account>();
-			lock (Connection.Connections)
+			// NinjaTrader's per-connection Accounts collection can omit live accounts
+			// that are nevertheless connected and visible in the Accounts grid. The
+			// global collection is the authoritative inventory used by NinjaScript.
+			// Filter it by the account's own connection so disconnected history is not
+			// transmitted as current inventory.
+			lock (Account.All)
 			{
-				foreach (Connection connection in Connection.Connections.Where(item => item != null && item.Status == NinjaTrader.Cbi.ConnectionStatus.Connected))
-				{
-					lock (connection.Accounts)
-						accounts.AddRange(connection.Accounts.Where(account => account != null));
-				}
+				return Account.All
+					.Where(account => account != null
+						&& account.Connection != null
+						&& account.Connection.Status == NinjaTrader.Cbi.ConnectionStatus.Connected)
+					.GroupBy(
+						account => ConnectionName(account) + "\u0000" + account.Name,
+						StringComparer.Ordinal)
+					.Select(group => group.First())
+					.ToList();
 			}
-			return accounts.Distinct().ToList();
 		}
 
 		private static bool IsObserved(AccountItem accountItem)
