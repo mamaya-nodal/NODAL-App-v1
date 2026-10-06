@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { MasterControlData } from "@/modules/admin/server/load-master-control";
+import { saveNodalUnit } from "./unit-actions";
 
 import "./desks.css";
 import "./master-control.css";
@@ -255,11 +256,12 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   </section></div>;
 }
 
-function UnitEditorModal({ draft, existingUnits, onClose, onSave }: Readonly<{
+function UnitEditorModal({ demo, draft, existingUnits, onClose, onSave }: Readonly<{
+  demo: boolean;
   draft: UnitDraft;
   existingUnits: Unit[];
   onClose: () => void;
-  onSave: (draft: UnitDraft) => void;
+  onSave: (draft: UnitDraft) => Promise<string | null> | string | null | void;
 }>) {
   const [code, setCode] = useState(draft.code);
   const [companyName, setCompanyName] = useState(draft.companyName);
@@ -267,11 +269,12 @@ function UnitEditorModal({ draft, existingUnits, onClose, onSave }: Readonly<{
   const [nodalPercent, setNodalPercent] = useState(draft.nodalPercent);
   const [responsible, setResponsible] = useState(draft.responsible);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   useEffect(() => {
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close);
   }, [onClose]);
-  const save = () => {
+  const save = async () => {
     const normalizedCode = code.trim().toUpperCase();
     const numericPercent = Number(nodalPercent.replace(",", "."));
     if (!companyName.trim() || !responsible.trim() || !email.trim() || !nodalPercent.trim()) { setError("Completá todos los datos de la unidad."); return; }
@@ -279,7 +282,10 @@ function UnitEditorModal({ draft, existingUnits, onClose, onSave }: Readonly<{
     if (existingUnits.some((unit) => unit.code === normalizedCode && unit.id !== draft.id)) { setError("Esa abreviación ya pertenece a otra unidad."); return; }
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) { setError("Ingresá un e-mail válido para la persona responsable."); return; }
     if (!Number.isFinite(numericPercent) || numericPercent < 0 || numericPercent > 100) { setError("El acuerdo NODAL debe ser un porcentaje entre 0 y 100."); return; }
-    onSave({ code: normalizedCode, companyName: companyName.trim(), email: email.trim(), id: draft.id, nodalPercent: String(numericPercent), responsible: responsible.trim() });
+    setSaving(true);
+    const message = await onSave({ code: normalizedCode, companyName: companyName.trim(), email: email.trim(), id: draft.id, nodalPercent: String(numericPercent), responsible: responsible.trim() });
+    setSaving(false);
+    if (message) setError(message);
   };
   return <div aria-modal="true" className="desk-modal-backdrop" role="dialog" onMouseDown={onClose}><section className="desk-user-modal master-unit-modal" onMouseDown={(event) => event.stopPropagation()}>
     <header><div><span>SISTEMA NODAL</span><h2>{draft.id ? "Editar unidad" : "Registrar unidad"}</h2></div><button className="desk-modal-close" onClick={onClose} type="button">×</button></header>
@@ -292,8 +298,8 @@ function UnitEditorModal({ draft, existingUnits, onClose, onSave }: Readonly<{
       <label>% Acuerdo NODAL<div className="master-unit-percent"><input inputMode="decimal" max="100" min="0" onChange={(event) => setNodalPercent(event.target.value)} placeholder="25" type="number" value={nodalPercent} /><span>%</span></div></label>
     </div>
     {error ? <p className="master-unit-error" role="alert">{error}</p> : null}
-    <small className="master-unit-local-note">Comprobación visual: este cambio existe sólo en el escenario ficticio y no se guarda en producción.</small>
-    <footer><button className="secondary-action" onClick={onClose} type="button">Cancelar</button><button className="primary-action" onClick={save} type="button">{draft.id ? "Guardar cambios" : "Dar de alta"}</button></footer>
+    <small className="master-unit-local-note">{demo ? "Comprobación visual: este cambio existe sólo en el escenario ficticio." : "El cambio se guarda con permisos de Admin Master y trazabilidad."}</small>
+    <footer><button className="secondary-action" disabled={saving} onClick={onClose} type="button">Cancelar</button><button className="primary-action" disabled={saving} onClick={save} type="button">{saving ? "Guardando…" : draft.id ? "Guardar cambios" : "Dar de alta"}</button></footer>
   </section></div>;
 }
 
@@ -313,9 +319,9 @@ export function MasterControlPanel({ data, demoAvailable = false, view = "contro
     const rootDesk = data.overview.desks.find((desk) => desk.id === unit.root_desk_id);
     const responsible = data.overview.people.find((person) => person.deskId === unit.root_desk_id);
     return [unit.id, {
-      email: responsible?.email ?? "responsable@nodal.test",
-      nodalPercent: String((rootDesk?.terms.nodal_bps ?? 0) / 100),
-      responsible: responsible?.name ?? "Responsable pendiente",
+      email: unit.responsible_email ?? responsible?.email ?? "responsable@nodal.test",
+      nodalPercent: String((unit.agreement_bps ?? rootDesk?.terms.nodal_bps ?? 0) / 100),
+      responsible: unit.responsible_name ?? responsible?.name ?? "Responsable pendiente",
     }];
   })));
   const displayData = useMemo<MasterControlData>(() => data.demo ? {
@@ -366,7 +372,14 @@ export function MasterControlPanel({ data, demoAvailable = false, view = "contro
     if (draft.id) {
       const previous = demoUnits.find((unit) => unit.id === draft.id);
       if (!previous) return;
-      setDemoUnits((current) => current.map((unit) => unit.id === draft.id ? { ...unit, code: draft.code, name: unitName } : unit));
+      setDemoUnits((current) => current.map((unit) => unit.id === draft.id ? {
+        ...unit,
+        agreement_bps: nodalBps,
+        code: draft.code,
+        name: unitName,
+        responsible_email: draft.email,
+        responsible_name: draft.responsible,
+      } : unit));
       setDemoDesks((current) => current.map((desk) => desk.id === previous.root_desk_id ? { ...desk, name: rootDeskName, terms: { ...desk.terms, nodal_bps: nodalBps } } : desk));
       setDemoUnitDetails((current) => ({ ...current, [draft.id!]: { email: draft.email, nodalPercent: draft.nodalPercent, responsible: draft.responsible } }));
       if (previous.code !== draft.code) {
@@ -382,7 +395,16 @@ export function MasterControlPanel({ data, demoAvailable = false, view = "contro
     const unitId = `demo-unit-${token}`;
     const rootDeskId = `demo-root-${token}`;
     const ordinal = demoUnits.reduce((maximum, unit) => Math.max(maximum, unit.ordinal), 0) + 1;
-    const unit: Unit = { code: draft.code, id: unitId, name: unitName, ordinal, root_desk_id: rootDeskId };
+    const unit: Unit = {
+      agreement_bps: nodalBps,
+      code: draft.code,
+      id: unitId,
+      name: unitName,
+      ordinal,
+      responsible_email: draft.email,
+      responsible_name: draft.responsible,
+      root_desk_id: rootDeskId,
+    };
     const rootDesk: OverviewDesk = {
       children: [],
       created_at: new Date().toISOString(),
@@ -408,6 +430,13 @@ export function MasterControlPanel({ data, demoAvailable = false, view = "contro
     setSelectedDeskId("all");
     setUnitDraft(null);
   };
+  const persistUnit = async (draft: UnitDraft) => {
+    const result = await saveNodalUnit(draft);
+    if (!result.ok) return result.message;
+    setUnitDraft(null);
+    router.refresh();
+    return null;
+  };
   return <div className="admin-page admin-shell master-control">
     <header className="desk-heading master-heading"><div><p className="status">ADMIN MASTER</p><h1>{view === "statistics" ? "Estadísticas" : "Panel control"}</h1></div>{view === "control" && !data.demo ? <Link className={`master-alerts ${displayData.pendingAccessCount ? "has-alerts" : ""}`} href="/app/admin/users"><span>{displayData.pendingAccessCount}</span><strong>Altas y alertas</strong></Link> : null}</header>
     {data.demo ? <p className="master-demo-notice" role="status"><span><strong>Escenario ficticio</strong> · permite comprobar jerarquías, filtros y fichas sin modificar datos reales.</span><Link href="/app/admin">Volver a datos reales</Link></p> : demoAvailable ? <p className="master-demo-notice available"><span>Comprobación de diseño disponible sólo para tu cuenta.</span><Link href="/app/admin?demo=1">Abrir escenario ficticio</Link></p> : null}
@@ -415,10 +444,10 @@ export function MasterControlPanel({ data, demoAvailable = false, view = "contro
     <section className="master-kpis"><Metric label="Ganancia NODAL del período" value={money(displayData.overview.nodalIncome)} /><Metric label="Ganancia NODAL histórica" value={money(historicNodal)} /><Metric label="Facturación total del período" value={money(displayData.overview.gross)} /><Metric label="Facturación histórica" value={money(historicGross)} /><Metric label="Unidades operativas" value={String(displayData.units.length)} /><Metric label="Usuarios activos" value={String(activePeople.length)} /></section>
     <section className="master-dashboard-grid"><article className="desk-surface"><div className="admin-section-heading"><div><h2>Desempeño del sistema</h2></div></div><SystemChart history={displayData.performanceHistory} /></article><article className="desk-surface"><div className="admin-section-heading"><div><h2>{selectedUnitId === "all" ? "Ranking NODAL" : "Ranking de la unidad"}</h2></div></div><Ranking people={scopedPeople} /></article></section>
     <section aria-label="Filtros del sistema" className="master-filters"><label>Unidad<select value={selectedUnitId} onChange={(event) => { setSelectedUnitId(event.target.value); setSelectedDeskId("all"); }}><option value="all">Todas las unidades</option>{displayData.units.map((unit) => <option key={unit.id} value={unit.id}>{String(unit.ordinal).padStart(2, "0")} · {unit.name}</option>)}</select></label><label>Mesa<select value={selectedDeskId} onChange={(event) => setSelectedDeskId(event.target.value)}><option value="all">Todas las mesas</option>{unitDesks.map((desk) => <option key={desk.id} value={desk.id}>{desk.name}</option>)}</select></label><label>ID o nombre de usuario<input onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuario" value={query} /></label><label>Período<select onChange={(event) => changePeriod(event.target.value)} value={displayData.month}>{displayData.periods.map((period) => <option key={period} value={period}>{monthLabel(period)}</option>)}</select></label></section>
-    {view === "control" ? <><div className="master-unit-heading"><div><h2>Unidades del sistema</h2><small>{data.demo ? "Los cambios de esta prueba son locales y temporales." : "Estructura registrada del Sistema NODAL."}</small></div>{data.demo ? <button className="primary-action" onClick={() => setUnitDraft({ code: "", companyName: "", email: "", id: null, nodalPercent: "", responsible: "" })} type="button">+ Agregar unidad</button> : null}</div><section className="master-unit-grid">{visibleUnitSummaries.map((summary) => { const unit = displayData.units.find((candidate) => candidate.id === summary.id)!; return <article className={`master-unit-card ${selectedUnitId === unit.id ? "selected" : ""}`} key={unit.id}><button aria-pressed={selectedUnitId === unit.id} className="master-unit-select" onClick={() => { setSelectedUnitId(unit.id); setSelectedDeskId("all"); }} type="button"><div className="master-unit-identity"><span>{String(unit.ordinal).padStart(2, "0")}</span><div><p>UNIDAD</p><h2>{unit.name}</h2><small>{unit.code}</small></div></div><dl><div><dt>Facturación período</dt><dd>{money(summary.gross)}</dd></div><div><dt>Ganancia NODAL</dt><dd>{money(summary.nodalIncome)}</dd></div><div><dt>Mesas</dt><dd>{summary.deskCount}</dd></div><div><dt>Usuarios</dt><dd>{summary.userCount}</dd></div></dl></button>{data.demo ? <button className="master-unit-edit" onClick={() => editUnit(unit)} type="button">Editar</button> : null}</article>; })}</section></> : null}
+    {view === "control" ? <><div className="master-unit-heading"><div><h2>Unidades del sistema</h2><small>{data.demo ? "Los cambios de esta prueba son locales y temporales." : "Estructura registrada del Sistema NODAL."}</small></div><button className="primary-action" onClick={() => setUnitDraft({ code: "", companyName: "", email: "", id: null, nodalPercent: "", responsible: "" })} type="button">+ Agregar unidad</button></div><section className="master-unit-grid">{visibleUnitSummaries.map((summary) => { const unit = displayData.units.find((candidate) => candidate.id === summary.id)!; return <article className={`master-unit-card ${selectedUnitId === unit.id ? "selected" : ""}`} key={unit.id}><button aria-pressed={selectedUnitId === unit.id} className="master-unit-select" onClick={() => { setSelectedUnitId(unit.id); setSelectedDeskId("all"); }} type="button"><div className="master-unit-identity"><span>{String(unit.ordinal).padStart(2, "0")}</span><div><p>UNIDAD</p><h2>{unit.name}</h2><small>{unit.code}</small></div></div><dl><div><dt>Facturación período</dt><dd>{money(summary.gross)}</dd></div><div><dt>Ganancia NODAL</dt><dd>{money(summary.nodalIncome)}</dd></div><div><dt>Mesas</dt><dd>{summary.deskCount}</dd></div><div><dt>Usuarios</dt><dd>{summary.userCount}</dd></div></dl></button><button className="master-unit-edit" onClick={() => editUnit(unit)} type="button">Editar</button></article>; })}</section></> : null}
     <section className="desk-surface"><div className="admin-section-heading"><div><h2>{selectedUnitId === "all" ? "Usuarios del sistema" : "Usuarios de la unidad"}</h2></div><span className="calculated-badge">{visiblePeople.length}</span></div><div className="desk-table-scroll"><table className="desk-table"><thead><tr><th>ID</th><th>Nombre</th><th>Unidad</th><th>Rol</th><th>Estado</th><th>Ganancia período</th><th>Facturación histórica</th></tr></thead><tbody>{visiblePeople.map((person) => { const managed = displayData.overview.desks.some((desk) => desk.terms.active && desk.terms.manager_id === person.id); const master = displayData.profilesByUser[person.id]?.access_role === "admin"; const unit = displayData.units.find((candidate) => candidate.id === displayData.unitByUser[person.id]); return <tr key={person.id}><td><span className="desk-user-id">{displayData.identifiersByUser[person.id] ?? "ID pendiente"}</span></td><td><button className="desk-person" onClick={() => setSelectedPersonId(person.id)} type="button">{person.name}</button></td><td>{unit?.code ?? "—"}</td><td>{managed ? "Admin" : master ? "Admin Master" : "Usuario"}</td><td><span className="desk-status active">Activo</span></td><td>{money(person.gross)}</td><td>{money(displayData.historicalGrossByUser[person.id] ?? 0)}</td></tr>; })}</tbody></table>{!visiblePeople.length ? <p className="desk-empty">No hay coincidencias.</p> : null}</div></section>
     {view === "control" ? <section className="desk-surface desk-board-section"><div className="admin-section-heading"><div><h2>Sistema NODAL</h2></div></div><SystemBoard data={displayData} onOpenUser={setSelectedPersonId} people={scopedPeople} selectedUnitId={selectedUnitId} /></section> : null}
     {selected ? <MasterUserModal data={displayData} onClose={() => setSelectedPersonId(null)} person={selected} /> : null}
-    {unitDraft ? <UnitEditorModal draft={unitDraft} existingUnits={displayData.units} onClose={() => setUnitDraft(null)} onSave={saveUnit} /> : null}
+    {unitDraft ? <UnitEditorModal demo={data.demo} draft={unitDraft} existingUnits={displayData.units} onClose={() => setUnitDraft(null)} onSave={data.demo ? saveUnit : persistUnit} /> : null}
   </div>;
 }

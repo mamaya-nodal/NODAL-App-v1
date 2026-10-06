@@ -307,9 +307,33 @@
 .master-user-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .master-user-metrics article { min-height: 82px; padding: 12px; }
 .master-user-metrics strong { font-size: 1rem; }
-.master-user-modal .desk-user-switches article:last-child { display: flex; align-items: center; justify-content: space-between; }
+.master-user-modal { width: min(820px, 100%); padding: 26px; }
+.master-user-modal .desk-user-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.master-user-modal .desk-user-fields input { min-height: 44px; }
+.master-user-modal .desk-user-switches > article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 62px;
+  padding: 12px 14px;
+  border: 1px solid var(--app-border, var(--line));
+  border-radius: 13px;
+  background: var(--app-input, var(--app-bg));
+}
 .master-user-modal .desk-user-switches article:last-child span { display: grid; }
+.master-user-modal .desk-user-switches article:last-child strong { text-align: right; }
 .master-user-modal .primary-action { display: inline-flex; align-items: center; text-decoration: none; }
+.master-user-modal > footer { align-items: center; margin-top: 20px; }
+.master-user-modal > footer :is(.primary-action, .secondary-action) {
+  width: 188px;
+  min-height: 46px;
+  margin: 0;
+  padding-inline: 16px;
+}
 
 .master-unit-modal {
   width: min(560px, 100%);
@@ -398,6 +422,7 @@
 .master-unit-modal > footer :is(.primary-action, .secondary-action) {
   width: 132px;
   min-height: 44px;
+  margin: 0;
   padding-inline: 14px;
 }
 
@@ -417,6 +442,8 @@
   .master-filters { grid-template-columns: 1fr; }
   .master-unit-heading { align-items: flex-start; flex-direction: column; }
   .master-user-metrics { grid-template-columns: 1fr; }
+  .master-user-modal .desk-user-fields,
+  .master-user-modal .desk-user-switches { grid-template-columns: 1fr; }
   .master-unit-fields { grid-template-columns: 1fr; }
   .master-unit-fields label:nth-child(n + 3) { grid-column: auto; }
 }
@@ -425,5 +452,7 @@
   .master-kpis { grid-template-columns: 1fr; }
   .master-unit-select dl { grid-template-columns: 1fr; }
   .master-unit-modal > footer { align-items: stretch; flex-direction: column-reverse; }
-  .master-unit-modal > footer button { width: 100%; }
+  .master-unit-modal > footer button,
+  .master-user-modal > footer :is(.primary-action, .secondary-action) { width: 100%; }
+  .master-user-modal > footer { align-items: stretch; flex-direction: column-reverse; }
 }

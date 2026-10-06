@@ -6,10 +6,13 @@ import { requireNodalAdmin } from "./admin-access";
 import { loadDesks } from "./load-desks";
 
 type UnitRow = Readonly<{
+  agreement_bps: number;
   code: string;
   id: string;
   name: string;
   ordinal: number;
+  responsible_email: string;
+  responsible_name: string;
   root_desk_id: string;
 }>;
 
@@ -31,7 +34,7 @@ export async function loadMasterControl(
   const db = createServiceClient();
   const userIds = deskData.overview.people.map((person) => person.id);
   const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult] = await Promise.all([
-    db.from("nodal_units").select("id,ordinal,name,code,root_desk_id").order("ordinal"),
+    db.from("nodal_units").select("id,ordinal,name,code,root_desk_id,responsible_name,responsible_email,agreement_bps").order("ordinal"),
     db.from("nodal_users")
       .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled")
       .in("id", userIds),

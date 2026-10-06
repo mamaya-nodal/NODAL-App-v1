@@ -19,6 +19,8 @@ describe("Admin Master design demo", () => {
     expect(data.identifiersByUser["demo-elena"]).toBe("USERHW-MP-01");
     expect(data.identifiersByUser["demo-paula"]).toBe("USERAT-M01-01");
     expect(data.identifiersByUser["demo-ivan"]).toBe("USERAP-M01-01");
+    expect(data.units.every((unit) => unit.responsible_name && unit.responsible_email)).toBe(true);
+    expect(data.units.every((unit) => Number.isInteger(unit.agreement_bps))).toBe(true);
     expect(new Set(Object.values(data.unitByUser))).toEqual(new Set(data.units.map((unit) => unit.id)));
     expect(data.unitSummaries.reduce((sum, unit) => sum + unit.gross, 0)).toBe(data.overview.gross);
     expect(data.unitSummaries.reduce((sum, unit) => sum + unit.nodalIncome, 0)).toBe(data.overview.nodalIncome);
