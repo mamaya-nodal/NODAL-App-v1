@@ -20,6 +20,11 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
 
   return (
     <AdminWorkspace
+      avatarUrl={typeof user?.user_metadata?.avatar_url === "string"
+        ? user.user_metadata.avatar_url
+        : typeof user?.user_metadata?.picture === "string"
+          ? user.user_metadata.picture
+          : null}
       userLabel={profile?.display_name || profile?.email || "Administrador"}
       versionInfo={{
         appRevision: appRelease.revision,

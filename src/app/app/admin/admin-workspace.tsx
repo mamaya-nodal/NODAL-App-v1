@@ -13,13 +13,14 @@ import {
 } from "../workspace-user-menu";
 
 type Props = Readonly<{
+  avatarUrl?: string | null;
   children: ReactNode;
   scope?: "desk" | "master";
   userLabel: string;
   versionInfo: WorkspaceVersionInfo;
 }>;
 
-export function AdminWorkspace({ children, scope = "master", userLabel, versionInfo }: Props) {
+export function AdminWorkspace({ avatarUrl, children, scope = "master", userLabel, versionInfo }: Props) {
   const pathname = usePathname();
   const panelHref = scope === "desk" ? "/app/mi-mesa" : "/app/admin";
   const panelLabel = scope === "desk" ? "Panel Admin" : "Panel control";
@@ -31,18 +32,6 @@ export function AdminWorkspace({ children, scope = "master", userLabel, versionI
     ] : []),
   ];
   const isActive = (href: string) => pathname === href;
-  const activeLabel = pathname.startsWith("/app/admin/users")
-    ? "Solicitudes"
-    : pathname.startsWith("/app/admin/ninja")
-      ? "Conectores Ninja"
-      : pathname.startsWith("/app/admin/periods")
-        ? "Registros"
-      : pathname.startsWith("/app/admin/statistics")
-        ? "Estadísticas"
-      : pathname === panelHref
-        ? panelLabel
-        : "Ficha del usuario";
-
   return (
     <main className="nodal-workspace admin-workspace">
       <aside className="workspace-sidebar">
@@ -65,10 +54,10 @@ export function AdminWorkspace({ children, scope = "master", userLabel, versionI
 
       <div className="workspace-stage">
         <header className="workspace-topbar">
-          {scope === "master" ? <div><span>Panel de administración</span><strong>{activeLabel}</strong></div> : <div />}
+          <div />
           <div className="workspace-top-actions">
             <ThemeToggle />
-            <WorkspaceUserMenu userLabel={userLabel} versionInfo={versionInfo} />
+            <WorkspaceUserMenu avatarUrl={avatarUrl} userLabel={userLabel} versionInfo={versionInfo} />
           </div>
         </header>
         <div className="app-page-shell workspace-content admin-page-shell">{children}</div>

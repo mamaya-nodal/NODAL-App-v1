@@ -15,12 +15,8 @@
 .master-control .desk-heading,
 .master-control .desk-surface { margin-bottom: 0; }
 
-.master-heading small {
-  display: block;
-  margin-top: 6px;
-  color: var(--app-subtle, var(--muted));
-  text-transform: capitalize;
-}
+.master-heading > div { justify-content: flex-start; gap: 16px; }
+.master-heading .status { margin: 0; }
 
 .master-demo-notice {
   display: flex;
