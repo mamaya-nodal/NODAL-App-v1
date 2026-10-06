@@ -257,7 +257,7 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, ownerNam
                 <div><span>Cuentas cerradas</span><strong>{closedAccounts}</strong></div>
               </div>
 
-              <section className="identity-company-powers" aria-label={`Poder por empresa de ${identity.firstName} ${identity.lastName}`}><div className="identity-company-powers-heading"><span><strong>Círculos de poder</strong><small>Cada empresa se completa con cuatro payouts aprobados.</small></span><b>{identity.burnedCompanyCount} quemadas</b></div><div className="identity-company-power-grid">{identity.companyPowers.map((company) => <CompanyPower company={company} key={company.id} />)}</div>{identity.companyPowers.length === 0 ? <p>Sin empresas de fondeo configuradas.</p> : null}</section>
+              <section className="identity-company-powers" aria-label={`Payouts por empresa de ${identity.firstName} ${identity.lastName}`}><div className="identity-company-powers-heading"><strong>Payouts</strong><b>{identity.burnedCompanyCount} quemadas</b></div><div className="identity-company-power-grid">{identity.companyPowers.map((company) => <CompanyPower company={company} key={company.id} />)}</div>{identity.companyPowers.length === 0 ? <p>Sin empresas de fondeo configuradas.</p> : null}</section>
 
               <div className="identity-connector-row">
                 <span>
