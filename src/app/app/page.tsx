@@ -1202,8 +1202,9 @@ async function renderPrivateAppPage({
             <summary>Volver a vincular</summary>
             <div className="connector-recovery-panel">
               <a className="connector-recovery-download" download href="/api/downloads/ninja-connector">
-                Descargar conector
+                Descargar ZIP del conector
               </a>
+              <small className="connector-recovery-help">Antes de actualizar, hacé clic derecho sobre el ZIP y elegí “Extraer todo”.</small>
               <NinjaConnectorPanel compact connector={ninjaConnector} />
             </div>
           </details>

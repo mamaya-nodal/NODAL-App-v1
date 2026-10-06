@@ -63,8 +63,8 @@ export function NinjaConnectorGate({ administrationScope, connector, message }: 
 
         {message ? <p className="purchase-message success" role="status">{message}</p> : null}
         <div className="connector-install-step">
-          <a download href="/api/downloads/ninja-connector">Descargar conector</a>
-          <span>Después generá el código y ejecutá el instalador en la PC de NinjaTrader.</span>
+          <a download href="/api/downloads/ninja-connector">Descargar conector (.zip)</a>
+          <span>Guardá el ZIP, elegí “Extraer todo” y recién después ejecutá el instalador en la PC de NinjaTrader.</span>
         </div>
         <NinjaConnectorPanel compact connector={connector} monitor />
 

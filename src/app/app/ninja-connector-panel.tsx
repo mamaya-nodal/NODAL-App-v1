@@ -75,7 +75,7 @@ export function NinjaConnectorPanel({ compact = false, connector, monitor = fals
         <div className="ninja-pairing-code" role="status">
           <div>
             <small>
-              Primera vinculación: INSTALAR-NODAL · Si esta PC ya tiene el conector: ACTUALIZAR-NODAL · válido 5 minutos
+              Primero extraé todo el ZIP · Primera vinculación: INSTALAR-NODAL · Si esta PC ya tiene el conector: ACTUALIZAR-NODAL · válido 5 minutos
             </small>
             <strong>{state.code}</strong>
           </div>

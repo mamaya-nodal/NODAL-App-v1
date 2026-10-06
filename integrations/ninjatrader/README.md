@@ -53,7 +53,9 @@ descarta el código, para que pueda reintentarse.
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.
-2. Descarga y descomprime `NODAL-Ninja-Connector.zip` en la PC donde corre NinjaTrader.
+2. Descarga `NODAL-Ninja-Connector.zip`, hace clic derecho sobre el archivo y
+   elige `Extraer todo`. No ejecutes los comandos desde la vista interna del ZIP:
+   Windows extrae sólo el `.cmd` y deja afuera los archivos que necesita.
 3. Hace doble clic en `INSTALAR-NODAL.cmd` y pega ese código.
 4. El instalador copia el complemento automáticamente; el alumno solo debe
    compilar `NodalNinjaConnector` en NinjaScript Editor.
@@ -80,7 +82,5 @@ y todo su historial dentro del mismo usuario e identidad.
 - El archivo local de credenciales queda protegido para el usuario de Windows
   que realizó la vinculación.
 
-El instalador usa actualmente la dirección HTTPS privada de prueba de NODAL.
-`http://localhost:3000` queda reservado para desarrollo técnico explícito. Al
-publicar el dominio final deberá sustituirse la dirección de prueba por la URL
-oficial de producción.
+El instalador usa la dirección oficial `https://app.nodaltrading.com`.
+`http://localhost:3000` queda reservado para desarrollo técnico explícito.

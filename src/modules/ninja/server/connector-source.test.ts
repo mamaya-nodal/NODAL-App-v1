@@ -18,6 +18,14 @@ const connectorInstaller = readFileSync(
   ),
   "utf8",
 );
+const connectorUpdater = readFileSync(
+  join(process.cwd(), "integrations", "ninjatrader", "ACTUALIZAR-NODAL.cmd"),
+  "utf8",
+);
+const connectorFirstInstaller = readFileSync(
+  join(process.cwd(), "integrations", "ninjatrader", "INSTALAR-NODAL.cmd"),
+  "utf8",
+);
 
 describe("Ninja connector source", () => {
   it("publica la revisión vigente", () => {
@@ -31,6 +39,13 @@ describe("Ninja connector source", () => {
       '"InstalledSourceVersion=$connectorSourceVersion"',
     );
     expect(connectorSource).toContain('installedSourceVersion');
+  });
+
+  it("usa el dominio productivo y explica cuando el ZIP no fue extraído", () => {
+    expect(connectorInstaller).toContain('"https://app.nodaltrading.com"');
+    expect(connectorUpdater).toContain('if not exist "%~dp0NODAL-Ninja-Connector-setup.ps1"');
+    expect(connectorUpdater).toContain('Elegi "Extraer todo"');
+    expect(connectorFirstInstaller).toContain('if not exist "%~dp0NODAL-Ninja-Connector-setup.ps1"');
   });
 
   it("un código adicional agotado no interrumpe la sesión existente", () => {

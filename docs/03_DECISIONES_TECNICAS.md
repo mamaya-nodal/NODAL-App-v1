@@ -2114,3 +2114,11 @@ vigente sin aprobacion y evidencia suficiente.
 - **Integridad:** no se puede quitar el rol Admin mientras existan usuarios o mesas dependientes, ni retirar el propio acceso de Admin Master desde la ficha. Siempre debe quedar al menos un Admin Master activo.
 - **Solicitudes resueltas:** el bloque destacado de solicitudes desaparece del Panel control cuando el contador llega a cero; la orejeta `Solicitudes` permanece disponible para consultar y gestionar nuevas altas.
 
+### APP-159 - Descarga y extracción segura del conector Ninja
+
+- **Fecha:** 2026-10-06. Corrección a partir de la primera actualización ejecutada por Ivo.
+- **Hallazgo:** al abrir `ACTUALIZAR-NODAL.cmd` desde la vista interna del ZIP, Windows copiaba únicamente el `.cmd` a una carpeta temporal. El instalador PowerShell y el código del complemento quedaban dentro del archivo comprimido, por lo que la actualización fallaba antes de tocar NinjaTrader.
+- **Prevención:** `INSTALAR-NODAL` y `ACTUALIZAR-NODAL` verifican primero que el paquete completo haya sido extraído. Si falta el instalador, se detienen sin cambios y muestran instrucciones concretas para usar `Extraer todo`.
+- **Interfaz:** las pantallas de descarga, recuperación y generación de código indican que el ZIP debe extraerse antes de ejecutar cualquiera de los comandos.
+- **Destino:** las instalaciones nuevas usan `https://app.nodaltrading.com` como dirección oficial. Las actualizaciones conservan los vínculos, credenciales, historial, cola y configuración existentes.
+

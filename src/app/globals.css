@@ -6335,6 +6335,7 @@ html[data-theme="day"] .nodal-workspace .balance-summary :is(span, strong) {
   font-weight: 800;
   text-decoration: none;
 }
+.connector-recovery-help { color: var(--app-subtle); font-size: 10px; line-height: 1.35; }
 .connector-recovery-panel .ninja-pairing-panel.is-compact { margin: 0; padding: 0; background: transparent; box-shadow: none; }
 
 @media (max-width: 640px) {

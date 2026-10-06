@@ -1,5 +1,5 @@
 param(
-  [string]$BaseUrl = "https://nodal-app-preview.vercel.app",
+  [string]$BaseUrl = "https://app.nodaltrading.com",
   [string]$PairingCode = "",
   [switch]$UpdateOnly
 )
