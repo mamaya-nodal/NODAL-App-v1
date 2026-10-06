@@ -72,8 +72,13 @@
   font-size: .78rem;
 }
 
-.records-demo-actions { display: flex; align-items: center; gap: 12px; }
-.records-demo-actions :is(.primary-action, .secondary-action) { min-width: 168px; }
+.records-demo-actions { display: flex; align-items: flex-end; gap: 12px; }
+.records-demo-actions :is(.primary-action, .secondary-action) {
+  height: 44px;
+  min-width: 168px;
+  min-height: 44px;
+  margin: 0;
+}
 .records-demo-actions .primary-action { min-width: 210px; }
 
 .records-demo-list {
