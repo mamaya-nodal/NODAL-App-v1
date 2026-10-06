@@ -18,7 +18,7 @@ export async function loadDesks(
   const [users, spaces, desks, terms, userTerms, history] = await Promise.all([
     readAll(db
       .from("nodal_users")
-      .select("id,email,display_name,access_state,access_role,created_at")
+      .select("id,email,display_name,access_state,access_role,created_at,updated_at")
       .order("display_name").order("id")),
     readAll(db
       .from("workspaces")
@@ -139,7 +139,7 @@ export async function loadDesks(
     pendingAccessRequests: (users.data ?? [])
       .filter((user) => user.access_state === "pending")
       .map((user) => ({
-        createdAt: user.created_at,
+        createdAt: user.updated_at || user.created_at,
         email: user.email,
         id: user.id,
         name: user.display_name || user.email,
