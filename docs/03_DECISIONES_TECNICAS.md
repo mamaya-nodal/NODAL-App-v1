@@ -2079,3 +2079,11 @@ vigente sin aprobacion y evidencia suficiente.
 - **Gestión real de unidades:** las ventanas de alta y edición utilizan una única operación transaccional restringida a Admin Master. El alta crea conjuntamente la unidad, su Mesa Principal y el acuerdo vigente; la edición sincroniza nombre, abreviatura, responsable, e-mail, acuerdo e IDs visibles activos. Cada cambio conserva actor, período, motivo, estado anterior y estado resultante en el historial de gestión. Una falla revierte toda la operación y no deja estructuras parciales.
 - **Identificación visual:** ambas vistas indican de forma persistente que se trata de datos ficticios y ofrecen volver a los datos reales.
 
+### APP-155 - Nómina activa corregida y solicitudes visibles en Panel control
+
+- **Fecha:** 2026-10-06. Corrección confirmada por Mauricio antes de aprobar las altas pendientes.
+- **Nómina:** Ivo Pirrone y Rodolfo Augusto Thumann no deben integrar todavía la nómina activa. Sus accesos se revocan de forma lógica y auditada; se conservan autenticación, perfiles, registros e historial.
+- **Correlativos:** `USERND-MP-01` y `USERND-MP-05` permanecen como identificadores históricos y no se reasignan ni provocan la renumeración de otros usuarios.
+- **Estructura visible:** los cálculos, el ranking, la tabla y la pizarra de Admin Master incluyen únicamente usuarios con acceso activo. Un perfil pendiente o revocado nunca integra la estructura económica vigente.
+- **Solicitudes:** las solicitudes directas pendientes se muestran con nombre, correo y fecha dentro de `Panel control`, además de la pantalla de revisión. La tarjeta lleva a las acciones de aprobar o rechazar ya auditadas.
+

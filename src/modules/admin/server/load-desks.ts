@@ -18,7 +18,7 @@ export async function loadDesks(
   const [users, spaces, desks, terms, userTerms, history] = await Promise.all([
     readAll(db
       .from("nodal_users")
-      .select("id,email,display_name,access_state,access_role")
+      .select("id,email,display_name,access_state,access_role,created_at")
       .order("display_name").order("id")),
     readAll(db
       .from("workspaces")
@@ -90,7 +90,7 @@ export async function loadDesks(
       deskRows,
       deskSettings,
       (users.data ?? [])
-        .filter((u) => u.access_state !== "pending")
+        .filter((u) => u.access_state === "active")
         .map((u) => {
           const p = allPeriods.find(
             (p) => p.user === u.id && p.period_month === period,
@@ -136,6 +136,14 @@ export async function loadDesks(
   return {
     overview,
     pendingAccessCount: (users.data ?? []).filter((user) => user.access_state === "pending").length,
+    pendingAccessRequests: (users.data ?? [])
+      .filter((user) => user.access_state === "pending")
+      .map((user) => ({
+        createdAt: user.created_at,
+        email: user.email,
+        id: user.id,
+        name: user.display_name || user.email,
+      })),
     mode,
     month,
     periods,

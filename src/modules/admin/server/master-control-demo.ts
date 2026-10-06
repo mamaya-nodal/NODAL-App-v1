@@ -192,6 +192,7 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     month: current.month,
     overview: current.overview,
     pendingAccessCount: 6,
+    pendingAccessRequests: [],
     performanceHistory: availableSnapshots.map((snapshot) => ({
       gross: snapshot.overview.gross,
       month: snapshot.month,
