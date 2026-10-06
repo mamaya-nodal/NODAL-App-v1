@@ -1085,7 +1085,7 @@ dialog.desk-dialog::backdrop {
 }
 .desk-identities-table th {
   background: var(--brand);
-  color: #10200f;
+  color: var(--brand-contrast);
   font-weight: 850;
 }
 .desk-identities-table p {
