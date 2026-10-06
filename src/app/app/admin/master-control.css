@@ -358,7 +358,8 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
-.master-user-modal .desk-user-fields input { min-height: 44px; }
+.master-user-modal .desk-user-fields :is(input, select) { min-height: 44px; }
+.master-user-modal .desk-user-fields select:disabled { opacity: .72; }
 .master-user-modal .desk-user-switches > article {
   display: flex;
   align-items: center;
@@ -373,12 +374,18 @@
 .master-user-modal .desk-user-switches article:last-child span { display: grid; }
 .master-user-modal .desk-user-switches article:last-child strong { text-align: right; }
 .master-user-modal .primary-action { display: inline-flex; align-items: center; text-decoration: none; }
-.master-user-modal > footer { align-items: center; margin-top: 20px; }
+.master-user-modal > footer { align-items: center; flex-wrap: wrap; margin-top: 20px; }
 .master-user-modal > footer :is(.primary-action, .secondary-action) {
   width: 188px;
   min-height: 46px;
   margin: 0;
   padding-inline: 16px;
+}
+.master-user-role-result {
+  margin: -4px 0 16px;
+  color: #bf4a42;
+  font-size: .72rem;
+  font-weight: 750;
 }
 
 .master-unit-modal {

@@ -166,6 +166,7 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
   });
 
   return {
+    actorUserId: "demo-mauricio",
     chart: snapshots.map((snapshot) => ({
       month: snapshot.month,
       values: Object.fromEntries(units.map((unit) => [unit.id,

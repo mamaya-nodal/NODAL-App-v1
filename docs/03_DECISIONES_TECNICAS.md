@@ -2103,5 +2103,14 @@ vigente sin aprobacion y evidencia suficiente.
 - **Reingreso:** una persona revocada que vuelve a autenticarse con Google pasa a `pending`; no recupera acceso por iniciar sesión y requiere una nueva decisión de Admin Master.
 - **Conservación:** se mantiene el UUID, el ID NODAL y todo el historial. La solicitud no recupera el rol administrativo anterior: vuelve como `Usuario` y una elevación futura requiere su flujo explícito.
 - **Trazabilidad:** el cambio de `revoked` a `pending` registra el estado y rol anteriores, la fecha y el motivo. Las solicitudes producidas antes de publicar esta regla se recuperan sólo cuando el último ingreso es posterior a la baja.
-- **Interfaz:** `Solicitudes` permanece visible en la navegación de Admin Master y el bloque de solicitudes del Panel control no desaparece cuando el total es cero.
+- **Interfaz:** `Solicitudes` permanece visible en la navegación de Admin Master. El aviso destacado del Panel control aparece sólo cuando hay solicitudes pendientes, para no dejar una tarjeta vacía después de resolverlas.
+
+### APP-158 - Roles administrables y porcentaje de mesa
+
+- **Fecha:** 2026-10-06. Comportamiento confirmado por Mauricio para la ficha de usuario de Admin Master.
+- **Selector:** Admin Master puede asignar desde la ficha los estados `Usuario`, `Admin` y `Admin Master`. El cambio se guarda en servidor y queda registrado en el historial de gestión.
+- **Capacidades:** `Admin` representa la administración de una mesa. `Admin Master` conserva el permiso global y, desde este selector, también incluye una mesa administrada. El almacenamiento mantiene separadas ambas capacidades para no confundir autorización global con jerarquía comercial.
+- **Porcentaje:** al seleccionar `Admin` o `Admin Master` aparece `% mesa`; al seleccionar `Usuario` se oculta. El valor se valida entre 0% y 100% y se guarda en puntos básicos.
+- **Integridad:** no se puede quitar el rol Admin mientras existan usuarios o mesas dependientes, ni retirar el propio acceso de Admin Master desde la ficha. Siempre debe quedar al menos un Admin Master activo.
+- **Solicitudes resueltas:** el bloque destacado de solicitudes desaparece del Panel control cuando el contador llega a cero; la orejeta `Solicitudes` permanece disponible para consultar y gestionar nuevas altas.
 

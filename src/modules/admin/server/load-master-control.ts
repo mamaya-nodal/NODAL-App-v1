@@ -27,10 +27,11 @@ export type MasterUnitSummary = Readonly<{
 export async function loadMasterControl(
   requestedMonth?: string,
 ) {
-  const [deskData] = await Promise.all([
+  const [deskData, adminDb] = await Promise.all([
     loadDesks("real", requestedMonth),
     requireNodalAdmin(),
   ]);
+  const { data: claimsData } = await adminDb.auth.getClaims();
   const db = createServiceClient();
   const userIds = deskData.overview.people.map((person) => person.id);
   const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult] = await Promise.all([
@@ -138,6 +139,7 @@ export async function loadMasterControl(
 
   return {
     ...deskData,
+    actorUserId: claimsData?.claims.sub ?? null,
     demo: false,
     connectorByUser,
     identitiesByUser,
