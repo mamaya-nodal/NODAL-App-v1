@@ -30,6 +30,7 @@ export function AdminWorkspace({ avatarUrl, children, scope = "master", userLabe
   const scopedNavigation = [
     { href: panelHref, icon: "summary" as WorkspaceIconName, label: panelLabel, path: panelPath },
     ...(scope === "master" ? [
+      { href: "/app/admin/users", icon: "identities" as WorkspaceIconName, label: "Solicitudes", path: "/app/admin/users" },
       { href: demo ? "/app/admin/periods?demo=1" : "/app/admin/periods", icon: "daily" as WorkspaceIconName, label: "Registros", path: "/app/admin/periods" },
       { href: "/app/admin/statistics", icon: "operations" as WorkspaceIconName, label: "Estadísticas", path: "/app/admin/statistics" },
     ] : []),

@@ -2097,3 +2097,11 @@ vigente sin aprobacion y evidencia suficiente.
 - **Círculos de poder:** cada tarjeta muestra todas las empresas de fondeo vigentes, el conteo de payouts y el progreso visual hacia cuatro. La animación es decorativa y respeta la preferencia de movimiento reducido.
 - **Pizarra:** el titular aparece como raíz y sus identidades como nodos. La vista admite zoom, centrado y desplazamiento con espacio; cada identidad despliega estado, deterioro, empresas quemadas y payouts registrados.
 
+### APP-157 - Solicitudes de reactivación visibles
+
+- **Fecha:** 2026-10-06. Corrección del primer reingreso real posterior a la limpieza preproductiva.
+- **Reingreso:** una persona revocada que vuelve a autenticarse con Google pasa a `pending`; no recupera acceso por iniciar sesión y requiere una nueva decisión de Admin Master.
+- **Conservación:** se mantiene el UUID, el ID NODAL y todo el historial. La solicitud no recupera el rol administrativo anterior: vuelve como `Usuario` y una elevación futura requiere su flujo explícito.
+- **Trazabilidad:** el cambio de `revoked` a `pending` registra el estado y rol anteriores, la fecha y el motivo. Las solicitudes producidas antes de publicar esta regla se recuperan sólo cuando el último ingreso es posterior a la baja.
+- **Interfaz:** `Solicitudes` permanece visible en la navegación de Admin Master y el bloque de solicitudes del Panel control no desaparece cuando el total es cero.
+
