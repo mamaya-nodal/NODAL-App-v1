@@ -73,10 +73,10 @@ function ApprovalForm({ periodId }: Readonly<{ periodId: string }>) {
   </form>;
 }
 
-export function PeriodClosePanel({ data }: Readonly<{ data: PeriodCloseControlData }>) {
+export function PeriodClosePanel({ data, embedded = false }: Readonly<{ data: PeriodCloseControlData; embedded?: boolean }>) {
   const lastRun = data.runs[0];
-  return <div className="admin-page admin-shell close-control-page">
-    <header className="desk-heading"><div><p className="status">ADMIN MASTER</p><h1>Cierres contables</h1></div><RetryControl /></header>
+  return <div className={`${embedded ? "close-control-embedded" : "admin-page admin-shell"} close-control-page`}>
+    <header className="desk-heading"><div>{!embedded ? <p className="status">ADMIN MASTER</p> : null}<h1>{embedded ? "Administración de cierres" : "Cierres contables"}</h1></div><RetryControl /></header>
 
     <section className="close-overview-grid">
       <article><span>Última ejecución</span><strong>{lastRun ? dateTime(lastRun.startedAt) : "Sin ejecuciones"}</strong><small>{lastRun ? lastRun.triggerSource === "manual" ? "Manual" : "Automática" : ""}</small></article>

@@ -11,5 +11,5 @@ export default async function AdminPage({searchParams}:Props){
     canUseAdministrationDesignDemo(),
   ]);
   const data = params.demo === "1" && demoAvailable ? buildMasterControlDemo(params.period) : realData;
-  return <MasterControlPanel data={data} demoAvailable={demoAvailable} />;
+  return <MasterControlPanel data={data} />;
 }

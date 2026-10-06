@@ -2068,5 +2068,14 @@ vigente sin aprobacion y evidencia suficiente.
 - **Registro ficticio:** la orejeta Registros del escenario de comprobación sigue el mockup aprobado: selección de unidad, descarga simulada, aprobación total, selección individual por ID NODAL y envío simulado. Ninguna de estas acciones modifica cierres productivos.
 - **Lectura del árbol:** al desplegar una persona, la pizarra muestra ID, fecha de alta, acuerdos, identidades y estado/versión del conector, manteniendo el mismo lenguaje informativo aprobado para el árbol del Panel Admin.
 - **Filtros inmediatos:** unidad, mesa y usuario se aplican al seleccionarlos. El período recarga automáticamente el período elegido; no existe un segundo botón de confirmación.
+
+### APP-154 - Promoción del diseño aprobado de Admin Master a producción
+
+- **Fecha:** 2026-10-06. Diseño aprobado y trasladado a las vistas reales.
+- **Panel control:** la vista productiva utiliza la misma distribución, jerarquía visual, filtros, tarjetas, tabla, fichas y pizarra aprobadas en el escenario ficticio, alimentadas exclusivamente por unidades, mesas, usuarios, IDs y cifras reales. El acceso visible al escenario de diseño se retira del panel productivo.
+- **Registros:** la orejeta productiva adopta la cabecera, selección de unidad, listado por usuario y acciones del mockup aprobado. La descarga exporta únicamente los registros reales seleccionados. La aprobación múltiple reutiliza la función auditada de aprobación de cierres; conserva los bloqueos por informe pendiente y observaciones sin resolver, y genera la entrega en el mismo estado controlado que la aprobación individual.
+- **Conservación funcional:** el control detallado de cierres, PDF, observaciones, rectificaciones, ejecuciones y reintentos permanece disponible dentro de la misma orejeta. La adaptación visual no elimina ni sustituye esas funciones.
+- **Aislamiento:** no se copian las cuatro unidades, usuarios, importes ni alertas ficticias a producción. `?demo=1` continúa siendo una comprobación aislada y no se ofrece como acción dentro del panel real.
+- **Límite de unidades:** las ventanas de alta y edición de unidades continúan simuladas hasta contar con una operación transaccional aprobada que cree o modifique conjuntamente la unidad, su Mesa Principal, responsable, acuerdo, IDs y auditoría. No se publica un formulario que aparente guardar cambios sin hacerlo.
 - **Identificación visual:** ambas vistas indican de forma persistente que se trata de datos ficticios y ofrecen volver a los datos reales.
 

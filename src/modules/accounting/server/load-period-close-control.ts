@@ -54,6 +54,7 @@ export async function loadPeriodCloseControl() {
       modality: workspace?.modality ?? "real",
       month: period.period_month,
       owner: user?.display_name || user?.email || "Usuario sin nombre",
+      ownerUserId: workspace?.owner_user_id ?? null,
       periodId: period.id,
       positionDifferenceInCents: Number(summary.positionDifferenceInCents ?? 0),
       realizedDifferenceInCents: Number(summary.realizedReconciliationDifferenceInCents ?? 0),

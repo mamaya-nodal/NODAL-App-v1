@@ -134,3 +134,38 @@ export async function approveAccountingClosure(
   return { message: "Cierre aprobado. El envío quedó esperando el informe PDF y la factura.", ok: true };
 }
 
+export async function approveSelectedAccountingClosures(
+  _previous: ClosureActionResult,
+  form: FormData,
+): Promise<ClosureActionResult> {
+  const periodIds = [...new Set(form.getAll("period_id").map((entry) => String(entry)).filter(Boolean))];
+  if (periodIds.length === 0) return { message: "Seleccioná al menos un registro pendiente.", ok: false };
+
+  const db = await requireNodalAdmin();
+  let approved = 0;
+  const blocked: string[] = [];
+  for (const periodId of periodIds) {
+    const { error } = await db.rpc("admin_approve_period_closure", { target_period_id: periodId });
+    if (!error) {
+      approved += 1;
+      continue;
+    }
+    if (error.message.includes("UNRESOLVED_OBSERVATIONS")) blocked.push("observaciones sin resolver");
+    else if (error.message.includes("REPORT_NOT_READY")) blocked.push("informes todavía no disponibles");
+    else blocked.push("cierres que no pudieron aprobarse");
+  }
+
+  refresh();
+  if (blocked.length > 0) {
+    const reasons = [...new Set(blocked)].join(" y ");
+    return {
+      message: `${approved} registro${approved === 1 ? "" : "s"} aprobado${approved === 1 ? "" : "s"}; quedaron ${periodIds.length - approved} pendientes por ${reasons}.`,
+      ok: false,
+    };
+  }
+  return {
+    message: `${approved} registro${approved === 1 ? "" : "s"} aprobado${approved === 1 ? "" : "s"}. Los envíos quedaron sujetos a la disponibilidad del informe y la factura.`,
+    ok: true,
+  };
+}
+
