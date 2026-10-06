@@ -1085,9 +1085,10 @@ dialog.desk-dialog::backdrop {
 }
 .desk-identities-table th {
   background: var(--brand);
-  color: var(--brand-contrast);
+  color: #10200f;
   font-weight: 850;
 }
+html[data-theme="day"] .nodal-workspace .desk-identities-table th { color: #fff; }
 .desk-identities-table p {
   color: var(--muted);
   font-size: 0.7rem;
