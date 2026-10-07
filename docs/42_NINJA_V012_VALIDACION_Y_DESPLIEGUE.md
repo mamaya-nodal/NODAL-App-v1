@@ -3,7 +3,9 @@
 Estado del piloto autorizado (2026-10-07): migración aditiva aplicada y registrada;
 servidor publicado y verificado. Fuente 0.12 copiada a la instalación de Mauricio,
 con configuración/vínculos y cola intactos verificados por comparación/hash.
-**Pendiente:** compilación y reinicio dentro de Ninja, recepción real y conciliación.
+Compilación/reinicio y heartbeat 0.12 verificados. Cola v2 sin pendientes ni
+cuarentena. **Pendiente:** reconectar las conexiones Ninja, recibir inventario
+real y luego validar el primer evento/recibo antes de ampliar el piloto.
 La descarga oficial continúa en 0.11. Complementa APP-161 y APP-162.
 
 ## Qué cambia

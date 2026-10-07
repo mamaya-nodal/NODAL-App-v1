@@ -24,6 +24,13 @@
   conservados. No se compiló ni inició Ninja por el usuario.
 - La comparación numérica de versiones evita ofrecer 0.11 como actualización
   a un piloto 0.12. Pruebas finales: 521/113 archivos, tipos y build correctos.
+- **Activación comprobada:** Mauricio compiló y reinició Ninja. Supabase recibió
+  `connector_version=0.12`, `installed_source_version=0.12`, conector activo y
+  heartbeat posterior al inicio. La importación creó únicamente marcador/lock:
+  cero pendientes y cero cuarentenas; recibos/trabajos permanecen vacíos porque
+  todavía no se generó telemetría v2. El primer inventario informó cero cuentas
+  al estar las conexiones Ninja desconectadas tras el reinicio. Falta reconectar
+  y comprobar inventario real; no es necesario abrir una operación para ello.
 
 ### APP-162 - Transporte Ninja v2 y conector 0.12 candidato
 
