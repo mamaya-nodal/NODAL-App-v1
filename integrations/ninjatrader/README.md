@@ -65,6 +65,11 @@ borrar la cola, los respaldos ni el historial. Si una credencial revocada quedó
 en una instalación ya preparada, el complemento la abandona y continúa con el
 código nuevo después de recibir el rechazo definitivo del servidor.
 
+La versión 0.14 combina el inventario global de NinjaTrader con el inventario
+de cada conexión activa. Algunos proveedores sólo publican determinadas cuentas
+en una de esas dos vistas; la combinación evita omitir la cuenta broker y
+deduplica por conexión y nombre sin incluir cuentas desconectadas.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.

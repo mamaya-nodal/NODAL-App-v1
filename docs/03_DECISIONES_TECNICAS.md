@@ -1,5 +1,16 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-167 - Inventario Ninja combinado para proveedores con vistas incompletas
+
+- **Fecha:** 2026-10-07.
+- **Hallazgo:** el conector 0.13 estaba activo y transmitía, pero en un caso real
+  `Account.All` sólo expuso tres cuentas simuladas aunque el broker figuraba
+  conectado en NinjaTrader. La app no tenía una cuenta broker que clasificar.
+- **Decisión:** publicar 0.14 combinando las cuentas activas de `Account.All` y
+  de cada `Connection.Accounts`, y deduplicarlas por conexión y nombre. Se
+  conservan el filtro de conexión activa, el modo de sólo lectura y toda la
+  trazabilidad existente.
+
 ### APP-166 - Reinstalación no bloqueada por una sesión Ninja revocada
 
 - **Fecha:** 2026-10-07.

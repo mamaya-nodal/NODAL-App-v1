@@ -73,12 +73,15 @@ describe("Ninja connector source", () => {
     );
   });
 
-  it("toma el inventario global para no omitir cuentas live visibles en NinjaTrader", () => {
+  it("combina los inventarios global y por conexión sin duplicar cuentas activas", () => {
     expect(connectorSource).toContain("lock (Account.All)");
-    expect(connectorSource).toContain("return Account.All");
+    expect(connectorSource).toContain("accounts.AddRange(Account.All.Where(IsConnectedAccount))");
+    expect(connectorSource).toContain("lock (Connection.Connections)");
+    expect(connectorSource).toContain("lock (connection.Accounts)");
+    expect(connectorSource).toContain("connection.Accounts.Where(IsConnectedAccount)");
     expect(connectorSource).toContain(
       "account.Connection.Status == NinjaTrader.Cbi.ConnectionStatus.Connected",
     );
-    expect(connectorSource).not.toContain("lock (connection.Accounts)");
+    expect(connectorSource).toContain('ConnectionName(account) + "\\u0000" + account.Name');
   });
 });

@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.12 (candidate; server v2 required)
+// NODAL Ninja Connector v0.14 (server v2 required)
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -217,7 +217,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.13";
+		private const string ConnectorVersion = "0.14";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10), MaxResponseContentBufferSize = 1024 * 1024 };
@@ -784,23 +784,41 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		private static List<Account> ConnectedAccounts()
 		{
-			// NinjaTrader's per-connection Accounts collection can omit live accounts
-			// that are nevertheless connected and visible in the Accounts grid. The
-			// global collection is the authoritative inventory used by NinjaScript.
-			// Filter it by the account's own connection so disconnected history is not
-			// transmitted as current inventory.
+			// Providers do not expose their inventory consistently: some accounts only
+			// appear in Account.All while others only appear in connection.Accounts.
+			// Merge both read-only views and keep only accounts whose own connection is
+			// currently active. This prevents either provider behaviour from hiding a
+			// connected broker account.
+			List<Account> accounts = new List<Account>();
 			lock (Account.All)
-			{
-				return Account.All
-					.Where(account => account != null
-						&& account.Connection != null
-						&& account.Connection.Status == NinjaTrader.Cbi.ConnectionStatus.Connected)
-					.GroupBy(
-						account => ConnectionName(account) + "\u0000" + account.Name,
-						StringComparer.Ordinal)
-					.Select(group => group.First())
+				accounts.AddRange(Account.All.Where(IsConnectedAccount));
+
+			List<Connection> connections;
+			lock (Connection.Connections)
+				connections = Connection.Connections
+					.Where(connection => connection != null
+						&& connection.Status == NinjaTrader.Cbi.ConnectionStatus.Connected)
 					.ToList();
+
+			foreach (Connection connection in connections)
+			{
+				lock (connection.Accounts)
+					accounts.AddRange(connection.Accounts.Where(IsConnectedAccount));
 			}
+
+			return accounts
+				.GroupBy(
+					account => ConnectionName(account) + "\u0000" + account.Name,
+					StringComparer.Ordinal)
+				.Select(group => group.First())
+				.ToList();
+		}
+
+		private static bool IsConnectedAccount(Account account)
+		{
+			return account != null
+				&& account.Connection != null
+				&& account.Connection.Status == NinjaTrader.Cbi.ConnectionStatus.Connected;
 		}
 
 		private static bool IsObserved(AccountItem accountItem)
