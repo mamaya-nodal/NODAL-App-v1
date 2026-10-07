@@ -1,7 +1,9 @@
 # Conector 0.12 candidato: validación y despliegue coordinado
 
-Estado al iniciar el piloto autorizado (2026-10-07): migración aditiva aplicada
-y registrada; servidor en preparación. Conector local todavía sin reemplazar.
+Estado del piloto autorizado (2026-10-07): migración aditiva aplicada y registrada;
+servidor publicado y verificado. Fuente 0.12 copiada a la instalación de Mauricio,
+con configuración/vínculos y cola intactos verificados por comparación/hash.
+**Pendiente:** compilación y reinicio dentro de Ninja, recepción real y conciliación.
 La descarga oficial continúa en 0.11. Complementa APP-161 y APP-162.
 
 ## Qué cambia
@@ -77,7 +79,13 @@ plano. No se compiló ni sobrescribió el ensamblado instalado de Ninja.
 - No se incorporan cuotas/WAF, política de retención ni panel de cuarentena.
   Las alertas de cuarentena están en Ninja y los recibos en tablas de servicio.
 
-## Orden de publicación (pendiente)
+## Orden de publicación original y alcance del piloto
+
+APP-163 registra la simplificación autorizada: prueba aislada de transporte/SQL,
+comprobación del esquema real sin datos ficticios, despliegue compatible limitado
+a una instalación y piloto local respaldado. Servidor/migración y copia del código
+ya realizados. Compilación, ejecución y conciliación reales siguen pendientes.
+Última suite: 521 pruebas en 113 archivos; typecheck/build correctos.
 
 1. Copia de seguridad verificable; entorno de ensayo separado de producción.
    No usar Preview si comparte base con producción (APP-143).
@@ -100,4 +108,5 @@ Apagar v2 detiene confirmaciones y deja la cola local intacta; no elimina tablas
 No volver sin más a 0.11: éste no lee la cola `.v2` y puede reenviar la copia vieja.
 Conservar ambos formatos y respaldos; conciliar recibos pendientes antes de una
 reversión del conector. Nunca borrar cuarentena, recibos ni eventos para ocultar
-errores de prueba. No se aplicó ninguna reversión ni migración en vivo.
+errores de prueba. No se aplicó ninguna reversión. La migración aditiva sí está
+aplicada y registrada; sus tablas estaban vacías en la verificación previa al piloto.

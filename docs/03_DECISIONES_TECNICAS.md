@@ -18,6 +18,12 @@
   `mauriciosebastianamaya@gmail.com`. El resto mantiene protocolo existente.
 - Descarga oficial 0.11 intacta. La compilación/ejecución Ninja y conciliación
   posteriores a la actualización son requisito antes de ampliar el piloto.
+- Servidor publicado con verificación HTTP de revisión, salud de base y rechazo
+  401 de solicitudes no autenticadas a ambos protocolos. Fuente 0.12 copiada
+  mediante UpdateOnly con Ninja cerrado; hash de cola y campos de vinculación
+  conservados. No se compiló ni inició Ninja por el usuario.
+- La comparación numérica de versiones evita ofrecer 0.11 como actualización
+  a un piloto 0.12. Pruebas finales: 521/113 archivos, tipos y build correctos.
 
 ### APP-162 - Transporte Ninja v2 y conector 0.12 candidato
 
