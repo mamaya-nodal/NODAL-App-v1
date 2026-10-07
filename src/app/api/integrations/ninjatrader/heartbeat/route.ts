@@ -1,5 +1,6 @@
 import { requireNinjaConnector, rememberNinjaConnectorVersions } from "@/modules/ninja/server/connector-auth";
 import { after } from "next/server";
+import { isTelemetryV2Enabled } from "@/modules/ninja/server/telemetry-v2-rollout";
 import { safelyDrainTelemetryV2 } from "@/modules/ninja/server/telemetry-v2";
 import { refreshNinjaTechnicalOperations } from "@/modules/ninja/server/technical-operation-processing";
 import { refreshNinjaTransitionsFromLatestSnapshot } from "@/modules/ninja/server/transition-processing";
@@ -12,7 +13,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const connector = await requireNinjaConnector(request);
   if (connector instanceof Response) return connector;
-  if (process.env.NINJA_TELEMETRY_V2_ENABLED === "true") after(() => safelyDrainTelemetryV2(connector.connectorId));
+  if (isTelemetryV2Enabled(connector.connectorId)) after(() => safelyDrainTelemetryV2(connector.connectorId));
   // Older heartbeats had no body or JSON content-type. Keep that compatibility,
   // but authenticate first and never read an unbounded body.
   const input = await readNinjaJson(request, 4 * 1024, false);

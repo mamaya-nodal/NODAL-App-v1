@@ -7,6 +7,7 @@ import { POST } from "./route";
 const request = () => new Request("https://invalid.test/v2", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
 beforeEach(() => {
   vi.resetAllMocks(); vi.stubEnv("NINJA_TELEMETRY_V2_ENABLED", "true");
+  vi.stubEnv("NINJA_TELEMETRY_V2_CONNECTOR_IDS", "physical");
   mocks.auth.mockResolvedValue({ connectorId: "physical" });
   mocks.parse.mockReturnValue({ batchId: "batch", events: ["event"] });
   mocks.receive.mockResolvedValue([{ eventId: "one", status: "pending", sha256: "hash", reason: "unresolved" }]);

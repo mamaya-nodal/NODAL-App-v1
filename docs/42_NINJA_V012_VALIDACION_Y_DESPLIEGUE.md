@@ -1,12 +1,15 @@
 # Conector 0.12 candidato: validación y despliegue coordinado
 
-Estado: implementación local, **no publicada ni instalada**. La descarga oficial
-continúa en 0.11. Fecha: 2026-10-07. Complementa APP-161 y APP-162.
+Estado al iniciar el piloto autorizado (2026-10-07): migración aditiva aplicada
+y registrada; servidor en preparación. Conector local todavía sin reemplazar.
+La descarga oficial continúa en 0.11. Complementa APP-161 y APP-162.
 
 ## Qué cambia
 
 - Servidor compatible con conectores anteriores; endpoint v2 separado, apagado
-  salvo `NINJA_TELEMETRY_V2_ENABLED=true`.
+  salvo `NINJA_TELEMETRY_V2_ENABLED=true` y el ID del conector incluido en
+  `NINJA_TELEMETRY_V2_CONNECTOR_IDS`. Sin lista se deshabilita; no acepta comodín.
+  También se limita el disparador heartbeat a esa instalación.
 - Cada evento obtiene un recibo asociado a instalación, ID y SHA-256 del JSON
   original. Los campos persistidos se normalizan; no se confía en IDs de dueño
   o destino enviados por el cliente. SHA-256 verifica integridad/correspondencia,
@@ -35,7 +38,8 @@ continúa en 0.11. Fecha: 2026-10-07. Complementa APP-161 y APP-162.
 3. Instalar PGlite sólo en `tmp/ninja-v2-validation`, sin cambiar dependencias de
    la app: `npm install --prefix tmp/ninja-v2-validation --no-save --package-lock=false @electric-sql/pglite`.
    Luego `node scripts/test-ninja-receipts.mjs`. Ejecuta la migración y funciones
-   en PostgreSQL WASM aislado con tablas mínimas, no en Supabase real.
+   en PostgreSQL WASM aislado, cargando las definiciones reales de las tablas
+   dependientes desde las migraciones del repositorio; no en Supabase real.
 4. Compilación completa C# con bibliotecas locales NinjaTrader y .NET Framework
    4.8 hacia `tmp`, no hacia `NinjaTrader 8/bin/Custom`.
 

@@ -1,5 +1,24 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-163 - Piloto 0.12 exclusivo de Mauricio
+
+- **Fecha:** 2026-10-07. Mauricio aprobó verificar servidor por separado y
+  actualizar sólo su instalación con respaldo, sin exigir otro equipo.
+- Respaldo local verificado por hash de configuración, cola y fuente instalada,
+  con ACL restringida, fuera del repositorio. Ningún secreto fue publicado.
+- Antes de publicar se detectó y corrigió `nodal_users.status` por
+  `nodal_users.access_state`; el ensayo SQL anterior usaba una tabla simplificada.
+  La prueba ahora importa DDL real del repositorio y verifica usuario revocado.
+- Migración `20261007000000` aplicada transaccionalmente y registrada desde el
+  editor Supabase, debido a falla de transporte de CLI. No modifica registros
+  económicos ni migra historiales; agrega recibos/trabajos y funciones privadas.
+- Activación doble: flag y lista explícita de conectores. Tanto intake como
+  disparador heartbeat v2 quedan limitados al piloto; no basta activar el flag.
+  La instalación fue contrastada con el usuario activo
+  `mauriciosebastianamaya@gmail.com`. El resto mantiene protocolo existente.
+- Descarga oficial 0.11 intacta. La compilación/ejecución Ninja y conciliación
+  posteriores a la actualización son requisito antes de ampliar el piloto.
+
 ### APP-162 - Transporte Ninja v2 y conector 0.12 candidato
 
 - **Fecha:** 2026-10-07. Segunda etapa autorizada, implementada localmente.
