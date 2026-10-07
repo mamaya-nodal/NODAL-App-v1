@@ -31,6 +31,13 @@
   todavía no se generó telemetría v2. El primer inventario informó cero cuentas
   al estar las conexiones Ninja desconectadas tras el reinicio. Falta reconectar
   y comprobar inventario real; no es necesario abrir una operación para ello.
+- **Reconexión comprobada:** inventario real recibido con seis cuentas conectadas
+  (broker principal y cinco cuentas Lucid). El protocolo v2 generó 12 recibos
+  `persisted/stored` y cuatro `excluded/simulator`, sin pendientes ni conflictos.
+  La cola local sólo conserva marcador y lock: cero eventos y cero cuarentenas.
+  El trabajo durable alcanzó `revision=completed_revision=12`, sin lease ni error.
+  Esto valida transporte, recibos y reconstrucción técnica inicial; no equivale
+  por sí solo a una conciliación económica ni valida todavía una operación nueva.
 
 ### APP-162 - Transporte Ninja v2 y conector 0.12 candidato
 

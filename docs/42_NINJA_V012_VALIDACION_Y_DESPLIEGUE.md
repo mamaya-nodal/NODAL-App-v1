@@ -3,9 +3,11 @@
 Estado del piloto autorizado (2026-10-07): migración aditiva aplicada y registrada;
 servidor publicado y verificado. Fuente 0.12 copiada a la instalación de Mauricio,
 con configuración/vínculos y cola intactos verificados por comparación/hash.
-Compilación/reinicio y heartbeat 0.12 verificados. Cola v2 sin pendientes ni
-cuarentena. **Pendiente:** reconectar las conexiones Ninja, recibir inventario
-real y luego validar el primer evento/recibo antes de ampliar el piloto.
+Compilación/reinicio, heartbeat 0.12, reconexión e inventario de seis cuentas
+verificados. Doce eventos técnicos persistidos y cuatro simuladores excluidos;
+trabajo durable completado sin error. Cola v2 sin pendientes ni cuarentena.
+**Pendiente antes de ampliar:** observar el siguiente evento operativo real y
+conciliar su efecto esperado; no es necesario crear una operación sólo para probar.
 La descarga oficial continúa en 0.11. Complementa APP-161 y APP-162.
 
 ## Qué cambia
