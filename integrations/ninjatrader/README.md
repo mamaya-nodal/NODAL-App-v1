@@ -50,6 +50,15 @@ venció, fue usado o corresponde a un destino ya vinculado. La sesión existente
 continúa enviando inventario y latidos. Un error de red o del servidor no
 descarta el código, para que pueda reintentarse.
 
+La versión 0.11 vuelve a tomar el inventario global visible en NinjaTrader para
+no omitir cuentas live que la conexión activa todavía no enumera correctamente.
+
+La versión 0.12 incorpora confirmaciones durables por evento. El servidor
+responde si cada registro fue guardado, duplicado, excluido o puesto en revisión;
+el conector sólo retira de su cola local aquello que recibió una confirmación
+definitiva. Una interrupción conserva los eventos para reintentarlos sin crear
+duplicados. La versión 0.11 continúa siendo compatible durante la transición.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.

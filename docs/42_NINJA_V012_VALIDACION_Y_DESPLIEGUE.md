@@ -8,7 +8,9 @@ verificados. Doce eventos técnicos persistidos y cuatro simuladores excluidos;
 trabajo durable completado sin error. Cola v2 sin pendientes ni cuarentena.
 **Pendiente antes de ampliar:** observar el siguiente evento operativo real y
 conciliar su efecto esperado; no es necesario crear una operación sólo para probar.
-La descarga oficial continúa en 0.11. Complementa APP-161 y APP-162.
+El piloto fue aprobado y la descarga oficial pasa a 0.12 según APP-164. Las
+instalaciones 0.11 continúan siendo compatibles durante la transición.
+Complementa APP-161, APP-162 y APP-163.
 
 ## Qué cambia
 

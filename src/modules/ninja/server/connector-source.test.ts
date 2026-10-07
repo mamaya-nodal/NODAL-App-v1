@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { CANDIDATE_NINJA_CONNECTOR_VERSION } from "../domain/connector-version";
+import { LATEST_NINJA_CONNECTOR_VERSION } from "../domain/connector-version";
 
 const connectorSource = readFileSync(
   join(process.cwd(), "integrations", "ninjatrader", "NodalNinjaConnector.cs"),
@@ -28,9 +28,9 @@ const connectorFirstInstaller = readFileSync(
 );
 
 describe("Ninja connector source", () => {
-  it("prepara la revisión candidata sin cambiar la descarga publicada", () => {
+  it("publica la misma revisión que declara la aplicación", () => {
     expect(connectorSource).toContain(
-      `ConnectorVersion = "${CANDIDATE_NINJA_CONNECTOR_VERSION}"`,
+      `ConnectorVersion = "${LATEST_NINJA_CONNECTOR_VERSION}"`,
     );
   });
 

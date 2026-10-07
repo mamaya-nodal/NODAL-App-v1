@@ -1,5 +1,23 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-164 - Publicación general del conector 0.12 con transición compatible
+
+- **Fecha:** 2026-10-07.
+- **Decisión:** publicar 0.12 como descarga oficial y habilitar la recepción v2
+  para todos los conectores autenticados mediante un interruptor de producción
+  separado. Mantener el protocolo anterior para instalaciones 0.11 durante la
+  transición; la actualización no se impone ni reemplaza archivos remotamente.
+- **Evidencia previa:** piloto de Mauricio con inventario de seis cuentas, doce
+  confirmaciones `persisted:stored`, cuatro exclusiones de simulador y cero
+  conflictos, cuarentenas o eventos pendientes. Suite completa, tipos y build
+  correctos antes de la publicación.
+- **Riesgo aceptado:** no habrá operativa real de Mauricio en los próximos días.
+  Por autorización del titular se amplía el despliegue y se observará sobre la
+  marcha; esto no convierte la conciliación de una operación real en validada.
+- **Reversión:** desactivar `NINJA_TELEMETRY_V2_ALL_CONNECTORS` devuelve el
+  alcance a la lista explícita sin borrar colas ni registros. Las instalaciones
+  0.11 conservan el transporte anterior.
+
 ### APP-163 - Piloto 0.12 exclusivo de Mauricio
 
 - **Fecha:** 2026-10-07. Mauricio aprobó verificar servidor por separado y
