@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { observedNinjaFetch } from "./processing-observation";
 
 import type { NinjaTelemetryRow } from "../domain/operation-probe";
 import { classifyNinjaAccount } from "../domain/account-classification";
@@ -14,6 +15,7 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
   if (!url || !serviceRoleKey) return { processedAccounts: 0, persistedOperations: 0 };
 
   const supabase = createClient(url, serviceRoleKey, {
+    global: { fetch: observedNinjaFetch },
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const [allowlistResult, linksResult, inventoryResult, reviewsResult, unsettledResult] = await Promise.all([

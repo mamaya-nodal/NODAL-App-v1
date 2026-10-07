@@ -7,8 +7,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 $normalizedBaseUrl = $BaseUrl.Trim().TrimEnd('/')
-if ($normalizedBaseUrl -notmatch '^https?://') {
-  throw "La direccion de NODAL debe comenzar con http:// o https://."
+if ($normalizedBaseUrl -notin @('https://app.nodaltrading.com', 'https://nodal-app-preview.vercel.app')) {
+  throw "La direccion debe ser un dominio HTTPS oficial de NODAL, sin rutas ni parametros."
+}
+if (Get-Process -Name NinjaTrader -ErrorAction SilentlyContinue) {
+  throw "Cerra NinjaTrader antes de instalar o actualizar. Esto protege la configuracion y la cola pendiente."
 }
 
 $ninjaPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "NinjaTrader 8"
@@ -33,6 +36,17 @@ if (!$connectorVersionMatch.Success) {
 }
 $connectorSourceVersion = $connectorVersionMatch.Groups['version'].Value
 
+function Write-ConfigAtomic {
+  param([string]$ConfigPath, [string[]]$Lines)
+  $temporaryConfigPath = $ConfigPath + '.tmp.' + [Guid]::NewGuid().ToString('N')
+  $bytes = [System.Text.UTF8Encoding]::new($false).GetBytes(($Lines -join [Environment]::NewLine) + [Environment]::NewLine)
+  $stream = [System.IO.FileStream]::new($temporaryConfigPath, [System.IO.FileMode]::CreateNew)
+  try { $stream.Write($bytes, 0, $bytes.Length); $stream.Flush($true) } finally { $stream.Dispose() }
+  if (Test-Path -LiteralPath $ConfigPath) {
+    [System.IO.File]::Replace($temporaryConfigPath, $ConfigPath, $ConfigPath + '.atomic.bak')
+  } else { [System.IO.File]::Move($temporaryConfigPath, $ConfigPath) }
+}
+
 function Set-InstalledSourceVersion {
   param([string]$ConfigPath, [string]$Version)
 
@@ -41,8 +55,7 @@ function Set-InstalledSourceVersion {
   } else {
     @()
   }
-  $configurationLines + "InstalledSourceVersion=$Version" |
-    Set-Content -LiteralPath $ConfigPath -Encoding utf8
+  Write-ConfigAtomic -ConfigPath $ConfigPath -Lines ($configurationLines + "InstalledSourceVersion=$Version")
 }
 
 function Clear-PendingPairingCode {
@@ -50,13 +63,16 @@ function Clear-PendingPairingCode {
 
   # ENTER in UpdateOnly means no new destination. An old, rejected code must
   # not interrupt the existing authenticated connector on every heartbeat.
-  @(Get-Content -LiteralPath $ConfigPath | Where-Object { $_ -notmatch '^PairingCode=' }) +
-    'PairingCode=' | Set-Content -LiteralPath $ConfigPath -Encoding utf8
+  Write-ConfigAtomic -ConfigPath $ConfigPath -Lines (@(Get-Content -LiteralPath $ConfigPath | Where-Object { $_ -notmatch '^PairingCode=' }) + 'PairingCode=')
 }
 
 if ($UpdateOnly) {
   if (!(Test-Path -LiteralPath $connectorConfigPath) -or !(Test-Path -LiteralPath $installedConnectorPath)) {
     throw "No se encontro una instalacion existente. Usa INSTALAR-NODAL para la primera vinculacion."
+  }
+  $existingOrigin = @(Get-Content -LiteralPath $connectorConfigPath | Where-Object { $_ -match '^BaseUrl=' }) | Select-Object -Last 1
+  if (!$existingOrigin -or $existingOrigin.Substring(8).Trim().TrimEnd('/') -notin @('https://app.nodaltrading.com', 'https://nodal-app-preview.vercel.app')) {
+    throw "La configuracion existente apunta a un destino no autorizado. Contacta soporte antes de actualizar; no se modifico la instalacion."
   }
 
   New-Item -ItemType Directory -Force -Path $connectorDirectory | Out-Null
@@ -93,17 +109,17 @@ if (Test-Path -LiteralPath $connectorConfigPath) {
   Copy-Item -LiteralPath $connectorConfigPath -Destination ($connectorConfigPath + ".before-pairing.bak") -Force
   $existingLines = Get-Content -LiteralPath $connectorConfigPath
   $keptLines = @($existingLines | Where-Object { $_ -notmatch '^(BaseUrl|PairingCode|InstalledSourceVersion)=' })
-  @(
+  Write-ConfigAtomic -ConfigPath $connectorConfigPath -Lines (@(
     "BaseUrl=$normalizedBaseUrl"
     "PairingCode=$normalizedCode"
     "InstalledSourceVersion=$connectorSourceVersion"
-  ) + $keptLines | Set-Content -LiteralPath $connectorConfigPath -Encoding utf8
+  ) + $keptLines)
 } else {
-  @(
+  Write-ConfigAtomic -ConfigPath $connectorConfigPath -Lines @(
     "BaseUrl=$normalizedBaseUrl"
     "PairingCode=$normalizedCode"
     "InstalledSourceVersion=$connectorSourceVersion"
-  ) | Set-Content -LiteralPath $connectorConfigPath -Encoding utf8
+  )
 }
 
 Copy-Item -LiteralPath $connectorSourcePath -Destination $installedConnectorPath -Force

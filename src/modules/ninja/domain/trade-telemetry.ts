@@ -124,3 +124,30 @@ export function isNinjaTradeTelemetryBatch(value: unknown): value is NinjaTradeT
     && payload.events.every(isEvent);
 }
 
+/** Drop unrecognized fields, including caller-supplied owner/destination IDs. */
+export function normalizeNinjaTradeTelemetryBatch(batch: NinjaTradeTelemetryBatch): NinjaTradeTelemetryBatch {
+  return {
+    kind: batch.kind, batchId: batch.batchId, observedAt: batch.observedAt,
+    events: batch.events.map((event): NinjaTradeTelemetryEvent => {
+      const common = {
+        eventId: event.eventId, occurredAt: event.occurredAt, accountName: event.accountName,
+        connectionName: event.connectionName, providerName: event.providerName,
+      };
+      if (event.kind === "balance") return {
+        ...common, kind: event.kind, cashValue: event.cashValue, netLiquidation: event.netLiquidation,
+        totalCashBalance: event.totalCashBalance, realizedProfitLoss: event.realizedProfitLoss,
+        unrealizedProfitLoss: event.unrealizedProfitLoss,
+      };
+      if (event.kind === "position") return {
+        ...common, kind: event.kind, instrument: event.instrument, marketPosition: event.marketPosition,
+        averagePrice: event.averagePrice, quantity: event.quantity,
+      };
+      return {
+        ...common, kind: event.kind, instrument: event.instrument, marketPosition: event.marketPosition,
+        executionId: event.executionId, orderId: event.orderId, orderAction: event.orderAction,
+        price: event.price, quantity: event.quantity,
+      };
+    }),
+  };
+}
+

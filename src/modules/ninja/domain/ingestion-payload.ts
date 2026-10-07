@@ -52,7 +52,7 @@ export function isNinjaInventorySnapshot(value: unknown): value is NinjaInventor
   return (
     payload.kind === "inventory_snapshot" &&
     isText(payload.eventId) &&
-    isText(payload.observedAt) &&
+    isText(payload.observedAt) && Number.isFinite(Date.parse(payload.observedAt as string)) &&
     Array.isArray(payload.accounts) &&
     payload.accounts.length <= maximumAccounts &&
     payload.accounts.every(isAccount)
@@ -62,8 +62,20 @@ export function isNinjaInventorySnapshot(value: unknown): value is NinjaInventor
 export function getNinjaSnapshotSummary(snapshot: NinjaInventorySnapshot) {
   return {
     accountCount: snapshot.accounts.length,
-    connections: [...new Set(snapshot.accounts.map((account) => account.connectionName))],
-    eventId: snapshot.eventId,
-    observedAt: snapshot.observedAt,
+    connectionCount: new Set(snapshot.accounts.map((account) => account.connectionName)).size,
+  };
+}
+
+/** Only contract fields may cross into storage, routing and diagnostics. */
+export function normalizeNinjaInventorySnapshot(snapshot: NinjaInventorySnapshot): NinjaInventorySnapshot {
+  return {
+    kind: snapshot.kind, eventId: snapshot.eventId, observedAt: snapshot.observedAt,
+    accounts: snapshot.accounts.map((account) => ({
+      accountName: account.accountName, connectionName: account.connectionName,
+      connectionStatus: account.connectionStatus, providerName: account.providerName,
+      cashValue: account.cashValue, netLiquidation: account.netLiquidation,
+      totalCashBalance: account.totalCashBalance, realizedProfitLoss: account.realizedProfitLoss,
+      unrealizedProfitLoss: account.unrealizedProfitLoss,
+    })),
   };
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { ensureNinjaBrokerBalanceBaseline, requireNinjaConnector, persistNinjaSnapshot, processNinjaTransitions, routeNinjaInventory } = vi.hoisted(() => ({
   ensureNinjaBrokerBalanceBaseline: vi.fn(),
@@ -39,12 +39,15 @@ const payload = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(console, "info").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   requireNinjaConnector.mockResolvedValue({ connectorId: "connector-1", ownerUserId: "user-1" });
   persistNinjaSnapshot.mockResolvedValue({ persisted: true });
   processNinjaTransitions.mockResolvedValue({ detectedChanges: 1, processed: true });
   ensureNinjaBrokerBalanceBaseline.mockResolvedValue({ created: false, processed: true });
   routeNinjaInventory.mockResolvedValue([{ destinationConnectorId: "connector-1", snapshot: payload }]);
 });
+afterEach(() => vi.restoreAllMocks());
 
 describe("POST /api/integrations/ninjatrader/ingest", () => {
   it("accepts an inventory from the paired connector", async () => {
@@ -90,5 +93,44 @@ describe("POST /api/integrations/ninjatrader/ingest", () => {
     expect(result.status).toBe(503);
     expect(await result.json()).toMatchObject({ accepted: false, persisted: false });
     expect(processNinjaTransitions).not.toHaveBeenCalled();
+  });
+
+  it("does not echo internal processing results or identifying labels", async () => {
+    processNinjaTransitions.mockResolvedValue({ processed: true, privateDetail: "do-not-return" });
+    const result = await POST(new Request("https://app.test/ingest", {
+      method: "POST", body: JSON.stringify(payload), headers: { "content-type": "application/json" },
+    }));
+    expect(await result.json()).toEqual({ accepted: true, persisted: true, destinations: 1,
+      summary: { accountCount: 1, connectionCount: 1 } });
+    expect(console.info).toHaveBeenCalledWith("NinjaTrader inventory received", { accountCount: 1, connectionCount: 1 });
+  });
+
+  it("strips arbitrary extra data before routing", async () => {
+    await POST(new Request("https://app.test/ingest", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...payload, ownerUserId: "other", accounts: [{ ...payload.accounts[0], secret: "private" }] }),
+    }));
+    expect(routeNinjaInventory).toHaveBeenCalledWith("connector-1", payload);
+  });
+
+  it("rejects invalid dates without attempting routing or storage", async () => {
+    const result = await POST(new Request("https://app.test/ingest", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...payload, observedAt: "invalid" }),
+    }));
+    expect(result.status).toBe(422);
+    expect(routeNinjaInventory).not.toHaveBeenCalled();
+    expect(persistNinjaSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("returns a retryable generic error on infrastructure exceptions", async () => {
+    routeNinjaInventory.mockRejectedValueOnce(new Error("private connection and secret"));
+    const result = await POST(new Request("https://app.test/ingest", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload),
+    }));
+    expect(result.status).toBe(503);
+    expect(result.headers.get("Retry-After")).toBe("15");
+    expect(await result.text()).not.toContain("private connection");
+    expect(console.error).toHaveBeenCalledWith("NODAL_NINJA_INTAKE_UNAVAILABLE", { scope: "inventory" });
   });
 });

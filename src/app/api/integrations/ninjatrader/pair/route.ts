@@ -1,25 +1,13 @@
 import { pairNinjaConnector, connectorServiceUnavailableResponse } from "@/modules/ninja/server/connector-auth";
+import { ninjaIntakeResponse as response, readNinjaJson } from "@/modules/ninja/server/intake-http";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function response(body: object, status: number) {
-  return Response.json(body, { headers: { "Cache-Control": "no-store, max-age=0" }, status });
-}
-
 export async function POST(request: Request) {
-  if (!request.headers.get("content-type")?.includes("application/json")) {
-    return response({ error: "Formato no válido." }, 415);
-  }
-
-  let body: unknown;
-  try {
-    const raw = await request.text();
-    if (Buffer.byteLength(raw, "utf8") > 4 * 1024) return response({ error: "Solicitud demasiado grande." }, 413);
-    body = JSON.parse(raw) as unknown;
-  } catch {
-    return response({ error: "No se pudo leer la vinculación." }, 400);
-  }
+  const input = await readNinjaJson(request, 4 * 1024);
+  if (!input.ok) return input.response;
+  const body = input.payload;
 
   if (!body || typeof body !== "object") return response({ error: "Datos incompletos." }, 422);
   const values = body as Record<string, unknown>;

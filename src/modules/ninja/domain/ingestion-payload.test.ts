@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getNinjaSnapshotSummary,
   isNinjaInventorySnapshot,
+  normalizeNinjaInventorySnapshot,
 } from "./ingestion-payload";
 
 const snapshot = {
@@ -38,12 +39,21 @@ describe("Ninja ingestion payload", () => {
     ).toBe(false);
   });
 
-  it("creates a diagnostic summary without account balances", () => {
+  it("creates an allowlisted diagnostic summary without identifiers or balances", () => {
     expect(getNinjaSnapshotSummary(snapshot)).toEqual({
       accountCount: 1,
-      connections: ["Ninja Mauri"],
-      eventId: "event-1",
-      observedAt: "2026-08-26T14:14:25.000Z",
+      connectionCount: 1,
     });
+  });
+
+  it("rejects invalid dates before account classification", () => {
+    expect(isNinjaInventorySnapshot({ ...snapshot, observedAt: "not-a-date" })).toBe(false);
+  });
+
+  it("strips extra fields without changing contract values", () => {
+    const extended = { ...snapshot, ownerUserId: "other-user",
+      accounts: [{ ...snapshot.accounts[0], secret: "do-not-store" }],
+    };
+    expect(normalizeNinjaInventorySnapshot(extended)).toEqual(snapshot);
   });
 });

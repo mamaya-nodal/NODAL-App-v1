@@ -1,4 +1,6 @@
 export const LATEST_NINJA_CONNECTOR_VERSION = "0.11";
+// Candidate source is not the published download until isolated QA and rollout approval.
+export const CANDIDATE_NINJA_CONNECTOR_VERSION = "0.12";
 
 export type ConnectorVersionState =
   | "current"

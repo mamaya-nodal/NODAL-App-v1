@@ -1,5 +1,84 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-162 - Transporte Ninja v2 y conector 0.12 candidato
+
+- **Fecha:** 2026-10-07. Segunda etapa autorizada, implementada localmente.
+  No instalada ni desplegada. ZIP oficial y versión publicada permanecen 0.11.
+- **Contrato:** recibos durables por evento, vinculados a instalación, ID y hash;
+  confirmación exclusivamente de persistencia técnica, no de asiento contable.
+  Pendientes no se borran; conflictos quedan conservados para revisión. La
+  exclusión explícita de simuladores mantiene la política de enrutamiento vigente.
+- **Servidor:** migración aditiva con RLS y RPC sólo service_role; inserción
+  transaccional de recibo/evento/trabajo. Reintentos idempotentes y trabajos con
+  revisión/lease; oportunidad de ejecución mediante recepción y heartbeat.
+  Endpoint separado y feature flag apagado por defecto. El protocolo viejo sigue.
+- **Conector:** cola individual cifrada DPAPI, ACL por usuario/SYSTEM, importación
+  no destructiva del formato anterior, sin truncamiento 8 MiB, cuarentena visible
+  en salida Ninja, validación de recibos antes de retirar archivos. Destinos HTTPS
+  oficiales sin redirects, JSON escapado y precios sin redondeo fijo. Instalador
+  exige Ninja cerrado; configuración reemplazada atómicamente con respaldos.
+- **Sin cambio económico:** se instrumentan errores HTTP de los motores para
+  no dar por completado un intento que ocultó una falla de infraestructura; no
+  se cambian fórmulas, titularidades ni ventanas de lectura. Persistir no prueba
+  conciliación, especialmente para eventos tardíos y cuentas aún no vinculadas.
+- **Publicación:** requiere ensayo integrado en base aislada y piloto Ninja,
+  servidor primero y conector después. No se usan datos reales para estas pruebas.
+  Límites, comandos, validación y reversión: `42_NINJA_V012_VALIDACION_Y_DESPLIEGUE.md`.
+
+### APP-161 - Refuerzo compatible de recepción Ninja, primera etapa
+
+- **Fecha:** 2026-10-07. Implementación local autorizada por Mauricio tras la
+  revisión externa. No publicada ni aplicada sobre datos de Producción.
+- **Alcance:** endurecer el transporte sin cambiar pantallas, selección
+  automática de cuentas, semáforos, titularidades, reglas económicas ni
+  credenciales de instalaciones existentes. No requiere actualizar el conector.
+- **Entrada acotada:** inventario (128 KiB), telemetría (256 KiB), vinculación
+  y vínculo adicional (4 KiB) aplican el límite mientras leen el cuerpo,
+  también sin Content-Length o con un tamaño subdeclarado. Se valida el tipo
+  JSON exacto y la codificación UTF-8. El heartbeat autentica antes de leer y
+  limita su cuerpo a 4 KiB, conservando compatibilidad con latidos antiguos
+  sin cuerpo/cabecera JSON. No es un sustituto de límites de frecuencia/WAF.
+- **Minimización:** se construyen inventarios y eventos exclusivamente con los
+  campos del contrato vigente antes de enrutarlos o persistirlos. Los campos
+  adicionales no se almacenan. Los IDs de propietario/destino suministrados
+  por el cliente no conceden autoridad; continúa decidiendo el servidor desde
+  el conector autenticado. Se conservan las magnitudes y la precisión recibida.
+- **Diagnóstico:** el resumen de inventario conserva sólo conteos. Ya no
+  publica nombres de conexiones, IDs de evento, fechas ni resultados internos
+  del procesamiento. El conector distribuido sólo consulta el estado HTTP
+  para estas respuestas. No se borran registros técnicos/históricos existentes.
+- **Errores:** excepciones de recepción/procesamiento responden 503 con
+  Retry-After y no-store, sin imprimir el error original ni el payload.
+  Las fallas de persistencia de cualquier destino continúan impidiendo
+  confirmar el lote. Las fechas de inventario inválidas se rechazan antes de
+  clasificación; una fecha inválida no puede hacer fallar el procesamiento.
+- **Límite importante:** el protocolo legado confirma lotes, no cada evento.
+  Esta etapa NO corrige aún la confirmación 2xx de un lote total/parcialmente
+  omitido por enrutamiento, el descarte local al superar 8 MiB, la falta de
+  recibos durables individuales ni todos los errores internos de los motores
+  que éstos expresan como resultados en lugar de excepciones. Tampoco
+  acceptedEvents equivale a cantidad de inserciones nuevas: conserva la
+  semántica anterior. No se presenta este cambio como garantía de entrega.
+- **Siguiente etapa:** diseñar recibos persistentes por evento y tratamiento
+  explícito de pendientes/exclusiones, con reintentos idempotentes; publicar
+  primero el servidor compatible y después un conector que retire únicamente
+  eventos confirmados. No convertir todos los eventos omitidos en reintentos
+  del lote legado: un broker sin titular o una recepción pausada podría
+  bloquear los primeros 50 eventos y detener la cola entera. También quedan
+  para el conector la conservación de la cola, el destino HTTPS autorizado,
+  la escritura local segura y la serialización sin redondeo fijo de precios.
+- **Verificación:** 498 pruebas en 109 archivos aprobadas, typecheck y build
+  correctos; lint sin errores y con 10 advertencias en archivos no modificados.
+  Regresiones de límites por bytes/chunks, UTF-8, compatibilidad, autenticación
+  antes de lectura, campos extra, privacidad, errores y fallas parciales.
+  Se usaron dobles de prueba, sin consultas/escrituras a la base real durante
+  esas pruebas. No hay cambios C#, migraciones SQL ni cambios de permisos/RLS.
+- **Publicación pendiente:** no hacer ensayos con escritura en Preview mientras
+  siga compartiendo la base de Producción según APP-143. Validar el despliegue
+  en un entorno separado antes de promoverlo. Esto mejora privacidad y
+  confiabilidad; no demuestra la causa del incidente Tradeify ni oculta NODAL
+  frente a herramientas antifraude.
+
 ### Recuperación segura del saldo broker previo (2026-10-05)
 
 - Una sesión técnica excluida nunca se usa para establecer continuidad contable del saldo broker: su exclusión indica precisamente que no es una fuente confiable para el libro.

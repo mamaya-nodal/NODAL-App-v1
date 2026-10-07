@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { observedNinjaFetch } from "./processing-observation";
 
 import { classifyNinjaAccount, hasApprovedAutomaticRiskRule } from "../domain/account-classification";
 import { isolatedNinjaConnectionNames, isNinjaConnectionActive } from "../domain/connection-access";
@@ -39,7 +40,7 @@ export async function processNinjaTransitions(connectorId: string, snapshot: Nin
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return { detectedChanges: 0, processed: false, reason: "not_configured" };
-  const supabase = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const supabase = createClient(url, serviceRoleKey, { global: { fetch: observedNinjaFetch }, auth: { autoRefreshToken: false, persistSession: false } });
 
   const [{ data: reviewRows, error: reviewError }, { data: storedState, error: stateError }] = await Promise.all([
     supabase.from("ninja_connector_connection_reviews").select("connection_name,status").eq("connector_id", connectorId).eq("status", "isolated"),
@@ -93,7 +94,7 @@ export async function bootstrapNinjaTransitions(connectorId: string): Promise<Tr
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return { detectedChanges: 0, processed: false, reason: "not_configured" };
-  const supabase = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const supabase = createClient(url, serviceRoleKey, { global: { fetch: observedNinjaFetch }, auth: { autoRefreshToken: false, persistSession: false } });
   const { data: existing, error: stateError } = await supabase.from("ninja_transition_states").select("connector_id").eq("connector_id", connectorId).maybeSingle();
   if (stateError) return { detectedChanges: 0, processed: false, reason: "storage_error" };
   if (existing) return { detectedChanges: 0, processed: true };
@@ -119,7 +120,7 @@ export async function refreshNinjaTransitionsFromLatestSnapshot(
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return { detectedChanges: 0, processed: false, reason: "not_configured" };
-  const supabase = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const supabase = createClient(url, serviceRoleKey, { global: { fetch: observedNinjaFetch }, auth: { autoRefreshToken: false, persistSession: false } });
   const { data: latest, error } = await supabase
     .from("ninja_inventory_snapshots")
     .select("event_id, observed_at, accounts")
@@ -149,7 +150,7 @@ export async function processNinjaOperationBurns(
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return { detectedChanges: 0, processed: false, reason: "not_configured" };
-  const supabase = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const supabase = createClient(url, serviceRoleKey, { global: { fetch: observedNinjaFetch }, auth: { autoRefreshToken: false, persistSession: false } });
   const burnSourceIds = candidates.map((operation) => `ninja-operation-burn:${operation.openingEventId}`);
   const [{ data: storedState, error }, { data: priorBurnRows, error: priorBurnError }] = await Promise.all([
     supabase.from("ninja_transition_states").select("revision,state").eq("connector_id", connectorId).maybeSingle(),

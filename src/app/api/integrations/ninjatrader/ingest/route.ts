@@ -1,6 +1,7 @@
 import {
   getNinjaSnapshotSummary,
   isNinjaInventorySnapshot,
+  normalizeNinjaInventorySnapshot,
 } from "@/modules/ninja/domain/ingestion-payload";
 import { rememberLocalNinjaSnapshot } from "@/modules/ninja/server/local-snapshot-store";
 import { persistNinjaSnapshot } from "@/modules/ninja/server/snapshot-persistence";
@@ -8,74 +9,49 @@ import { processNinjaTransitions } from "@/modules/ninja/server/transition-proce
 import { ensureNinjaBrokerBalanceBaseline } from "@/modules/ninja/server/broker-balance-processing";
 import { requireNinjaConnector } from "@/modules/ninja/server/connector-auth";
 import { routeNinjaInventory } from "@/modules/ninja/server/intake-routing";
+import { ninjaIntakeResponse as response, readNinjaJson } from "@/modules/ninja/server/intake-http";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const maximumPayloadBytes = 128 * 1024;
 
-function response(body: object, status: number) {
-  return Response.json(body, {
-    headers: { "Cache-Control": "no-store, max-age=0" },
-    status,
-  });
-}
-
 export async function POST(request: Request) {
   const connector = await requireNinjaConnector(request);
   if (connector instanceof Response) return connector;
 
-  if (!request.headers.get("content-type")?.includes("application/json")) {
-    return response({ error: "El formato recibido no es válido." }, 415);
-  }
-
-  const declaredSize = Number(request.headers.get("content-length") ?? "0");
-  if (declaredSize > maximumPayloadBytes) {
-    return response({ error: "La actualización recibida es demasiado grande." }, 413);
-  }
-
-  let payload: unknown;
-  try {
-    const body = await request.text();
-    if (Buffer.byteLength(body, "utf8") > maximumPayloadBytes) {
-      return response({ error: "La actualización recibida es demasiado grande." }, 413);
-    }
-    payload = JSON.parse(body) as unknown;
-  } catch {
-    return response({ error: "No se pudo leer la actualización de Ninja." }, 400);
-  }
-
-  if (!isNinjaInventorySnapshot(payload)) {
+  const input = await readNinjaJson(request, maximumPayloadBytes);
+  if (!input.ok) return input.response;
+  if (!isNinjaInventorySnapshot(input.payload)) {
     return response({ error: "La actualización de Ninja no cumple el formato esperado." }, 422);
   }
+  const payload = normalizeNinjaInventorySnapshot(input.payload);
 
-  const summary = getNinjaSnapshotSummary(payload);
-  const routed = await routeNinjaInventory(connector.connectorId, payload);
-  if (routed === null) return response({ error: "No se pudo resolver el destino de la señal." }, 503);
-  const results = await Promise.all(routed.map(async ({ destinationConnectorId, snapshot }) => {
-    if (process.env.NEXT_PUBLIC_APP_ENV === "local") rememberLocalNinjaSnapshot(destinationConnectorId, snapshot);
-    const persistence = await persistNinjaSnapshot(destinationConnectorId, snapshot, connector.connectorId);
-    if (!persistence.persisted) return { persistence };
-    const [transitions, brokerBaseline] = await Promise.all([
-      processNinjaTransitions(destinationConnectorId, snapshot),
-      ensureNinjaBrokerBalanceBaseline(destinationConnectorId, snapshot),
-    ]);
-    return { brokerBaseline, persistence, transitions };
-  }));
-  const accepted = results.every((result) => result.persistence.persisted);
+  try {
+    const summary = getNinjaSnapshotSummary(payload);
+    const routed = await routeNinjaInventory(connector.connectorId, payload);
+    if (routed === null) return response({ error: "No se pudo resolver el destino de la señal." }, 503);
+    const results = await Promise.all(routed.map(async ({ destinationConnectorId, snapshot }) => {
+      if (process.env.NEXT_PUBLIC_APP_ENV === "local") rememberLocalNinjaSnapshot(destinationConnectorId, snapshot);
+      const persistence = await persistNinjaSnapshot(destinationConnectorId, snapshot, connector.connectorId);
+      if (!persistence.persisted) return persistence;
+      await Promise.all([
+        processNinjaTransitions(destinationConnectorId, snapshot),
+        ensureNinjaBrokerBalanceBaseline(destinationConnectorId, snapshot),
+      ]);
+      return persistence;
+    }));
+    const accepted = results.every((result) => result.persisted);
 
-  // El inventario técnico se conserva para detección y revisión. Este receptor
-  // no crea por sí solo compras ni movimientos económicos.
-  console.info("NinjaTrader inventory received", summary);
+    // Keep operational identifiers and downstream processing details out of logs/responses.
+    console.info("NinjaTrader inventory received", summary);
 
-  return response(
-    {
-      accepted,
-      destinations: routed.length,
-      persisted: accepted,
-      summary,
-      results,
-    },
-    accepted ? 202 : 503,
-  );
+    return response(
+      { accepted, destinations: routed.length, persisted: accepted, summary },
+      accepted ? 202 : 503,
+    );
+  } catch {
+    console.error("NODAL_NINJA_INTAKE_UNAVAILABLE", { scope: "inventory" });
+    return response({ accepted: false, error: "No se pudo completar la recepción. Se reintentará." }, 503);
+  }
 }

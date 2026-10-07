@@ -38,4 +38,12 @@ describe("POST /api/integrations/ninjatrader/link", () => {
     }));
     expect(result.status).toBe(409);
   });
+
+  it("rejects null payloads as invalid input rather than infrastructure failures", async () => {
+    const result = await POST(new Request("https://app.test/link", {
+      method: "POST", body: "null", headers: { "content-type": "application/json" },
+    }));
+    expect(result.status).toBe(422);
+    expect(linkNinjaConnectorDestination).not.toHaveBeenCalled();
+  });
 });

@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.11
+// NODAL Ninja Connector v0.12 (candidate; server v2 required)
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -14,6 +14,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
+using System.Security.AccessControl;
+using System.Security.Principal;
+using System.Web.Script.Serialization;
 using NinjaTrader.Cbi;
 using NinjaTrader.Code;
 using NinjaTrader.NinjaScript;
@@ -21,12 +25,202 @@ using NinjaTrader.NinjaScript;
 
 namespace NinjaTrader.NinjaScript.AddOns
 {
+	// Pure transport/storage helper, also exercised outside NinjaTrader by the test harness.
+	internal sealed class NodalReliableTelemetry
+	{
+		internal sealed class Entry
+		{
+			public string Path;
+			public string Payload;
+			public string Hash;
+			public string Id;
+		}
+		private readonly string legacyPath;
+		private readonly string directory;
+		private readonly Func<string, string> protect;
+		private readonly Func<string, string> unprotect;
+		private bool secured;
+		private long lastWrittenTicks;
+		public NodalReliableTelemetry(string path, Func<string, string> encrypt, Func<string, string> decrypt)
+		{
+			legacyPath = path; directory = path + ".v2"; protect = encrypt; unprotect = decrypt;
+		}
+		private static JavaScriptSerializer Json() { return new JavaScriptSerializer { MaxJsonLength = 1024 * 1024, RecursionLimit = 32 }; }
+		internal static string Hash(string value)
+		{
+			using (SHA256 sha = SHA256.Create()) return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(value))).Replace("-", "").ToLowerInvariant();
+		}
+		internal static bool IsAllowedOrigin(string value)
+		{
+			Uri uri;
+			return Uri.TryCreate(value, UriKind.Absolute, out uri) && uri.Scheme == "https" && uri.Port == 443
+				&& string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.Fragment)
+				&& uri.AbsolutePath == "/" && (uri.Host == "app.nodaltrading.com" || uri.Host == "nodal-app-preview.vercel.app");
+		}
+		private IDisposable Lock()
+		{
+			Directory.CreateDirectory(directory);
+			if (!secured) {
+				DirectorySecurity acl = new DirectorySecurity();
+				acl.SetAccessRuleProtection(true, false);
+				InheritanceFlags inherit = InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit;
+				acl.AddAccessRule(new FileSystemAccessRule(WindowsIdentity.GetCurrent().User, FileSystemRights.FullControl, inherit, PropagationFlags.None, AccessControlType.Allow));
+				acl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null), FileSystemRights.FullControl, inherit, PropagationFlags.None, AccessControlType.Allow));
+				Directory.SetAccessControl(directory, acl);
+				secured = true;
+			}
+			for (int i = 0; ; i++) {
+				try { return new FileStream(System.IO.Path.Combine(directory, ".lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+				catch (IOException) { if (i >= 50) throw; Thread.Sleep(20); }
+			}
+		}
+		private void WriteNew(string path, string value)
+		{
+			if (File.Exists(path)) return;
+			string tmp = path + ".tmp." + Guid.NewGuid().ToString("N");
+			byte[] bytes = Encoding.UTF8.GetBytes(value);
+			// Interrupted temporary writes are never treated as committed events.
+			using (FileStream stream = new FileStream(tmp, FileMode.CreateNew, FileAccess.Write, FileShare.None)) {
+				stream.Write(bytes, 0, bytes.Length); stream.Flush(true);
+			}
+			File.Move(tmp, path);
+			// Keep source order even when the system clock has a coarse resolution.
+			lastWrittenTicks = Math.Max(DateTime.UtcNow.Ticks, lastWrittenTicks + 10);
+			File.SetLastWriteTimeUtc(path, new DateTime(lastWrittenTicks, DateTimeKind.Utc));
+		}
+		private static string EventId(string payload)
+		{
+			if (string.IsNullOrWhiteSpace(payload) || Encoding.UTF8.GetByteCount(payload) > 8192) throw new InvalidDataException("Invalid event");
+			Dictionary<string, object> data = Json().DeserializeObject(payload) as Dictionary<string, object>;
+			object id;
+			if (data == null || !data.TryGetValue("eventId", out id) || !(id is string)
+				|| ((string)id).Length == 0 || ((string)id).Length > 160) throw new InvalidDataException("Invalid event ID");
+			foreach (string key in new[] { "occurredAt", "accountName", "connectionName", "providerName", "kind" }) RequireText(data, key);
+			DateTimeOffset occurred;
+			if (!DateTimeOffset.TryParse((string)data["occurredAt"], CultureInfo.InvariantCulture, DateTimeStyles.None, out occurred)) throw new InvalidDataException("Invalid date");
+			string kind = (string)data["kind"];
+			if (kind == "balance") {
+				foreach (string key in new[] { "cashValue", "netLiquidation", "totalCashBalance", "realizedProfitLoss", "unrealizedProfitLoss" }) RequireNumber(data, key, true);
+			} else if (kind == "position" || kind == "execution") {
+				RequireText(data, "instrument"); RequireText(data, "marketPosition");
+				double quantity = RequireNumber(data, "quantity", false);
+				if (quantity != Math.Truncate(quantity) || quantity < (kind == "execution" ? 1 : 0)) throw new InvalidDataException("Invalid quantity");
+				RequireNumber(data, kind == "execution" ? "price" : "averagePrice", false);
+				if (kind == "execution") foreach (string key in new[] { "executionId", "orderId", "orderAction" }) RequireText(data, key);
+			} else throw new InvalidDataException("Invalid kind");
+			return (string)id;
+		}
+		private static void RequireText(Dictionary<string, object> data, string key)
+		{
+			object value;
+			if (!data.TryGetValue(key, out value) || !(value is string) || ((string)value).Length < 1 || ((string)value).Length > 160) throw new InvalidDataException("Invalid text");
+		}
+		private static double RequireNumber(Dictionary<string, object> data, string key, bool nullable)
+		{
+			object value;
+			if (!data.TryGetValue(key, out value)) throw new InvalidDataException("Missing number");
+			if (nullable && value == null) return 0;
+			if (!(value is int || value is long || value is decimal || value is double || value is float)) throw new InvalidDataException("Invalid number");
+			double number = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+			if (double.IsNaN(number) || double.IsInfinity(number)) throw new InvalidDataException("Invalid number");
+			return number;
+		}
+		private void MigrateLegacy()
+		{
+			string marker = System.IO.Path.Combine(directory, ".legacy-imported");
+			if (File.Exists(marker) || !File.Exists(legacyPath)) return;
+			// Source remains intact. A crash retries the same content-addressed imports.
+			foreach (string line in File.ReadLines(legacyPath)) {
+				if (string.IsNullOrWhiteSpace(line)) continue;
+				string payload = null;
+				bool valid;
+				try { payload = unprotect(line); EventId(payload); valid = true; } catch { valid = false; }
+				string path = System.IO.Path.Combine(directory, (valid ? Hash(payload) + ".event" : Hash(line) + ".quarantine"));
+				WriteNew(path, line);
+			}
+			WriteNew(marker, "Legacy import complete; original queue retained.");
+		}
+		public void Append(string payload)
+		{
+			bool valid;
+			try { EventId(payload); valid = true; } catch { valid = false; }
+			using (Lock()) {
+				MigrateLegacy();
+				WriteNew(System.IO.Path.Combine(directory, Hash(payload) + (valid ? ".event" : ".quarantine")), protect(payload));
+			}
+		}
+		public int QuarantineCount { get { return Directory.Exists(directory) ? Directory.GetFiles(directory, "*.quarantine").Length : 0; } }
+		public List<Entry> Peek(int limit)
+		{
+			using (Lock()) {
+				MigrateLegacy();
+				List<Entry> entries = new List<Entry>();
+				HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);
+				foreach (string path in Directory.GetFiles(directory, "*.event").OrderBy(File.GetLastWriteTimeUtc).ThenBy(p => p, StringComparer.Ordinal)) {
+					Entry entry;
+					try {
+						string payload = unprotect(File.ReadAllText(path, Encoding.UTF8));
+						string id = EventId(payload);
+						string hash = Hash(payload);
+						if (System.IO.Path.GetFileName(path) != hash + ".event") throw new InvalidDataException("Hash mismatch");
+						entry = new Entry { Path = path, Payload = payload, Hash = hash, Id = id };
+					} catch {
+						File.Move(path, path + "." + Guid.NewGuid().ToString("N") + ".quarantine");
+						continue;
+					}
+					// Conflicting IDs are sent on separate attempts, never silently merged.
+					if (!ids.Add(entry.Id)) continue;
+					entries.Add(entry);
+					if (entries.Count >= limit) break;
+				}
+				return entries;
+			}
+		}
+		public static string BuildBatch(string batchId, List<Entry> entries)
+		{
+			return Json().Serialize(new { protocol = 2, batchId = batchId,
+				events = entries.Select(e => new { payload = e.Payload, sha256 = e.Hash }).ToArray() });
+		}
+		public int ApplyReceipts(string batchId, List<Entry> entries, string response)
+		{
+			Dictionary<string, object> root = Json().DeserializeObject(response) as Dictionary<string, object>;
+			object protocol; object returnedBatch; object receiptsValue;
+			if (root == null || !root.TryGetValue("protocol", out protocol) || !(protocol is int) || (int)protocol != 2
+				|| !root.TryGetValue("batchId", out returnedBatch) || !Equals(returnedBatch, batchId)
+				|| !root.TryGetValue("receipts", out receiptsValue) || !(receiptsValue is object[])) throw new InvalidDataException("Unconfirmed response");
+			object[] receipts = (object[])receiptsValue;
+			if (receipts.Length != entries.Count) throw new InvalidDataException("Incomplete receipts");
+			Dictionary<string, string> decisions = new Dictionary<string, string>(StringComparer.Ordinal);
+			foreach (object item in receipts) {
+				Dictionary<string, object> receipt = item as Dictionary<string, object>;
+				object id; object hash; object status;
+				if (receipt == null || !receipt.TryGetValue("eventId", out id) || !(id is string)
+					|| !receipt.TryGetValue("sha256", out hash) || !(hash is string)
+					|| !receipt.TryGetValue("status", out status) || !(status is string)) throw new InvalidDataException("Invalid receipt");
+				Entry entry = entries.SingleOrDefault(e => e.Id == (string)id && e.Hash == (string)hash);
+				if (entry == null || decisions.ContainsKey(entry.Id)
+					|| !new[] { "persisted", "excluded", "pending", "conflict" }.Contains((string)status)) throw new InvalidDataException("Unknown receipt");
+				decisions.Add(entry.Id, (string)status);
+			}
+			int acknowledged = 0;
+			using (Lock()) foreach (Entry entry in entries) {
+				if (!File.Exists(entry.Path)) continue;
+				if (Hash(unprotect(File.ReadAllText(entry.Path, Encoding.UTF8))) != entry.Hash) throw new InvalidDataException("Queue changed");
+				string status = decisions[entry.Id];
+				if (status == "persisted" || status == "excluded") { File.Delete(entry.Path); acknowledged++; }
+				else if (status == "conflict") File.Move(entry.Path, entry.Path + "." + Guid.NewGuid().ToString("N") + ".quarantine");
+				else File.SetLastWriteTimeUtc(entry.Path, DateTime.UtcNow); // Round-robin: pending never blocks newer events.
+			}
+			return acknowledged;
+		}
+	}
+
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.11";
+		private const string ConnectorVersion = "0.12";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
-		private static readonly HttpClient Http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+		private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10), MaxResponseContentBufferSize = 1024 * 1024 };
 		private readonly HashSet<Account> subscribedAccounts = new HashSet<Account>();
 		private readonly SemaphoreSlim authorizationLock = new SemaphoreSlim(1, 1);
 		private readonly SemaphoreSlim telemetryFlushLock = new SemaphoreSlim(1, 1);
@@ -45,6 +239,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 		private bool heartbeatWasHealthy;
 		private bool terminated;
 		private string telemetryQueuePath;
+		private NodalReliableTelemetry telemetry;
 
 		protected override void OnStateChange()
 		{
@@ -58,6 +253,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 				terminated = false;
 				settings = ConnectorSettings.Load();
 				telemetryQueuePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "NinjaTrader 8", "NODAL", TelemetryQueueFileName);
+				telemetry = new NodalReliableTelemetry(telemetryQueuePath, ConnectorSettings.ProtectTelemetry, ConnectorSettings.UnprotectTelemetry);
 				if (!settings.HasBaseUrl)
 				{
 					Write("CONFIGURACION_PENDIENTE|Ejecutá la configuración de NODAL con el código temporal mostrado en la app.");
@@ -250,20 +446,13 @@ namespace NinjaTrader.NinjaScript.AddOns
 		{
 			try
 			{
-				lock (telemetryFileLock)
-				{
-					Directory.CreateDirectory(Path.GetDirectoryName(telemetryQueuePath));
-					File.AppendAllText(telemetryQueuePath, ConnectorSettings.ProtectTelemetry(eventJson) + Environment.NewLine, Encoding.UTF8);
-					FileInfo queue = new FileInfo(telemetryQueuePath);
-					if (queue.Length > 8 * 1024 * 1024)
-					{
-						string[] lines = File.ReadAllLines(telemetryQueuePath);
-						File.WriteAllLines(telemetryQueuePath, lines.Skip(Math.Max(0, lines.Length - 5000)), Encoding.UTF8);
-					}
-				}
+				telemetry.Append(eventJson);
 				QueueTelemetryFlush();
 			}
-			catch (Exception exception) { Write("TELEMETRIA_COLA_ERROR|" + exception.GetType().Name); }
+			catch (Exception exception) {
+				lock (telemetryFileLock) { lastBalanceFingerprint.Clear(); lastBalanceSampleUtc.Clear(); }
+				Write("TELEMETRIA_CAPTURA_ERROR|No se pudo guardar un evento. Revisar disco y permisos antes de continuar. Los pendientes anteriores se conservan.|" + exception.GetType().Name);
+			}
 		}
 
 		private void QueueTelemetryFlush()
@@ -277,38 +466,26 @@ namespace NinjaTrader.NinjaScript.AddOns
 			if (!await telemetryFlushLock.WaitAsync(0)) return;
 			try
 			{
-				List<string> protectedLines;
-				List<string> events;
-				lock (telemetryFileLock)
-				{
-					protectedLines = File.Exists(telemetryQueuePath)
-						? File.ReadAllLines(telemetryQueuePath).Where(line => !string.IsNullOrWhiteSpace(line)).Take(50).ToList()
-						: new List<string>();
-					events = protectedLines.Select(ConnectorSettings.UnprotectTelemetry).Where(value => !string.IsNullOrWhiteSpace(value)).ToList();
-				}
+				List<NodalReliableTelemetry.Entry> events = telemetry.Peek(50);
+				if (telemetry.QuarantineCount > 0) Write("TELEMETRIA_REVISION|Hay eventos conservados en cuarentena. Contactar soporte; no fueron descartados.");
 				if (events.Count == 0) return;
-
-				string payload = "{\"kind\":\"trade_telemetry_batch\",\"batchId\":\""
-					+ Guid.NewGuid().ToString("N") + "\",\"observedAt\":\""
-					+ DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture) + "\",\"events\":["
-					+ string.Join(",", events) + "]}";
-				using (HttpResponseMessage response = await SendAuthorizedAsync("/api/integrations/ninjatrader/telemetry", payload))
+				string batchId = Guid.NewGuid().ToString("N");
+				string payload = NodalReliableTelemetry.BuildBatch(batchId, events);
+				// JSON escaping can enlarge an envelope. Split, never discard oversized batches.
+				while (Encoding.UTF8.GetByteCount(payload) > 480 * 1024 && events.Count > 1) {
+					events.RemoveAt(events.Count - 1);
+					payload = NodalReliableTelemetry.BuildBatch(batchId, events);
+				}
+				int acknowledged = 0;
+				using (HttpResponseMessage response = await SendAuthorizedAsync("/api/integrations/ninjatrader/telemetry/v2", payload))
 				{
 					if (response == null || !response.IsSuccessStatusCode) return;
+					acknowledged = telemetry.ApplyReceipts(batchId, events, await response.Content.ReadAsStringAsync());
 				}
-
-				lock (telemetryFileLock)
-				{
-					List<string> remaining = File.Exists(telemetryQueuePath) ? File.ReadAllLines(telemetryQueuePath).ToList() : new List<string>();
-					foreach (string sent in protectedLines)
-					{
-						int index = remaining.IndexOf(sent);
-						if (index >= 0) remaining.RemoveAt(index);
-					}
-					File.WriteAllLines(telemetryQueuePath, remaining, Encoding.UTF8);
-				}
-				Write("TELEMETRIA_OK|eventos=" + events.Count.ToString(CultureInfo.InvariantCulture));
-				QueueTelemetryFlush();
+				Write("TELEMETRIA_CONFIRMADA|eventos=" + acknowledged.ToString(CultureInfo.InvariantCulture));
+				if (telemetry.QuarantineCount > 0) Write("TELEMETRIA_REVISION|Hay eventos conservados en cuarentena. Contactar soporte; no fueron descartados.");
+				// Heartbeat retries pending events; avoid a tight loop on unresolved routes.
+				if (acknowledged > 0) Task.Run(async () => { await Task.Delay(1000); QueueTelemetryFlush(); });
 			}
 			catch (Exception exception) { Write("TELEMETRIA_ERROR|" + exception.GetType().Name); }
 			finally { telemetryFlushLock.Release(); }
@@ -543,6 +720,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		private async Task<HttpResponseMessage> PostAsync(string path, string payload, string bearer)
 		{
+			if (!NodalReliableTelemetry.IsAllowedOrigin(settings.BaseUrl)) throw new InvalidOperationException("Destino NODAL no autorizado.");
 			using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, settings.BaseUrl.TrimEnd('/') + path))
 			{
 				if (!string.IsNullOrWhiteSpace(bearer)) request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearer);
@@ -636,7 +814,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 		{
 			return double.IsNaN(value) || double.IsInfinity(value)
 				? "null"
-				: value.ToString("0.00", CultureInfo.InvariantCulture);
+				: value.ToString("R", CultureInfo.InvariantCulture);
 		}
 
 		private static string ConnectionName(Account account)
@@ -656,7 +834,8 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		private static string Escape(string value)
 		{
-			return (value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n");
+			string json = new JavaScriptSerializer().Serialize(value ?? string.Empty);
+			return json.Substring(1, json.Length - 2);
 		}
 
 		private static void Write(string message)
@@ -678,7 +857,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			public DateTime RefreshExpiresAtUtc { get; private set; }
 
 			private ConnectorSettings(string configPath) { path = configPath; }
-			public bool HasBaseUrl { get { return !string.IsNullOrWhiteSpace(BaseUrl); } }
+			public bool HasBaseUrl { get { return NodalReliableTelemetry.IsAllowedOrigin(BaseUrl); } }
 			public bool HasPairingCode { get { return !string.IsNullOrWhiteSpace(PairingCode); } }
 			public bool HasFreshAccess { get { return !string.IsNullOrWhiteSpace(AccessToken) && AccessExpiresAtUtc > DateTime.UtcNow.AddMinutes(1); } }
 			public bool HasRefresh { get { return !string.IsNullOrWhiteSpace(RefreshToken) && RefreshExpiresAtUtc > DateTime.UtcNow.AddMinutes(1); } }

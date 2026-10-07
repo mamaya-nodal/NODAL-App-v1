@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { observedNinjaFetch } from "./processing-observation";
 
 import { roundLikeSheets } from "@/modules/control-diario/domain/result-allocation";
 import { correlateAutomaticOperationBatches, countBrokerContextProps } from "../domain/automatic-operation-batch";
@@ -73,6 +74,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return { persistedBatches: 0 };
   const supabase = createClient(url, serviceRoleKey, {
+    global: { fetch: observedNinjaFetch },
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const aggregateBrokerBalance = await usesAggregateBrokerBalance(supabase, connectorId);

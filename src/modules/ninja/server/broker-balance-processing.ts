@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { observedNinjaFetch } from "./processing-observation";
 
 import { extractNinjaBrokerBalance } from "../domain/broker-balance-event";
 import { isolatedNinjaConnectionNames } from "../domain/connection-access";
@@ -24,6 +25,7 @@ export async function processNinjaBrokerBalance(
   }
 
   const supabase = createClient(url, serviceRoleKey, {
+    global: { fetch: observedNinjaFetch },
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const { data: reviewRows, error: reviewError } = await supabase
@@ -81,6 +83,7 @@ export async function ensureNinjaBrokerBalanceBaseline(
     return { created: false, processed: false, reason: "not_configured" };
   }
   const supabase = createClient(url, serviceRoleKey, {
+    global: { fetch: observedNinjaFetch },
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const { data, error } = await supabase
@@ -108,6 +111,7 @@ export async function recordNinjaBrokerOperationBalance(args: Readonly<{
     return { created: false, processed: false, reason: "not_configured" };
   }
   const supabase = createClient(url, serviceRoleKey, {
+    global: { fetch: observedNinjaFetch },
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const sourceEventId = `ninja-operation:${args.openingEventId}`;
@@ -147,6 +151,7 @@ export async function bootstrapNinjaBrokerBalance(
   }
 
   const supabase = createClient(url, serviceRoleKey, {
+    global: { fetch: observedNinjaFetch },
     auth: { autoRefreshToken: false, persistSession: false },
   });
   // A physical installation with additional accounting destinations is only

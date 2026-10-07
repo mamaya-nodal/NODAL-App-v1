@@ -34,4 +34,13 @@ describe("POST /api/integrations/ninjatrader/pair", () => {
     }));
     expect(result.status).toBe(401);
   });
+
+  it("rechaza entradas excesivas antes de consultar códigos", async () => {
+    const result = await POST(new Request("https://app.test/pair", {
+      method: "POST", body: JSON.stringify({ code: "x".repeat(4096) }),
+      headers: { "content-type": "application/json" },
+    }));
+    expect(result.status).toBe(413);
+    expect(pairNinjaConnector).not.toHaveBeenCalled();
+  });
 });
