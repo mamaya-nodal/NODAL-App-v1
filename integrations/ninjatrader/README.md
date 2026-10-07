@@ -59,6 +59,12 @@ el conector sólo retira de su cola local aquello que recibió una confirmación
 definitiva. Una interrupción conserva los eventos para reintentarlos sin crear
 duplicados. La versión 0.11 continúa siendo compatible durante la transición.
 
+La versión 0.13 corrige la reinstalación posterior a una baja. `INSTALAR-NODAL`
+descarta la sesión técnica anterior antes de preparar el código nuevo, sin
+borrar la cola, los respaldos ni el historial. Si una credencial revocada quedó
+en una instalación ya preparada, el complemento la abandona y continúa con el
+código nuevo después de recibir el rechazo definitivo del servidor.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.

@@ -1,5 +1,17 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-166 - Reinstalación no bloqueada por una sesión Ninja revocada
+
+- **Fecha:** 2026-10-07.
+- **Hallazgo:** 0.12 conservaba la credencial anterior al ejecutar una
+  instalación nueva. Si esa credencial había sido revocada, intentaba renovarla
+  antes de canjear el código nuevo y repetía el rechazo indefinidamente.
+- **Decisión:** publicar 0.13. `INSTALAR-NODAL` elimina sólo la sesión técnica
+  anterior; `ACTUALIZAR-NODAL` conserva la sesión para permitir vínculos
+  adicionales. Como defensa, un rechazo definitivo seguido de un código nuevo
+  descarta la sesión y continúa con el canje en el mismo ciclo.
+- **Conservación:** no se borran cola, respaldos, eventos ni historial.
+
 ### APP-165 - La baja de acceso invalida el conector del ciclo anterior
 
 - **Fecha:** 2026-10-07.

@@ -55,6 +55,14 @@ describe("Ninja connector source", () => {
     expect(connectorSource).toContain("VINCULO_ADICIONAL_DESCARTADO");
   });
 
+  it("una reinstalación no queda bloqueada por la sesión revocada anterior", () => {
+    expect(connectorInstaller).toContain("RefreshTokenProtected");
+    expect(connectorInstaller).toContain("if ($UpdateOnly)");
+    expect(connectorSource).toContain("response.StatusCode == HttpStatusCode.Unauthorized && settings.HasPairingCode");
+    expect(connectorSource).toContain("settings.ClearSession()");
+    expect(connectorSource).toContain("SESION_ANTERIOR_DESCARTADA");
+  });
+
   it("evita la colisión entre el estado de cuenta y el enum de NinjaTrader", () => {
     expect(connectorSource).toContain(
       "account.Connection.Status == NinjaTrader.Cbi.ConnectionStatus.Connected",

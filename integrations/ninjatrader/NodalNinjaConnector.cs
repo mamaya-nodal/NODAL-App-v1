@@ -217,7 +217,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.12";
+		private const string ConnectorVersion = "0.13";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10), MaxResponseContentBufferSize = 1024 * 1024 };
@@ -637,10 +637,18 @@ namespace NinjaTrader.NinjaScript.AddOns
 					{
 						if (response.IsSuccessStatusCode && await ApplySessionAsync(response, false))
 							return settings.HasPairingCode ? await LinkAdditionalDestinationAsync() : true;
+						if (response.StatusCode == HttpStatusCode.Unauthorized && settings.HasPairingCode)
+						{
+							settings.ClearSession();
+							Write("SESION_ANTERIOR_DESCARTADA|La credencial anterior fue revocada. Se continuará con el código nuevo.");
+						}
+						else
+						{
 						Write(response.StatusCode == HttpStatusCode.Unauthorized
 							? "AUTORIZACION_RECHAZADA|La sesión venció o fue revocada. Los registros y la configuración se conservan."
 							: "RENOVACION_PENDIENTE|NODAL no confirmó la renovación. Se reintentará conservando la vinculación. HTTP=" + (int)response.StatusCode);
 						return false;
+						}
 					}
 				}
 
@@ -918,6 +926,16 @@ namespace NinjaTrader.NinjaScript.AddOns
 			{
 				AccessToken = string.Empty;
 				AccessExpiresAtUtc = DateTime.MinValue;
+				Save();
+			}
+
+			public void ClearSession()
+			{
+				ConnectorId = string.Empty;
+				AccessToken = string.Empty;
+				AccessExpiresAtUtc = DateTime.MinValue;
+				RefreshToken = string.Empty;
+				RefreshExpiresAtUtc = DateTime.MinValue;
 				Save();
 			}
 

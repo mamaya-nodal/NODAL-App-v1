@@ -108,7 +108,15 @@ New-Item -ItemType Directory -Force -Path $addOnDirectory | Out-Null
 if (Test-Path -LiteralPath $connectorConfigPath) {
   Copy-Item -LiteralPath $connectorConfigPath -Destination ($connectorConfigPath + ".before-pairing.bak") -Force
   $existingLines = Get-Content -LiteralPath $connectorConfigPath
-  $keptLines = @($existingLines | Where-Object { $_ -notmatch '^(BaseUrl|PairingCode|InstalledSourceVersion)=' })
+  # INSTALAR inicia un ciclo de vinculación nuevo. Conserva cola, respaldos y
+  # preferencias, pero no una sesión técnica que pudo haber sido revocada.
+  # ACTUALIZAR con código conserva la sesión porque agrega otro destino.
+  $replacedKeys = if ($UpdateOnly) {
+    '^(BaseUrl|PairingCode|InstalledSourceVersion)='
+  } else {
+    '^(BaseUrl|PairingCode|InstalledSourceVersion|ConnectorId|AccessTokenProtected|AccessExpiresAtUtc|RefreshTokenProtected|RefreshExpiresAtUtc)='
+  }
+  $keptLines = @($existingLines | Where-Object { $_ -notmatch $replacedKeys })
   Write-ConfigAtomic -ConfigPath $connectorConfigPath -Lines (@(
     "BaseUrl=$normalizedBaseUrl"
     "PairingCode=$normalizedCode"
