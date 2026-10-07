@@ -1,5 +1,21 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-165 - La baja de acceso invalida el conector del ciclo anterior
+
+- **Fecha:** 2026-10-07.
+- **Hallazgo:** una baja cambiaba `nodal_users.access_state`, pero dejaba activo
+  el conector Ninja. Si el usuario pedía reactivación y era aprobado otra vez,
+  la aplicación reutilizaba esa credencial histórica y omitía la instalación.
+- **Decisión:** toda transición a acceso revocado invalida conectores activos y
+  vence códigos de vinculación pendientes. Una aprobación posterior conserva
+  la cuenta y su historial, pero exige un vínculo nuevo antes de reconstruir.
+- **Reparación:** revocar conectores activos cuya fecha de vinculación sea
+  anterior o igual a la última baja auditada del usuario. No se eliminan
+  inventarios, operaciones, cuentas ni registros contables.
+- **Aplicación:** migración `20261007190000` ejecutada y registrada en
+  producción. Resultado: disparador instalado, tres conectores históricos
+  reparados y cero conectores obsoletos todavía activos.
+
 ### APP-164 - Publicación general del conector 0.12 con transición compatible
 
 - **Fecha:** 2026-10-07.
