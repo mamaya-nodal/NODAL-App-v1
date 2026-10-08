@@ -1,5 +1,18 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-174 - Lista inicial cerrada para Identidades
+
+- **Fecha:** 2026-10-08. Alcance corregido por Mauricio.
+- **Habilitados iniciales:** Mauricio (cuenta personal), Ivo Pirrone, Alfred
+  (perfil `SB Digitalmarkets`) y Julián Agustín Seco conservan Identidades.
+- **Resto de la base:** todos los demás perfiles, activos o revocados, pasan a
+  `identities_enabled = false`, incluidos Nicolás y Lorena. El cambio se registra
+  individualmente en el historial de gestión.
+- **Altas futuras:** APP-172 y APP-173 mantienen la opción deshabilitada al crear,
+  aprobar o reactivar una cuenta. La lista no es una excepción permanente por
+  nombre: cualquier habilitación posterior debe realizarse explícitamente desde
+  Admin o Admin Master y queda auditada.
+
 ### APP-173 - Las altas futuras reinician explícitamente el acceso a Identidades
 
 - **Fecha:** 2026-10-08. Regla aclarada por Mauricio después del alta de Julián
