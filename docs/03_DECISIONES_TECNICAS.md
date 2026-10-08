@@ -1,5 +1,22 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-171 - Nivel automático según rol vigente
+
+- **Fecha:** 2026-10-08. Regla confirmada por Mauricio para conservar el nivel
+  visible en Inicio sin gestión manual ni promociones por rendimiento.
+- **Mapeo determinista:** `Usuario` corresponde a Nivel 1, `Admin` a Nivel 2 y
+  `Admin Master` a Nivel 3. Admin Master mantiene además la capacidad de
+  administrar una mesa; autorización global y propiedad de mesa siguen siendo
+  relaciones separadas en el almacenamiento.
+- **Aplicación:** cualquier cambio de rol actualiza el nivel del período vigente
+  en la misma transacción. La baja a Usuario restablece Nivel 1 sólo después de
+  comprobar que la mesa no tenga personas o mesas dependientes.
+- **Economía:** el nivel no asigna porcentajes. El acuerdo de operaciones propias
+  y el porcentaje de mesa continúan siendo datos separados y explícitos.
+- **Trazabilidad:** el historial de gestión conserva actor, rol y nivel anterior,
+  rol y nivel resultante, mesa y porcentaje. No se utiliza la facturación para
+  elevar permisos automáticamente.
+
 ### APP-170 - Lectura autorizada de cuentas pendientes durante la apertura
 
 - **Fecha:** 2026-10-08. Corrección del error de carga introducido al publicar APP-169.

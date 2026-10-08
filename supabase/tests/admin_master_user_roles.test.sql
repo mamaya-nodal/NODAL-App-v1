@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(5);
+select plan(8);
 
 select has_function(
   'public',
@@ -33,6 +33,24 @@ select like(
   pg_get_functiondef('public.admin_update_nodal_user_role(uuid,text,integer)'::regprocedure),
   '%SELF_MASTER_REMOVAL_FORBIDDEN%',
   'Admin Master cannot remove their own global access'
+);
+
+select like(
+  pg_get_functiondef('public.admin_update_nodal_user_role(uuid,text,integer)'::regprocedure),
+  $$%when 'user' then 1%$$,
+  'Usuario maps deterministically to level 1'
+);
+
+select like(
+  pg_get_functiondef('public.admin_update_nodal_user_role(uuid,text,integer)'::regprocedure),
+  $$%when 'admin' then 2%$$,
+  'Admin maps deterministically to level 2'
+);
+
+select like(
+  pg_get_functiondef('public.admin_update_nodal_user_role(uuid,text,integer)'::regprocedure),
+  $$%when 'admin_master' then 3%$$,
+  'Admin Master maps deterministically to level 3'
 );
 
 select * from finish();
