@@ -360,7 +360,7 @@
 }
 .master-user-modal .desk-user-fields :is(input, select) { min-height: 44px; }
 .master-user-modal .desk-user-fields select:disabled { opacity: .72; }
-.master-user-modal .desk-user-switches > article {
+.master-user-modal .desk-user-switches > :is(article, label) {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -371,8 +371,8 @@
   border-radius: 13px;
   background: var(--app-input, var(--app-bg));
 }
-.master-user-modal .desk-user-switches article:last-child span { display: grid; }
-.master-user-modal .desk-user-switches article:last-child strong { text-align: right; }
+.master-user-modal .desk-user-switches label span { display: grid; }
+.master-user-modal .desk-user-switches label select { min-width: 140px; }
 .master-user-modal .primary-action { display: inline-flex; align-items: center; text-decoration: none; }
 .master-user-modal > footer { align-items: center; flex-wrap: wrap; margin-top: 20px; }
 .master-user-modal > footer :is(.primary-action, .secondary-action) {

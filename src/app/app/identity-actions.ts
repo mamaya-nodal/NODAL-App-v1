@@ -20,8 +20,16 @@ function isUuid(value: string) {
 async function authenticatedClient() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  return { supabase, user };
+  const { data: profile } = user
+    ? await supabase.from("nodal_users").select("identities_enabled").eq("id", user.id).maybeSingle()
+    : { data: null };
+  return { identitiesEnabled: profile?.identities_enabled === true, supabase, user };
 }
+
+const identitiesDisabled = (): ActionResult => ({
+  message: "Identidades todavía no fue habilitada por un administrador.",
+  ok: false,
+});
 
 function applicationUrl() {
   const configured = process.env.NODAL_APP_BASE_URL?.trim();
@@ -32,8 +40,9 @@ function applicationUrl() {
 
 export async function sendIdentityConnectorInstallation(identityId: string): Promise<ActionResult> {
   if (!isUuid(identityId)) return { ok: false, message: "La identidad no es válida." };
-  const { supabase, user } = await authenticatedClient();
+  const { identitiesEnabled, supabase, user } = await authenticatedClient();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
 
   const token = randomBytes(32).toString("hex");
   const tokenHash = createHash("sha256").update(token).digest("hex");
@@ -86,8 +95,9 @@ export async function createIdentityDirectly(input: Readonly<{
   if (!isUuid(input.workspaceId) || !identity) {
     return { ok: false, message: "Ingresá nombre completo y un correo válido." };
   }
-  const { supabase, user } = await authenticatedClient();
+  const { identitiesEnabled, supabase, user } = await authenticatedClient();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
   const { error } = await supabase.rpc("create_nodal_identity_direct", {
     target_email: identity.email,
     target_first_name: identity.firstName,
@@ -108,8 +118,9 @@ export async function createIdentityDirectly(input: Readonly<{
 
 export async function assignIdentityAccount(identityId: string, accountId: string): Promise<ActionResult> {
   if (!isUuid(identityId) || !isUuid(accountId)) return { ok: false, message: "La identidad o la cuenta no son válidas." };
-  const { supabase, user } = await authenticatedClient();
+  const { identitiesEnabled, supabase, user } = await authenticatedClient();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
   const { error } = await supabase.rpc("assign_nodal_account_identity", {
     target_account_id: accountId,
     target_identity_id: identityId,
@@ -121,8 +132,9 @@ export async function assignIdentityAccount(identityId: string, accountId: strin
 
 export async function unassignIdentityAccount(identityId: string, accountId: string): Promise<ActionResult> {
   if (!isUuid(identityId) || !isUuid(accountId)) return { ok: false, message: "La identidad o la cuenta no son válidas." };
-  const { supabase, user } = await authenticatedClient();
+  const { identitiesEnabled, supabase, user } = await authenticatedClient();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
   const { error } = await supabase.rpc("unassign_nodal_account_identity", {
     target_account_id: accountId,
     target_identity_id: identityId,
@@ -135,8 +147,9 @@ export async function unassignIdentityAccount(identityId: string, accountId: str
 
 export async function setIdentitySignal(identityId: string, enabled: boolean): Promise<ActionResult> {
   if (!isUuid(identityId)) return { ok: false, message: "La identidad no es válida." };
-  const { supabase, user } = await authenticatedClient();
+  const { identitiesEnabled, supabase, user } = await authenticatedClient();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
   const { error } = await supabase.rpc("set_ninja_identity_signal", {
     target_enabled: enabled,
     target_identity_id: identityId,
@@ -167,8 +180,9 @@ export async function updateIdentityOperationalStatus(
   if (!isUuid(identityId) || !identityOperationalStatuses.has(status)) {
     return { ok: false, message: "El estado elegido no es válido." };
   }
-  const { supabase, user } = await authenticatedClient();
+  const { identitiesEnabled, supabase, user } = await authenticatedClient();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
   const { error } = await supabase.rpc("update_nodal_identity_operational_status", {
     target_identity_id: identityId,
     target_status: status,

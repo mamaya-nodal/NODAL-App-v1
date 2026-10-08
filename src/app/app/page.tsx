@@ -217,7 +217,7 @@ async function renderPrivateAppPage({
 
   const { data: nodalUser, error: accessError } = await readWithRetry(() => supabase
     .from("nodal_users")
-    .select("id, email, display_name, access_state, access_role")
+    .select("id, email, display_name, access_state, access_role, identities_enabled")
     .eq("id", userId)
     .maybeSingle());
 
@@ -1245,7 +1245,7 @@ async function renderPrivateAppPage({
             <a href="#cuentas">Cuentas</a>
             <a href="#operaciones">Operaciones</a>
             <a href="#contabilidad">Contabilidad</a>
-            <a href="#identidades">Identidades</a>
+            {nodalUser?.identities_enabled ? <a href="#identidades">Identidades</a> : null}
             {canOpenDeskAdmin(administrationScope) ? <Link href="/app/mi-mesa">Admin</Link> : null}
             {canOpenMasterAdmin(administrationScope) ? <Link href="/app/admin">Admin Master</Link> : null}
             <form action="/auth/logout" className="logout-form" method="post">
@@ -1454,7 +1454,7 @@ async function renderPrivateAppPage({
             })}
             economicTrace={economicTrace}
             embedded
-            identities={walletIdentities}
+            identities={nodalUser?.identities_enabled ? walletIdentities : []}
             hasPendingNinjaOperation={hasPendingNinjaOperation}
             liveBrokerBalance={liveNinjaBrokerBalance}
             periodId={selection.period.id}
@@ -1469,7 +1469,7 @@ async function renderPrivateAppPage({
         </section>
       )}
 
-      {allowed && selection?.period && (
+      {allowed && nodalUser?.identities_enabled && selection?.period && (
         <IdentitiesWorkspace
           accounts={identityAccounts}
           connectors={ninjaConnectors.filter((connector) => connector.identityId !== null)}

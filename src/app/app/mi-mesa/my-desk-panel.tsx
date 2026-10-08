@@ -139,14 +139,13 @@ function UserPerformanceChart({ data }: Readonly<{
 function buildEditablePeople(data: MyDeskPanelData) {
   return Object.fromEntries(data.overview.people.map((person) => {
     const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id);
-    const identities = data.identitiesByUser[person.id] ?? { active: 0, total: 0 };
     return [person.id, {
       adminBps: managedDesk?.terms.nodal_bps ?? null,
       assignedUserIds: [...(managedDesk?.members ?? [])],
       commissionBps: person.terms?.commission_bps ?? null,
       contactEmail: data.profilesByUser[person.id]?.contact_email ?? data.profilesByUser[person.id]?.email ?? person.email,
       dependencyDestinationDeskId: managedDesk?.parent_id ?? null,
-      identitiesEnabled: identities.total > 0,
+      identitiesEnabled: data.profilesByUser[person.id]?.identities_enabled === true,
       membershipDeskId: person.terms?.desk_id ?? person.deskId,
       role: managedDesk ? "admin" : "student",
       state: (person.terms?.state ?? "active") as EditablePerson["state"],
@@ -422,7 +421,7 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
             <span>Alta: {profile?.created_at ? dateLabel(profile.created_at.slice(0, 10)) : "Sin fecha"}</span>
             <span>% op. propias: {person.terms?.commission_bps === null || person.terms?.commission_bps === undefined ? "Sin acuerdo" : `${person.terms.commission_bps / 100}%`}</span>
             {managedDesk ? <span>% Admin. mesa: {managedDesk.terms.nodal_bps / 100}%</span> : null}
-            <span>Identidades: {identities.total > 0 ? "activadas" : "no habilitadas"} | {identities.active}</span>
+            <span>Identidades: {profile?.identities_enabled ? "habilitadas" : "no habilitadas"} | {identities.active}</span>
           </small> : <small>{node.detail}</small> : null}
         </article>;
         })}

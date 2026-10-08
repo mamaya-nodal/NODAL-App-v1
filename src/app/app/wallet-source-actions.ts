@@ -10,11 +10,16 @@ export async function loadWalletSources(periodId: string) {
   const db = await createClient();
   const { data: { user } } = await db.auth.getUser();
   if (!user) throw new Error("La sesión venció.");
-  const { data: period } = await db.from("periods").select("workspace_id,lifecycle_status").eq("id", periodId).single();
+  const [{ data: period }, { data: profile }] = await Promise.all([
+    db.from("periods").select("workspace_id,lifecycle_status").eq("id", periodId).single(),
+    db.from("nodal_users").select("identities_enabled").eq("id", user.id).maybeSingle(),
+  ]);
   if (!period) throw new Error("Período no disponible.");
   const [sources, identities, wallets, movements, payouts] = await Promise.all([
     db.from("nodal_wallet_sources").select("wallet_id,identity_id,address,started_at,observed_at,observed_cents,last_error").eq("workspace_id", period.workspace_id),
-    db.from("nodal_identities").select("id,first_name,last_name").eq("workspace_id", period.workspace_id).order("first_name"),
+    profile?.identities_enabled
+      ? db.from("nodal_identities").select("id,first_name,last_name").eq("workspace_id", period.workspace_id).order("first_name")
+      : Promise.resolve({ data: [], error: null }),
     db.from("nodal_wallets").select("id").eq("workspace_id", period.workspace_id).eq("is_active", true),
     db.from("wallet_movements").select("id,wallet_id,destination_wallet_id,kind,amount_cents,fee_cents,occurred_on").eq("period_id", periodId),
     db.from("funding_withdrawals").select("id,wallet_id,amount_cents,collection_fee_cents,collected_on").eq("collected_period_id", periodId).eq("is_active", true).not("collected_on", "is", null),
@@ -33,6 +38,12 @@ export async function configureWalletSource(walletId: string, identityId: string
   try { canonical = address.trim() ? normalizeAddress(address) : null; }
   catch { return { ok: false, message: "Ingresá una dirección pública EVM válida (0x…). No una frase de recuperación." }; }
   const db = await createClient();
+  const { data: { user } } = await db.auth.getUser();
+  if (!user) return { ok: false, message: "La sesión venció." };
+  if (identityId) {
+    const { data: profile } = await db.from("nodal_users").select("identities_enabled").eq("id", user.id).maybeSingle();
+    if (!profile?.identities_enabled) return { ok: false, message: "Identidades todavía no fue habilitada por un administrador." };
+  }
   const { error } = await db.rpc("configure_nodal_wallet_source", { target_wallet_id: walletId, target_identity_id: identityId || null, target_address: canonical });
   if (error) return { ok: false, message: error.code === "23505" ? "Esa dirección ya está registrada en otra billetera." : "No se pudo guardar. Una dirección conectada no se reemplaza: registrá otra billetera." };
   revalidatePath("/app");
@@ -43,6 +54,10 @@ export async function assignWalletIdentity(walletId: string, identityId: string)
   const db = await createClient();
   const { data: { user } } = await db.auth.getUser();
   if (!user) return { ok: false, message: "La sesión venció." };
+  if (identityId) {
+    const { data: profile } = await db.from("nodal_users").select("identities_enabled").eq("id", user.id).maybeSingle();
+    if (!profile?.identities_enabled) return { ok: false, message: "Identidades todavía no fue habilitada por un administrador." };
+  }
   const { error } = await db.rpc("assign_nodal_wallet_identity", {
     target_identity_id: identityId || null,
     target_wallet_id: walletId,

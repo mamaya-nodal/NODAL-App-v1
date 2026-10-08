@@ -1,5 +1,23 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-172 - Identidades deshabilitadas por defecto y habilitación administrativa
+
+- **Fecha:** 2026-10-08. Regla confirmada por Mauricio para nuevas altas.
+- **Alta segura:** `nodal_users.identities_enabled` pasa a tener valor inicial
+  `false`. El cambio no deshabilita a quienes ya tenían la capacidad concedida.
+- **Autorización:** la capacidad sólo puede habilitarse o deshabilitarse desde
+  Admin para integrantes de su estructura, o desde Admin Master para cualquier
+  usuario. El alta por Google, una invitación o la aprobación de acceso no la
+  conceden implícitamente.
+- **Experiencia personal:** cuando la capacidad está deshabilitada no se muestra
+  la orejeta Identidades, no se ofrecen identidades en las asignaciones de
+  billeteras y las acciones del servidor rechazan mutaciones directas.
+- **Consistencia administrativa:** Admin lee el indicador persistido, no lo
+  infiere por la cantidad de identidades ya creadas. Admin Master guarda rol,
+  mesa y acceso a Identidades en una única transacción.
+- **Trazabilidad:** cada cambio de habilitación registra actor, persona afectada,
+  período y valores anterior/nuevo en `nodal_management_history`.
+
 ### APP-171 - Nivel automático según rol vigente
 
 - **Fecha:** 2026-10-08. Regla confirmada por Mauricio para conservar el nivel
