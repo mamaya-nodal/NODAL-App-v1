@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
-import { buildNinjaLiveBrokerBalance, type NinjaInventoryView } from "@/modules/ninja/domain/live-broker-balance";
 import type { OpeningAccountStage } from "@/modules/summary/domain/opening-snapshot";
+import { readOpeningBrokerState } from "@/modules/ninja/server/opening-broker-state";
 
 type Result = Readonly<{ ok: boolean; message: string }>;
 type BatchInput = Readonly<{
@@ -104,15 +104,15 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "La sesión venció." };
-  const { data: inventory, error: inventoryError } = await supabase.rpc("get_current_user_ninja_inventory");
-  const liveBroker = inventoryError ? null : buildNinjaLiveBrokerBalance((inventory ?? []) as NinjaInventoryView[]);
+  let brokerState;
+  try { brokerState = await readOpeningBrokerState(supabase, user.id); }
+  catch { return { ok: false, message: "No se pudo comprobar el saldo broker. Volvé a intentar." }; }
+  const liveBroker = brokerState.liveBrokerBalance;
   if (!liveBroker) {
-    const reportedAccounts = ((inventory ?? []) as NinjaInventoryView[])
-      .reduce((total, item) => total + item.accounts.length, 0);
     return {
       ok: false,
-      message: reportedAccounts > 0
-        ? "NinjaTrader está conectado, pero el conector todavía no informó ninguna cuenta broker. Actualizá el conector y volvé a intentar."
+      message: brokerState.pendingAccounts.length > 0
+        ? "NODAL recibió tus cuentas broker. Confirmá cuáles son tuyas con «Es mía» antes de continuar."
         : "Conectá NinjaTrader para que NODAL tome el saldo broker antes de confirmar.",
     };
   }

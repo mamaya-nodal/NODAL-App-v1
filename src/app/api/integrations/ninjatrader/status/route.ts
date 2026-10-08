@@ -3,10 +3,10 @@ import { readWithRetry, reportReadFailure } from "@/lib/supabase/read-with-retry
 import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
 import {
   applyNinjaBrokerAccountAliases,
-  buildNinjaLiveBrokerBalance,
   type NinjaBrokerAccountAlias,
 } from "@/modules/ninja/domain/live-broker-balance";
 import { principalConnectorSignal } from "@/modules/ninja/domain/connector-status";
+import { readOpeningBrokerState } from "@/modules/ninja/server/opening-broker-state";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +50,9 @@ export async function GET() {
     isOnline: connector.is_online,
     status: connector.status,
   })));
+  let brokerBalance;
+  try { brokerBalance = (await readOpeningBrokerState(supabase, user.id, inventoryResult.data ?? [])).liveBrokerBalance; }
+  catch { return Response.json({ error: "No pudimos consultar el saldo broker" }, { status: 503, headers: { "Cache-Control": "no-store" } }); }
   return Response.json(
     {
       inventoryRevision: error
@@ -58,7 +61,7 @@ export async function GET() {
       liveBrokerBalance: error
         ? null
         : applyNinjaBrokerAccountAliases(
-            buildNinjaLiveBrokerBalance(inventoryResult.data ?? []),
+            brokerBalance,
             aliases,
           ),
       linked: !error && principalSignal.linked,

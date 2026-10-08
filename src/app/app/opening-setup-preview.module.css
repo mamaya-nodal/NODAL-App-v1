@@ -147,6 +147,15 @@
 .autoValue span { color: var(--app-copy); font-size: 11px; font-weight: 700; }
 .autoValue strong { color: var(--app-title); font-size: 13px; }
 .autoValue small { margin-top: 5px; color: var(--app-subtle); font-size: 9px; grid-column: 1 / -1; }
+.brokerClaims { display: grid; gap: 10px; margin-bottom: 20px; padding: 16px; border: 1px solid var(--app-border-strong); border-radius: 13px; background: var(--app-panel); }
+.brokerClaims > strong { color: var(--app-title); font-size: 12px; }
+.brokerClaims > p { margin: 0; color: var(--app-copy); font-size: 11px; line-height: 1.5; }
+.brokerClaimRow { display: flex; align-items: center; gap: 14px; padding-top: 10px; border-top: 1px solid var(--app-border); }
+.brokerClaimRow > div { display: grid; gap: 4px; flex: 1; }
+.brokerClaimRow strong { color: var(--app-title); font-size: 12px; }
+.brokerClaimRow small { color: var(--app-subtle); font-size: 10px; }
+.brokerClaimRow > span { color: var(--app-title); font-size: 12px; font-weight: 800; }
+.brokerClaimRow button:disabled { opacity: .6; cursor: wait; }
 .detectedBox > div { display: flex; align-items: center; justify-content: space-between; color: var(--app-copy); font-size: 11px; }
 .detectedBox strong { color: var(--app-title); font-size: 24px; }
 .detectedBox p { margin: 8px 0 0; color: var(--app-subtle); font-size: 10px; }
@@ -204,7 +213,9 @@
   .choice { min-height: 0; }
   .choice p { min-height: 0; }
   .footer { padding: 12px 14px; }
-  .actionMessage { display: none; }
+  .actionMessage { width: 100%; flex-basis: 100%; text-align: left; }
+  .footer { flex-wrap: wrap; }
+  .brokerClaimRow { flex-wrap: wrap; }
   .textButton { display: none; }
   .footer > div { width: 100%; }
   .footer :is(.backButton, .nextButton) { flex: 1; }

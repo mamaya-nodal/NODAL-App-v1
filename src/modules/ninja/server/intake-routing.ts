@@ -145,7 +145,7 @@ function epochsAt(rows: readonly EpochRow[], owners: ReadonlyMap<string, string>
     }));
 }
 
-async function rememberUnclaimedBroker(args: Readonly<{
+export async function rememberUnclaimedBroker(args: Readonly<{
   account: NinjaAccountSnapshot;
   destinationConnectorId: string | null;
   observedAt: string;
@@ -153,7 +153,7 @@ async function rememberUnclaimedBroker(args: Readonly<{
   supabase: NonNullable<ReturnType<typeof serviceClient>>;
 }>) {
   const balance = args.account.cashValue ?? args.account.netLiquidation ?? args.account.totalCashBalance;
-  await args.supabase.from("ninja_unclaimed_broker_accounts").upsert({
+  const { error: insertError } = await args.supabase.from("ninja_unclaimed_broker_accounts").upsert({
     account_name: args.account.accountName,
     connection_name: args.account.connectionName,
     first_observed_at: args.observedAt,
@@ -161,7 +161,16 @@ async function rememberUnclaimedBroker(args: Readonly<{
     latest_balance_cents: balance === null ? null : Math.round(balance * 100),
     physical_connector_id: args.physicalConnectorId,
     proposed_destination_connector_id: args.destinationConnectorId,
-  }, { onConflict: "physical_connector_id,connection_name,account_name" });
+  }, { onConflict: "physical_connector_id,connection_name,account_name", ignoreDuplicates: true });
+  if (insertError) throw new Error("Pending broker storage unavailable");
+  // Advance atomically: a delayed retry must not replace a newer observation.
+  const { error: updateError } = await args.supabase.from("ninja_unclaimed_broker_accounts").update({
+    last_observed_at: args.observedAt,
+    latest_balance_cents: balance === null ? null : Math.round(balance * 100),
+    proposed_destination_connector_id: args.destinationConnectorId,
+  }).eq("physical_connector_id", args.physicalConnectorId).eq("connection_name", args.account.connectionName)
+    .eq("account_name", args.account.accountName).lt("last_observed_at", args.observedAt);
+  if (updateError) throw new Error("Pending broker storage unavailable");
 }
 
 export async function routeNinjaInventory(

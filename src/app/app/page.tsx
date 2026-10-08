@@ -33,11 +33,11 @@ import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-regi
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
 import {
   applyNinjaBrokerAccountAliases,
-  buildNinjaLiveBrokerBalance,
   type NinjaBrokerAccountAlias,
   type NinjaLiveBrokerBalance,
 } from "@/modules/ninja/domain/live-broker-balance";
 import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
+import { readOpeningBrokerState } from "@/modules/ninja/server/opening-broker-state";
 import type {
   AccountPhaseWithdrawal,
 } from "@/modules/operations/domain/account-phase-results";
@@ -674,7 +674,7 @@ async function renderPrivateAppPage({
     connectedNinjaBrokerAccountNames = connectedBrokerAccounts.map((account) => account.accountName);
     connectedNinjaPropAccountNames = connectedPropAccounts.map((account) => account.accountName);
     liveNinjaBrokerBalance = applyNinjaBrokerAccountAliases(
-      buildNinjaLiveBrokerBalance(ninjaInventories),
+      (await readOpeningBrokerState(supabase, userId, ninjaInventories)).liveBrokerBalance,
       (ninjaBrokerAccountAliasRows ?? []).map((alias): NinjaBrokerAccountAlias => ({
         accountName: alias.account_name,
         connectionName: alias.connection_name,
@@ -1194,7 +1194,7 @@ async function renderPrivateAppPage({
         connectorVersion: ninjaConnector?.connectorVersion ?? null,
       }}
     >
-      <NinjaConnectorMonitor inventoryRevision={ninjaInventoryRevision} online={connectorOnline} />
+      <NinjaConnectorMonitor inventoryRevision={ninjaInventoryRevision} online={connectorOnline} refreshOnChange={!openingSetupEligible} />
       {!connectorOnline ? (
         <div className="notice connector-offline-notice" role="status">
           <span>Conector sin señal. Estás viendo los últimos datos guardados.</span>

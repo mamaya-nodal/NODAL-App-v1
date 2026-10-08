@@ -1,5 +1,33 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-169 - Confirmación de titularidad broker accesible durante la apertura
+
+- **Fecha:** 2026-10-08.
+- **Causa verificada:** el servidor recibió las dos cuentas Live y sus saldos,
+  pero APP-123 las retuvo en `ninja_unclaimed_broker_accounts` al no tener
+  titularidad. La apertura sólo consultaba el inventario ya filtrado y mostraba
+  erróneamente que faltaba conectar Ninja. El botón `Es mía` estaba detrás del
+  modal en Cuentas, produciendo un bloqueo circular para los usuarios nuevos.
+- **Corrección:** el asistente ofrece la misma confirmación auditada de APP-123
+  en Dinero disponible / Dinero actual y Vista previa. Actualiza señal y saldo
+  sin perder el borrador. No requiere reemplazar el conector ni asigna cuentas
+  automáticamente.
+- **Disponibilidad inmediata:** después de confirmar, la app puede leer la
+  última muestra balance real conservada en `ninja_event_receipts`, con su fecha
+  original, mientras el inventario filtrado aún sea anterior a la confirmación.
+  La consulta privilegiada se limita a titularidades del usuario autenticado,
+  destinos personales activos y conexiones no aisladas. El próximo inventario
+  posterior a la confirmación toma precedencia, incluso vacío o desconectado.
+- **Orden de observaciones:** los reintentos de telemetría antigua sobrescribían
+  fecha y saldo de la bandeja pendiente. La ingesta ahora inserta sin reemplazar
+  filas existentes y avanza la última observación mediante una condición atómica
+  por fecha. La lectura recupera la muestra más reciente del ledger para los
+  pendientes existentes que sufrieron ese retroceso.
+- **Límite del diagnóstico anterior:** APP-168 describió una mejora en la captura
+  del conector, pero atribuyó indebidamente al envío las listas vacías persistidas:
+  dichas listas ya estaban filtradas por el servidor. No demostraban una lectura
+  local vacía. La causa del bloqueo de alta se verifica en APP-169.
+
 ### APP-168 - Envío de la captura de inventario sin segunda lectura asíncrona
 
 - **Fecha:** 2026-10-08.

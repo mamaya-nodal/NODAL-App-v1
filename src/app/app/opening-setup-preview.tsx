@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { confirmOpeningSetup } from "./opening-setup-actions";
+import { claimOpeningBrokerAccount, getOpeningBrokerState } from "./opening-broker-actions";
+import type { PendingOpeningBrokerAccount } from "@/modules/ninja/domain/broker-claim-balance";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import styles from "./opening-setup-preview.module.css";
 
@@ -150,7 +152,7 @@ function WalletEditor({ onChange, wallets }: Readonly<{
   </div>;
 }
 
-export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance = null, periodId }: Props) {
+export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance: initialBrokerBalance = null, periodId }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(autoOpen);
   const [mode, setMode] = useState<StartMode | null>(null);
@@ -160,9 +162,59 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance = null
   const [showBatchForm, setShowBatchForm] = useState(false);
   const [batch, setBatch] = useState<BatchDraft>(initialBatch);
   const [message, setMessage] = useState<string | null>(null);
+  const [liveBrokerBalance, setLiveBrokerBalance] = useState(initialBrokerBalance);
+  const [pendingBrokerAccounts, setPendingBrokerAccounts] = useState<PendingOpeningBrokerAccount[]>([]);
+  const [claimingAccount, setClaimingAccount] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const steps = mode === "reconstruct" ? reconstructionSteps : zeroSteps;
   const lastStep = steps.length - 1;
+
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    const check = async () => {
+      try {
+        const result = await getOpeningBrokerState();
+        if (active && result.ok) {
+          setLiveBrokerBalance(result.liveBrokerBalance);
+          setPendingBrokerAccounts(result.pendingAccounts);
+        }
+      } catch { /* Preserve the current draft and last data during transient failures. */ }
+    };
+    void check();
+    const timer = window.setInterval(check, 5_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [open]);
+
+  async function claimBroker(account: PendingOpeningBrokerAccount) {
+    setClaimingAccount(`${account.physicalConnectorId}:${account.connectionName}:${account.accountName}`);
+    setMessage(null);
+    try {
+      const result = await claimOpeningBrokerAccount(account);
+      if (result.ok) {
+        setLiveBrokerBalance(result.liveBrokerBalance);
+        setPendingBrokerAccounts(result.pendingAccounts);
+      } else setMessage(result.message);
+    } catch { setMessage("No se pudo confirmar la cuenta. Volvé a intentar."); }
+    finally { setClaimingAccount(null); }
+  }
+
+  const brokerClaims = pendingBrokerAccounts.length > 0 ? (
+    <div className={styles.brokerClaims}>
+      <strong>Confirmá tus cuentas broker</strong>
+      <p>Ninja ya las informó. Solo las que confirmes se sumarán al saldo de tu apertura.</p>
+      {pendingBrokerAccounts.map((account) => {
+        const key = `${account.physicalConnectorId}:${account.connectionName}:${account.accountName}`;
+        return <div className={styles.brokerClaimRow} key={key}>
+          <div><strong>{account.accountName}</strong><small>{account.connectionName}</small></div>
+          <span>{account.balanceInCents === null ? "Sin saldo informado" : money(account.balanceInCents / 100)}</span>
+          <button className={styles.backButton} disabled={claimingAccount !== null} onClick={() => void claimBroker(account)} type="button">
+            {claimingAccount === key ? "Confirmando…" : "Es mía"}
+          </button>
+        </div>;
+      })}
+    </div>
+  ) : null;
 
   const totals = useMemo(() => {
     const broker = (liveBrokerBalance?.balanceInCents ?? 0) / 100;
@@ -277,6 +329,7 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance = null
                     <h3>¿Con qué fondos comenzás?</h3>
                     <p className={styles.description}>El saldo broker se tomará del conector. Informá solamente el dinero disponible fuera del broker.</p>
                     <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{liveBrokerBalance ? money(liveBrokerBalance.balanceInCents / 100) : "Sin datos de Ninja"}</strong><small>Se toma automáticamente del conector y no se edita aquí.</small></div>
+                    {brokerClaims}
                     <WalletEditor onChange={setWallets} wallets={wallets} />
                   </div>
                 ) : null}
@@ -342,6 +395,7 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance = null
                     <h3>¿Qué dinero existe hoy dentro del circuito?</h3>
                     <p className={styles.description}>Los movimientos entre broker y billetera no son aportes nuevos. Registramos cada ubicación una sola vez.</p>
                     <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{liveBrokerBalance ? money(liveBrokerBalance.balanceInCents / 100) : "Sin datos de Ninja"}</strong><small>Se toma automáticamente del conector y no se edita aquí.</small></div>
+                    {brokerClaims}
                     <WalletEditor onChange={setWallets} wallets={wallets} />
                     <div className={styles.fields}>
                       <Field label="Payouts aprobados pendientes (USD)" name="pendingPayouts" onChange={update} placeholder="0,00" type="number" value={draft.pendingPayouts} />
@@ -368,6 +422,7 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance = null
                     <p className={styles.eyebrow}>VISTA PREVIA DE APERTURA</p>
                     <h3>Así comenzaría tu cuenta</h3>
                     <p className={styles.description}>Revisá el pantallazo. Al confirmar, quedará como apertura auditable del período y se verá en el panel.</p>
+                    {brokerClaims}
                     <div className={styles.summaryGrid}>
                       <SummaryItem label="Capital neto aportado" value={money(totals.netCapital)} />
                       <SummaryItem label="Posición observable" value={money(totals.observable)} />
@@ -391,7 +446,7 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance = null
               <div>
                 {step > 0 ? <button className={styles.backButton} onClick={() => setStep((current) => Math.max(0, current - 1))} type="button">Atrás</button> : null}
                 {step > 0 && step < lastStep ? <button className={styles.nextButton} onClick={() => setStep((current) => Math.min(lastStep, current + 1))} type="button">Continuar</button> : null}
-                {step === lastStep ? <button className={styles.nextButton} disabled={isPending} onClick={finishSetup} type="button">{isPending ? "Guardando…" : "Confirmar punto de partida"}</button> : null}
+                {step === lastStep ? <button className={styles.nextButton} disabled={isPending || claimingAccount !== null} onClick={finishSetup} type="button">{isPending ? "Guardando…" : "Confirmar punto de partida"}</button> : null}
               </div>
             </footer>
           </section>

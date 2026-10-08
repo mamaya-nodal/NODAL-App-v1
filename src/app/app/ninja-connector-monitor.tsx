@@ -8,9 +8,10 @@ type Props = Readonly<{
   inventoryRevision?: string;
   linked?: boolean;
   online: boolean;
+  refreshOnChange?: boolean;
 }>;
 
-export function NinjaConnectorMonitor({ inventoryRevision, linked = true, online }: Props) {
+export function NinjaConnectorMonitor({ inventoryRevision, linked = true, online, refreshOnChange = true }: Props) {
   useEffect(() => {
     let active = true;
     const check = async () => {
@@ -30,7 +31,7 @@ export function NinjaConnectorMonitor({ inventoryRevision, linked = true, online
         const inventoryChanged = inventoryRevision !== undefined &&
           typeof result.inventoryRevision === "string" &&
           result.inventoryRevision !== inventoryRevision;
-        if (active && response.ok && (Boolean(result.linked) !== linked || Boolean(result.online) !== online || inventoryChanged)) {
+        if (active && response.ok && refreshOnChange && (Boolean(result.linked) !== linked || Boolean(result.online) !== online || inventoryChanged)) {
           // Una recarga completa conserva el hash de la sección activa. El refresh
           // del router puede reconstruir la URL del servidor sin ese fragmento.
           window.location.reload();
@@ -42,7 +43,7 @@ export function NinjaConnectorMonitor({ inventoryRevision, linked = true, online
     void check();
     const interval = window.setInterval(check, 5_000);
     return () => { active = false; window.clearInterval(interval); };
-  }, [inventoryRevision, linked, online]);
+  }, [inventoryRevision, linked, online, refreshOnChange]);
 
   return null;
 }
