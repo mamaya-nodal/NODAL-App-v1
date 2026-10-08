@@ -1,5 +1,21 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-173 - Las altas futuras reinician explícitamente el acceso a Identidades
+
+- **Fecha:** 2026-10-08. Regla aclarada por Mauricio después del alta de Julián
+  Agustín Seco, quien debe conservar Identidades habilitadas.
+- **Causa:** APP-172 cambió el valor inicial de nuevas filas, pero algunos
+  perfiles pendientes habían sido creados antes y conservaban el valor histórico
+  `true`. La aprobación actualizaba su estado sin normalizar esa capacidad.
+- **Regla:** toda transición de `pending` o `revoked` a `active` fuerza
+  `identities_enabled = false` en la misma transacción, independientemente de la
+  antigüedad del perfil. La habilitación posterior sigue siendo exclusiva de
+  Admin o Admin Master.
+- **Alcance:** no se modifican permisos de personas ya activas. Mauricio, Ivo,
+  Alfred (perfil `SB Digitalmarkets`) y Julián conservan su habilitación actual.
+  La regla actúa exclusivamente en altas o reactivaciones futuras; luego Admin o
+  Admin Master puede habilitar la capacidad desde los paneles previstos.
+
 ### APP-172 - Identidades deshabilitadas por defecto y habilitación administrativa
 
 - **Fecha:** 2026-10-08. Regla confirmada por Mauricio para nuevas altas.
