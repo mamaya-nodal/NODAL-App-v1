@@ -84,4 +84,12 @@ describe("Ninja connector source", () => {
     );
     expect(connectorSource).toContain('ConnectionName(account) + "\\u0000" + account.Name');
   });
+
+  it("envía la captura encontrada sin volver a consultar Ninja desde la tarea diferida", () => {
+    expect(connectorSource).toContain("QueueInventorySend(force, accounts)");
+    expect(connectorSource).toContain("InventoryCapture capture = BuildInventoryCapture(accounts)");
+    expect(connectorSource).toContain("SendInventoryAsync(capture, forceCurrent)");
+    expect(connectorSource).toContain("SendAuthorizedAsync(\"/api/integrations/ninjatrader/ingest\", capture.Payload)");
+    expect(connectorSource).not.toContain("private async Task SendInventoryAsync(bool force)");
+  });
 });

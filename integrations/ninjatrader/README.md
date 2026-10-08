@@ -70,6 +70,11 @@ de cada conexión activa. Algunos proveedores sólo publican determinadas cuenta
 en una de esas dos vistas; la combinación evita omitir la cuenta broker y
 deduplica por conexión y nombre sin incluir cuentas desconectadas.
 
+La versión 0.15 conserva exactamente la captura obtenida durante el refresco de
+NinjaTrader y envía esa misma captura. No vuelve a consultar las colecciones
+desde la tarea diferida de red, porque algunos proveedores devuelven una vista
+vacía fuera del callback aunque las cuentas estén conectadas y visibles.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.

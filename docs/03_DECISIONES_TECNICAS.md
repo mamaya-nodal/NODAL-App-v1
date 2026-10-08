@@ -1,5 +1,25 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-168 - Envío de la captura de inventario sin segunda lectura asíncrona
+
+- **Fecha:** 2026-10-08.
+- **Evidencia:** el diagnóstico local de Ivo observó de forma repetida las
+  cuentas broker `1850465` y `2210006` tanto en `Account.All` como en
+  `Connection.Accounts`, con conexión `Live`, proveedor `Provider31`, estado
+  conectado, saldos legibles y resultado positivo del filtro 0.14. En esos
+  mismos segundos, el conector 0.14 persistió inventarios vacíos en producción.
+- **Hallazgo:** `RefreshInventory` obtenía la colección correcta, pero la cola
+  no conservaba esa captura. Después de 750 ms, `SendInventoryAsync` volvía a
+  consultar NinjaTrader desde la tarea de red y construía el payload con esa
+  segunda vista, que podía estar vacía según el contexto del proveedor.
+- **Decisión:** 0.15 serializa huella, payload y cantidad en el mismo refresco
+  que descubrió las cuentas. La cola conserva la captura más reciente, evita
+  lecturas concurrentes del conjunto de suscripciones y envía exactamente el
+  inventario observado sin volver a consultar la API local.
+- **Integridad:** no se relajan filtros, no se inventan cuentas o saldos y no se
+  reutilizan inventarios históricos. Los reintentos normales continúan mediante
+  el heartbeat, que genera una captura nueva cada quince segundos.
+
 ### APP-167 - Inventario Ninja combinado para proveedores con vistas incompletas
 
 - **Fecha:** 2026-10-07.

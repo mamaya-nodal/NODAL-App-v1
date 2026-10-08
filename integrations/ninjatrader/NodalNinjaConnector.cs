@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.14 (server v2 required)
+// NODAL Ninja Connector v0.15 (server v2 required)
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -217,7 +217,21 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 	public class NodalNinjaConnector : AddOnBase
 	{
-		private const string ConnectorVersion = "0.14";
+		private sealed class InventoryCapture
+		{
+			public readonly int AccountCount;
+			public readonly string Fingerprint;
+			public readonly string Payload;
+
+			public InventoryCapture(int accountCount, string fingerprint, string payload)
+			{
+				AccountCount = accountCount;
+				Fingerprint = fingerprint;
+				Payload = payload;
+			}
+		}
+
+		private const string ConnectorVersion = "0.15";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10), MaxResponseContentBufferSize = 1024 * 1024 };
@@ -226,16 +240,17 @@ namespace NinjaTrader.NinjaScript.AddOns
 		private readonly SemaphoreSlim telemetryFlushLock = new SemaphoreSlim(1, 1);
 		private readonly Dictionary<string, DateTime> lastBalanceSampleUtc = new Dictionary<string, DateTime>(StringComparer.Ordinal);
 		private readonly Dictionary<string, string> lastBalanceFingerprint = new Dictionary<string, string>(StringComparer.Ordinal);
+		private readonly object inventoryRefreshLock = new object();
 		private readonly object telemetryFileLock = new object();
 		private readonly object sendLock = new object();
 		private string lastSentFingerprint = string.Empty;
+		private InventoryCapture pendingInventory;
 		private bool sendInProgress;
 		private bool sendQueued;
 		private bool forceSendQueued;
 		private ConnectorSettings settings;
 		private Timer heartbeatTimer;
 		private int heartbeatInProgress;
-		private int retryScheduled;
 		private bool heartbeatWasHealthy;
 		private bool terminated;
 		private string telemetryQueuePath;
@@ -345,30 +360,37 @@ namespace NinjaTrader.NinjaScript.AddOns
 			if (settings == null || !settings.HasBaseUrl)
 				return;
 
-			List<Account> accounts = ConnectedAccounts();
-
-			foreach (Account account in accounts)
+			List<Account> accounts;
+			lock (inventoryRefreshLock)
 			{
-				if (subscribedAccounts.Contains(account))
-					continue;
+				accounts = ConnectedAccounts();
 
-				account.AccountItemUpdate += OnAccountItemUpdate;
-				account.ExecutionUpdate += OnExecutionUpdate;
-				account.PositionUpdate += OnPositionUpdate;
-				subscribedAccounts.Add(account);
-				QueueBalanceSample(account, true);
-				QueueCurrentPositions(account);
+				foreach (Account account in accounts)
+				{
+					if (subscribedAccounts.Contains(account))
+						continue;
+
+					account.AccountItemUpdate += OnAccountItemUpdate;
+					account.ExecutionUpdate += OnExecutionUpdate;
+					account.PositionUpdate += OnPositionUpdate;
+					subscribedAccounts.Add(account);
+					QueueBalanceSample(account, true);
+					QueueCurrentPositions(account);
+				}
+
+				foreach (Account account in subscribedAccounts.Where(account => !accounts.Contains(account)).ToList())
+				{
+					account.AccountItemUpdate -= OnAccountItemUpdate;
+					account.ExecutionUpdate -= OnExecutionUpdate;
+					account.PositionUpdate -= OnPositionUpdate;
+					subscribedAccounts.Remove(account);
+				}
 			}
 
-			foreach (Account account in subscribedAccounts.Where(account => !accounts.Contains(account)).ToList())
-			{
-				account.AccountItemUpdate -= OnAccountItemUpdate;
-				account.ExecutionUpdate -= OnExecutionUpdate;
-				account.PositionUpdate -= OnPositionUpdate;
-				subscribedAccounts.Remove(account);
-			}
-
-			QueueInventorySend(force);
+			// Preserve the exact collection observed in this refresh. Some NinjaTrader
+			// providers expose their accounts on the callback thread but return an empty
+			// collection when the delayed network task reads the API again.
+			QueueInventorySend(force, accounts);
 			QueueTelemetryFlush();
 		}
 
@@ -493,25 +515,59 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		private void QueueInventorySend(bool force)
 		{
+			QueueInventorySend(force, ConnectedAccounts());
+		}
+
+		private void QueueInventorySend(bool force, IEnumerable<Account> accounts)
+		{
+			InventoryCapture capture = BuildInventoryCapture(accounts);
+			bool startWorker = false;
 			lock (sendLock)
 			{
+				pendingInventory = capture;
 				forceSendQueued = forceSendQueued || force;
-				if (sendQueued)
-					return;
-				sendQueued = true;
+				if (!sendQueued && !sendInProgress)
+				{
+					sendQueued = true;
+					startWorker = true;
+				}
 			}
+			if (startWorker) StartInventorySend();
+		}
 
+		private void StartInventorySend()
+		{
 			Task.Run(async () =>
 			{
 				await Task.Delay(750);
+				InventoryCapture capture;
 				bool forceCurrent;
 				lock (sendLock)
 				{
 					sendQueued = false;
+					capture = pendingInventory;
+					pendingInventory = null;
 					forceCurrent = forceSendQueued;
 					forceSendQueued = false;
+					if (capture == null) return;
+					sendInProgress = true;
 				}
-				await SendInventoryAsync(forceCurrent);
+
+				try { await SendInventoryAsync(capture, forceCurrent); }
+				finally
+				{
+					bool startNext = false;
+					lock (sendLock)
+					{
+						sendInProgress = false;
+						if (pendingInventory != null && !sendQueued)
+						{
+							sendQueued = true;
+							startNext = true;
+						}
+					}
+					if (startNext) StartInventorySend();
+				}
 			});
 		}
 
@@ -529,20 +585,6 @@ namespace NinjaTrader.NinjaScript.AddOns
 			{
 				try { await SendHeartbeatAsync(); }
 				finally { Interlocked.Exchange(ref heartbeatInProgress, 0); }
-			});
-		}
-
-		private void QueueRetry()
-		{
-			if (terminated || Interlocked.Exchange(ref retryScheduled, 1) == 1)
-				return;
-
-			Task.Run(async () =>
-			{
-				await Task.Delay(TimeSpan.FromSeconds(15));
-				Interlocked.Exchange(ref retryScheduled, 0);
-				if (!terminated)
-					QueueInventorySend(true);
 			});
 		}
 
@@ -571,43 +613,32 @@ namespace NinjaTrader.NinjaScript.AddOns
 			}
 		}
 
-		private async Task SendInventoryAsync(bool force)
+		private async Task SendInventoryAsync(InventoryCapture capture, bool force)
 		{
-			List<Account> accounts = ConnectedAccounts();
-
-			string fingerprint = BuildInventoryFingerprint(accounts);
 			lock (sendLock)
 			{
-				if (sendInProgress || (!force && string.Equals(lastSentFingerprint, fingerprint, StringComparison.Ordinal)))
+				if (!force && string.Equals(lastSentFingerprint, capture.Fingerprint, StringComparison.Ordinal))
 					return;
-				sendInProgress = true;
 			}
 
 			try
 			{
-				string payload = BuildInventoryPayload(accounts);
-				using (HttpResponseMessage response = await SendAuthorizedAsync("/api/integrations/ninjatrader/ingest", payload))
+				using (HttpResponseMessage response = await SendAuthorizedAsync("/api/integrations/ninjatrader/ingest", capture.Payload))
 				{
 					if (response != null && response.IsSuccessStatusCode)
 					{
-						lock (sendLock) lastSentFingerprint = fingerprint;
-						Write("ENVIO_OK|cuentas=" + accounts.Count.ToString(CultureInfo.InvariantCulture));
+						lock (sendLock) lastSentFingerprint = capture.Fingerprint;
+						Write("ENVIO_OK|cuentas=" + capture.AccountCount.ToString(CultureInfo.InvariantCulture));
 					}
 					else
 					{
 						Write("ENVIO_RECHAZADO|El inventario no fue aceptado.");
-						QueueRetry();
 					}
 				}
 			}
 			catch (Exception exception)
 			{
 				Write("ENVIO_ERROR|" + exception.GetType().Name);
-				QueueRetry();
-			}
-			finally
-			{
-				lock (sendLock) sendInProgress = false;
 			}
 		}
 
@@ -765,6 +796,15 @@ namespace NinjaTrader.NinjaScript.AddOns
 				+ "\"observedAt\":\"" + DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture) + "\","
 				+ "\"accounts\":[" + string.Join(",", accounts.Select(BuildAccountJson)) + "]"
 				+ "}";
+		}
+
+		private static InventoryCapture BuildInventoryCapture(IEnumerable<Account> accounts)
+		{
+			List<Account> snapshot = accounts.ToList();
+			return new InventoryCapture(
+				snapshot.Count,
+				BuildInventoryFingerprint(snapshot),
+				BuildInventoryPayload(snapshot));
 		}
 
 		private static string BuildAccountJson(Account account)
