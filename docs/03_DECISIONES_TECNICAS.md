@@ -1,5 +1,26 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-170 - Lectura autorizada de cuentas pendientes durante la apertura
+
+- **Fecha:** 2026-10-08. Corrección del error de carga introducido al publicar APP-169.
+- **Causa reproducida:** la lectura autenticada directa de `ninja_unclaimed_broker_accounts`
+  aplica una política que consulta `ninja_connectors`, tabla sin permiso de lectura
+  para `authenticated`. PostgreSQL rechaza la consulta con `42501`, incluso para
+  el titular. El error no controlado detenía el render de `/app`.
+- **Corrección:** el servidor obtiene primero los destinos personales activos
+  mediante la función autenticada de estado del conector. Sólo después consulta
+  pendientes con el cliente de servicio, filtrando obligatoriamente por esos
+  destinos. Sin destinos autorizados no se realiza ninguna lectura privilegiada.
+  La titularidad conserva su función transaccional y auditada; no se aprueban
+  cuentas automáticamente ni se amplían los permisos de `ninja_connectors`.
+- **Fallos de lectura:** se registran únicamente alcance y código de error, sin
+  secretos ni datos personales. Los errores de consulta usan la recuperación de
+  datos existente de la página, sin convertir fallos en saldos cero.
+- **Verificación:** reproducción aislada en PostgreSQL con la política y
+  revocación reales; pruebas de aislamiento entre personas, exclusión de
+  identidades, ausencia de consulta privilegiada sin autorización y recuperación
+  controlada ante errores. No requiere cambios ni reinstalación en NinjaTrader.
+
 ### APP-169 - Confirmación de titularidad broker accesible durante la apertura
 
 - **Fecha:** 2026-10-08.
