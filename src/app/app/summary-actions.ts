@@ -108,8 +108,10 @@ export async function createWallet(input: Readonly<{ date: string; name: string;
   if (error) {
     const message = error.message.includes("duplicate")
       ? "Ya existe una billetera con ese nombre."
-      : error.message.includes("Wallet period is invalid")
-        ? "La fecha no pertenece al período operativo seleccionado."
+      : error.message.includes("Wallet period is not open")
+        ? "El período todavía no está abierto. Actualizá la pantalla; si ya confirmaste tu punto de partida, avisá a soporte."
+        : error.message.includes("Wallet date is outside the open period") || error.message.includes("Wallet period is invalid")
+          ? "La fecha no pertenece al período operativo seleccionado."
         : "No se pudo crear la billetera.";
     return { ok: false, message };
   }

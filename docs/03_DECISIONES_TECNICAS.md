@@ -2450,3 +2450,21 @@ vigente sin aprobacion y evidencia suficiente.
 - **Seguridad:** ambas acciones vuelven a autenticar, verifican que Identidades esté
   habilitado y delegan la autorización de espacio a funciones auditadas de base.
 
+### APP-176 - Apertura confirmada y alta continua de billeteras
+
+- **Fecha:** 2026-10-13. Corrección a partir del primer alta de billetera de Lore.
+- **Hallazgo:** un período creado antes del corte mensual podía conservar el estado
+  `scheduled` aun después de confirmar la reconstrucción. La apertura existía, pero
+  cualquier saldo inicial posterior era rechazado como movimiento fuera de un período
+  abierto y la interfaz ocultaba la causa bajo un mensaje genérico.
+- **Invariante:** confirmar el punto de partida abre atómicamente el período inicial
+  cuando ya corresponde al ciclo vigente y no existe otro período abierto. Una fecha
+  futura o un segundo período abierto se rechazan explícitamente.
+- **Billeteras:** el titular puede agregar billeteras durante cualquier día hábil del
+  período real abierto. El saldo inicial opcional se registra como aporte externo en
+  ese mismo período; no se reescribe el pantallazo de apertura ni se inventan saldos.
+- **Reparación:** las aperturas ya confirmadas que permanecían `scheduled` se promueven
+  a `open` sin crear billeteras ni movimientos, conservando un evento de auditoría.
+- **Diagnóstico:** la interfaz distingue un período aún no abierto de una fecha fuera
+  del ciclo, evitando volver a mostrar únicamente “No se pudo crear la billetera”.
+
