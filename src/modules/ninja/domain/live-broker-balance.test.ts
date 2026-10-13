@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { NinjaAccountSnapshot } from "./ingestion-payload";
-import { applyNinjaBrokerAccountAliases, buildNinjaLiveBrokerBalance } from "./live-broker-balance";
+import {
+  applyNinjaBrokerAccountAliases,
+  buildNinjaLiveBrokerBalance,
+  resolveNinjaBrokerAccountNames,
+} from "./live-broker-balance";
 
 function account(input: Partial<NinjaAccountSnapshot> & Pick<NinjaAccountSnapshot, "accountName">): NinjaAccountSnapshot {
   return {
@@ -93,5 +97,27 @@ describe("live Ninja broker balance", () => {
         displayName: "Cobertura identidad Juli",
       }],
     });
+  });
+
+  it("uses recovered broker sources when the latest inventory omits the account", () => {
+    const recoveredBalance = buildNinjaLiveBrokerBalance([{
+      accounts: [account({
+        accountName: "2177299",
+        cashValue: 10_447.42,
+        connectionName: "Ninja Gaston",
+      })],
+      observed_at: "2026-10-13T18:21:59Z",
+    }]);
+
+    expect(resolveNinjaBrokerAccountNames([], recoveredBalance)).toEqual(["2177299"]);
+  });
+
+  it("does not duplicate a broker present in inventory and recovered telemetry", () => {
+    const balance = buildNinjaLiveBrokerBalance([{
+      accounts: [account({ accountName: "2177299", cashValue: 10_447.42 })],
+      observed_at: "2026-10-13T18:21:59Z",
+    }]);
+
+    expect(resolveNinjaBrokerAccountNames(["2177299"], balance)).toEqual(["2177299"]);
   });
 });

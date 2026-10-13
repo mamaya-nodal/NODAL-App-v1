@@ -2468,3 +2468,17 @@ vigente sin aprobacion y evidencia suficiente.
 - **Diagnóstico:** la interfaz distingue un período aún no abierto de una fecha fuera
   del ciclo, evitando volver a mostrar únicamente “No se pudo crear la billetera”.
 
+### APP-177 - Estado broker coherente entre inventario y telemetría recuperada
+
+- **Fecha:** 2026-10-13. Corrección a partir del primer ingreso de Javier Torales.
+- **Hallazgo:** una cuenta broker ya reclamada podía aportar saldo vigente mediante
+  telemetría recuperada aunque el último inventario instantáneo no la incluyera. La
+  tarjeta mostraba correctamente el saldo, pero el aviso declaraba “sin cuenta broker”
+  porque evaluaba únicamente ese inventario.
+- **Fuente común:** el estado visible de cuentas broker combina las cuentas conectadas
+  del inventario con las cuentas validadas que originan el saldo broker recuperado. Se
+  deduplican por nombre y no se crean cuentas, saldos ni asignaciones implícitas.
+- **Interfaz:** el aviso de ausencia se muestra solamente cuando ninguna de las dos
+  fuentes autorizadas aporta una cuenta broker. La corrección aplica a todos los
+  usuarios y no contiene excepciones personales.
+

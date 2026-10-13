@@ -33,6 +33,7 @@ import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-regi
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
 import {
   applyNinjaBrokerAccountAliases,
+  resolveNinjaBrokerAccountNames,
   type NinjaBrokerAccountAlias,
   type NinjaLiveBrokerBalance,
 } from "@/modules/ninja/domain/live-broker-balance";
@@ -671,7 +672,6 @@ async function renderPrivateAppPage({
         classifyNinjaAccount(account, account.firstSeenAt ?? new Date().toISOString()).type ===
         "prop",
     );
-    connectedNinjaBrokerAccountNames = connectedBrokerAccounts.map((account) => account.accountName);
     connectedNinjaPropAccountNames = connectedPropAccounts.map((account) => account.accountName);
     liveNinjaBrokerBalance = applyNinjaBrokerAccountAliases(
       (await readOpeningBrokerState(supabase, userId, ninjaInventories)).liveBrokerBalance,
@@ -681,7 +681,11 @@ async function renderPrivateAppPage({
         displayName: alias.display_name,
       })),
     );
-    if (connectedNinjaAccounts.length > 0 && connectedBrokerAccounts.length === 0) {
+    connectedNinjaBrokerAccountNames = resolveNinjaBrokerAccountNames(
+      connectedBrokerAccounts.map((account) => account.accountName),
+      liveNinjaBrokerBalance,
+    );
+    if (connectedNinjaAccounts.length > 0 && connectedNinjaBrokerAccountNames.length === 0) {
       ninjaBrokerSourceNotice =
         "NinjaTrader está conectado, pero no informa ninguna cuenta broker. Los saldos automáticos se reanudarán cuando una cuenta broker vuelva a aparecer en Accounts.";
     }

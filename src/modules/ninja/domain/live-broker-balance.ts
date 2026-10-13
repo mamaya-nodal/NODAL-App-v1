@@ -92,3 +92,13 @@ export function applyNinjaBrokerAccountAliases(
     })),
   };
 }
+
+export function resolveNinjaBrokerAccountNames(
+  inventoryAccountNames: readonly string[],
+  balance: NinjaLiveBrokerBalance | null,
+): string[] {
+  return [...new Set([
+    ...inventoryAccountNames,
+    ...(balance?.sourceAccounts.map((account) => account.accountName) ?? []),
+  ])];
+}
