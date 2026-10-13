@@ -12,7 +12,7 @@ type ActionResult = Readonly<{ message: string; ok: boolean }>;
 
 const DEFAULT_IDENTITY_AUTOMATION_URL =
   "https://script.google.com/macros/s/AKfycbzqwgrt7c92nQCA3wvMweEj4tVbQ7OzXsa5pqRNj8vNADtSTHDh_HOraHBuGMG8ioMQiQ/exec";
-const DEFAULT_APP_URL = "https://nodal-app-preview.vercel.app";
+const DEFAULT_APP_URL = "https://app.nodaltrading.com";
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -38,12 +38,10 @@ function applicationUrl() {
   return vercelHost ? `https://${vercelHost}` : DEFAULT_APP_URL;
 }
 
-export async function sendIdentityConnectorInstallation(identityId: string): Promise<ActionResult> {
-  if (!isUuid(identityId)) return { ok: false, message: "La identidad no es válida." };
-  const { identitiesEnabled, supabase, user } = await authenticatedClient();
-  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
-  if (!identitiesEnabled) return identitiesDisabled();
-
+async function dispatchIdentityConnectorInstallation(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  identityId: string,
+): Promise<ActionResult> {
   const token = randomBytes(32).toString("hex");
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -86,6 +84,14 @@ export async function sendIdentityConnectorInstallation(identityId: string): Pro
   return { ok: true, message: "Instalación enviada. El enlace vence en 24 horas." };
 }
 
+export async function sendIdentityConnectorInstallation(identityId: string): Promise<ActionResult> {
+  if (!isUuid(identityId)) return { ok: false, message: "La identidad no es válida." };
+  const { identitiesEnabled, supabase, user } = await authenticatedClient();
+  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
+  return dispatchIdentityConnectorInstallation(supabase, identityId);
+}
+
 export async function createIdentityDirectly(input: Readonly<{
   email: string;
   fullName: string;
@@ -98,7 +104,7 @@ export async function createIdentityDirectly(input: Readonly<{
   const { identitiesEnabled, supabase, user } = await authenticatedClient();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
   if (!identitiesEnabled) return identitiesDisabled();
-  const { error } = await supabase.rpc("create_nodal_identity_direct", {
+  const { data: identityId, error } = await supabase.rpc("create_nodal_identity_direct", {
     target_email: identity.email,
     target_first_name: identity.firstName,
     target_last_name: identity.lastName,
@@ -112,8 +118,42 @@ export async function createIdentityDirectly(input: Readonly<{
         : "No se pudo agregar la identidad.",
     };
   }
+  if (!isUuid(identityId)) {
+    return { ok: false, message: "La identidad se agregó, pero no se pudo preparar su instalación." };
+  }
+  const dispatch = await dispatchIdentityConnectorInstallation(supabase, identityId);
   revalidatePath("/app");
-  return { ok: true, message: "Identidad agregada." };
+  return dispatch.ok
+    ? { ok: true, message: "Identidad agregada. El conector fue enviado por correo." }
+    : {
+        ok: true,
+        message: "Identidad agregada, pero el correo no pudo enviarse. Podés reenviarlo desde su tarjeta.",
+      };
+}
+
+export async function retireIdentity(identityId: string): Promise<ActionResult> {
+  if (!isUuid(identityId)) return { ok: false, message: "La identidad no es válida." };
+  const { identitiesEnabled, supabase, user } = await authenticatedClient();
+  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
+  const { error } = await supabase.rpc("retire_nodal_identity", {
+    target_identity_id: identityId,
+  });
+  if (error) {
+    const reason = error.message.toLowerCase();
+    return {
+      ok: false,
+      message: reason.includes("active account")
+        ? "Quitá primero las cuentas asignadas a esta identidad."
+        : reason.includes("wallet")
+          ? "Quitá primero las billeteras asignadas a esta identidad."
+          : reason.includes("active connector")
+            ? "Desvinculá primero el conector activo de esta identidad."
+            : "No se pudo eliminar la identidad.",
+    };
+  }
+  revalidatePath("/app");
+  return { ok: true, message: "Identidad eliminada del panel. Su trazabilidad quedó preservada." };
 }
 
 export async function assignIdentityAccount(identityId: string, accountId: string): Promise<ActionResult> {

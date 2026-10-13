@@ -988,6 +988,7 @@ async function renderPrivateAppPage({
         .from("nodal_identities")
         .select("id,first_name,last_name,contact_email,onboarding_status,operational_status,documentation_status,credentials_status,drive_folder_url")
         .eq("workspace_id", selection.workspace.id)
+        .neq("onboarding_status", "inactive")
         .order("last_name")
         .order("first_name"),
       supabase

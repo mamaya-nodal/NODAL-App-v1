@@ -21,6 +21,7 @@ import type {
 import {
   assignIdentityAccount,
   createIdentityDirectly,
+  retireIdentity,
   sendIdentityConnectorInstallation,
   setIdentitySignal,
   unassignIdentityAccount,
@@ -347,6 +348,18 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, ownerNam
                 </select>
                 <button className="primary-action" disabled={pending || unassigned.length === 0} type="submit">Asignar</button>
               </form>
+              <div className="identity-retirement-row">
+                <button
+                  className="identity-retire"
+                  disabled={pending}
+                  onClick={() => {
+                    if (window.confirm(`¿Eliminar a ${identity.firstName} ${identity.lastName} del panel? Esta acción conserva la trazabilidad.`)) {
+                      run(() => retireIdentity(identity.id));
+                    }
+                  }}
+                  type="button"
+                >Eliminar identidad</button>
+              </div>
             </div>
           </details>
         })}

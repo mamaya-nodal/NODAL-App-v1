@@ -2438,3 +2438,15 @@ vigente sin aprobacion y evidencia suficiente.
 - **Apertura:** si existe señal e inventario pero todavía no llegó una cuenta broker, la interfaz distingue ese caso de una desconexión y solicita actualizar el conector. No se confirma una apertura con saldo cero inferido ni se elige silenciosamente una cuenta simulada.
 - **Alcance:** la corrección es común a todos los usuarios y no agrega excepciones por persona, cuenta o proveedor.
 
+### APP-175 - Alta con envío inmediato y baja reversible de identidades
+
+- **Fecha:** 2026-10-13. Decisión implementada.
+- **Alta:** crear una identidad aprobada prepara y despacha en la misma acción el
+  correo temporal del conector. Si el proveedor de correo falla, la identidad se
+  conserva y la interfaz informa que debe reenviarse desde su tarjeta.
+- **Baja:** `Eliminar identidad` no destruye filas ni historia. Cambia la identidad
+  a `inactive`, conserva auditoría y la oculta del panel. La baja se bloquea mientras
+  existan cuentas, billeteras o un conector activo; los envíos abiertos se invalidan.
+- **Seguridad:** ambas acciones vuelven a autenticar, verifican que Identidades esté
+  habilitado y delegan la autorización de espacio a funciones auditadas de base.
+
