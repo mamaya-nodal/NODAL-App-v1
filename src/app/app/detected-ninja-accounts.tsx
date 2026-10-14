@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSyncExternalStore, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 
 import type { DetectedNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
@@ -43,6 +43,7 @@ function parseOmissions(value: string): ReadonlySet<string> {
 export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, excludedAccountKeys, registeredAccountKeys, mode, online, pendingBrokerAccounts, period, periodId, wallets }: Props) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
   const omissionStorageKey = `nodal:omitted-ninja-accounts:${connectorId}`;
   const omittedKeys = parseOmissions(useSyncExternalStore(subscribeToOmissions, () => readOmissions(omissionStorageKey), () => "[]"));
   const detectedPropAccounts = accounts.filter((account) => account.type === "prop");
@@ -54,7 +55,23 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, exclu
   function refreshAccounts() {
     try { window.sessionStorage.removeItem(omissionStorageKey); } catch { /* Sin almacenamiento, no hay omisiones guardadas. */ }
     window.dispatchEvent(new Event(omissionsChangedEvent));
-    startRefresh(() => router.refresh());
+    setRefreshMessage(null);
+    startRefresh(async () => {
+      try {
+        const response = await fetch("/api/ninja-account-registration-exclusions/restore", {
+          body: JSON.stringify({ connectorId }),
+          headers: { "content-type": "application/json" },
+          method: "POST",
+        });
+        const result = await response.json() as { message?: unknown; ok?: unknown };
+        setRefreshMessage(typeof result.message === "string"
+          ? result.message
+          : "No pudimos actualizar las cuentas detectadas.");
+      } catch {
+        setRefreshMessage("No pudimos actualizar las cuentas detectadas.");
+      }
+      router.refresh();
+    });
   }
 
   function omitAccount(account: DetectedNinjaAccount) {
@@ -77,6 +94,7 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, exclu
           </span>
         </div>
       </div>
+      {refreshMessage ? <p className="ninja-refresh-message" role="status">{refreshMessage}</p> : null}
       {propAccounts.length === 0 ? <p className="ninja-empty">Sin cuentas nuevas</p> : null}
       {propAccounts.length > 0 ? (
         <div className="ninja-detected-grid">{propAccounts.map((account) => (

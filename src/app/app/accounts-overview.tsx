@@ -324,7 +324,7 @@ function AccountCard({ item, wallets }: Readonly<{
           {actionMode === "delete" && (
             <div aria-labelledby={`delete-account-${account.id}`} aria-modal="true" className="manual-account-delete-confirm" role="alertdialog">
               <strong id={`delete-account-${account.id}`}>¿Eliminar este registro?</strong>
-              <p>La cuenta desaparecerá de la app y el conector no volverá a detectarla ni ofrecerla para registrar.</p>
+              <p>La cuenta desaparecerá de la app y quedará oculta del alta automática. Si necesitás corregirla, podrás volver a habilitarla con “Actualizar” en NinjaTrader.</p>
               <div>
                 <button className="cancel" disabled={working} onClick={() => setActionMode(null)} type="button">Cancelar</button>
                 <button className="confirm-delete" disabled={working} onClick={async () => {

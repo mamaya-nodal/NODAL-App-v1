@@ -2522,3 +2522,17 @@ vigente sin aprobacion y evidencia suficiente.
   desde la elección inicial para que el titular pueda optar nuevamente por
   `Empezar desde cero` o `Reconstruir mi situación actual`.
 
+### APP-180 - Rehabilitación de cuentas detectadas eliminadas
+
+- **Fecha:** 2026-10-14. Corrección general a partir de la cuenta 15 de Lorena.
+- **Hallazgo:** eliminar un registro sin actividad conservaba una exclusión permanente
+  para que NinjaTrader no lo recreara. El botón `Actualizar` sólo limpiaba omisiones
+  del navegador, por lo que una cuenta corregida nunca volvía a ofrecerse.
+- **Regla:** la eliminación sigue siendo auditable y evita la reaparición automática.
+  Cuando el titular pulsa `Actualizar`, la app rehabilita únicamente las exclusiones
+  del conector seleccionado que NinjaTrader volvió a informar después de la baja.
+- **Seguridad:** el servidor valida sesión, titularidad y estado activo del conector.
+  Cada exclusión rehabilitada genera un evento de auditoría antes de eliminarse.
+- **Interfaz:** la confirmación de baja explica que la cuenta queda oculta y que puede
+  recuperarse manualmente. La actualización informa si restauró una o más cuentas.
+
