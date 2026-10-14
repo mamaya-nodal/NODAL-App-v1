@@ -2508,3 +2508,17 @@ vigente sin aprobacion y evidencia suficiente.
 - **Alcance:** la regla es general para todos los usuarios y no incorpora
   excepciones por nombre, cuenta o rol operativo.
 
+### APP-179 - Solicitud de edición estable entre despliegues
+
+- **Fecha:** 2026-10-14. Corrección posterior al primer intento de Lorena.
+- **Hallazgo:** la base aceptaba la solicitud, pero el formulario dependía de un
+  identificador de Server Action que cambia entre despliegues. Una pestaña abierta
+  con la versión anterior podía invocar un identificador ya inexistente, caer en la
+  pantalla general de error y no llegar a ejecutar la función transaccional.
+- **Transporte:** la solicitud usa un endpoint autenticado y estable. El servidor
+  vuelve a validar sesión, período y titularidad; los errores esperables se devuelven
+  dentro de la tarjeta y nunca reemplazan toda la aplicación.
+- **Reingreso:** cuando Admin Master autoriza, Inicio abre automáticamente el asistente
+  desde la elección inicial para que el titular pueda optar nuevamente por
+  `Empezar desde cero` o `Reconstruir mi situación actual`.
+

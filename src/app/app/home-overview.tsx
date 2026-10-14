@@ -135,7 +135,7 @@ export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liv
 
   return (
     <section aria-label="Inicio" className="home-overview-panel" id="inicio">
-      {openingSetupPreview && periodId ? <OpeningSetupPreview autoOpen={!openingSnapshot} initialOpening={openingSnapshot} liveBrokerBalance={liveBalance} periodId={periodId} registeredAccountCount={registeredAccountCount} revision={Boolean(openingSnapshot)} /> : null}
+      {openingSetupPreview && periodId ? <OpeningSetupPreview autoOpen={!openingSnapshot || openingRevisionStatus === "approved"} initialOpening={openingSnapshot} key={openingRevisionStatus === "approved" ? "approved-revision" : openingSnapshot ? "registered-opening" : "initial-opening"} liveBrokerBalance={liveBalance} periodId={periodId} registeredAccountCount={registeredAccountCount} revision={Boolean(openingSnapshot)} /> : null}
       {openingSnapshot && periodId ? <OpeningSnapshotHome opening={openingSnapshot} periodId={periodId} revisionEligible={openingRevisionEligible} revisionStatus={openingRevisionStatus} /> : null}
       {liveBalance && (
         <div className="home-live-status">
