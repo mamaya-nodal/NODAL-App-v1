@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canConfigurePeriodOpening } from "./opening-eligibility";
+import { canConfigurePeriodOpening, canRequestPeriodOpeningRevision } from "./opening-eligibility";
 
 const emptyOpening = {
   accountCount: 0,
@@ -44,5 +44,16 @@ describe("period opening eligibility", () => {
 
   it("does not allow setup after an opening was confirmed", () => {
     expect(canConfigurePeriodOpening({ ...emptyOpening, hasOpeningSnapshot: true })).toBe(false);
+  });
+
+  it("allows requesting a revision only for an unused confirmed opening", () => {
+    expect(canRequestPeriodOpeningRevision({ ...emptyOpening, hasOpeningSnapshot: true })).toBe(true);
+    expect(canRequestPeriodOpeningRevision({ ...emptyOpening, accountCount: 5, hasOpeningSnapshot: true })).toBe(true);
+    expect(canRequestPeriodOpeningRevision(emptyOpening)).toBe(false);
+    expect(canRequestPeriodOpeningRevision({
+      ...emptyOpening,
+      hasOpeningSnapshot: true,
+      walletMovementCount: 1,
+    })).toBe(false);
   });
 });

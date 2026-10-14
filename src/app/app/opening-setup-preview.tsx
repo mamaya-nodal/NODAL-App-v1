@@ -7,14 +7,18 @@ import { confirmOpeningSetup } from "./opening-setup-actions";
 import { claimOpeningBrokerAccount, getOpeningBrokerState } from "./opening-broker-actions";
 import type { PendingOpeningBrokerAccount } from "@/modules/ninja/domain/broker-claim-balance";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
+import type { PeriodOpeningRecord } from "@/modules/summary/domain/opening-snapshot";
 import styles from "./opening-setup-preview.module.css";
 
 type StartMode = "reconstruct" | "zero";
 
 type Props = Readonly<{
   autoOpen?: boolean;
+  initialOpening?: PeriodOpeningRecord | null;
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
   periodId: string;
+  registeredAccountCount?: number;
+  revision?: boolean;
 }>;
 
 type WalletDraft = Readonly<{ balance: string; id: string; name: string }>;
@@ -61,6 +65,47 @@ const initialBatch: BatchDraft = {
   accountCount: "", accountSize: "50000", companyName: "", costPerAccount: "",
   currentCashValue: "", stage: "evaluation",
 };
+
+function decimal(cents: number) {
+  return (cents / 100).toFixed(2);
+}
+
+function draftFromOpening(opening?: PeriodOpeningRecord | null, clearRegisteredAccounts = false): Draft {
+  if (!opening) return { ...initialDraft };
+  return {
+    closedAccounts: String(opening.closedAccountsReference),
+    contributedCapital: decimal(opening.contributedCapitalInCents),
+    fundedAccounts: clearRegisteredAccounts ? "0" : String(opening.fundedAccounts),
+    liveEvaluationAccounts: clearRegisteredAccounts ? "0" : String(opening.liveEvaluationAccounts),
+    pendingPayouts: decimal(opening.fundingPendingInCents),
+    personalWithdrawals: decimal(opening.personalWithdrawalsInCents),
+    reconstructionDate: initialDraft.reconstructionDate,
+    virginAccounts: clearRegisteredAccounts ? "0" : String(opening.virginAccounts),
+    workingCapital: decimal(opening.floatingInCents),
+  };
+}
+
+function walletsFromOpening(opening?: PeriodOpeningRecord | null): WalletDraft[] {
+  if (!opening?.wallets.length) return [{ balance: "", id: "opening-wallet-1", name: "" }];
+  return opening.wallets.map((wallet) => ({
+    balance: decimal(wallet.balanceInCents),
+    id: wallet.id,
+    name: wallet.name,
+  }));
+}
+
+function batchFromOpening(opening?: PeriodOpeningRecord | null): BatchDraft {
+  const batch = opening?.batches[0];
+  if (!batch) return { ...initialBatch };
+  return {
+    accountCount: String(batch.accountCount),
+    accountSize: decimal(batch.accountSizeInCents),
+    companyName: batch.companyName,
+    costPerAccount: decimal(batch.costPerAccountInCents),
+    currentCashValue: batch.currentCashValueInCents === null ? "" : decimal(batch.currentCashValueInCents),
+    stage: batch.stage,
+  };
+}
 
 const zeroSteps = ["Punto de partida", "Dinero disponible", "Cuentas iniciales", "Vista previa"];
 const reconstructionSteps = ["Punto de partida", "Fecha de corte", "Cuentas actuales", "Dinero actual", "Progreso previo", "Vista previa"];
@@ -152,15 +197,16 @@ function WalletEditor({ onChange, wallets }: Readonly<{
   </div>;
 }
 
-export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance: initialBrokerBalance = null, periodId }: Props) {
+export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, liveBrokerBalance: initialBrokerBalance = null, periodId, registeredAccountCount = 0, revision = false }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(autoOpen);
   const [mode, setMode] = useState<StartMode | null>(null);
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<Draft>(initialDraft);
-  const [wallets, setWallets] = useState<WalletDraft[]>([{ balance: "", id: "opening-wallet-1", name: "" }]);
-  const [showBatchForm, setShowBatchForm] = useState(false);
-  const [batch, setBatch] = useState<BatchDraft>(initialBatch);
+  const preserveRegisteredAccounts = revision && registeredAccountCount > 0;
+  const [draft, setDraft] = useState<Draft>(() => draftFromOpening(initialOpening, preserveRegisteredAccounts));
+  const [wallets, setWallets] = useState<WalletDraft[]>(() => walletsFromOpening(initialOpening));
+  const [showBatchForm, setShowBatchForm] = useState(!preserveRegisteredAccounts && Boolean(initialOpening?.batches.length));
+  const [batch, setBatch] = useState<BatchDraft>(() => batchFromOpening(initialOpening));
   const [message, setMessage] = useState<string | null>(null);
   const [liveBrokerBalance, setLiveBrokerBalance] = useState(initialBrokerBalance);
   const [pendingBrokerAccounts, setPendingBrokerAccounts] = useState<PendingOpeningBrokerAccount[]>([]);
@@ -245,10 +291,10 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance: initi
   function restart() {
     setMode(null);
     setStep(0);
-    setDraft(initialDraft);
-    setBatch(initialBatch);
-    setWallets([{ balance: "", id: "opening-wallet-1", name: "" }]);
-    setShowBatchForm(false);
+    setDraft(draftFromOpening(initialOpening, preserveRegisteredAccounts));
+    setBatch(batchFromOpening(initialOpening));
+    setWallets(walletsFromOpening(initialOpening));
+    setShowBatchForm(!preserveRegisteredAccounts && Boolean(initialOpening?.batches.length));
     setMessage(null);
   }
 
@@ -269,14 +315,14 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance: initi
     <>
       <article className={styles.launcher}>
         <div>
-          <span>PREPARACIÓN INICIAL</span>
-          <h2>Configurá tu punto de partida</h2>
+          <span>{revision ? "EDICIÓN AUTORIZADA" : "PREPARACIÓN INICIAL"}</span>
+          <h2>{revision ? "Rehacé tu punto de partida" : "Configurá tu punto de partida"}</h2>
           <p>
-            Elegí si empezás desde cero o si necesitás reconstruir la situación con la que llegás a NODAL.
+            {revision ? "La versión anterior quedará archivada. La nueva apertura reorganizará la contabilidad desde el corte que confirmes." : "Elegí si empezás desde cero o si necesitás reconstruir la situación con la que llegás a NODAL."}
           </p>
         </div>
         <button onClick={() => setOpen(true)} type="button">
-          Comenzar
+          {revision ? "Editar punto de partida" : "Comenzar"}
         </button>
       </article>
 
@@ -285,15 +331,15 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance: initi
           <section aria-labelledby="opening-setup-title" aria-modal="true" className={styles.dialog} role="dialog">
             <header className={styles.header}>
               <div>
-                <span>CONFIGURACIÓN DE APERTURA</span>
-                <h2 id="opening-setup-title">Tu punto de partida en NODAL</h2>
+                <span>{revision ? "REVISIÓN AUTORIZADA" : "CONFIGURACIÓN DE APERTURA"}</span>
+                <h2 id="opening-setup-title">{revision ? "Rehacé tu punto de partida" : "Tu punto de partida en NODAL"}</h2>
               </div>
               <button aria-label="Cerrar configuración" className={styles.close} onClick={() => setOpen(false)} type="button">×</button>
             </header>
 
             <div className={styles.previewNotice}>
-              <strong>Apertura real</strong>
-              <span>Al confirmar, este pantallazo quedará guardado y alimentará tu panel. No se inventarán trades ni cuentas cerradas.</span>
+              <strong>{revision ? "Reemplazo auditado" : "Apertura real"}</strong>
+              <span>{revision ? "Al confirmar, esta versión será la base vigente y la anterior quedará conservada en el historial." : "Al confirmar, este pantallazo quedará guardado y alimentará tu panel. No se inventarán trades ni cuentas cerradas."}</span>
             </div>
 
             <div className={styles.body}>
@@ -362,17 +408,17 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance: initi
                     <p className={styles.eyebrow}>CUENTAS ACTUALES</p>
                     <h3>Cargá solamente las cuentas que todavía existen</h3>
                     <p className={styles.description}>Las cuentas cerradas anteriores no se recrean. Su cantidad puede conservarse como referencia histórica.</p>
-                    <div className={styles.fieldsThree}>
+                    {preserveRegisteredAccounts ? <div className={styles.tip}><strong>{registeredAccountCount} cuentas registradas se conservan</strong><span>No vuelvas a declararlas como lote inicial: seguirán visibles y sus compras anteriores quedarán absorbidas por el nuevo corte.</span></div> : <div className={styles.fieldsThree}>
                       <Field label="Vírgenes" name="virginAccounts" onChange={update} placeholder="0" type="number" value={draft.virginAccounts} />
                       <Field label="En evaluación" name="liveEvaluationAccounts" onChange={update} placeholder="0" type="number" value={draft.liveEvaluationAccounts} />
                       <Field label="Funded activas" name="fundedAccounts" onChange={update} placeholder="0" type="number" value={draft.fundedAccounts} />
-                    </div>
+                    </div>}
                     <div className={styles.historyReference}>
                       <Field hint="Solo referencia. No creará cuentas en el inventario." label="Cuentas cerradas antes de NODAL" name="closedAccounts" onChange={update} placeholder="0" type="number" value={draft.closedAccounts} />
                     </div>
-                    <button className={styles.secondaryButton} onClick={() => setShowBatchForm((current) => !current)} type="button">
+                    {!preserveRegisteredAccounts ? <button className={styles.secondaryButton} onClick={() => setShowBatchForm((current) => !current)} type="button">
                       {showBatchForm ? "Ocultar lote" : "+ Agregar lote de cuentas"}
-                    </button>
+                    </button> : null}
                     {showBatchForm ? (
                       <div className={styles.batchForm}>
                         <div className={styles.batchHeading}><strong>Lote 1</strong><span>Detalle opcional</span></div>
@@ -446,7 +492,7 @@ export function OpeningSetupPreview({ autoOpen = false, liveBrokerBalance: initi
               <div>
                 {step > 0 ? <button className={styles.backButton} onClick={() => setStep((current) => Math.max(0, current - 1))} type="button">Atrás</button> : null}
                 {step > 0 && step < lastStep ? <button className={styles.nextButton} onClick={() => setStep((current) => Math.min(lastStep, current + 1))} type="button">Continuar</button> : null}
-                {step === lastStep ? <button className={styles.nextButton} disabled={isPending || claimingAccount !== null} onClick={finishSetup} type="button">{isPending ? "Guardando…" : "Confirmar punto de partida"}</button> : null}
+                {step === lastStep ? <button className={styles.nextButton} disabled={isPending || claimingAccount !== null} onClick={finishSetup} type="button">{isPending ? "Guardando…" : revision ? "Guardar nuevo punto de partida" : "Confirmar punto de partida"}</button> : null}
               </div>
             </footer>
           </section>

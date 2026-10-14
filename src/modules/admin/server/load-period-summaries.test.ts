@@ -96,6 +96,25 @@ describe("shared period summaries", () => {
     expect(current.realizedReconciliationDifferenceInCents).not.toBe(0);
   });
 
+  it("absorbs purchases made before an authorized revised opening", async () => {
+    const data: Record<string, Row[]> = {
+      periods: [{ id: "oct", workspace_id: "w", period_month: "2026-10-01", lifecycle_status: "open", workspaces: { owner_user_id: "u" } }],
+      accounts: [{ id: "a", period_id: "oct", state: "virgin", state_origin: "automatic" }],
+      purchases: [{ id: "p", account_id: "a", period_id: "oct", purchased_on: "2026-10-08", price_cents: 10_500, funds_origin: "Aporte trader" }],
+      period_opening_snapshots: [{
+        id: "opening", period_id: "oct", start_mode: "reconstruct", cutover_date: "2026-10-14",
+        broker_balance_cents: 2_300_000, wallet_balance_cents: 0, funding_pending_cents: 0,
+        contributed_capital_cents: 2_300_000, personal_withdrawals_cents: 0,
+        prior_realized_result_cents: 0, floating_cents: 0, virgin_accounts: 0,
+        live_evaluation_accounts: 0, funded_accounts: 0, closed_accounts_reference: 0,
+        revision_number: 2,
+      }],
+    };
+    const summary = (await loadPeriodSummaries(client(data), ["oct"])).get("oct")!.summary;
+    expect(summary.periodResultInCents).toBe(0);
+    expect(summary.capitalNetInCents).toBe(2_300_000);
+  });
+
   it("an empty request performs no reads", async () => {
     expect((await loadPeriodSummaries(client({}), [])).size).toBe(0);
   });

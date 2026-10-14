@@ -2482,3 +2482,29 @@ vigente sin aprobacion y evidencia suficiente.
   fuentes autorizadas aporta una cuenta broker. La corrección aplica a todos los
   usuarios y no contiene excepciones personales.
 
+### APP-178 - Edición autorizada del punto de partida sin actividad
+
+- **Fecha:** 2026-10-14. Decisión funcional confirmada por Mauricio a partir de
+  los casos de Lorena y Julián.
+- **Solicitud:** el titular de un espacio Real puede solicitar rehacer su punto de
+  partida desde la tarjeta de Inicio. La solicitud sólo se admite si existe una
+  apertura confirmada y no hay operaciones, controles, movimientos de billetera,
+  payouts, arrastres, rectificaciones ni cierres posteriores.
+- **Cuentas sin uso:** las cuentas ya compradas pueden conservarse si todavía no
+  tienen actividad. No se vuelven a declarar como lote inicial y sus compras
+  anteriores quedan absorbidas por el nuevo corte, evitando duplicar cuentas o
+  descontar dos veces su costo.
+- **Autorización:** únicamente Admin Master puede aprobar o rechazar la solicitud
+  desde `Solicitudes`. La decisión exige motivo y queda auditada. Una aprobación
+  habilita una sola edición y se vuelve inválida si aparece actividad antes de
+  confirmar el reemplazo.
+- **Contabilidad:** la apertura anterior no se elimina. Se archiva completa junto
+  con sus lotes y billeteras; la apertura vigente se reemplaza atómicamente y pasa
+  a ser la nueva base del período. La diferencia entre el valor anterior y el nuevo
+  no genera una ganancia, pérdida, aporte ni retiro.
+- **Billeteras:** los saldos iniciales se reemplazan en la misma transacción. Una
+  billetera omitida sólo se desactiva cuando no tiene movimientos, compras, cobros,
+  controles ni fuente automática; nunca se destruye su historia.
+- **Alcance:** la regla es general para todos los usuarios y no incorpora
+  excepciones por nombre, cuenta o rol operativo.
+

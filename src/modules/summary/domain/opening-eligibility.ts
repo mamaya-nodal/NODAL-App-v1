@@ -34,3 +34,11 @@ export function canConfigurePeriodOpening(input: OpeningEligibilityInput): boole
     && input.walletMovementCount === 0
     && input.fundingWithdrawalCount === 0;
 }
+
+export function canRequestPeriodOpeningRevision(input: OpeningEligibilityInput): boolean {
+  return input.hasOpeningSnapshot
+    && input.dailyControls.length === 0
+    && input.operationEntryCount === 0
+    && input.walletMovementCount === 0
+    && input.fundingWithdrawalCount === 0;
+}

@@ -135,6 +135,10 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
   if (error) {
     if (error.message.includes("already confirmed")) return { ok: false, message: "Este punto de partida ya fue confirmado." };
     if (error.message.includes("after period activity")) return { ok: false, message: "Ya existe actividad en el período. La apertura inicial no puede mezclarse con registros posteriores." };
+    if (error.message.includes("OPENING_REVISION_NOT_APPROVED")) return { ok: false, message: "La autorización de edición ya no está disponible." };
+    if (error.message.includes("OPENING_REVISION_HAS_ACTIVITY")) return { ok: false, message: "Apareció actividad en el período. La edición fue bloqueada para proteger la contabilidad." };
+    if (error.message.includes("OPENING_REVISION_REGISTERED_ACCOUNTS")) return { ok: false, message: "Las cuentas ya registradas se conservan automáticamente; no las vuelvas a cargar como lote inicial." };
+    if (error.message.includes("OPENING_REVISION_NOT_AVAILABLE")) return { ok: false, message: "Este punto de partida no está disponible para edición." };
     return { ok: false, message: "No se pudo confirmar el punto de partida." };
   }
 

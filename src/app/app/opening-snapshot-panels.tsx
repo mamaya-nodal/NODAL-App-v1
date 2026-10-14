@@ -1,5 +1,6 @@
 import type { PeriodOpeningRecord } from "@/modules/summary/domain/opening-snapshot";
 
+import { OpeningRevisionRequest, type OpeningRevisionRequestStatus } from "./opening-revision-request";
 import styles from "./opening-setup-preview.module.css";
 
 function money(cents: number | null) {
@@ -13,13 +14,23 @@ function date(value: string) {
   return new Intl.DateTimeFormat("es-AR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
 
-export function OpeningSnapshotHome({ opening }: Readonly<{ opening: PeriodOpeningRecord }>) {
+export function OpeningSnapshotHome({
+  opening,
+  periodId,
+  revisionEligible,
+  revisionStatus,
+}: Readonly<{
+  opening: PeriodOpeningRecord;
+  periodId: string;
+  revisionEligible: boolean;
+  revisionStatus: OpeningRevisionRequestStatus;
+}>) {
   const capital = opening.mode === "zero"
     ? opening.contributedCapitalInCents + opening.walletBalanceInCents
     : opening.contributedCapitalInCents - opening.personalWithdrawalsInCents;
   const live = opening.liveEvaluationAccounts + opening.fundedAccounts;
   return <article className={styles.savedOpening}>
-    <div><span>PUNTO DE PARTIDA REGISTRADO</span><h2>{opening.mode === "zero" ? "Ciclo iniciado desde cero" : "Situación anterior reconstruida"}</h2><p>Corte al {date(opening.cutoverDate)} · los movimientos posteriores se calculan sobre esta apertura.</p></div>
+    <div><span>PUNTO DE PARTIDA REGISTRADO</span><h2>{opening.mode === "zero" ? "Ciclo iniciado desde cero" : "Situación anterior reconstruida"}</h2><p>Corte al {date(opening.cutoverDate)} · los movimientos posteriores se calculan sobre esta apertura.</p><OpeningRevisionRequest eligible={revisionEligible} periodId={periodId} status={revisionStatus} /></div>
     <div className={styles.savedMetrics}>
       <p><span>Capital neto inicial</span><strong>{money(capital)}</strong></p>
       <p><span>Resultado acumulado inferido</span><strong>{money(opening.inferredResultInCents)}</strong></p>

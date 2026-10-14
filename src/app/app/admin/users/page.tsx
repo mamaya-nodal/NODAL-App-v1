@@ -1,30 +1,40 @@
 import { requireNodalAdmin } from "@/modules/admin/server/admin-access";
-import { authorizeAndProvisionStudent, reviewDirectAccessRequest, reviewUserInvitation, revokeStudent } from "../user-actions";
+import { authorizeAndProvisionStudent, reviewDirectAccessRequest, reviewOpeningRevisionRequest, reviewUserInvitation, revokeStudent } from "../user-actions";
 import { accountingPeriodMonthAt } from "@/modules/accounting/domain/period-calendar";
 
 type Props = { searchParams: Promise<{ result?: string | string[] }> };
 const one = (value: string | string[] | undefined) => typeof value === "string" ? value : undefined;
 const messages: Record<string, string> = {
-  access_request_approved: "Solicitud aprobada. El usuario quedó preparado en la Mesa Principal.", access_request_rejected: "Solicitud rechazada con trazabilidad.", access_request_review_failed: "No se pudo resolver la solicitud.", authorized: "Usuario autorizado y espacios Real y Práctica preparados.", invalid: "Completá correo, período y motivo.", invalid_access_request: "Revisá los datos de la solicitud.", invalid_invitation: "Revisá los datos de la invitación.", invitation_approved: "Invitación aprobada y usuario preparado.", invitation_rejected: "Invitación rechazada con trazabilidad.", invitation_review_failed: "No se pudo resolver la invitación. Para aprobarla, la persona debe haber iniciado sesión con Google primero.", not_authorized: "No se pudo autorizar. La persona debe haber iniciado sesión con Google primero.", not_revoked: "No se pudo revocar este acceso.", revoked: "Acceso del usuario revocado. Sus registros se conservan.",
+  access_request_approved: "Solicitud aprobada. El usuario quedó preparado en la Mesa Principal.", access_request_rejected: "Solicitud rechazada con trazabilidad.", access_request_review_failed: "No se pudo resolver la solicitud.", authorized: "Usuario autorizado y espacios Real y Práctica preparados.", invalid: "Completá correo, período y motivo.", invalid_access_request: "Revisá los datos de la solicitud.", invalid_invitation: "Revisá los datos de la invitación.", invalid_opening_revision: "Revisá la decisión y el motivo.", invitation_approved: "Invitación aprobada y usuario preparado.", invitation_rejected: "Invitación rechazada con trazabilidad.", invitation_review_failed: "No se pudo resolver la invitación. Para aprobarla, la persona debe haber iniciado sesión con Google primero.", not_authorized: "No se pudo autorizar. La persona debe haber iniciado sesión con Google primero.", not_revoked: "No se pudo revocar este acceso.", opening_revision_approved: "Edición autorizada. El usuario ya puede rehacer su punto de partida.", opening_revision_has_activity: "La solicitud no puede aprobarse porque el período ya tiene actividad económica.", opening_revision_rejected: "Solicitud de edición rechazada con trazabilidad.", opening_revision_review_failed: "No se pudo resolver la solicitud de edición.", revoked: "Acceso del usuario revocado. Sus registros se conservan.",
 };
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   const supabase = await requireNodalAdmin();
   const { result } = await searchParams;
-  const [{ data: users }, { data: workspaces }, { data: invitations }] = await Promise.all([
+  const [{ data: users }, { data: workspaces }, { data: invitations }, { data: openingRevisionRequests }] = await Promise.all([
     supabase.from("nodal_users").select("id, email, display_name, access_state, access_role, authorized_at, revoked_at, created_at, updated_at").order("created_at", { ascending: false }),
-    supabase.from("workspaces").select("owner_user_id, modality, periods(id)"),
+    supabase.from("workspaces").select("owner_user_id, modality, periods(id,period_month)"),
     supabase.from("nodal_user_invitations")
       .select("id,recipient_email,status,created_at,referred_by_user_id")
       .in("status", ["sent", "pending_approval"]).order("created_at", { ascending: false }),
+    supabase.from("period_opening_revision_requests")
+      .select("id,period_id,requested_by,status,requested_at")
+      .eq("status", "pending").order("requested_at", { ascending: true }),
   ]);
   const pendingUsers = (users ?? []).filter((user) => user.access_state === "pending");
   const currentUsers = (users ?? []).filter((user) => user.access_state === "active");
   const revokedUsers = (users ?? []).filter((user) => user.access_state === "revoked");
   const workspaceCount = new Map((workspaces ?? []).map((workspace) => [workspace.owner_user_id, workspace.periods.length]));
+  const periodMonthById = new Map((workspaces ?? []).flatMap((workspace) => workspace.periods.map((period) => [period.id, period.period_month] as const)));
   return <div className="admin-page admin-shell">
     <header className="workspace-view-heading admin-page-heading"><div><p className="status">ACCESOS</p><h2>Usuarios</h2></div><p>Altas, bajas y espacios habilitados.</p></header>
-    {one(result) && messages[one(result)!] && <p className={`admin-result ${["authorized", "revoked", "invitation_approved", "invitation_rejected", "access_request_approved", "access_request_rejected"].includes(one(result)!) ? "success" : "error"}`}>{messages[one(result)!]}</p>}
+    {one(result) && messages[one(result)!] && <p className={`admin-result ${["authorized", "revoked", "invitation_approved", "invitation_rejected", "access_request_approved", "access_request_rejected", "opening_revision_approved", "opening_revision_rejected"].includes(one(result)!) ? "success" : "error"}`}>{messages[one(result)!]}</p>}
+    <section className="admin-user-list admin-access-requests" id="opening-edit-requests"><div className="admin-section-heading"><div><p className="status">REVISIÓN CONTABLE</p><h3>Edición del punto de partida</h3></div><span className="calculated-badge">{(openingRevisionRequests ?? []).length}</span></div>
+      {(openingRevisionRequests ?? []).length === 0 ? <p className="empty-state">No hay solicitudes de edición pendientes.</p> : <div>{(openingRevisionRequests ?? []).map((request) => {
+        const requester = (users ?? []).find((user) => user.id === request.requested_by);
+        return <article className="admin-user-row" key={request.id}><div><strong>{requester?.display_name || requester?.email || "Usuario NODAL"}</strong><span>{requester?.email || "Correo no disponible"}</span><small>Período {periodMonthById.get(request.period_id) ?? "vigente"} · solicitada {new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(request.requested_at))}</small></div><form action={reviewOpeningRevisionRequest} className="admin-invitation-review"><input name="request_id" type="hidden" value={request.id} /><label>Motivo<input defaultValue="Reinicio autorizado por falta de actividad posterior" name="reason" required /></label><div><button className="primary-action" name="decision" type="submit" value="approve">Autorizar edición</button><button className="admin-revoke" name="decision" type="submit" value="reject">Rechazar</button></div></form></article>;
+      })}</div>}
+    </section>
     <section className="admin-user-list admin-access-requests"><div className="admin-section-heading"><div><p className="status">APROBACIÓN MASTER</p><h3>Solicitudes de apertura</h3></div><span className="calculated-badge">{pendingUsers.length}</span></div>
       {pendingUsers.length === 0 ? <p className="empty-state">No hay solicitudes directas pendientes.</p> : <div>{pendingUsers.map((user) => <article className="admin-user-row" key={user.id}><div><strong>{user.display_name || user.email}</strong><span>{user.email}</span><small>Solicitada {new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(user.updated_at || user.created_at))}</small></div><form action={reviewDirectAccessRequest} className="admin-invitation-review"><input name="target_user_id" type="hidden" value={user.id} /><input defaultValue={accountingPeriodMonthAt()} name="period_month" type="hidden" /><label>Nombre<input defaultValue={user.display_name || ""} name="display_name" placeholder="Nombre visible" /></label><label>% op. propias<input defaultValue="40" max="100" min="0" name="commission_percent" required step="0.01" type="number" /></label><label>Motivo<input defaultValue="Alta aprobada por Admin Master" name="reason" required /></label><div><button className="primary-action" name="decision" type="submit" value="approve">Aprobar</button><button className="admin-revoke" name="decision" type="submit" value="reject">Rechazar</button></div></form></article>)}</div>}
     </section>

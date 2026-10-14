@@ -60,7 +60,7 @@ export async function loadPeriodSummaries(
     readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, transfer_fee_cents").in("period_id", periodIds).order("id")),
     readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, destination_wallet_id, daily_control_id, occurred_on, kind, amount_cents, fee_cents, observation").in("period_id", periodIds).order("id")),
     readAll(supabase.from("funding_withdrawals").select("id, period_id, collected_period_id, account_result_applied_period_id, receipt_timing_v2, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents").eq("is_active", true).in("period_id", periodIds).order("id")),
-    readAll(supabase.from("period_opening_snapshots").select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("period_opening_snapshots").select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference,revision_number").in("period_id", periodIds).order("id")),
     readAll(supabase.from("account_period_carryovers").select("from_period_id,to_period_id,account_id,account_state,lifetime_result_cents,purchase_price_cents").in("to_period_id", periodIds).order("id")),
     readAll(supabase.from("period_closure_versions").select("period_id,version,summary_data").in("period_id", periodIds).order("version", { ascending: false })),
     readAll(supabase.from("period_rectifications").select("adjustment_period_id,result_adjustment_cents,commission_adjustment_cents").in("adjustment_period_id", periodIds).order("created_at")),
@@ -79,7 +79,7 @@ export async function loadPeriodSummaries(
   const accountIds = accounts.map((account) => account.id);
   const [purchasesResult, entriesResult, withdrawalsResult] = accountIds.length > 0
     ? await Promise.all([
-        readAll(supabase.from("purchases").select("account_id,period_id,price_cents,funds_origin").in("account_id", accountIds).order("id")),
+        readAll(supabase.from("purchases").select("account_id,period_id,purchased_on,price_cents,funds_origin").in("account_id", accountIds).order("id")),
         readAll(supabase.from("operation_entries").select("id,period_id,account_id,operated_on,phase,participant_role,destination,magnitude_cents").in("account_id", accountIds).order("id")),
         readAll(supabase.from("account_phase_withdrawals").select("period_id,account_id,phase,total_withdrawal_cents").in("account_id", accountIds).order("id")),
       ])
@@ -237,7 +237,8 @@ export async function loadPeriodSummaries(
           fundsOrigin: purchase?.funds_origin === "Saldo generado" ? "Saldo generado" : "Aporte trader",
           id: account.id,
           priceInCents: Number(purchase?.price_cents ?? 0),
-          purchaseBelongsToPeriod: purchase?.period_id === periodId,
+          purchaseBelongsToPeriod: purchase ? purchase.period_id === periodId
+            && !(Number(openingRow?.revision_number ?? 1) > 1 && purchase.purchased_on <= openingRow!.cutover_date) : false,
           state: account.state,
           stateOrigin: account.state_origin,
         };

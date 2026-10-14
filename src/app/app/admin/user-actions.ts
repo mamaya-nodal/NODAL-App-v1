@@ -88,3 +88,27 @@ export async function reviewDirectAccessRequest(formData: FormData) {
       ? "access_request_approved"
       : "access_request_rejected"}`);
 }
+
+export async function reviewOpeningRevisionRequest(formData: FormData) {
+  const requestId = text(formData, "request_id");
+  const decision = text(formData, "decision");
+  const reason = text(formData, "reason");
+  if (!requestId || !reason || !["approve", "reject"].includes(decision)) {
+    redirect("/app/admin/users?result=invalid_opening_revision#opening-edit-requests");
+  }
+
+  const supabase = await requireNodalAdmin();
+  const { error } = await supabase.rpc("admin_review_period_opening_revision_request", {
+    management_reason: reason,
+    target_approved: decision === "approve",
+    target_request_id: requestId,
+  });
+  const result = error
+    ? error.message.includes("OPENING_REVISION_HAS_ACTIVITY")
+      ? "opening_revision_has_activity"
+      : "opening_revision_review_failed"
+    : decision === "approve"
+      ? "opening_revision_approved"
+      : "opening_revision_rejected";
+  redirect(`/app/admin/users?result=${result}#opening-edit-requests`);
+}

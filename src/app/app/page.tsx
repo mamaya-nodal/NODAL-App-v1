@@ -57,7 +57,8 @@ import {
   type CapitalHistoryPoint,
   type HomePerformance,
 } from "@/modules/summary/domain/home-dashboard";
-import { canConfigurePeriodOpening } from "@/modules/summary/domain/opening-eligibility";
+import { canConfigurePeriodOpening, canRequestPeriodOpeningRevision } from "@/modules/summary/domain/opening-eligibility";
+import type { OpeningRevisionRequestStatus } from "./opening-revision-request";
 import type { OperationalOpeningSnapshot } from "@/modules/summary/domain/operational-summary";
 import {
   type OpeningAccountStage,
@@ -372,6 +373,9 @@ async function renderPrivateAppPage({
   let unclaimedBrokerAccounts: Array<{ accountName: string; connectionName: string; physicalConnectorId: string; proposedDestinationConnectorId: string }> = [];
   let openingSnapshot: PeriodOpeningRecord | null = null;
   let openingSetupEligible = false;
+  let openingRevisionEligible = false;
+  let openingRevisionStatus: OpeningRevisionRequestStatus = null;
+  let registeredAccountCount = 0;
   let periodOpening: OperationalOpeningSnapshot = {
     accumulatedResultInCents: 0,
     brokerBalanceInCents: null,
@@ -414,6 +418,7 @@ async function renderPrivateAppPage({
       { data: openingSnapshotRows },
       { data: openingBatchRows },
       { data: openingWalletRows },
+      { data: openingRevisionRequestRows },
     ] =
       await Promise.all([
         supabase
@@ -524,6 +529,12 @@ async function renderPrivateAppPage({
         supabase
           .from("period_opening_wallets")
           .select("opening_snapshot_id,wallet_id,balance_cents,nodal_wallets(name)"),
+        supabase
+          .from("period_opening_revision_requests")
+          .select("period_id,status,requested_at")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id))
+          .in("status", ["pending", "approved"])
+          .order("requested_at", { ascending: false }),
       ]).then(requireSuccessfulReads);
     const walletSourceById = new Map((walletSourceRows ?? []).map((source) => [source.wallet_id, source]));
     walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
@@ -720,6 +731,7 @@ async function renderPrivateAppPage({
     const accountsById = new Map(
       (accountRows ?? []).map((account) => [account.id, account]),
     );
+    registeredAccountCount = (accountRows ?? []).length;
     const companiesById = new Map(
       (companyRows ?? []).map((company) => [company.id, company]),
     );
@@ -1108,6 +1120,14 @@ async function renderPrivateAppPage({
       })),
     }));
     openingSnapshot = openingRecords.find((record) => record.periodId === selection.period!.id) ?? null;
+    const activeOpeningRevision = (openingRevisionRequestRows ?? []).find(
+      (request) => request.period_id === selection.period!.id,
+    );
+    openingRevisionStatus = activeOpeningRevision?.status === "approved"
+      ? "approved"
+      : activeOpeningRevision?.status === "pending"
+        ? "pending"
+        : null;
     const [loadedPersonalDashboard, loadedAccountingPeriods] = await Promise.all([
       personalDashboardPromise,
       accountingPeriodSummariesPromise,
@@ -1167,7 +1187,7 @@ async function renderPrivateAppPage({
         periodId: movement.period_id,
       })),
     });
-    openingSetupEligible = canConfigurePeriodOpening({
+    const openingEligibilityInput = {
       accountCount: accountHistory.length,
       dailyControls: (dailyControlRows ?? []).map((control) => ({
         controlNumber: control.control_number,
@@ -1180,7 +1200,10 @@ async function renderPrivateAppPage({
       hasOpeningSnapshot: openingSnapshot !== null,
       operationEntryCount: operationEntryHistory.length,
       walletMovementCount: walletMovements.length,
-    });
+    };
+    openingRevisionEligible = canRequestPeriodOpeningRevision(openingEligibilityInput);
+    openingSetupEligible = canConfigurePeriodOpening(openingEligibilityInput)
+      || (openingSnapshot !== null && openingRevisionStatus === "approved");
   }
 
   return (
@@ -1280,11 +1303,14 @@ async function renderPrivateAppPage({
           dashboard={personalDashboard}
           dailyHistory={homeDailyHistory}
           liveBrokerBalance={liveNinjaBrokerBalance}
+          openingRevisionEligible={openingRevisionEligible}
+          openingRevisionStatus={openingRevisionStatus}
           openingSetupPreview={openingSetupEligible}
           openingSnapshot={openingSnapshot}
           performance={homePerformance}
           periodId={selection.period.id}
           periodLabel={formatPeriodLabel(selection.period.periodMonth)}
+          registeredAccountCount={registeredAccountCount}
           summary={operationalSummary}
         />
       )}

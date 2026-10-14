@@ -18,6 +18,7 @@ import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 import { OpeningSetupPreview } from "./opening-setup-preview";
 import { OpeningSnapshotHome } from "./opening-snapshot-panels";
+import type { OpeningRevisionRequestStatus } from "./opening-revision-request";
 
 type HomeOverviewProps = Readonly<{
   capitalHistory: CapitalHistoryPoint[];
@@ -26,7 +27,10 @@ type HomeOverviewProps = Readonly<{
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
   openingSetupPreview?: boolean;
   openingSnapshot?: PeriodOpeningRecord | null;
+  openingRevisionEligible?: boolean;
+  openingRevisionStatus?: OpeningRevisionRequestStatus;
   periodId?: string;
+  registeredAccountCount?: number;
   performance: HomePerformance;
   periodLabel: string;
   summary: OperationalSummary;
@@ -95,7 +99,7 @@ function EarningsItem({ label, valueInCents }: Readonly<{ label: string; valueIn
   return <div><span>{label}</span><strong>{formatMoney(valueInCents)}</strong></div>;
 }
 
-export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liveBrokerBalance = null, openingSetupPreview = false, openingSnapshot = null, performance, periodId, periodLabel, summary }: HomeOverviewProps) {
+export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liveBrokerBalance = null, openingRevisionEligible = false, openingRevisionStatus = null, openingSetupPreview = false, openingSnapshot = null, performance, periodId, periodLabel, registeredAccountCount = 0, summary }: HomeOverviewProps) {
   const [chartMetric, setChartMetric] = useState<ChartMetric>(dashboard ? "earnings" : "billing");
   const [chartScale, setChartScale] = useState<"day" | "month">("month");
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
@@ -131,8 +135,8 @@ export function HomeOverview({ capitalHistory, dashboard, dailyHistory = [], liv
 
   return (
     <section aria-label="Inicio" className="home-overview-panel" id="inicio">
-      {openingSetupPreview && periodId ? <OpeningSetupPreview autoOpen liveBrokerBalance={liveBalance} periodId={periodId} /> : null}
-      {openingSnapshot ? <OpeningSnapshotHome opening={openingSnapshot} /> : null}
+      {openingSetupPreview && periodId ? <OpeningSetupPreview autoOpen={!openingSnapshot} initialOpening={openingSnapshot} liveBrokerBalance={liveBalance} periodId={periodId} registeredAccountCount={registeredAccountCount} revision={Boolean(openingSnapshot)} /> : null}
+      {openingSnapshot && periodId ? <OpeningSnapshotHome opening={openingSnapshot} periodId={periodId} revisionEligible={openingRevisionEligible} revisionStatus={openingRevisionStatus} /> : null}
       {liveBalance && (
         <div className="home-live-status">
           <span>Saldo broker</span>

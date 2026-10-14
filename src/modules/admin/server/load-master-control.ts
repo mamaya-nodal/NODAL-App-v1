@@ -34,7 +34,7 @@ export async function loadMasterControl(
   const { data: claimsData } = await adminDb.auth.getClaims();
   const db = createServiceClient();
   const userIds = deskData.overview.people.map((person) => person.id);
-  const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult] = await Promise.all([
+  const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult, openingRevisionRequestsResult] = await Promise.all([
     db.from("nodal_units").select("id,ordinal,name,code,root_desk_id,responsible_name,responsible_email,agreement_bps").order("ordinal"),
     db.from("nodal_users")
       .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled")
@@ -46,8 +46,11 @@ export async function loadMasterControl(
     db.from("ninja_connectors")
       .select("owner_user_id,connector_version,last_seen_at")
       .in("owner_user_id", userIds).order("paired_at", { ascending: false }),
+    db.from("period_opening_revision_requests")
+      .select("id,requested_by,requested_at")
+      .eq("status", "pending").order("requested_at", { ascending: true }),
   ]);
-  if (unitsResult.error || profilesResult.error || identifiersResult.error || workspacesResult.error || connectorsResult.error) {
+  if (unitsResult.error || profilesResult.error || identifiersResult.error || workspacesResult.error || connectorsResult.error || openingRevisionRequestsResult.error) {
     throw new Error("No se pudo cargar el panel de control Admin Master.");
   }
 
@@ -147,6 +150,15 @@ export async function loadMasterControl(
       .filter((identifier) => identifier.valid_to === null)
       .map((identifier) => [identifier.user_id, identifier.display_id])),
     identifierHistoryByUser,
+    pendingOpeningRevisionRequests: (openingRevisionRequestsResult.data ?? []).map((request) => {
+      const profile = (profilesResult.data ?? []).find((candidate) => candidate.id === request.requested_by);
+      return {
+        createdAt: request.requested_at,
+        email: profile?.email ?? "",
+        id: request.id,
+        name: profile?.display_name || profile?.email || "Usuario NODAL",
+      };
+    }),
     profilesByUser: Object.fromEntries((profilesResult.data ?? []).map((profile) => [profile.id, profile])),
     unitByDesk,
     unitByUser,
