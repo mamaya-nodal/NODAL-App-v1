@@ -32,7 +32,7 @@ describe("POST /api/ninja-account-registration-exclusions/restore", () => {
 
     expect(result.status).toBe(200);
     expect(await result.json()).toEqual({
-      message: "La cuenta eliminada volvió a quedar disponible para registrar.",
+      message: "La cuenta eliminada quedó habilitada para volver a registrarse. Si todavía no aparece, conectala en NinjaTrader y actualizá nuevamente.",
       ok: true,
       restoredCount: 1,
     });

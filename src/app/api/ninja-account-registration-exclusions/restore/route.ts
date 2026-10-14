@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     const restoredCount = Number(data ?? 0);
     const message = restoredCount > 0
       ? restoredCount === 1
-        ? "La cuenta eliminada volvió a quedar disponible para registrar."
+        ? "La cuenta eliminada quedó habilitada para volver a registrarse. Si todavía no aparece, conectala en NinjaTrader y actualizá nuevamente."
         : `${restoredCount} cuentas eliminadas volvieron a quedar disponibles para registrar.`
       : "Listado actualizado con la última información de NinjaTrader.";
     return response(message, true, 200, restoredCount);
