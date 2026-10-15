@@ -2536,3 +2536,18 @@ vigente sin aprobacion y evidencia suficiente.
 - **Interfaz:** la confirmación de baja explica que la cuenta queda oculta y que puede
   recuperarse manualmente. La actualización informa si restauró una o más cuentas.
 
+### APP-181 - Confirmación de cobro visible en payouts
+
+- **Fecha:** 2026-10-15. Corrección general a partir del primer cobro intentado por
+  Alfred.
+- **Hallazgo:** cada payout pendiente presentaba estado, billetera, fecha, fee y
+  acción en una única fila sin ajuste. En paneles angostos el botón quedaba fuera del
+  contenedor y el titular no podía confirmar la acreditación.
+- **Interfaz:** los datos del payout y el formulario de cobro ocupan filas separadas.
+  Billetera, fecha y fee se distribuyen dentro del ancho disponible, y la acción
+  visible se denomina `Confirmar pago acreditado`. En pantallas pequeñas todos los
+  controles se apilan verticalmente.
+- **Contabilidad:** la corrección es exclusivamente visual y conserva el circuito
+  transaccional de APP-140: acredita el neto en la billetera, reduce el flotante por
+  el bruto y registra el fee informado.
+

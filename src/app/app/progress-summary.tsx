@@ -664,14 +664,14 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                     <span>✓ Cobrado el {date(item.collectedOn)}{(item.feeInCents ?? 0) > 0 ? ` · Fee ${money(item.feeInCents ?? 0)}` : ""}</span>
                   ) : (
                     <form className="payout-collection-form" onSubmit={(event) => collect(event, item.id)}>
-                      <span className="payout-pending-status">Pendiente</span>
+                      <span className="payout-pending-status">Pendiente de acreditación</span>
                       <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required aria-label="Billetera de destino">
                         <option disabled value="">Billetera</option>
                         {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
                       </select>
                       <input aria-label="Fecha de cobro" defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="collected_on" required type="date" />
-                      <input inputMode="decimal" min="0" name="fee" placeholder="Fee USD" />
-                      <button className="text-action" disabled={saving || wallets.length === 0} type="submit">Confirmar cobro</button>
+                      <input aria-label="Fee del cobro en USD" inputMode="decimal" min="0" name="fee" placeholder="Fee USD" />
+                      <button className="payout-confirm-button" disabled={saving || wallets.length === 0} type="submit">Confirmar pago acreditado</button>
                     </form>
                   )}
                 </div>

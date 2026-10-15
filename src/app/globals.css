@@ -7866,14 +7866,22 @@ html[data-theme="day"] .accounting-history {
 .wallet-create-inline > summary { color: var(--app-positive); font-size: 10px; font-weight: 800; list-style: none; cursor: pointer; }
 .wallet-create-inline > summary::-webkit-details-marker { display: none; }
 .wallet-create-inline .summary-form { margin-top: 10px; }
-.payout-list-row { min-height: 50px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 11px; border-radius: 9px; background: var(--app-input); }
+.payout-list-row { min-height: 50px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 11px; border-radius: 9px; background: var(--app-input); }
 .payout-list-row + .payout-list-row { margin-top: 6px; }
-.payout-list-row p { display: grid; gap: 3px; margin: 0; color: var(--app-copy); font-size: 10px; }
+.payout-list-row p { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; color: var(--app-copy); font-size: 10px; }
 .payout-list-row p > span { display: block; }
 .payout-list-row span { color: var(--app-subtle); font-size: 9px; }
-.payout-collection-form { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
-.payout-collection-form :is(select, input) { width: 132px; min-height: 32px; padding: 0 8px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 9px; }
+.payout-collection-form { width: 100%; display: grid; grid-template-columns: max-content minmax(140px, 1.35fr) minmax(120px, 1fr) minmax(82px, 0.65fr); grid-template-areas: "status wallet date fee" ". action action action"; align-items: center; gap: 8px; }
+.payout-collection-form .payout-pending-status { grid-area: status; }
+.payout-collection-form select { grid-area: wallet; }
+.payout-collection-form input[name="collected_on"] { grid-area: date; }
+.payout-collection-form input[name="fee"] { grid-area: fee; }
+.payout-collection-form :is(select, input) { min-width: 0; width: 100%; min-height: 36px; padding: 0 9px; border: 1px solid var(--app-border); border-radius: 8px; color: var(--app-title); background: var(--app-panel); font: inherit; font-size: 9px; }
 .payout-collection-form .payout-pending-status { padding: 4px 7px; border-radius: 999px; color: var(--app-warning); background: color-mix(in srgb, var(--app-warning) 10%, transparent); font-weight: 800; }
+.payout-confirm-button { grid-area: action; min-height: 38px; padding: 0 16px; border: 1px solid color-mix(in srgb, var(--brand) 72%, white); border-radius: 9px; color: #071006; background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 67%, white), var(--brand)); font: inherit; font-size: 10px; font-weight: 850; cursor: pointer; box-shadow: 0 8px 20px color-mix(in srgb, var(--brand) 18%, transparent); }
+.payout-confirm-button:hover { filter: brightness(1.04); }
+.payout-confirm-button:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.payout-confirm-button:disabled { cursor: not-allowed; filter: saturate(0.45); opacity: 0.52; box-shadow: none; }
 .broker-transfer-reconciliation { display: grid; gap: 12px; margin-top: 10px; padding: 14px 16px 16px; border: 1px solid color-mix(in srgb, var(--app-warning) 45%, var(--app-border)); border-radius: 13px; background: color-mix(in srgb, var(--app-warning) 5%, var(--app-panel)); }
 .broker-transfer-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .broker-transfer-heading strong { color: var(--app-title); font-size: 11px; }
@@ -8059,6 +8067,8 @@ html[data-theme="day"] .demo-stage.live {
   .named-wallet-display,
   .payout-collection-form { width: 100%; }
   .named-wallet-row input { width: 100%; }
+  .payout-list-row p { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .payout-collection-form { grid-template-columns: 1fr; grid-template-areas: "status" "wallet" "date" "fee" "action"; align-items: stretch; }
   .payout-collection-form :is(select, input) { min-width: 0; width: 100%; }
   .demo-operation-grid { grid-template-columns: 1fr; }
   .demo-operation-grid > article:last-child { grid-column: auto; }
