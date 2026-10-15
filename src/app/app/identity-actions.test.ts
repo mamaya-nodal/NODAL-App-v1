@@ -22,7 +22,7 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 
-import { createIdentityDirectly, retireIdentity } from "./identity-actions";
+import { claimIdentityBrokerAccount, createIdentityDirectly, retireIdentity } from "./identity-actions";
 
 const identityId = "09c293db-6514-471c-8bd1-981f2d97f5f8";
 const installationId = "6522d107-cd3e-4730-aef4-ee172cd8c4bd";
@@ -110,6 +110,27 @@ describe("identity access gate", () => {
     expect(result.ok).toBe(true);
     expect(mocks.rpc).toHaveBeenCalledWith("retire_nodal_identity", {
       target_identity_id: identityId,
+    });
+  });
+
+  it("returns visible confirmation after assigning a broker account", async () => {
+    mocks.maybeSingle.mockResolvedValue({ data: { identities_enabled: true }, error: null });
+    mocks.rpc.mockResolvedValue({ data: null, error: null });
+
+    const result = await claimIdentityBrokerAccount({
+      accountName: "2149906",
+      connectionName: "Live",
+      physicalConnectorId: "69b6c516-c0d8-4691-862b-2b15af76bd10",
+    });
+
+    expect(result).toEqual({
+      message: "Cuenta broker 2149906 asignada correctamente.",
+      ok: true,
+    });
+    expect(mocks.rpc).toHaveBeenCalledWith("claim_ninja_broker_account", {
+      target_account_name: "2149906",
+      target_connection_name: "Live",
+      target_physical_connector_id: "69b6c516-c0d8-4691-862b-2b15af76bd10",
     });
   });
 });

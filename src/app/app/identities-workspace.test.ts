@@ -1,10 +1,10 @@
-import { createElement } from "react";
+import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { IdentitySummary } from "@/modules/identities/domain/identity-summary";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("./identity-actions", () => ({ assignIdentityAccount: vi.fn(), createIdentityDirectly: vi.fn(),
+vi.mock("./identity-actions", () => ({ assignIdentityAccount: vi.fn(), claimIdentityBrokerAccount: vi.fn(), createIdentityDirectly: vi.fn(),
   sendIdentityConnectorInstallation: vi.fn(), unassignIdentityAccount: vi.fn(), setIdentitySignal: vi.fn(), updateIdentityOperationalStatus: vi.fn() }));
 vi.mock("./ninja-connector-panel", () => ({ NinjaConnectorPanel: ({ pairingLabel }: { pairingLabel: string }) =>
   createElement("button", {}, pairingLabel) }));
@@ -16,8 +16,8 @@ const identity: IdentitySummary = { id: "identity", firstName: "Test", lastName:
     { burned: true, code: "LUCID", id: "lucid", name: "Lucid", payoutCount: 4, progress: 1 },
   ], connectorInstallation: null, deteriorationLevel: 1, resultTotalInCents: 0, payoutTotalInCents: 0,
   wallets: [{ balanceInCents: 125_000, id: "wallet", identityId: "identity", name: "ARQ · Test" }] };
-function render(value = identity) {
-  return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], connectors: [], identities: [value], ownerName: "Titular", signalStates: {}, workspaceId: "workspace" }));
+function render(value = identity, brokerAccounts: ComponentProps<typeof IdentitiesWorkspace>["brokerAccounts"] = []) {
+  return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], brokerAccounts, connectors: [], identities: [value], ownerName: "Titular", signalStates: {}, workspaceId: "workspace" }));
 }
 describe("identity pairing is independent of email delivery", () => {
   it("offers a code after unlinking without requiring another email", () => {
@@ -44,5 +44,31 @@ describe("identity pairing is independent of email delivery", () => {
     expect(markup).toContain("Quemada");
     expect(markup).toContain("Desconfigurada");
     expect(markup).toContain("Muerta");
+  });
+  it("keeps a detected broker account inside its identity and labels the assignment", () => {
+    const markup = render(identity, [{
+      accountName: "2149906",
+      balanceInCents: 819_671,
+      connectionName: "Live",
+      identityId: identity.id,
+      physicalConnectorId: "69b6c516-c0d8-4691-862b-2b15af76bd10",
+      status: "pending",
+    }]);
+    expect(markup).toContain("Cuenta broker");
+    expect(markup).toContain("2149906");
+    expect(markup).toContain("Asignar a Test");
+    expect(markup).not.toContain("Es mía");
+  });
+  it("shows confirmed broker ownership independently from prop accounts", () => {
+    const markup = render(identity, [{
+      accountName: "2149906",
+      balanceInCents: null,
+      connectionName: "Live",
+      identityId: identity.id,
+      physicalConnectorId: "69b6c516-c0d8-4691-862b-2b15af76bd10",
+      status: "confirmed",
+    }]);
+    expect(markup).toContain("Asignada");
+    expect(markup).toContain("Pendiente de nueva lectura");
   });
 });

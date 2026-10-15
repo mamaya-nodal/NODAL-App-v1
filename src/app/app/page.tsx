@@ -98,7 +98,7 @@ import { AccountsOverview, type AccountOverviewAccount, type AccountOverviewPayo
 import { PurchasePaymentFields } from "./purchase-payment-fields";
 import { OpeningAccountReferences, OpeningOperationReference } from "./opening-snapshot-panels";
 import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary";
-import { IdentitiesWorkspace } from "./identities-workspace";
+import { IdentitiesWorkspace, type IdentityBrokerAccountView } from "./identities-workspace";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -174,6 +174,7 @@ type NinjaTransitionRpcRow = {
 
 type NinjaBrokerBalanceRpcRow = {
   balance_cents: number | string;
+  connector_id: string;
   id: string;
   observed_at: string;
   source_accounts: NinjaBrokerBalanceEvent["sourceAccounts"];
@@ -368,9 +369,9 @@ async function renderPrivateAppPage({
   let accountingPeriods: AccountingPeriodView[] = [];
   let economicTrace: EconomicTraceItem[] = [];
   let identityAccounts: IdentityAccount[] = [];
+  let identityBrokerAccounts: IdentityBrokerAccountView[] = [];
   let identitySummaries: IdentitySummary[] = [];
   let identitySignalStates: Record<string, boolean> = {};
-  let unclaimedBrokerAccounts: Array<{ accountName: string; connectionName: string; physicalConnectorId: string; proposedDestinationConnectorId: string }> = [];
   let openingSnapshot: PeriodOpeningRecord | null = null;
   let openingSetupEligible = false;
   let openingRevisionEligible = false;
@@ -406,6 +407,7 @@ async function renderPrivateAppPage({
       { data: ninjaBrokerBalanceRows },
       { data: ninjaBrokerAccountAliasRows },
       { data: unclaimedBrokerRows },
+      { data: claimedBrokerRows },
       { data: historicalPurchaseRows },
       { data: historicalAccountRows },
       { data: historicalOperationEntryRows },
@@ -465,7 +467,7 @@ async function renderPrivateAppPage({
           .limit(500),
         (privileged ?? supabase)
           .from("ninja_broker_balance_events")
-          .select("id, observed_at, balance_cents, source_accounts, source_event_id")
+          .select("id, connector_id, observed_at, balance_cents, source_accounts, source_event_id")
           .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
           .order("observed_at", { ascending: false })
           .limit(30),
@@ -474,8 +476,13 @@ async function renderPrivateAppPage({
           .select("connection_name,account_name,display_name"),
         (privileged ?? supabase)
           .from("ninja_unclaimed_broker_accounts")
-          .select("physical_connector_id,connection_name,account_name,proposed_destination_connector_id")
+          .select("physical_connector_id,connection_name,account_name,proposed_destination_connector_id,latest_balance_cents")
           .in("proposed_destination_connector_id", ninjaConnectors.filter((connector) => connector.status === "active").map((connector) => connector.connectorId)),
+        supabase
+          .from("ninja_account_ownership")
+          .select("physical_connector_id,connection_name,account_name,destination_connector_id")
+          .eq("account_type", "broker")
+          .in("destination_connector_id", ninjaConnectors.filter((connector) => connector.identityId !== null).map((connector) => connector.connectorId)),
         supabase
           .from("purchases")
           .select("id, account_id, period_id, purchase_number, purchased_on, price_cents, funds_origin, wallet_id")
@@ -660,13 +667,37 @@ async function renderPrivateAppPage({
         technicalTradeCount: sessions.length,
       }] as const];
     }));
-    unclaimedBrokerAccounts = (unclaimedBrokerRows ?? []).flatMap((row) =>
-      row.proposed_destination_connector_id ? [{
+    const identityIdByConnectorId = new Map(ninjaConnectors.flatMap((connector) =>
+      connector.identityId ? [[connector.connectorId, connector.identityId] as const] : []));
+    const pendingIdentityBrokerAccounts: IdentityBrokerAccountView[] = (unclaimedBrokerRows ?? []).flatMap((row) => {
+      const identityId = row.proposed_destination_connector_id
+        ? identityIdByConnectorId.get(row.proposed_destination_connector_id)
+        : undefined;
+      return identityId ? [{
         accountName: row.account_name,
+        balanceInCents: row.latest_balance_cents === null ? null : Number(row.latest_balance_cents),
         connectionName: row.connection_name,
+        identityId,
         physicalConnectorId: row.physical_connector_id,
-        proposedDestinationConnectorId: row.proposed_destination_connector_id,
-      }] : []);
+        status: "pending" as const,
+      }] : [];
+    });
+    const confirmedIdentityBrokerAccounts: IdentityBrokerAccountView[] = (claimedBrokerRows ?? []).flatMap((row) => {
+      const identityId = identityIdByConnectorId.get(row.destination_connector_id);
+      const latestSourceAccount = ((ninjaBrokerBalanceRows ?? []) as NinjaBrokerBalanceRpcRow[])
+        .filter((event) => event.connector_id === row.destination_connector_id)
+        .flatMap((event) => event.source_accounts)
+        .find((account) => account.accountName === row.account_name && account.connectionName === row.connection_name);
+      return identityId ? [{
+        accountName: row.account_name,
+        balanceInCents: latestSourceAccount?.balanceInCents ?? null,
+        connectionName: row.connection_name,
+        identityId,
+        physicalConnectorId: row.physical_connector_id,
+        status: "confirmed" as const,
+      }] : [];
+    });
+    identityBrokerAccounts = [...confirmedIdentityBrokerAccounts, ...pendingIdentityBrokerAccounts];
     ninjaInventoryRevision = buildNinjaInventoryRevision(ninjaInventories);
     const connectedNinjaAccounts = ninjaInventories.flatMap((inventory) =>
       inventory.accounts.filter(
@@ -1356,7 +1387,7 @@ async function renderPrivateAppPage({
               account.firstSeenAt ?? inventory.observed_at,
             ));
             const companyIds = Object.fromEntries(companies.flatMap((company) => [[company.code.toLowerCase(), company.id], [company.displayName.toLowerCase(), company.id]]));
-            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} excludedAccountKeys={excludedNinjaAccountKeys} key={inventory.connector_id} registeredAccountKeys={registeredNinjaAccountKeys} mode={selection.workspace.modality} online={connectorOnline} pendingBrokerAccounts={unclaimedBrokerAccounts.filter((account) => account.proposedDestinationConnectorId === inventory.connector_id)} period={selection.period!.periodMonth} periodId={selection.period!.id} wallets={walletViews} />;
+            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} excludedAccountKeys={excludedNinjaAccountKeys} key={inventory.connector_id} registeredAccountKeys={registeredNinjaAccountKeys} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} wallets={walletViews} />;
           })}
 
           {openingSnapshot ? <OpeningAccountReferences opening={openingSnapshot} /> : null}
@@ -1503,6 +1534,7 @@ async function renderPrivateAppPage({
       {allowed && nodalUser?.identities_enabled && selection?.period && (
         <IdentitiesWorkspace
           accounts={identityAccounts}
+          brokerAccounts={identityBrokerAccounts}
           connectors={ninjaConnectors.filter((connector) => connector.identityId !== null)}
           identities={identitySummaries}
           ownerName={nodalUser?.display_name || nodalUser?.email || "Mi espacio"}

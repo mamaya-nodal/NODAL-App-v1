@@ -4306,6 +4306,16 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-signal-toggle:disabled { cursor: wait; opacity: .6; }
 .identity-subsection-title { display: flex; align-items: center; gap: 7px; margin: 16px 0 6px; }
 .identity-subsection-title span { color: var(--app-subtle); font-size: 10px; }
+.identity-broker-list > p { margin: 0; padding: 12px; border: 1px dashed var(--app-border); border-radius: 11px; color: var(--app-subtle); font-size: 11px; }
+.identity-broker-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto) auto; align-items: center; gap: 14px; min-height: 58px; padding: 11px 12px; border: 1px solid var(--app-border); border-radius: 11px; background: color-mix(in srgb, var(--app-input) 92%, transparent); }
+.identity-broker-row.status-pending { border-color: color-mix(in srgb, #83e936 48%, var(--app-border)); }
+.identity-broker-row > span { display: grid; min-width: 0; gap: 3px; }
+.identity-broker-row small { color: var(--app-subtle); font-size: 9px; }
+.identity-broker-row > span:first-child strong { overflow: hidden; color: var(--app-title); font-size: 12px; text-overflow: ellipsis; }
+.identity-broker-balance { text-align: right; }
+.identity-broker-balance strong { color: var(--app-copy); font-size: 10px; }
+.identity-broker-row .primary-action { width: auto; min-height: 36px; padding: 8px 12px; border-radius: 9px; font-size: 10px; white-space: nowrap; }
+.identity-broker-status { padding: 7px 10px; border-radius: 999px; background: color-mix(in srgb, #83e936 23%, var(--app-soft)); color: var(--app-title); font-size: 9px; }
 .identity-assigned-accounts > p { color: var(--app-subtle); font-size: 11px; }
 .identity-wallet-list > p { color: var(--app-subtle); font-size: 11px; }
 .identity-wallet-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 42px; padding: 8px 0; border-top: 1px solid var(--app-border); }
@@ -4347,6 +4357,10 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   .identity-connector-row { grid-template-columns: 1fr; }
   .identity-connector-actions { justify-items: stretch; }
   .identity-connector-row .ninja-pairing-panel.is-compact { grid-template-columns: 1fr; }
+  .identity-broker-row { grid-template-columns: 1fr; align-items: stretch; }
+  .identity-broker-balance { text-align: left; }
+  .identity-broker-row .primary-action { width: 100%; }
+  .identity-broker-status { justify-self: start; }
   .identity-account-card > summary { grid-template-columns: minmax(0, 1fr) auto auto; }
   .identity-account-card > summary > span:nth-child(2) { display: none; }
   .identity-account-facts { grid-template-columns: 1fr; }

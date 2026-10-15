@@ -2551,3 +2551,20 @@ vigente sin aprobacion y evidencia suficiente.
   transaccional de APP-140: acredita el neto en la billetera, reduce el flotante por
   el bruto y registra el fee informado.
 
+### APP-182 - Cuenta broker separada dentro de cada identidad
+
+- **Fecha:** 2026-10-15. Corrección general a partir de la asignación de la cuenta
+  broker de Jhordan.
+- **Hallazgo:** la cuenta broker detectada se mostraba mezclada con las cuentas prop
+  en `Cuentas`. La acción `Es mía` ejecutaba la asignación, pero no exponía ni el
+  resultado exitoso ni los errores de la operación.
+- **Interfaz:** cada identidad tiene una sección independiente `Cuenta broker`. Una
+  cuenta pendiente muestra saldo detectado y la acción explícita `Asignar a
+  <identidad>`; una cuenta ya reclamada permanece visible con estado `Asignada`, sin
+  mezclarse con las cuentas de fondeo.
+- **Confirmación:** la acción devuelve un mensaje visible de éxito o error y actualiza
+  la tarjeta. El saldo confirmado puede quedar como pendiente hasta que el conector
+  emita una nueva lectura; nunca se reutiliza ni se inventa un saldo anterior.
+- **Trazabilidad:** se conserva la RPC auditada de titularidad y no se crean reglas ni
+  excepciones por usuario, identidad o número de cuenta.
+
