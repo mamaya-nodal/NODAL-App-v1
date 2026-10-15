@@ -206,36 +206,6 @@ export async function setIdentitySignal(identityId: string, enabled: boolean): P
   return { ok: true, message: enabled ? "Recepción activada." : "Recepción pausada." };
 }
 
-export async function claimIdentityBrokerAccount(input: Readonly<{
-  accountName: string;
-  connectionName: string;
-  physicalConnectorId: string;
-}>): Promise<ActionResult> {
-  const accountName = input.accountName.trim();
-  const connectionName = input.connectionName.trim();
-  if (!isUuid(input.physicalConnectorId) || !accountName || !connectionName) {
-    return { ok: false, message: "La cuenta broker detectada no es válida." };
-  }
-  const { identitiesEnabled, supabase, user } = await authenticatedClient();
-  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
-  if (!identitiesEnabled) return identitiesDisabled();
-  const { error } = await supabase.rpc("claim_ninja_broker_account", {
-    target_account_name: accountName,
-    target_connection_name: connectionName,
-    target_physical_connector_id: input.physicalConnectorId,
-  });
-  if (error) {
-    return {
-      ok: false,
-      message: error.message.includes("not available")
-        ? "La cuenta ya no está disponible para asignar. Actualizá el panel."
-        : "No se pudo asignar la cuenta broker a la identidad.",
-    };
-  }
-  revalidatePath("/app");
-  return { ok: true, message: `Cuenta broker ${accountName} asignada correctamente.` };
-}
-
 const identityOperationalStatuses = new Set<IdentityOperationalStatus>([
   "unconfigured",
   "configured",

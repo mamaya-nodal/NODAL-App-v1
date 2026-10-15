@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
-import { inferFundedContinuationDestination } from "./intake-routing";
+import { inferFundedContinuationDestination, resolveSharedBrokerDestination } from "./intake-routing";
 
 const funded: NinjaAccountSnapshot = {
   accountName: "FTDFYSLX50350058576",
@@ -47,5 +47,47 @@ describe("Ninja continuation routing", () => {
     expect(inferFundedContinuationDestination(funded, "2026-10-02T14:00:00Z", [
       { accountName: "TDFYSL50558089557", connectionName: "Tradeify Nati", destinationConnectorId: "nati", eligibleForFundedContinuation: false },
     ])).toBeNull();
+  });
+});
+
+describe("shared broker routing", () => {
+  it("recognizes the same broker number across different Ninja connections", () => {
+    expect(resolveSharedBrokerDestination({
+      accountName: " 2149906 ",
+      confirmedAccountNames: new Set(["2149906"]),
+      localOwnerUserId: null,
+      ownerUserId: "david",
+      personalConnectorId: "david-personal",
+    })).toBe("david-personal");
+  });
+
+  it("does not infer ownership for a different broker number", () => {
+    expect(resolveSharedBrokerDestination({
+      accountName: "9999999",
+      confirmedAccountNames: new Set(["2149906"]),
+      localOwnerUserId: null,
+      ownerUserId: "david",
+      personalConnectorId: "david-personal",
+    })).toBeNull();
+  });
+
+  it("routes an already confirmed local broker away from an identity ledger", () => {
+    expect(resolveSharedBrokerDestination({
+      accountName: "2149906",
+      confirmedAccountNames: new Set(),
+      localOwnerUserId: "david",
+      ownerUserId: "david",
+      personalConnectorId: "david-personal",
+    })).toBe("david-personal");
+  });
+
+  it("never takes a broker account already owned by another user", () => {
+    expect(resolveSharedBrokerDestination({
+      accountName: "2149906",
+      confirmedAccountNames: new Set(["2149906"]),
+      localOwnerUserId: "another-owner",
+      ownerUserId: "david",
+      personalConnectorId: "david-personal",
+    })).toBeNull();
   });
 });

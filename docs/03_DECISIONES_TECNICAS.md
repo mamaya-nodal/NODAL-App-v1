@@ -2551,7 +2551,7 @@ vigente sin aprobacion y evidencia suficiente.
   transaccional de APP-140: acredita el neto en la billetera, reduce el flotante por
   el bruto y registra el fee informado.
 
-### APP-182 - Cuenta broker separada dentro de cada identidad
+### APP-182 - Cuenta broker separada dentro de cada identidad (reemplazada)
 
 - **Fecha:** 2026-10-15. Corrección general a partir de la asignación de la cuenta
   broker de Jhordan.
@@ -2567,4 +2567,27 @@ vigente sin aprobacion y evidencia suficiente.
   emita una nueva lectura; nunca se reutiliza ni se inventa un saldo anterior.
 - **Trazabilidad:** se conserva la RPC auditada de titularidad y no se crean reglas ni
   excepciones por usuario, identidad o número de cuenta.
+- **Reemplazo:** esta interpretación fue corregida el mismo día por APP-183. El
+  NinjaTrader de una identidad puede observar la cuenta broker personal del titular;
+  esa observación no convierte al broker en propiedad de la identidad.
+
+### APP-183 - Cuenta broker única por número entre conectores
+
+- **Fecha:** 2026-10-15. Regla funcional aclarada por Mauricio después de APP-182.
+- **Propiedad:** las cuentas prop pertenecen a la identidad con la que se compraron.
+  Las cuentas broker pertenecen al usuario NODAL y cubren tanto operaciones propias
+  como operaciones de sus identidades.
+- **Identificación:** el número de cuenta broker es su identidad estable. El
+  NinjaTrader personal o de identidad y el nombre de conexión son fuentes físicas de
+  observación, no nuevas cuentas económicas.
+- **Enrutamiento:** un número broker ya confirmado que aparece en cualquier otro
+  conector del mismo titular se reconoce automáticamente y converge al conector
+  personal. La deduplicación entre conectores evita contabilizar dos veces una misma
+  cobertura observada desde más de un NinjaTrader.
+- **Cuentas nuevas:** un número nunca confirmado requiere confirmación del usuario,
+  pero se presenta como cuenta broker general y no dentro de ninguna identidad. La
+  confirmación alcanza todas las observaciones pendientes del mismo número.
+- **Reparación:** las titularidades broker previamente dirigidas a conectores de
+  identidad se trasladan al destino personal sin alterar titular, número, saldo ni
+  historia, y el cambio queda auditado.
 

@@ -703,11 +703,18 @@ h1 {
 .ninja-pairing-code strong { margin-top: 3px; color: var(--ink); font-size: clamp(1.35rem, 4vw, 2rem); letter-spacing: .16em; }
 .ninja-detections-heading, .ninja-account-title { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .ninja-detections-controls, .ninja-detected-actions { display: flex; align-items: center; gap: 8px; }
-.ninja-broker-claims { display: grid; gap: 8px; margin-top: 14px; }
-.ninja-broker-claims > p { margin: 0; color: var(--muted); font-size: .8rem; }
-.ninja-broker-claim { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 14px; }
-.ninja-broker-claim span { display: grid; gap: 2px; }
-.ninja-broker-claim small { color: var(--muted); }
+.broker-account-claims { display: grid; gap: 12px; margin-top: 28px; padding: 18px; border: 1px solid var(--app-border); border-radius: 17px; background: var(--app-panel); }
+.broker-account-claims > div:first-child { display: grid; gap: 4px; }
+.broker-account-claims > div:first-child > span { color: var(--app-positive); font-size: 9px; font-weight: 900; letter-spacing: .08em; }
+.broker-account-claims h3 { margin: 0; color: var(--app-title); font-size: 15px; }
+.broker-account-claims p { margin: 0; color: var(--app-subtle); font-size: 10px; }
+.broker-account-message { padding: 9px 11px; border-radius: 9px; background: var(--app-soft); color: var(--app-title) !important; font-weight: 750; }
+.broker-account-claim-list { display: grid; gap: 8px; }
+.broker-account-claim { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(130px, 1fr) minmax(140px, 1fr) auto; align-items: center; gap: 14px; padding: 11px 13px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-input); }
+.broker-account-claim > span { display: grid; min-width: 0; gap: 3px; }
+.broker-account-claim small { color: var(--app-subtle); font-size: 9px; }
+.broker-account-claim strong { overflow: hidden; color: var(--app-title); font-size: 11px; text-overflow: ellipsis; }
+.broker-account-claim .primary-action { width: auto; min-height: 38px; padding: 8px 13px; border-radius: 9px; font-size: 10px; white-space: nowrap; }
 .ninja-detections-heading h3, .manual-purchase-heading h3 { margin: 4px 0 0; }
 .ninja-live-badge, .ninja-phase { padding: 8px 12px; border-radius: 999px; background: color-mix(in srgb, var(--brand) 22%, transparent); color: var(--brand); font-weight: 800; }
 .ninja-live-badge.is-offline { background: color-mix(in srgb, var(--muted) 20%, transparent); color: var(--muted); }
@@ -4306,16 +4313,6 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-signal-toggle:disabled { cursor: wait; opacity: .6; }
 .identity-subsection-title { display: flex; align-items: center; gap: 7px; margin: 16px 0 6px; }
 .identity-subsection-title span { color: var(--app-subtle); font-size: 10px; }
-.identity-broker-list > p { margin: 0; padding: 12px; border: 1px dashed var(--app-border); border-radius: 11px; color: var(--app-subtle); font-size: 11px; }
-.identity-broker-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto) auto; align-items: center; gap: 14px; min-height: 58px; padding: 11px 12px; border: 1px solid var(--app-border); border-radius: 11px; background: color-mix(in srgb, var(--app-input) 92%, transparent); }
-.identity-broker-row.status-pending { border-color: color-mix(in srgb, #83e936 48%, var(--app-border)); }
-.identity-broker-row > span { display: grid; min-width: 0; gap: 3px; }
-.identity-broker-row small { color: var(--app-subtle); font-size: 9px; }
-.identity-broker-row > span:first-child strong { overflow: hidden; color: var(--app-title); font-size: 12px; text-overflow: ellipsis; }
-.identity-broker-balance { text-align: right; }
-.identity-broker-balance strong { color: var(--app-copy); font-size: 10px; }
-.identity-broker-row .primary-action { width: auto; min-height: 36px; padding: 8px 12px; border-radius: 9px; font-size: 10px; white-space: nowrap; }
-.identity-broker-status { padding: 7px 10px; border-radius: 999px; background: color-mix(in srgb, #83e936 23%, var(--app-soft)); color: var(--app-title); font-size: 9px; }
 .identity-assigned-accounts > p { color: var(--app-subtle); font-size: 11px; }
 .identity-wallet-list > p { color: var(--app-subtle); font-size: 11px; }
 .identity-wallet-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 42px; padding: 8px 0; border-top: 1px solid var(--app-border); }
@@ -4357,13 +4354,11 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   .identity-connector-row { grid-template-columns: 1fr; }
   .identity-connector-actions { justify-items: stretch; }
   .identity-connector-row .ninja-pairing-panel.is-compact { grid-template-columns: 1fr; }
-  .identity-broker-row { grid-template-columns: 1fr; align-items: stretch; }
-  .identity-broker-balance { text-align: left; }
-  .identity-broker-row .primary-action { width: 100%; }
-  .identity-broker-status { justify-self: start; }
   .identity-account-card > summary { grid-template-columns: minmax(0, 1fr) auto auto; }
   .identity-account-card > summary > span:nth-child(2) { display: none; }
   .identity-account-facts { grid-template-columns: 1fr; }
+  .broker-account-claim { grid-template-columns: 1fr; }
+  .broker-account-claim .primary-action { width: 100%; }
 }
 
 @keyframes identity-power-fill {

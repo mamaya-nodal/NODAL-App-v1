@@ -39,6 +39,25 @@ function accountKey(connectionName: string, accountName: string) {
   return `${connectionName}\u0000${accountName}`;
 }
 
+function brokerAccountKey(accountName: string) {
+  return accountName.trim().toUpperCase();
+}
+
+export function resolveSharedBrokerDestination(input: Readonly<{
+  accountName: string;
+  confirmedAccountNames: ReadonlySet<string>;
+  localOwnerUserId: string | null;
+  ownerUserId: string;
+  personalConnectorId: string | null;
+}>) {
+  if (!input.personalConnectorId) return null;
+  if (input.localOwnerUserId !== null && input.localOwnerUserId !== input.ownerUserId) return null;
+  return input.localOwnerUserId === input.ownerUserId
+    || input.confirmedAccountNames.has(brokerAccountKey(input.accountName))
+    ? input.personalConnectorId
+    : null;
+}
+
 /**
  * A Funded name continues in the ledger that already owns compatible
  * Evaluation names. This continuity takes precedence over the live signal
@@ -105,7 +124,13 @@ function telemetryAccount(event: NinjaTradeTelemetryEvent): NinjaAccountSnapshot
 async function routingState(physicalConnectorId: string) {
   const supabase = serviceClient();
   if (!supabase) return null;
-  const [epochsResult, ownershipResult, destinationsResult] = await Promise.all([
+  const { data: physicalConnector, error: physicalConnectorError } = await supabase
+    .from("ninja_connectors")
+    .select("owner_user_id")
+    .eq("id", physicalConnectorId)
+    .maybeSingle();
+  if (physicalConnectorError || !physicalConnector) return null;
+  const [epochsResult, ownershipResult, destinationsResult, sharedBrokerResult, personalConnectorResult] = await Promise.all([
     supabase.from("ninja_connector_route_epochs")
       .select("destination_connector_id,effective_from,effective_until")
       .eq("physical_connector_id", physicalConnectorId)
@@ -116,8 +141,21 @@ async function routingState(physicalConnectorId: string) {
     supabase.from("ninja_connector_destinations")
       .select("destination_connector_id,destination_owner_user_id")
       .eq("physical_connector_id", physicalConnectorId),
+    supabase.from("ninja_account_ownership")
+      .select("account_name")
+      .eq("owner_user_id", physicalConnector.owner_user_id)
+      .eq("account_type", "broker"),
+    supabase.from("ninja_connectors")
+      .select("id")
+      .eq("owner_user_id", physicalConnector.owner_user_id)
+      .is("identity_id", null)
+      .eq("status", "active")
+      .order("paired_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
-  if (epochsResult.error || ownershipResult.error || destinationsResult.error) return null;
+  if (epochsResult.error || ownershipResult.error || destinationsResult.error
+    || sharedBrokerResult.error || personalConnectorResult.error) return null;
   const destinationIds = destinationsResult.data.map((row) => row.destination_connector_id);
   const transitionStatesResult = destinationIds.length === 0
     ? { data: [], error: null }
@@ -125,8 +163,11 @@ async function routingState(physicalConnectorId: string) {
   if (transitionStatesResult.error) return null;
   return {
     destinationOwners: new Map(destinationsResult.data.map((row) => [row.destination_connector_id, row.destination_owner_user_id])),
+    knownBrokerAccountNames: new Set(sharedBrokerResult.data.map((row) => brokerAccountKey(row.account_name))),
+    ownerUserId: physicalConnector.owner_user_id,
     ownership: new Map((ownershipResult.data as OwnershipRow[]).map((row) => [accountKey(row.connection_name, row.account_name), row])),
     pendingFundedContinuations: pendingFundedContinuations(transitionStatesResult.data ?? []),
+    personalConnectorId: personalConnectorResult.data?.id ?? null,
     rows: epochsResult.data as unknown as EpochRow[],
     supabase,
   };
@@ -173,6 +214,44 @@ export async function rememberUnclaimedBroker(args: Readonly<{
   if (updateError) throw new Error("Pending broker storage unavailable");
 }
 
+async function rememberRecognizedBroker(args: Readonly<{
+  account: NinjaAccountSnapshot;
+  ownerUserId: string;
+  personalConnectorId: string;
+  physicalConnectorId: string;
+  supabase: NonNullable<ReturnType<typeof serviceClient>>;
+}>) {
+  const { error: ownershipError } = await args.supabase.from("ninja_account_ownership").upsert({
+    account_name: args.account.accountName,
+    account_type: "broker",
+    claimed_at: new Date().toISOString(),
+    claimed_by: args.ownerUserId,
+    connection_name: args.account.connectionName,
+    destination_connector_id: args.personalConnectorId,
+    owner_user_id: args.ownerUserId,
+    physical_connector_id: args.physicalConnectorId,
+  }, { onConflict: "physical_connector_id,connection_name,account_name" });
+  if (ownershipError) throw new Error("Shared broker ownership unavailable");
+  const { error: pendingError } = await args.supabase.from("ninja_unclaimed_broker_accounts").delete()
+    .eq("physical_connector_id", args.physicalConnectorId)
+    .eq("connection_name", args.account.connectionName)
+    .eq("account_name", args.account.accountName);
+  if (pendingError) throw new Error("Shared broker pending cleanup unavailable");
+  const { error: auditError } = await args.supabase.from("audit_events").insert({
+    action: "ninja_shared_broker_account_recognized",
+    actor_user_id: args.ownerUserId,
+    current_data: {
+      account_name: args.account.accountName,
+      connection_name: args.account.connectionName,
+      physical_connector_id: args.physicalConnectorId,
+    },
+    entity_id: args.personalConnectorId,
+    entity_table: "ninja_account_ownership",
+    reason: "Mismo número de cuenta broker ya confirmado en otro conector NinjaTrader del titular",
+  });
+  if (auditError) throw new Error("Shared broker audit unavailable");
+}
+
 export async function routeNinjaInventory(
   physicalConnectorId: string,
   snapshot: NinjaInventorySnapshot,
@@ -201,10 +280,24 @@ export async function routeNinjaInventory(
       epochs: currentEpochs,
       occurredAt: snapshot.observedAt,
     });
-    if (classified.type === "broker" && !ownership) {
-      await rememberUnclaimedBroker({ account, destinationConnectorId: currentDestination,
-        observedAt: snapshot.observedAt, physicalConnectorId, supabase: state.supabase });
-      continue;
+    if (classified.type === "broker") {
+      const sharedDestination = resolveSharedBrokerDestination({ accountName: account.accountName,
+        confirmedAccountNames: state.knownBrokerAccountNames,
+        localOwnerUserId: ownership?.owner_user_id ?? null, ownerUserId: state.ownerUserId,
+        personalConnectorId: state.personalConnectorId });
+      if (sharedDestination) {
+        if (!ownership || ownership.destination_connector_id !== state.personalConnectorId) {
+          await rememberRecognizedBroker({ account, ownerUserId: state.ownerUserId,
+            personalConnectorId: sharedDestination, physicalConnectorId, supabase: state.supabase });
+        }
+        grouped.set(sharedDestination, [...(grouped.get(sharedDestination) ?? []), account]);
+        continue;
+      }
+      if (!ownership) {
+        await rememberUnclaimedBroker({ account, destinationConnectorId: state.personalConnectorId ?? currentDestination,
+          observedAt: snapshot.observedAt, physicalConnectorId, supabase: state.supabase });
+        continue;
+      }
     }
     const continuationDestination = ownership ? null
       : inferFundedContinuationDestination(account, snapshot.observedAt, propOwnershipRows);
@@ -247,10 +340,25 @@ export async function routeNinjaTelemetry(
       epochs,
       occurredAt: event.occurredAt,
     });
-    if (classified.type === "broker" && !ownership) {
-      await rememberUnclaimedBroker({ account, destinationConnectorId: epochs.at(-1)?.destination?.connectorId ?? null,
-        observedAt: event.occurredAt, physicalConnectorId, supabase: state.supabase });
-      continue;
+    if (classified.type === "broker") {
+      const sharedDestination = resolveSharedBrokerDestination({ accountName: event.accountName,
+        confirmedAccountNames: state.knownBrokerAccountNames,
+        localOwnerUserId: ownership?.owner_user_id ?? null, ownerUserId: state.ownerUserId,
+        personalConnectorId: state.personalConnectorId });
+      if (sharedDestination) {
+        if (!ownership || ownership.destination_connector_id !== state.personalConnectorId) {
+          await rememberRecognizedBroker({ account, ownerUserId: state.ownerUserId,
+            personalConnectorId: sharedDestination, physicalConnectorId, supabase: state.supabase });
+        }
+        grouped.set(sharedDestination, [...(grouped.get(sharedDestination) ?? []), event]);
+        continue;
+      }
+      if (!ownership) {
+        await rememberUnclaimedBroker({ account,
+          destinationConnectorId: state.personalConnectorId ?? epochs.at(-1)?.destination?.connectorId ?? null,
+          observedAt: event.occurredAt, physicalConnectorId, supabase: state.supabase });
+        continue;
+      }
     }
     const continuationDestination = ownership ? null
       : inferFundedContinuationDestination(account, event.occurredAt, propOwnershipRows);

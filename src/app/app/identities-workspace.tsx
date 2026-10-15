@@ -20,7 +20,6 @@ import type {
 
 import {
   assignIdentityAccount,
-  claimIdentityBrokerAccount,
   createIdentityDirectly,
   retireIdentity,
   sendIdentityConnectorInstallation,
@@ -32,21 +31,11 @@ import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connecto
 
 type Props = Readonly<{
   accounts: IdentityAccount[];
-  brokerAccounts: IdentityBrokerAccountView[];
   connectors: NinjaConnectorStatus[];
   identities: IdentitySummary[];
   ownerName: string;
   signalStates: Readonly<Record<string, boolean>>;
   workspaceId: string;
-}>;
-
-export type IdentityBrokerAccountView = Readonly<{
-  accountName: string;
-  balanceInCents: number | null;
-  connectionName: string;
-  identityId: string;
-  physicalConnectorId: string;
-  status: "confirmed" | "pending";
 }>;
 
 const operationalStatusOptions: ReadonlyArray<Readonly<{
@@ -176,7 +165,7 @@ function accountState(account: IdentityAccount) {
   return "Activa";
 }
 
-export function IdentitiesWorkspace({ accounts, brokerAccounts, connectors, identities, ownerName, signalStates, workspaceId }: Props) {
+export function IdentitiesWorkspace({ accounts, connectors, identities, ownerName, signalStates, workspaceId }: Props) {
   const router = useRouter();
   const createFormRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
@@ -250,7 +239,6 @@ export function IdentitiesWorkspace({ accounts, brokerAccounts, connectors, iden
           const liveAccounts = identity.accounts.filter((account) => account.state !== "closed").length;
           const closedAccounts = identity.accounts.filter((account) => account.state === "closed").length;
           const degradation = deteriorationLabel(identity);
-          const identityBrokerAccounts = brokerAccounts.filter((account) => account.identityId === identity.id);
           return <details className={`identity-card status-${identity.operationalStatus}`} id={`identity-${identity.id}`} key={identity.id}>
             <summary>
               <span><strong>{identity.firstName} {identity.lastName}</strong><small>{identity.contactEmail}</small></span>
@@ -308,31 +296,6 @@ export function IdentitiesWorkspace({ accounts, brokerAccounts, connectors, iden
                 <button aria-pressed={signalAvailable && signalEnabled} className={`identity-signal-toggle${signalAvailable && signalEnabled ? " is-on" : ""}`} disabled={pending || identity.onboardingStatus !== "approved" || !signalAvailable} onClick={() => run(() => setIdentitySignal(identity.id, !signalEnabled))} type="button">
                   {signalEnabled ? "Apagar" : "Encender"}
                 </button>
-              </div>
-
-              <div className="identity-subsection-title"><strong>Cuenta broker</strong><span>{identityBrokerAccounts.length}</span></div>
-              <div className="identity-broker-list">
-                {identityBrokerAccounts.length === 0 ? <p>Sin cuenta broker detectada.</p> : identityBrokerAccounts.map((account) => (
-                  <div className={`identity-broker-row status-${account.status}`} key={`${account.physicalConnectorId}-${account.connectionName}-${account.accountName}`}>
-                    <span>
-                      <strong>{account.accountName}</strong>
-                      <small>{account.connectionName}</small>
-                    </span>
-                    <span className="identity-broker-balance">
-                      <small>Saldo broker</small>
-                      <strong>{account.balanceInCents === null ? "Pendiente de nueva lectura" : money(account.balanceInCents)}</strong>
-                    </span>
-                    {account.status === "pending" ? (
-                      <button className="primary-action" disabled={pending} onClick={() => run(() => claimIdentityBrokerAccount({
-                        accountName: account.accountName,
-                        connectionName: account.connectionName,
-                        physicalConnectorId: account.physicalConnectorId,
-                      }))} type="button">
-                        {pending ? "Asignando…" : `Asignar a ${identity.firstName}`}
-                      </button>
-                    ) : <b className="identity-broker-status">Asignada</b>}
-                  </div>
-                ))}
               </div>
 
               <div className="identity-subsection-title"><strong>Billeteras</strong><span>{identity.wallets.length}</span></div>
