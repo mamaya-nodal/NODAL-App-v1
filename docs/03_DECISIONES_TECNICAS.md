@@ -2597,12 +2597,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **Orden:** los movimientos se presentan por fecha económica descendente. Cuando
   comparten fecha, se usa el momento de creación y luego el identificador estable
   como desempate, manteniendo un resultado determinista y auditable.
-- **Consulta:** la tarjeta muestra los diez movimientos más recientes y permite
-  cargar los siguientes bloques o desplegar el período completo. La cantidad visible
+- **Consulta:** la tarjeta muestra los diez movimientos más recientes de toda la
+  historia y permite cargar los siguientes bloques o desplegarla completa. Cada fila
+  identifica su período. La cantidad visible
   y el total se informan explícitamente; ningún movimiento queda oculto por un límite
   silencioso.
-- **Descarga:** el titular puede exportar a CSV todos los movimientos del período
-  seleccionado, no sólo los visibles. El archivo conserva fecha, momento de registro,
+- **Descarga:** el titular puede exportar a CSV todos los movimientos de todos sus
+  períodos, no sólo los visibles. El archivo conserva fecha, período, momento de registro,
   billeteras, tipo, importe, fee, observación, origen e identificador técnico.
 - **Alcance:** la regla se aplica a todos los usuarios y períodos. No modifica
   importes, clasificaciones, fechas ni asientos contables existentes.

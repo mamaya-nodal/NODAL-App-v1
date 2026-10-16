@@ -27,14 +27,15 @@ describe("wallet movement history", () => {
       labels: { external_contribution: "Aporte externo a billetera" },
       movements: [
         movement({ id: "old", occurredOn: "2026-10-14" }),
-        movement({ amountInCents: 473_100, createdAt: "2026-10-15T13:00:00Z", id: "new", observation: "Cobranza, sala", occurredOn: "2026-10-15" }),
+        movement({ amountInCents: 473_100, createdAt: "2026-10-15T13:00:00Z", id: "new", observation: "Cobranza, sala", occurredOn: "2026-10-15", periodLabel: "Octubre 2026" }),
       ],
       walletNames: { wallet: "Metamask Alf" },
     });
 
-    expect(csv).toContain('"Fecha","Registrado","Billetera origen"');
+    expect(csv).toContain('"Fecha","Período","Registrado","Billetera origen"');
     expect(csv.indexOf('"new"')).toBeLessThan(csv.indexOf('"old"'));
     expect(csv).toContain('"4731.00"');
+    expect(csv).toContain('"Octubre 2026"');
     expect(csv).toContain('"Cobranza, sala"');
   });
 });

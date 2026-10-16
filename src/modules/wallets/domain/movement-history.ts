@@ -21,6 +21,7 @@ export function buildWalletMovementHistoryCsv(input: Readonly<{
 }>): string {
   const rows = orderWalletMovementHistory(input.movements).map((movement) => [
     movement.occurredOn,
+    movement.periodLabel ?? "",
     movement.createdAt ?? "",
     input.walletNames[movement.walletId ?? ""] ?? "Billetera",
     movement.destinationWalletId
@@ -35,7 +36,7 @@ export function buildWalletMovementHistoryCsv(input: Readonly<{
   ]);
 
   return [
-    ["Fecha", "Registrado", "Billetera origen", "Billetera destino", "Tipo", "Importe USD", "Fee USD", "Observación", "Origen", "ID"],
+    ["Fecha", "Período", "Registrado", "Billetera origen", "Billetera destino", "Tipo", "Importe USD", "Fee USD", "Observación", "Origen", "ID"],
     ...rows,
   ].map((row) => row.map(csvValue).join(",")).join("\r\n");
 }

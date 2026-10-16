@@ -27,6 +27,7 @@ import {
 } from "@/modules/admin/domain/administration-scope";
 import { loadMyAdministrationScope } from "@/modules/admin/server/administration-scope";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
+import { readAll } from "@/modules/admin/server/read-all";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import { registeredNinjaAccountKeys as resolveRegisteredNinjaAccountKeys } from "@/modules/ninja/domain/account-registration-eligibility";
 import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
@@ -356,6 +357,8 @@ async function renderPrivateAppPage({
   let phaseWithdrawalHistory: AccountPhaseWithdrawal[] = [];
   let approvedPayoutHistory: AccountOverviewPayout[] = [];
   let walletMovements: WalletMovement[] = [];
+  let walletMovementHistory: WalletMovement[] = [];
+  let walletHistoryNames: Record<string, string> = {};
   let walletViews: WalletView[] = [];
   let walletIdentities: WalletIdentityView[] = [];
   let fundingWithdrawals: FundingWithdrawal[] = [];
@@ -501,10 +504,13 @@ async function renderPrivateAppPage({
           .order("period_id")
           .order("control_number")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
-        supabase
+        readAll(supabase
           .from("wallet_movements")
-          .select("id, period_id, wallet_id, destination_wallet_id, daily_control_id, occurred_on, kind, amount_cents, fee_cents, observation")
-          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
+          .select("id, period_id, wallet_id, destination_wallet_id, daily_control_id, occurred_on, kind, amount_cents, fee_cents, observation, created_at")
+          .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id))
+          .order("occurred_on", { ascending: false })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })),
         supabase
           .from("funding_withdrawals")
           .select("id, period_id, collected_period_id, account_result_applied_period_id, receipt_timing_v2, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents, created_at")
@@ -512,9 +518,8 @@ async function renderPrivateAppPage({
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("nodal_wallets")
-          .select("id,name")
+          .select("id,name,is_active")
           .eq("workspace_id", selection.workspace.id)
-          .eq("is_active", true)
           .order("created_at"),
         supabase
           .from("nodal_wallet_sources")
@@ -538,7 +543,8 @@ async function renderPrivateAppPage({
           .order("requested_at", { ascending: false }),
       ]).then(requireSuccessfulReads);
     const walletSourceById = new Map((walletSourceRows ?? []).map((source) => [source.wallet_id, source]));
-    walletViews = await Promise.all((walletRows ?? []).map(async (wallet) => {
+    walletHistoryNames = Object.fromEntries((walletRows ?? []).map((wallet) => [wallet.id, wallet.name]));
+    walletViews = await Promise.all((walletRows ?? []).filter((wallet) => wallet.is_active).map(async (wallet) => {
       const data = requireReadData(await supabase.rpc("calculate_nodal_wallet_balance", { target_wallet_id: wallet.id }));
       const source = walletSourceById.get(wallet.id);
       return {
@@ -979,6 +985,19 @@ async function renderPrivateAppPage({
       kind: movement.kind as WalletMovement["kind"], occurredOn: movement.occurred_on,
       observation: movement.observation,
       feeInCents: Number(movement.fee_cents ?? 0),
+      walletId: movement.wallet_id,
+    }));
+    walletMovementHistory = (historicalWalletMovementRows ?? []).map((movement) => ({
+      amountInCents: Number(movement.amount_cents),
+      createdAt: movement.created_at,
+      dailyControlId: movement.daily_control_id,
+      destinationWalletId: movement.destination_wallet_id,
+      feeInCents: Number(movement.fee_cents ?? 0),
+      id: movement.id,
+      kind: movement.kind as WalletMovement["kind"],
+      observation: movement.observation,
+      occurredOn: movement.occurred_on,
+      periodLabel: formatPeriodLabel(selection.workspace.periods.find((period) => period.id === movement.period_id)?.periodMonth ?? movement.occurred_on.slice(0, 7)),
       walletId: movement.wallet_id,
     }));
     fundingWithdrawals = (historicalFundingWithdrawalRows ?? [])
@@ -1497,6 +1516,7 @@ async function renderPrivateAppPage({
             identities={nodalUser?.identities_enabled ? walletIdentities : []}
             hasPendingNinjaOperation={hasPendingNinjaOperation}
             liveBrokerBalance={liveNinjaBrokerBalance}
+            movementHistory={walletMovementHistory}
             periodId={selection.period.id}
             periodLabel={formatPeriodLabel(selection.period.periodMonth)}
             periodOperationalStartOn={selection.period.operationalStartOn}
@@ -1504,6 +1524,7 @@ async function renderPrivateAppPage({
             periods={accountingPeriods}
             payouts={fundingWithdrawals}
             summary={operationalSummary}
+            walletHistoryNames={walletHistoryNames}
             wallets={walletViews}
           />
         </section>

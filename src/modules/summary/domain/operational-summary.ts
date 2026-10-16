@@ -36,6 +36,7 @@ export type WalletMovement = Readonly<{
   kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker" | "wallet_to_wallet";
   occurredOn: string;
   observation: string | null;
+  periodLabel?: string;
   walletId?: string;
 }>;
 
