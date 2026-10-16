@@ -58,7 +58,7 @@ export async function loadPeriodSummaries(
   const [accountsResult, controlsResult, walletResult, fundingResult, openingResult, carryoversResult, closuresResult, rectificationsResult] = await Promise.all([
     readAll(supabase.from("accounts").select("id, period_id, state, state_origin").in("period_id", periodIds).order("id")),
     readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, transfer_fee_cents").in("period_id", periodIds).order("id")),
-    readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, destination_wallet_id, daily_control_id, occurred_on, kind, amount_cents, fee_cents, observation").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, destination_wallet_id, daily_control_id, occurred_on, kind, amount_cents, fee_cents, observation, created_at").in("period_id", periodIds).order("id")),
     readAll(supabase.from("funding_withdrawals").select("id, period_id, collected_period_id, account_result_applied_period_id, receipt_timing_v2, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents").eq("is_active", true).in("period_id", periodIds).order("id")),
     readAll(supabase.from("period_opening_snapshots").select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference,revision_number").in("period_id", periodIds).order("id")),
     readAll(supabase.from("account_period_carryovers").select("from_period_id,to_period_id,account_id,account_state,lifetime_result_cents,purchase_price_cents").in("to_period_id", periodIds).order("id")),
@@ -149,6 +149,7 @@ export async function loadPeriodSummaries(
       .filter((movement) => movement.period_id === periodId)
       .map((movement) => ({
         amountInCents: Number(movement.amount_cents),
+        createdAt: movement.created_at,
         dailyControlId: movement.daily_control_id,
         destinationWalletId: movement.destination_wallet_id,
         id: movement.id,

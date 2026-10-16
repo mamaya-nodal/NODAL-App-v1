@@ -28,6 +28,7 @@ export type SummaryControl = Readonly<{
 
 export type WalletMovement = Readonly<{
   amountInCents: number;
+  createdAt?: string | null;
   dailyControlId?: string | null;
   destinationWalletId?: string | null;
   feeInCents?: number;

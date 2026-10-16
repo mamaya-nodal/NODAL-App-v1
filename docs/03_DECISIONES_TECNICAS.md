@@ -2591,3 +2591,19 @@ vigente sin aprobacion y evidencia suficiente.
   identidad se trasladan al destino personal sin alterar titular, número, saldo ni
   historia, y el cambio queda auditado.
 
+### APP-184 - Historial completo y ordenado de movimientos de fondos
+
+- **Fecha:** 2026-10-16. Corrección general a partir de la consulta de Alfred.
+- **Orden:** los movimientos se presentan por fecha económica descendente. Cuando
+  comparten fecha, se usa el momento de creación y luego el identificador estable
+  como desempate, manteniendo un resultado determinista y auditable.
+- **Consulta:** la tarjeta muestra los diez movimientos más recientes y permite
+  cargar los siguientes bloques o desplegar el período completo. La cantidad visible
+  y el total se informan explícitamente; ningún movimiento queda oculto por un límite
+  silencioso.
+- **Descarga:** el titular puede exportar a CSV todos los movimientos del período
+  seleccionado, no sólo los visibles. El archivo conserva fecha, momento de registro,
+  billeteras, tipo, importe, fee, observación, origen e identificador técnico.
+- **Alcance:** la regla se aplica a todos los usuarios y períodos. No modifica
+  importes, clasificaciones, fechas ni asientos contables existentes.
+

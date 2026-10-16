@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import { clampDateToPeriodSchedule } from "@/modules/accounting/domain/period-calendar";
 import type { FundingWithdrawal, OperationalSummary } from "@/modules/summary/domain/operational-summary";
 import { presentWalletBalances } from "@/modules/wallets/domain/balance-presentation";
+import { buildWalletMovementHistoryCsv, orderWalletMovementHistory } from "@/modules/wallets/domain/movement-history";
 import { buildSummaryAlerts } from "@/modules/summary/domain/summary-alerts";
 import { buildConciliationBreakdown, sumConciliationLines } from "@/modules/summary/domain/conciliation-breakdown";
 import {
@@ -99,6 +100,8 @@ const labels = {
   wallet_to_wallet: "Transferencia entre billeteras",
 } as const;
 
+const MOVEMENT_HISTORY_PAGE_SIZE = 10;
+
 export function ProgressSummary({ accounts, economicTrace = [], embedded = false, hasPendingNinjaOperation = false, identities = [], liveBrokerBalance = null, payouts, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, wallets }: Props) {
   const router = useRouter();
   const payoutAccounts = accounts.filter((account) => account.eligibleForPayout);
@@ -116,7 +119,20 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     Object.fromEntries(wallets.map((wallet) => [wallet.id, wallet.identityId ?? ""])),
   );
   const [movementKind, setMovementKind] = useState<keyof typeof labels>("external_contribution");
+  const [movementHistoryView, setMovementHistoryView] = useState({
+    periodId,
+    visibleCount: MOVEMENT_HISTORY_PAGE_SIZE,
+  });
   const [liveBalance, setLiveBalance] = useState(liveBrokerBalance);
+  const visibleMovementCount = movementHistoryView.periodId === periodId
+    ? movementHistoryView.visibleCount
+    : MOVEMENT_HISTORY_PAGE_SIZE;
+  const orderedWalletMovements = useMemo(
+    () => orderWalletMovementHistory(summary.walletMovements),
+    [summary.walletMovements],
+  );
+  const visibleWalletMovements = orderedWalletMovements.slice(0, visibleMovementCount);
+  const remainingMovementCount = Math.max(0, orderedWalletMovements.length - visibleWalletMovements.length);
   const displayedPayouts = payouts ?? summary.fundingWithdrawals;
   const brokerDifferenceInCents = liveBalance && summary.brokerBalanceInCents !== null
     ? liveBalance.balanceInCents - summary.brokerBalanceInCents
@@ -150,6 +166,20 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     window.addEventListener(NINJA_STATUS_EVENT, receiveStatus);
     return () => window.removeEventListener(NINJA_STATUS_EVENT, receiveStatus);
   }, []);
+
+  function downloadMovementHistory() {
+    const csv = buildWalletMovementHistoryCsv({
+      labels,
+      movements: orderedWalletMovements,
+      walletNames: Object.fromEntries(wallets.map((wallet) => [wallet.id, wallet.name])),
+    });
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `movimientos-${periodLabel?.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || periodId}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function wallet(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -616,16 +646,28 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <input name="observation" placeholder="Observación (opcional)" />
             <button disabled={saving}>Guardar movimiento</button>
           </form>
-          {summary.walletMovements.length > 0 && (
+          {orderedWalletMovements.length > 0 && (
             <details className="wallet-movement-history">
-              <summary><span>Ver historial de movimientos</span><strong>{summary.walletMovements.length}</strong></summary>
+              <summary><span>Ver historial de movimientos</span><strong>{orderedWalletMovements.length}</strong></summary>
+              <div className="wallet-movement-history-toolbar">
+                <span>Mostrando {visibleWalletMovements.length} de {orderedWalletMovements.length}</span>
+                <button onClick={downloadMovementHistory} type="button">Descargar historial</button>
+              </div>
               <div className="summary-list">
-                {summary.walletMovements.map((movement) => (
+                {visibleWalletMovements.map((movement) => (
                   <p key={movement.id}>
                     <strong>{date(movement.occurredOn)}</strong> · {wallets.find((wallet) => wallet.id === movement.walletId)?.name ?? "Billetera"}{movement.kind === "wallet_to_wallet" ? ` → ${wallets.find((wallet) => wallet.id === movement.destinationWalletId)?.name ?? "Billetera"}` : ""} · {labels[movement.kind as keyof typeof labels] ?? "Movimiento de billetera"} · {money(movement.amountInCents)}{(movement.feeInCents ?? 0) > 0 ? ` · Fee ${money(movement.feeInCents ?? 0)}` : ""}
                   </p>
                 ))}
               </div>
+              {remainingMovementCount > 0 && (
+                <div className="wallet-movement-history-actions">
+                  <button onClick={() => setMovementHistoryView({ periodId, visibleCount: visibleMovementCount + MOVEMENT_HISTORY_PAGE_SIZE })} type="button">
+                    Ver {Math.min(MOVEMENT_HISTORY_PAGE_SIZE, remainingMovementCount)} movimientos más
+                  </button>
+                  <button onClick={() => setMovementHistoryView({ periodId, visibleCount: orderedWalletMovements.length })} type="button">Ver todos</button>
+                </div>
+              )}
             </details>
           )}
         </details>

@@ -973,6 +973,7 @@ async function renderPrivateAppPage({
     );
     walletMovements = (walletMovementRows ?? []).map((movement) => ({
       amountInCents: Number(movement.amount_cents), id: movement.id,
+      createdAt: movement.created_at,
       dailyControlId: movement.daily_control_id,
       destinationWalletId: movement.destination_wallet_id,
       kind: movement.kind as WalletMovement["kind"], occurredOn: movement.occurred_on,

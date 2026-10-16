@@ -7238,6 +7238,34 @@ html[data-theme="day"] .nodal-workspace .accounting-exception {
 .wallet-movement-history > summary::after { color: var(--app-subtle); content: "+"; font-size: 14px; font-weight: 500; }
 .wallet-movement-history[open] > summary::after { content: "−"; }
 .wallet-movement-history > .summary-list { margin: 0; padding: 1px 0 4px; }
+.wallet-movement-history-toolbar,
+.wallet-movement-history-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+}
+.wallet-movement-history-toolbar { border-bottom: 1px solid var(--app-border); color: var(--app-subtle); font-size: 9px; }
+.wallet-movement-history-toolbar button,
+.wallet-movement-history-actions button {
+  min-height: 32px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  padding: 0 11px;
+  background: color-mix(in srgb, var(--app-panel) 88%, var(--app-accent));
+  color: var(--app-title);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.wallet-movement-history-toolbar button { color: var(--app-accent); }
+.wallet-movement-history-actions { justify-content: flex-end; border-top: 1px solid var(--app-border); }
+
+@media (max-width: 560px) {
+  .wallet-movement-history-toolbar,
+  .wallet-movement-history-actions { align-items: stretch; flex-direction: column; }
+}
 
 html[data-theme="day"] .accounting-view :is(.accounting-disclosure, .accounting-action-card) {
   border-color: #d1ddd3;
