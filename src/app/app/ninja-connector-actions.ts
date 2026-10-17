@@ -12,6 +12,7 @@ export type PairingCodeState = Readonly<{
 }>;
 
 const pairingAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const pairingLifetimeMinutes = 30;
 
 function generatePairingCode(): string {
   return Array.from({ length: 8 }, () => pairingAlphabet[randomInt(pairingAlphabet.length)]).join("");
@@ -34,7 +35,7 @@ export async function createNinjaPairingCode(
   }
 
   const code = generatePairingCode();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + pairingLifetimeMinutes * 60 * 1000).toISOString();
   const { error } = await supabase.rpc("create_ninja_pairing_code", {
     target_code_hash: hashConnectorSecret(code),
     target_expires_at: expiresAt,

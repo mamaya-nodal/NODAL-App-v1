@@ -2608,3 +2608,22 @@ vigente sin aprobacion y evidencia suficiente.
 - **Alcance:** la regla se aplica a todos los usuarios y períodos. No modifica
   importes, clasificaciones, fechas ni asientos contables existentes.
 
+### APP-185 - Vinculación confirmada por el instalador
+
+- **Fecha:** 2026-10-17. Corrección general a partir de la instalación de Juan
+  Sánchez.
+- **Hallazgo:** la instalación copiaba el complemento, pero el código se canjeaba
+  recién cuando NinjaTrader ejecutaba el AddOn después de compilar. El código
+  vencía a los cinco minutos y el instalador podía informar éxito sin que existiera
+  ningún conector asociado al usuario.
+- **Vinculación:** en la primera instalación, el instalador canjea el código antes
+  de informar éxito, cifra localmente la sesión con la protección del usuario de
+  Windows y la guarda en el mismo formato que consume el complemento. Si la app no
+  confirma el canje, la instalación se detiene con un mensaje explícito.
+- **Activación:** compilar y reiniciar NinjaTrader sigue siendo necesario para leer
+  y transmitir cuentas, pero ya no para crear el vínculo que habilita el ingreso a
+  la app. La app distingue vínculo confirmado de conector sin señal.
+- **Vigencia:** los códigos siguen siendo de un solo uso y ahora duran treinta
+  minutos para cubrir descarga, extracción e instalación sin depender de tiempos
+  de compilación. La regla se aplica a todos los usuarios nuevos, sin excepciones.
+

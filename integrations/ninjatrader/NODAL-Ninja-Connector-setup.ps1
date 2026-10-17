@@ -66,6 +66,69 @@ function Clear-PendingPairingCode {
   Write-ConfigAtomic -ConfigPath $ConfigPath -Lines (@(Get-Content -LiteralPath $ConfigPath | Where-Object { $_ -notmatch '^PairingCode=' }) + 'PairingCode=')
 }
 
+function Protect-ConnectorSecret {
+  param([string]$Value)
+
+  if ([string]::IsNullOrEmpty($Value)) { return "" }
+  Add-Type -AssemblyName System.Security
+  $plainBytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
+  $entropyBytes = [System.Text.Encoding]::UTF8.GetBytes("NODAL-Ninja-Connector-v0.2")
+  $protectedBytes = [System.Security.Cryptography.ProtectedData]::Protect(
+    $plainBytes,
+    $entropyBytes,
+    [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+  )
+  return [Convert]::ToBase64String($protectedBytes)
+}
+
+function Confirm-FirstPairing {
+  param([string]$Code, [string]$Version)
+
+  $payload = @{ code = $Code; connectorVersion = $Version } | ConvertTo-Json -Compress
+  try {
+    $session = Invoke-RestMethod `
+      -Uri ($normalizedBaseUrl + "/api/integrations/ninjatrader/pair") `
+      -Method Post `
+      -ContentType "application/json; charset=utf-8" `
+      -Body $payload `
+      -TimeoutSec 20
+  } catch {
+    $statusCode = $null
+    if ($_.Exception.Response) {
+      try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { $statusCode = $null }
+    }
+    if ($statusCode -eq 401) {
+      throw "El codigo vencio o ya fue utilizado. Genera uno nuevo en NODAL y ejecuta nuevamente INSTALAR-NODAL."
+    }
+    throw "NODAL no pudo confirmar la vinculacion. Revisa Internet y volve a ejecutar INSTALAR-NODAL; no se consumio una instalacion como valida."
+  }
+
+  $connectorId = [string]$session.connectorId
+  $accessToken = [string]$session.accessToken
+  $refreshToken = [string]$session.refreshToken
+  $accessExpiresAt = [string]$session.accessExpiresAt
+  $refreshExpiresAt = [string]$session.refreshExpiresAt
+  $parsedAccessExpiration = [DateTime]::MinValue
+  $parsedRefreshExpiration = [DateTime]::MinValue
+  $validAccessExpiration = [DateTime]::TryParse($accessExpiresAt, [ref]$parsedAccessExpiration)
+  $validRefreshExpiration = [DateTime]::TryParse($refreshExpiresAt, [ref]$parsedRefreshExpiration)
+  if ($connectorId -notmatch '^[0-9a-fA-F-]{36}$' -or
+      [string]::IsNullOrWhiteSpace($accessToken) -or
+      [string]::IsNullOrWhiteSpace($refreshToken) -or
+      !$validAccessExpiration -or
+      !$validRefreshExpiration) {
+    throw "NODAL respondio sin una credencial completa. Ejecuta nuevamente INSTALAR-NODAL con un codigo nuevo."
+  }
+
+  return @{
+    ConnectorId = $connectorId
+    AccessTokenProtected = Protect-ConnectorSecret -Value $accessToken
+    AccessExpiresAtUtc = $parsedAccessExpiration.ToUniversalTime().ToString("O")
+    RefreshTokenProtected = Protect-ConnectorSecret -Value $refreshToken
+    RefreshExpiresAtUtc = $parsedRefreshExpiration.ToUniversalTime().ToString("O")
+  }
+}
+
 if ($UpdateOnly) {
   if (!(Test-Path -LiteralPath $connectorConfigPath) -or !(Test-Path -LiteralPath $installedConnectorPath)) {
     throw "No se encontro una instalacion existente. Usa INSTALAR-NODAL para la primera vinculacion."
@@ -105,6 +168,7 @@ if ($normalizedCode -notmatch '^[A-Z0-9]{8}$') {
 
 New-Item -ItemType Directory -Force -Path $connectorDirectory | Out-Null
 New-Item -ItemType Directory -Force -Path $addOnDirectory | Out-Null
+$existingLines = @()
 if (Test-Path -LiteralPath $connectorConfigPath) {
   Copy-Item -LiteralPath $connectorConfigPath -Destination ($connectorConfigPath + ".before-pairing.bak") -Force
   $existingLines = Get-Content -LiteralPath $connectorConfigPath
@@ -116,25 +180,33 @@ if (Test-Path -LiteralPath $connectorConfigPath) {
   } else {
     '^(BaseUrl|PairingCode|InstalledSourceVersion|ConnectorId|AccessTokenProtected|AccessExpiresAtUtc|RefreshTokenProtected|RefreshExpiresAtUtc)='
   }
+}
+
+Copy-Item -LiteralPath $connectorSourcePath -Destination $installedConnectorPath -Force
+
+if ($UpdateOnly) {
   $keptLines = @($existingLines | Where-Object { $_ -notmatch $replacedKeys })
   Write-ConfigAtomic -ConfigPath $connectorConfigPath -Lines (@(
     "BaseUrl=$normalizedBaseUrl"
     "PairingCode=$normalizedCode"
     "InstalledSourceVersion=$connectorSourceVersion"
   ) + $keptLines)
-} else {
-  Write-ConfigAtomic -ConfigPath $connectorConfigPath -Lines @(
-    "BaseUrl=$normalizedBaseUrl"
-    "PairingCode=$normalizedCode"
-    "InstalledSourceVersion=$connectorSourceVersion"
-  )
-}
-
-Copy-Item -LiteralPath $connectorSourcePath -Destination $installedConnectorPath -Force
-
-if ($UpdateOnly) {
   Write-Output "Conector actualizado y nuevo vinculo preparado. Los vinculos anteriores y el historial se conservaron."
+  Write-Output "Ahora compila NodalNinjaConnector v$connectorSourceVersion en NinjaTrader; el codigo adicional se canjeara una sola vez."
 } else {
-  Write-Output "Conector preparado para NODAL. Si ya estaba instalado, sus vinculos e historial se conservaron."
+  $session = Confirm-FirstPairing -Code $normalizedCode -Version $connectorSourceVersion
+  $replacedKeys = '^(BaseUrl|PairingCode|InstalledSourceVersion|ConnectorId|AccessTokenProtected|AccessExpiresAtUtc|RefreshTokenProtected|RefreshExpiresAtUtc)='
+  $keptLines = @($existingLines | Where-Object { $_ -notmatch $replacedKeys })
+  Write-ConfigAtomic -ConfigPath $connectorConfigPath -Lines (@(
+    "BaseUrl=$normalizedBaseUrl"
+    "PairingCode="
+    "InstalledSourceVersion=$connectorSourceVersion"
+    "ConnectorId=$($session.ConnectorId)"
+    "AccessTokenProtected=$($session.AccessTokenProtected)"
+    "AccessExpiresAtUtc=$($session.AccessExpiresAtUtc)"
+    "RefreshTokenProtected=$($session.RefreshTokenProtected)"
+    "RefreshExpiresAtUtc=$($session.RefreshExpiresAtUtc)"
+  ) + $keptLines)
+  Write-Output "Vinculacion confirmada con NODAL. La app ya reconoce este conector."
+  Write-Output "Ahora compila NodalNinjaConnector v$connectorSourceVersion en NinjaTrader y reinicialo para comenzar a leer las cuentas."
 }
-Write-Output "Ahora compila NodalNinjaConnector v$connectorSourceVersion en NinjaTrader; el codigo se canjeara una sola vez."

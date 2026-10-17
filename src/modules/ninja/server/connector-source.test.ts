@@ -48,6 +48,14 @@ describe("Ninja connector source", () => {
     expect(connectorFirstInstaller).toContain('if not exist "%~dp0NODAL-Ninja-Connector-setup.ps1"');
   });
 
+  it("confirma la primera vinculación durante la instalación", () => {
+    expect(connectorInstaller).toContain('Confirm-FirstPairing -Code $normalizedCode');
+    expect(connectorInstaller).toContain('/api/integrations/ninjatrader/pair');
+    expect(connectorInstaller).toContain('"PairingCode="');
+    expect(connectorInstaller).toContain('"AccessTokenProtected=$($session.AccessTokenProtected)"');
+    expect(connectorInstaller).toContain('Vinculacion confirmada con NODAL');
+  });
+
   it("un código adicional agotado no interrumpe la sesión existente", () => {
     expect(connectorInstaller).toContain("Clear-PendingPairingCode -ConfigPath $connectorConfigPath");
     expect(connectorInstaller).toContain(".before-update.bak");

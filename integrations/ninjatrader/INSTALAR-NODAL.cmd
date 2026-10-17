@@ -26,5 +26,5 @@ if errorlevel 1 (
 )
 
 echo.
-echo Instalacion terminada. Abri NinjaTrader y compila NodalNinjaConnector.
+echo Vinculacion confirmada. Abri NinjaTrader, compila NodalNinjaConnector y reinicialo para activar la lectura.
 pause

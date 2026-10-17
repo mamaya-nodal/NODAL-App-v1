@@ -82,10 +82,12 @@ vacía fuera del callback aunque las cuentas estén conectadas y visibles.
    elige `Extraer todo`. No ejecutes los comandos desde la vista interna del ZIP:
    Windows extrae sólo el `.cmd` y deja afuera los archivos que necesita.
 3. Hace doble clic en `INSTALAR-NODAL.cmd` y pega ese código.
-4. El instalador copia el complemento automáticamente; el alumno solo debe
-   compilar `NodalNinjaConnector` en NinjaScript Editor.
-5. El conector canjea el código una sola vez y guarda en Windows una credencial
-   cifrada para ese usuario.
+4. El instalador confirma el código inmediatamente y guarda en Windows una
+   credencial cifrada para ese usuario. Si la app no confirma el vínculo, el
+   instalador se detiene con un mensaje visible en vez de informar éxito.
+5. El instalador copia el complemento automáticamente; el alumno solo debe
+   compilar `NodalNinjaConnector` en NinjaScript Editor y reiniciar NinjaTrader
+   para comenzar a enviar cuentas y saldos.
 
 Después de vincularse, el conector continúa enviando aunque el alumno cierre la
 web o salga de su sesión de Google. La credencial puede renovarse y revocarse
