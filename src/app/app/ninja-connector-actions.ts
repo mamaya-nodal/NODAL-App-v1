@@ -12,7 +12,8 @@ export type PairingCodeState = Readonly<{
 }>;
 
 const pairingAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const pairingLifetimeMinutes = 30;
+// The database permits at most ten minutes. Keep margin for clock skew.
+const pairingLifetimeMinutes = 5;
 
 function generatePairingCode(): string {
   return Array.from({ length: 8 }, () => pairingAlphabet[randomInt(pairingAlphabet.length)]).join("");

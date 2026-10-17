@@ -2623,7 +2623,8 @@ vigente sin aprobacion y evidencia suficiente.
 - **Activación:** compilar y reiniciar NinjaTrader sigue siendo necesario para leer
   y transmitir cuentas, pero ya no para crear el vínculo que habilita el ingreso a
   la app. La app distingue vínculo confirmado de conector sin señal.
-- **Vigencia:** los códigos siguen siendo de un solo uso y ahora duran treinta
-  minutos para cubrir descarga, extracción e instalación sin depender de tiempos
-  de compilación. La regla se aplica a todos los usuarios nuevos, sin excepciones.
+- **Vigencia:** los códigos son de un solo uso y duran cinco minutos. El intento
+  de ampliarlos a treinta fue revertido el mismo día: la RPC admite como máximo
+  diez minutos y rechazaba la generación. El canje inmediato del instalador evita
+  depender del tiempo de compilación. La regla es general para todos los usuarios.
 
