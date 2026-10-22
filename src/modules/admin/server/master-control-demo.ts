@@ -176,6 +176,8 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     connectorByUser,
     currentMonth: current.month,
     demo: true,
+    distributionAdminShares: [],
+    distributionSettings: [],
     historicalGrossByUser,
     historicCommission: Object.fromEntries(current.overview.people.map((person) => [person.id, person.commission])),
     history: [],

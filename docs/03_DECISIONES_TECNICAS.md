@@ -2666,3 +2666,25 @@ vigente sin aprobacion y evidencia suficiente.
   prohibición de autorrevocación y de revocar otro Master mediante esta RPC.
 - No se desactiva automáticamente ninguna cuenta homónima.
 
+### APP-189 - Distribución final administrada exclusivamente por Admin Master
+
+- **Fecha:** 2026-10-22. El titular reemplaza la cascada de porcentajes por una
+  distribución final explícita para cada usuario: porcentaje del usuario o trader,
+  porcentaje de NODAL y bolsa administrativa. Los tres conceptos deben sumar
+  exactamente 100% de la ganancia original.
+- **Desglose:** Admin Master distribuye manualmente la bolsa administrativa entre
+  los administradores vigentes de la cadena del usuario. Las participaciones son
+  puntos porcentuales sobre la ganancia original y deben sumar exactamente el valor
+  de la bolsa; agregar generaciones no agrega nuevos tipos de acuerdo.
+- **Autoridad:** únicamente Admin Master puede editar la distribución y su desglose.
+  Los administradores de rama y usuarios pueden consultarlos en modo de solo lectura.
+  La RPC anterior de administración conserva sus funciones de rol y jerarquía, pero
+  ignora cambios económicos enviados por administradores comunes.
+- **Vigencia y trazabilidad:** cada distribución se versiona por período. Sólo puede
+  modificarse el período abierto, requiere motivo y deja antes/después en el historial
+  administrativo. El alta de este modelo materializa la economía vigente sin cambiar
+  importes; los períodos históricos permanecen inmutables.
+- **Compatibilidad contable:** el porcentaje legado de comisión se sincroniza como
+  NODAL más bolsa administrativa para conservar los cierres existentes, mientras el
+  cálculo de reparto usa la distribución final explícita.
+

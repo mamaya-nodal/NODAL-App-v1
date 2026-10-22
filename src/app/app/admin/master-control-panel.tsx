@@ -9,6 +9,7 @@ import { peopleHierarchy } from "@/modules/admin/domain/people-hierarchy";
 import { saveNodalUnit } from "./unit-actions";
 import { deactivateMasterUser, saveMasterUserRole, type MasterUserRole } from "./user-role-actions";
 import { saveMasterAssignments } from "./assignment-actions";
+import { saveMasterDistribution } from "./distribution-actions";
 
 import "./desks.css";
 import "./master-control.css";
@@ -216,9 +217,6 @@ function SystemBoard({ data, onOpenUser, people, selectedUnitId }: Readonly<{ da
         const profile = node.personId ? data.profilesByUser[node.personId] : null;
         const identities = node.personId ? (data.identitiesByUser[node.personId] ?? []) : [];
         const activeIdentities = identities.filter((identity) => identity.state.toLowerCase() === "activa").length;
-        const managedDesk = node.personId
-          ? data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === node.personId)
-          : null;
         const connector = node.personId ? data.connectorByUser[node.personId] : null;
         const isExpanded = expanded.has(node.id);
         return <article className={`desk-board-node ${node.tone} ${isExpanded ? "expanded" : ""}`} key={node.id} style={{ left: node.x, top: node.y }}>
@@ -227,8 +225,8 @@ function SystemBoard({ data, onOpenUser, people, selectedUnitId }: Readonly<{ da
           {isExpanded && person ? <small className="desk-board-person-detail">
             <span>ID: {data.identifiersByUser[person.id] ?? "Pendiente"}</span>
             <span>Alta: {dateLabel(profile?.created_at)}</span>
-            <span>% op. propias: {(person.terms?.commission_bps ?? 0) / 100}%</span>
-            {managedDesk ? <span>% Admin mesa: {managedDesk.terms.nodal_bps / 100}%</span> : null}
+            <span>Usuario: {person.distribution.user_bps / 100}% · NODAL: {person.distribution.nodal_bps / 100}%</span>
+            <span>Bolsa admin: {person.distribution.admin_pool_bps / 100}%</span>
             <span>Identidades: {profile?.identities_enabled ? "habilitadas" : "no habilitadas"} · {activeIdentities}/{identities.length}</span>
             <span>Ninja: {connector?.active ? "Activo" : "Desactivado"}{connector?.version ? ` · v${connector.version}` : " · sin versión"}</span>
           </small> : isExpanded ? <small>{node.detail}</small> : null}
@@ -248,7 +246,10 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   const initialRole: MasterUserRole = profile?.access_role === "admin" ? "admin_master" : managedDesk ? "admin" : "user";
   const [role, setRole] = useState<MasterUserRole>(initialRole);
   const [accessState, setAccessState] = useState(person.access);
-  const [adminPercent, setAdminPercent] = useState(String((managedDesk?.terms.nodal_bps ?? 0) / 100));
+  const [userPercent, setUserPercent] = useState(String(person.distribution.user_bps / 100));
+  const [nodalPercent, setNodalPercent] = useState(String(person.distribution.nodal_bps / 100));
+  const [adminPoolPercent, setAdminPoolPercent] = useState(String(person.distribution.admin_pool_bps / 100));
+  const [distributionReason, setDistributionReason] = useState("Acuerdo comercial vigente");
   const [identitiesEnabled, setIdentitiesEnabled] = useState(profile?.identities_enabled === true);
   const [result, setResult] = useState("");
   const [saving, setSaving] = useState(false);
@@ -257,6 +258,24 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   );
   const [assignmentQuery, setAssignmentQuery] = useState("");
   const currentPeriod = data.month === data.currentMonth;
+  const eligibleAdministrators = useMemo(() => {
+    const result: Person[] = [];
+    const visited = new Set<string>();
+    let deskId: string | null = person.deskId;
+    while (deskId && !visited.has(deskId)) {
+      visited.add(deskId);
+      const desk = data.overview.desks.find((candidate) => candidate.id === deskId);
+      const manager = desk?.terms.manager_id
+        ? data.overview.people.find((candidate) => candidate.id === desk.terms.manager_id)
+        : null;
+      if (manager && manager.id !== person.id && !result.some((candidate) => candidate.id === manager.id)) result.push(manager);
+      deskId = desk?.parent_id ?? null;
+    }
+    return result;
+  }, [data.overview.desks, data.overview.people, person.deskId, person.id]);
+  const [adminSharePercents, setAdminSharePercents] = useState<Record<string, string>>(() => Object.fromEntries(
+    eligibleAdministrators.map((admin) => [admin.id, String((person.adminShares.find((share) => share.admin_user_id === admin.id)?.share_bps ?? 0) / 100)]),
+  ));
   const assignmentCandidates = data.overview.people.filter((candidate) => candidate.id !== person.id && candidate.id !== data.actorUserId);
   const saveAssignments = async () => {
     setSaving(true);
@@ -289,15 +308,10 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
       } finally { setSaving(false); }
       return;
     }
-    const percentage = Number(adminPercent.replace(",", "."));
-    if (role !== "user" && (!Number.isFinite(percentage) || percentage < 0 || percentage > 100)) {
-      setResult("Ingresá un porcentaje de mesa entre 0% y 100%.");
-      return;
-    }
     setSaving(true);
     setResult("");
     const response = await saveMasterUserRole({
-      adminBps: role === "user" ? null : Math.round(percentage * 100),
+      adminBps: role === "user" ? null : (managedDesk?.terms.nodal_bps ?? 10_000),
       identitiesEnabled,
       role,
       userId: person.id,
@@ -310,11 +324,38 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
     router.refresh();
     setResult("Rol y permisos guardados. Ya podés gestionar los usuarios a cargo.");
   };
+  const saveDistribution = async () => {
+    const toBps = (value: string) => Math.round(Number(value.replace(",", ".")) * 100);
+    const userBps = toBps(userPercent);
+    const nodalBps = toBps(nodalPercent);
+    const adminPoolBps = toBps(adminPoolPercent);
+    const adminShares = eligibleAdministrators.map((admin) => ({
+      adminUserId: admin.id,
+      shareBps: toBps(adminSharePercents[admin.id] ?? "0"),
+    })).filter((share) => share.shareBps > 0);
+    if ([userBps, nodalBps, adminPoolBps].some((value) => !Number.isInteger(value) || value < 0 || value > 10_000)
+      || userBps + nodalBps + adminPoolBps !== 10_000
+      || adminShares.reduce((sum, share) => sum + share.shareBps, 0) !== adminPoolBps) {
+      setResult("El acuerdo debe sumar 100% y el desglose debe coincidir con la bolsa administrativa.");
+      return;
+    }
+    setSaving(true);
+    setResult("");
+    try {
+      const response = await saveMasterDistribution({ adminPoolBps, adminShares, effectiveMonth: data.month, nodalBps, reason: distributionReason, userBps, userId: person.id });
+      setResult(response.message);
+      if (response.ok) router.refresh();
+    } catch {
+      setResult("No se pudo confirmar el acuerdo. Actualizá la página antes de reintentar.");
+    } finally {
+      setSaving(false);
+    }
+  };
   return <div aria-modal="true" className="desk-modal-backdrop" role="dialog" onMouseDown={onClose}><section className="desk-user-modal master-user-modal" onMouseDown={(event) => event.stopPropagation()}>
     <header><div><span>USUARIO NODAL</span><h2>{identifier} / {person.name}</h2></div><button className="desk-modal-close" onClick={onClose} type="button">×</button></header>
     <div className="master-user-metrics"><Metric label="Ganancia período" value={money(person.gross)} /><Metric label="Facturación histórica" value={money(data.historicalGrossByUser[person.id] ?? 0)} /><Metric label="Identidades" value={String(identities.length)} /></div>
     <div className="desk-user-fields"><label>Estado<select disabled={data.demo || editingSelf || saving || !currentPeriod || initialRole === "admin_master"} onChange={(event) => { setAccessState(event.target.value); setResult(""); }} value={accessState}><option value="active">Activo</option><option value="revoked">Desactivado</option></select></label><label>Email de acceso<input disabled value={profile?.email ?? person.email} /></label><label>Email de contacto<input disabled value={profile?.contact_email ?? profile?.email ?? person.email} /></label><label>Rol<select disabled={data.demo || editingSelf || saving} onChange={(event) => { setRole(event.target.value as MasterUserRole); setResult(""); }} value={role}><option value="user">Usuario</option><option value="admin">Admin</option><option value="admin_master">Admin Master</option></select></label></div>
-    <section className="desk-agreement-block"><h3>Acuerdo % NODAL</h3><label>Operaciones propias<div><input disabled value={(person.terms?.commission_bps ?? 0) / 100} /><span>%</span></div></label>{role !== "user" ? <label>% mesa<div><input disabled={data.demo || editingSelf || saving} inputMode="decimal" max="100" min="0" onChange={(event) => { setAdminPercent(event.target.value); setResult(""); }} type="number" value={adminPercent} /><span>%</span></div></label> : null}<small>{editingSelf ? "Por seguridad no podés modificar tu propio rol de Admin Master desde esta ficha. El acceso a Identidades sí puede administrarse." : "Admin Master puede modificar el rol, el porcentaje de mesa y el acceso a Identidades. Los cambios quedan auditados."}</small></section>
+    <section className="desk-agreement-block master-distribution-editor"><h3>Distribución de ganancias</h3><div className="master-distribution-main"><label>Usuario / trader<div><input disabled={data.demo || saving || !currentPeriod} max="100" min="0" onChange={(event) => { setUserPercent(event.target.value); setResult(""); }} step="0.01" type="number" value={userPercent} /><span>%</span></div></label><label>NODAL<div><input disabled={data.demo || saving || !currentPeriod} max="100" min="0" onChange={(event) => { setNodalPercent(event.target.value); setResult(""); }} step="0.01" type="number" value={nodalPercent} /><span>%</span></div></label><label>Bolsa administrativa<div><input disabled={data.demo || saving || !currentPeriod} max="100" min="0" onChange={(event) => { setAdminPoolPercent(event.target.value); setResult(""); }} step="0.01" type="number" value={adminPoolPercent} /><span>%</span></div></label></div><strong className="master-distribution-total">Total: {(Number(userPercent || 0) + Number(nodalPercent || 0) + Number(adminPoolPercent || 0)).toLocaleString("es-AR")}%</strong><div className="master-distribution-breakdown"><h4>Desglose de la bolsa administrativa</h4>{eligibleAdministrators.map((admin) => <label key={admin.id}>{admin.name}<div><input disabled={data.demo || saving || !currentPeriod} max="100" min="0" onChange={(event) => setAdminSharePercents((current) => ({ ...current, [admin.id]: event.target.value }))} step="0.01" type="number" value={adminSharePercents[admin.id] ?? "0"} /><span>%</span></div></label>)}{eligibleAdministrators.length === 0 ? <p>Este usuario no tiene administradores superiores. La bolsa debe ser 0%.</p> : null}<strong>Total asignado: {eligibleAdministrators.reduce((sum, admin) => sum + Number(adminSharePercents[admin.id] || 0), 0).toLocaleString("es-AR")}% de {adminPoolPercent || "0"}%</strong></div><label className="master-distribution-reason">Motivo<input disabled={data.demo || saving || !currentPeriod} onChange={(event) => setDistributionReason(event.target.value)} value={distributionReason} /></label><small>Solo Admin Master puede modificar este acuerdo. Los porcentajes son finales sobre la ganancia original y quedan auditados por período.</small>{!data.demo ? <button className="secondary-action" disabled={saving || !currentPeriod} onClick={saveDistribution} type="button">{saving ? "Guardando…" : "Guardar distribución"}</button> : null}</section>
     {role !== "user" ? <fieldset className="desk-assigned-users master-assigned-users" disabled={data.demo || saving || !managedDesk || !currentPeriod}>
       <legend>Usuarios a cargo · {assignedUserIds.length}</legend>
       <p>{!currentPeriod ? "Seleccioná el período actual para modificar la asignación." : !managedDesk ? "Guardá el nuevo rol para habilitar la asignación de usuarios." : "Seleccioná las personas que dependen de este administrador. Si seleccionás otro Admin, también se traslada su mesa. Al desmarcar una persona, vuelve a la mesa superior."}</p>

@@ -14,6 +14,19 @@ export type UserTerms = {
   commission_bps: number;
   bonus_enabled: boolean;
 };
+export type UserDistributionTerms = {
+  user_id: string;
+  effective_month: string;
+  user_bps: number;
+  nodal_bps: number;
+  admin_pool_bps: number;
+};
+export type UserDistributionAdminShare = {
+  user_id: string;
+  effective_month: string;
+  admin_user_id: string;
+  share_bps: number;
+};
 export type DeskTerms = {
   desk_id: string;
   effective_month: string;
@@ -80,6 +93,8 @@ export function calculateDeskOverview(
   users: readonly Person[],
   userTerms: readonly UserTerms[],
   month: string,
+  distributionTerms: readonly UserDistributionTerms[] = [],
+  distributionShares: readonly UserDistributionAdminShare[] = [],
 ) {
   const settings = new Map(
     latestTerms(userTerms, month, (t) => t.user_id).map((t) => [t.user_id, t]),
@@ -87,28 +102,87 @@ export function calculateDeskOverview(
   const agreements = new Map(
     latestTerms(deskTerms, month, (t) => t.desk_id).map((t) => [t.desk_id, t]),
   );
+  const explicitDistributions = new Map(
+    latestTerms(distributionTerms, month, (term) => term.user_id).map((term) => [term.user_id, term]),
+  );
+  const explicitShareMonths = new Map([...explicitDistributions].map(([userId, term]) => [userId, term.effective_month]));
+  const deskById = new Map(desks.map((desk) => [desk.id, desk]));
+  const legacyDistribution = (userId: string, deskId: string, commissionBps: number) => {
+    let remaining = commissionBps;
+    let currentDeskId: string | null = deskId;
+    const shares: UserDistributionAdminShare[] = [];
+    const visited = new Set<string>();
+    while (currentDeskId && remaining > 0 && !visited.has(currentDeskId)) {
+      visited.add(currentDeskId);
+      const agreement = agreements.get(currentDeskId);
+      if (!agreement?.active) break;
+      const managerBps = agreement.manager_id
+        ? Math.round((remaining * (10_000 - agreement.nodal_bps)) / 10_000)
+        : 0;
+      if (agreement.manager_id && managerBps > 0) shares.push({
+        admin_user_id: agreement.manager_id,
+        effective_month: month,
+        share_bps: managerBps,
+        user_id: userId,
+      });
+      remaining -= managerBps;
+      currentDeskId = deskById.get(currentDeskId)?.parent_id ?? null;
+    }
+    return {
+      shares,
+      terms: {
+        admin_pool_bps: shares.reduce((sum, share) => sum + share.share_bps, 0),
+        effective_month: month,
+        nodal_bps: remaining,
+        user_bps: 10_000 - commissionBps,
+        user_id: userId,
+      } satisfies UserDistributionTerms,
+    };
+  };
+  const resolvedShares = new Map<string, UserDistributionAdminShare[]>();
   const people = users.map((user) => {
     const terms = settings.get(user.id);
-    const commission = terms
-      ? portion(Math.max(0, user.gross), terms.commission_bps)
-      : user.legacyCommission;
+    const explicit = explicitDistributions.get(user.id);
+    const fallbackCommissionBps = terms?.commission_bps
+      ?? (user.gross > 0 ? Math.round((user.legacyCommission * 10_000) / user.gross) : 0);
+    const legacy = legacyDistribution(user.id, terms?.desk_id ?? ROOT_DESK, fallbackCommissionBps);
+    const distribution = explicit ?? legacy.terms;
+    const shares = explicit
+      ? distributionShares.filter((share) => share.user_id === user.id
+        && share.effective_month === explicitShareMonths.get(user.id))
+      : legacy.shares;
+    resolvedShares.set(user.id, shares);
+    const commission = portion(Math.max(0, user.gross), 10_000 - distribution.user_bps);
     return {
       ...user,
       terms,
       deskId: terms?.desk_id ?? ROOT_DESK,
+      distribution,
+      adminShares: shares,
       commission,
       ownIncome: Math.max(0, user.gross) - commission,
       mesaIncome: 0,
       totalIncome: 0,
     };
   });
+  const nodalByUser = new Map<string, number>();
+  for (const source of people) {
+    const gross = Math.max(0, source.gross);
+    let distributed = source.ownIncome;
+    for (const share of resolvedShares.get(source.id) ?? []) {
+      const amount = portion(gross, share.share_bps);
+      distributed += amount;
+      const recipient = people.find((person) => person.id === share.admin_user_id);
+      if (recipient) recipient.mesaIncome += amount;
+    }
+    nodalByUser.set(source.id, Math.max(0, gross - distributed));
+  }
   const rows = desks
     .filter((d) => agreements.has(d.id))
     .map((d) => {
       const terms = agreements.get(d.id)!;
       const members = people.filter((p) => p.deskId === d.id);
       const generated = members.reduce((s, p) => s + p.commission, 0);
-      const nodalShare = portion(generated, terms.nodal_bps);
       return {
         ...d,
         terms,
@@ -116,8 +190,8 @@ export function calculateDeskOverview(
         gross: members.reduce((s, p) => s + p.gross, 0),
         directGenerated: generated,
         generated,
-        nodalShare,
-        managerShare: generated - nodalShare,
+        nodalShare: 0,
+        managerShare: 0,
         structureGross: members.reduce((s, p) => s + p.gross, 0),
         structureMembers: members.map((p) => p.id),
         children: desks
@@ -137,31 +211,29 @@ export function calculateDeskOverview(
       const child = resolveDesk(childId);
       return child ? [child] : [];
     });
-    desk.generated = desk.directGenerated + childRows.reduce((sum, child) => sum + child.nodalShare, 0);
-    desk.nodalShare = portion(desk.generated, desk.terms.nodal_bps);
-    desk.managerShare = desk.generated - desk.nodalShare;
+    desk.generated = desk.directGenerated + childRows.reduce((sum, child) => sum + child.generated, 0);
     desk.structureGross = desk.gross + childRows.reduce((sum, child) => sum + child.structureGross, 0);
     desk.structureMembers = [
       ...desk.members,
       ...childRows.flatMap((child) => child.structureMembers),
     ];
+    desk.nodalShare = desk.structureMembers.reduce((sum, userId) => sum + (nodalByUser.get(userId) ?? 0), 0);
+    desk.managerShare = desk.terms.manager_id
+      ? desk.structureMembers.reduce((sum, userId) => sum + (resolvedShares.get(userId) ?? [])
+        .filter((share) => share.admin_user_id === desk.terms.manager_id)
+        .reduce((shareSum, share) => shareSum + portion(Math.max(0, people.find((person) => person.id === userId)?.gross ?? 0), share.share_bps), 0), 0)
+      : 0;
     resolving.delete(deskId);
     resolved.add(deskId);
     return desk;
   };
   for (const desk of rows) resolveDesk(desk.id);
-  for (const desk of rows) {
-    const manager = people.find((p) => p.id === desk.terms.manager_id);
-    if (manager) manager.mesaIncome += desk.managerShare;
-  }
   for (const person of people)
     person.totalIncome = person.ownIncome + person.mesaIncome;
   return {
     people,
     desks: rows,
     gross: people.reduce((s, p) => s + p.gross, 0),
-    nodalIncome: rows
-      .filter((desk) => desk.parent_id === null)
-      .reduce((sum, desk) => sum + desk.nodalShare, 0),
+    nodalIncome: [...nodalByUser.values()].reduce((sum, amount) => sum + amount, 0),
   };
 }

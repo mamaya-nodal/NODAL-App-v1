@@ -98,4 +98,40 @@ describe("desk accounting", () => {
     expect(result.nodalIncome).toBe(625);
     expect(result.nodalIncome + result.people.reduce((sum, person) => sum + person.totalIncome, 0)).toBe(10_000);
   });
+
+  it("uses an explicit final distribution and manual administrative pool", () => {
+    const desks = [
+      { id: ROOT_DESK, name: "NODAL", parent_id: null, created_at: "" },
+      { id: "julian", name: "Mesa Julián", parent_id: ROOT_DESK, created_at: "" },
+      { id: "andres", name: "Mesa Andrés", parent_id: "julian", created_at: "" },
+    ];
+    const deskTerms = [
+      { active: true, desk_id: ROOT_DESK, effective_month: "2026-10-01", manager_id: null, nodal_bps: 10_000 },
+      { active: true, desk_id: "julian", effective_month: "2026-10-01", manager_id: "j", nodal_bps: 5_000 },
+      { active: true, desk_id: "andres", effective_month: "2026-10-01", manager_id: "a", nodal_bps: 5_000 },
+    ];
+    const people: Person[] = [
+      { access: "active", email: "j@test", gross: 0, id: "j", legacyCommission: 0, master: false, name: "Julián" },
+      { access: "active", email: "a@test", gross: 0, id: "a", legacyCommission: 0, master: false, name: "Andrés" },
+      { access: "active", email: "e@test", gross: 100_000, id: "e", legacyCommission: 0, master: false, name: "Elena" },
+    ];
+    const userTerms = [
+      { bonus_enabled: false, commission_bps: 0, desk_id: ROOT_DESK, effective_month: "2026-10-01", level: 2, state: "active", user_id: "j" },
+      { bonus_enabled: false, commission_bps: 0, desk_id: "julian", effective_month: "2026-10-01", level: 2, state: "active", user_id: "a" },
+      { bonus_enabled: false, commission_bps: 4_000, desk_id: "andres", effective_month: "2026-10-01", level: 1, state: "active", user_id: "e" },
+    ];
+    const distributions = [
+      { admin_pool_bps: 2_000, effective_month: "2026-10-01", nodal_bps: 2_000, user_bps: 6_000, user_id: "e" },
+    ];
+    const shares = [
+      { admin_user_id: "a", effective_month: "2026-10-01", share_bps: 1_200, user_id: "e" },
+      { admin_user_id: "j", effective_month: "2026-10-01", share_bps: 800, user_id: "e" },
+    ];
+    const result = calculateDeskOverview(desks, deskTerms, people, userTerms, "2026-10-01", distributions, shares);
+    expect(result.people.find((person) => person.id === "e")?.ownIncome).toBe(60_000);
+    expect(result.people.find((person) => person.id === "a")?.mesaIncome).toBe(12_000);
+    expect(result.people.find((person) => person.id === "j")?.mesaIncome).toBe(8_000);
+    expect(result.nodalIncome).toBe(20_000);
+    expect(result.people.reduce((sum, person) => sum + person.totalIncome, 0) + result.nodalIncome).toBe(100_000);
+  });
 });

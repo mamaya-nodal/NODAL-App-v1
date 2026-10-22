@@ -8,6 +8,8 @@ import {
   type Desk,
   type DeskTerms,
   type UserTerms,
+  type UserDistributionTerms,
+  type UserDistributionAdminShare,
 } from "../domain/desks";
 
 export async function loadDesks(
@@ -15,7 +17,7 @@ export async function loadDesks(
   requestedMonth?: string,
 ) {
   const db = await requireNodalAdmin();
-  const [users, spaces, desks, terms, userTerms, history] = await Promise.all([
+  const [users, spaces, desks, terms, userTerms, distributions, distributionShares, history] = await Promise.all([
     readAll(db
       .from("nodal_users")
       .select("id,email,display_name,access_state,access_role,created_at,updated_at")
@@ -27,6 +29,8 @@ export async function loadDesks(
     readAll(db.from("nodal_desks").select("*").order("created_at").order("id")),
     readAll(db.from("nodal_desk_terms").select("*").order("desk_id").order("effective_month")),
     readAll(db.from("nodal_user_terms").select("*").order("user_id").order("effective_month")),
+    readAll(db.from("nodal_user_distribution_terms").select("*").order("user_id").order("effective_month")),
+    readAll(db.from("nodal_user_distribution_admin_shares").select("*").order("user_id").order("effective_month")),
     db
       .from("nodal_management_history")
       .select("*")
@@ -85,6 +89,8 @@ export async function loadDesks(
       ]
     : (terms.data ?? []);
   const settings: UserTerms[] = missing ? [] : (userTerms.data ?? []);
+  const distributionSettings = distributions.error ? [] : (distributions.data ?? []) as UserDistributionTerms[];
+  const distributionAdminShares = distributionShares.error ? [] : (distributionShares.data ?? []) as UserDistributionAdminShare[];
   const build = (period: string) =>
     calculateDeskOverview(
       deskRows,
@@ -108,6 +114,8 @@ export async function loadDesks(
         }),
       settings,
       period,
+      distributionSettings,
+      distributionAdminShares,
     );
   const overview = build(month);
   const historical = periods
@@ -135,6 +143,8 @@ export async function loadDesks(
   );
   return {
     overview,
+    distributionSettings,
+    distributionAdminShares,
     pendingAccessCount: (users.data ?? []).filter((user) => user.access_state === "pending").length,
     pendingAccessRequests: (users.data ?? [])
       .filter((user) => user.access_state === "pending")

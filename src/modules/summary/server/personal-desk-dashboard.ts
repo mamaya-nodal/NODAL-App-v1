@@ -10,6 +10,8 @@ import {
   type DeskTerms,
   type Person,
   type UserTerms,
+  type UserDistributionTerms,
+  type UserDistributionAdminShare,
 } from "@/modules/admin/domain/desks";
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { readAll } from "@/modules/admin/server/read-all";
@@ -51,14 +53,16 @@ export async function loadPersonalDeskDashboard(
   if (!userId) return null;
 
   const service = privilegedClient();
-  const [profileRows, workspaceRows, deskRows, deskTermRows, userTermRows] = await Promise.all([
+  const [profileRows, workspaceRows, deskRows, deskTermRows, userTermRows, distributionRows, distributionShareRows] = await Promise.all([
     readAll(service.from("nodal_users").select("id,email,display_name,access_state,access_role").order("id")),
     readAll(service.from("workspaces").select("owner_user_id,periods(id,period_month)").eq("modality", "real").order("id")),
     readAll(service.from("nodal_desks").select("id,name,parent_id,created_at").order("created_at").order("id")),
     readAll(service.from("nodal_desk_terms").select("desk_id,effective_month,manager_id,nodal_bps,active").order("desk_id").order("effective_month")),
     readAll(service.from("nodal_user_terms").select("user_id,effective_month,desk_id,level,state,commission_bps,bonus_enabled").order("user_id").order("effective_month")),
+    readAll(service.from("nodal_user_distribution_terms").select("user_id,effective_month,user_bps,nodal_bps,admin_pool_bps").order("user_id").order("effective_month")),
+    readAll(service.from("nodal_user_distribution_admin_shares").select("user_id,effective_month,admin_user_id,share_bps").order("user_id").order("effective_month")),
   ]);
-  const failed = [profileRows, workspaceRows, deskRows, deskTermRows, userTermRows].find((result) => result.error);
+  const failed = [profileRows, workspaceRows, deskRows, deskTermRows, userTermRows, distributionRows, distributionShareRows].find((result) => result.error);
   if (failed) throw new Error("No se pudo calcular la estructura económica del dashboard.");
 
   const profiles = (profileRows.data ?? []) as ProfileRow[];
@@ -66,6 +70,8 @@ export async function loadPersonalDeskDashboard(
   const desks = (deskRows.data ?? []) as Desk[];
   const deskTerms = (deskTermRows.data ?? []) as DeskTerms[];
   const userTerms = (userTermRows.data ?? []) as UserTerms[];
+  const distributions = (distributionRows.data ?? []) as UserDistributionTerms[];
+  const distributionShares = (distributionShareRows.data ?? []) as UserDistributionAdminShare[];
   const personalWorkspace = workspaces.find((workspace) => workspace.owner_user_id === userId);
   const months = [...new Set((personalWorkspace?.periods ?? [])
     .filter((period) => period.period_month <= selectedMonth)
@@ -107,7 +113,7 @@ export async function loadPersonalDeskDashboard(
       });
     return {
       month,
-      overview: calculateDeskOverview(desks, deskTerms, people, userTerms, month),
+      overview: calculateDeskOverview(desks, deskTerms, people, userTerms, month, distributions, distributionShares),
     };
   });
 

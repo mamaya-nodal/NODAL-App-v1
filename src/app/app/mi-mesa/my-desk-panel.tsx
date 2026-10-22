@@ -167,7 +167,6 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
   const identities = details?.identities ?? [];
   const connector = data.connectorByUser[person.id];
   const canEdit = data.demo || (!data.preview && person.id !== data.userId);
-  const canEditPercentages = canEdit && (data.demo || data.termsEditable);
   const identifier = data.displayIdByUser[person.id] || "ID pendiente";
   const identifierHistory = data.identifierHistoryByUser[person.id] ?? [];
   const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id) ?? null;
@@ -252,10 +251,16 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
         </label>)}</div>
       </fieldset> : null}
       <section className="desk-agreement-block">
-        <h3>Acuerdo % NODAL</h3>
-        <label>Operaciones propias<div><input disabled={!canEditPercentages} max="100" min="0" step="0.01" type="number" value={(draft.commissionBps ?? 0) / 100} onChange={(event) => setDraft({ ...draft, commissionBps: Math.round(Number(event.target.value) * 100) })} /><span>%</span></div></label>
-        {draft.role === "admin" ? <label>Admin mesa<div><input disabled={!canEditPercentages} max="100" min="0" step="0.01" type="number" value={(draft.adminBps ?? 0) / 100} onChange={(event) => setDraft({ ...draft, adminBps: Math.round(Number(event.target.value) * 100) })} /><span>%</span></div></label> : null}
-        <small>{data.termsEditable || data.demo ? "Ventana de edición habilitada." : "Solo lectura durante el período."}</small>
+        <h3>Distribución de ganancias</h3>
+        <div className="desk-agreement-summary">
+          <span>Usuario / trader<strong>{person.distribution.user_bps / 100}%</strong></span>
+          <span>NODAL<strong>{person.distribution.nodal_bps / 100}%</strong></span>
+          <span>Bolsa administrativa<strong>{person.distribution.admin_pool_bps / 100}%</strong></span>
+        </div>
+        {person.adminShares.length > 0 ? <div className="desk-agreement-breakdown">
+          {person.adminShares.map((share) => <span key={share.admin_user_id}>{data.overview.people.find((candidate) => candidate.id === share.admin_user_id)?.name ?? "Administrador"}<strong>{share.share_bps / 100}%</strong></span>)}
+        </div> : null}
+        <small>Acuerdo de solo lectura. Admin Master administra los porcentajes y su desglose.</small>
       </section>
       <div className="desk-user-switches">
         <article className="desk-ninja-state"><span>Conexión Ninja<small>Última transmisión: {dateTimeLabel(connector?.lastSeenAt)}</small></span><div><strong className={connector?.active ? "active" : "inactive"}>{connector?.active ? "Activo" : "Desactivado"}</strong><small>{connector?.version ? `Conector v${connector.version}` : "Sin versión registrada"}</small></div></article>
@@ -411,7 +416,6 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
         <svg aria-hidden="true" className="desk-board-lines" height={layout.canvasHeight} width={layout.canvasWidth}>{layout.edges.map(({ child, parent }) => { const startX = parent.x + 83; const startY = parent.y + 64; const endX = child.x + 83; const endY = child.y; const middleY = startY + (endY - startY) / 2; return <path d={`M ${startX} ${startY} V ${middleY} H ${endX} V ${endY}`} key={`${parent.id}-${child.id}`} />; })}</svg>
         {layout.nodes.map((node) => {
           const person = node.personId ? data.overview.people.find((candidate) => candidate.id === node.personId) : null;
-          const managedDesk = person ? data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id) : null;
           const identities = person ? data.identitiesByUser[person.id] ?? { active: 0, total: 0 } : { active: 0, total: 0 };
           const profile = person ? data.profilesByUser[person.id] : null;
           return <article className={`desk-board-node ${node.tone} ${expanded.has(node.id) ? "expanded" : ""}`} key={node.id} style={{ left: node.x, top: node.y }}>
@@ -419,8 +423,8 @@ function StructureBoard({ data, manager, onOpenUser, rootDesk }: Readonly<{ data
           <button aria-expanded={expanded.has(node.id)} aria-label={`Ver información de ${node.label}`} className="desk-board-node-toggle" onClick={() => setExpanded((current) => { const next = new Set(current); if (next.has(node.id)) next.delete(node.id); else next.add(node.id); return next; })} type="button">{expanded.has(node.id) ? "−" : "+"}</button>
           {expanded.has(node.id) ? person ? <small className="desk-board-person-detail">
             <span>Alta: {profile?.created_at ? dateLabel(profile.created_at.slice(0, 10)) : "Sin fecha"}</span>
-            <span>% op. propias: {person.terms?.commission_bps === null || person.terms?.commission_bps === undefined ? "Sin acuerdo" : `${person.terms.commission_bps / 100}%`}</span>
-            {managedDesk ? <span>% Admin. mesa: {managedDesk.terms.nodal_bps / 100}%</span> : null}
+            <span>Usuario: {person.distribution.user_bps / 100}% · NODAL: {person.distribution.nodal_bps / 100}%</span>
+            <span>Bolsa admin: {person.distribution.admin_pool_bps / 100}%</span>
             <span>Identidades: {profile?.identities_enabled ? "habilitadas" : "no habilitadas"} | {identities.active}</span>
           </small> : <small>{node.detail}</small> : null}
         </article>;

@@ -533,3 +533,42 @@
 }
 .master-person-branch { position: relative; padding-block: 4px; }
 .master-branch-mark { position: absolute; inset-inline-start: -17px; color: var(--muted, #8c9b91); }
+.master-distribution-editor { display: grid; gap: 14px; }
+.master-distribution-main {
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.master-distribution-total {
+  color: var(--brand);
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+.master-distribution-breakdown {
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  grid-column: 1 / -1;
+  padding: 14px;
+}
+.master-distribution-breakdown h4,
+.master-distribution-breakdown p { margin: 0; }
+.master-distribution-breakdown label {
+  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px);
+}
+.master-distribution-breakdown > strong { color: var(--muted); justify-self: end; }
+.master-distribution-reason { grid-column: 1 / -1; }
+.master-distribution-editor > button { grid-column: 1 / -1; justify-self: end; }
+
+@media (max-width: 720px) {
+  .master-distribution-main,
+  .desk-agreement-summary,
+  .desk-agreement-breakdown { grid-template-columns: 1fr; }
+  .master-distribution-breakdown label { align-items: stretch; grid-template-columns: 1fr; }
+  .master-distribution-editor > button { justify-self: stretch; }
+}

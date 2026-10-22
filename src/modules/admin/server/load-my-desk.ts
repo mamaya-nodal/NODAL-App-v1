@@ -18,6 +18,8 @@ import {
   type DeskTerms,
   type Person,
   type UserTerms,
+  type UserDistributionTerms,
+  type UserDistributionAdminShare,
 } from "../domain/desks";
 import { transmittedWithinLast24Hours } from "../domain/connector-activity";
 import { canOpenDeskAdmin } from "../domain/administration-scope";
@@ -167,18 +169,22 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
   const deskName = scope.kind === "desk" || scope.kind === "combined" ? scope.deskName : null;
   const service = privilegedClient();
   const month = accountingPeriodMonthAt();
-  const [deskRows, deskTermRows, userTermRows] = await Promise.all([
+  const [deskRows, deskTermRows, userTermRows, distributionRows, distributionShareRows] = await Promise.all([
     readAll(service.from("nodal_desks").select("id,name,parent_id,created_at").order("created_at").order("id")),
     readAll(service.from("nodal_desk_terms").select("desk_id,effective_month,manager_id,nodal_bps,active").order("desk_id").order("effective_month")),
     readAll(service.from("nodal_user_terms").select("user_id,effective_month,desk_id,level,state,commission_bps,bonus_enabled").order("user_id").order("effective_month")),
+    readAll(service.from("nodal_user_distribution_terms").select("user_id,effective_month,user_bps,nodal_bps,admin_pool_bps").order("user_id").order("effective_month")),
+    readAll(service.from("nodal_user_distribution_admin_shares").select("user_id,effective_month,admin_user_id,share_bps").order("user_id").order("effective_month")),
   ]);
-  if (deskRows.error || deskTermRows.error || userTermRows.error) {
+  if (deskRows.error || deskTermRows.error || userTermRows.error || distributionRows.error || distributionShareRows.error) {
     throw new Error("No se pudo cargar la estructura administrada.");
   }
 
   const desks = (deskRows.data ?? []) as Desk[];
   const deskTerms = (deskTermRows.data ?? []) as DeskTerms[];
   const userTerms = (userTermRows.data ?? []) as UserTerms[];
+  const distributions = (distributionRows.data ?? []) as UserDistributionTerms[];
+  const distributionShares = (distributionShareRows.data ?? []) as UserDistributionAdminShare[];
   const branchIds = preview ? new Set([ROOT_DESK]) : branch(deskId!, desks, deskTerms, month);
 
   if (!preview) {
@@ -325,6 +331,8 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
       people,
       userTerms.filter((term) => relevantUserIds.has(term.user_id)),
       periodMonth,
+      distributions.filter((term) => relevantUserIds.has(term.user_id)),
+      distributionShares.filter((share) => relevantUserIds.has(share.user_id)),
     );
   };
 

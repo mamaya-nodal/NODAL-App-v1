@@ -1016,6 +1016,29 @@ dialog.desk-dialog::backdrop {
   color: var(--muted);
   font-size: 0.66rem;
 }
+.desk-agreement-summary,
+.desk-agreement-breakdown {
+  display: grid;
+  gap: 10px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.desk-agreement-summary > span,
+.desk-agreement-breakdown > span {
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+.desk-agreement-summary strong,
+.desk-agreement-breakdown strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+.desk-agreement-breakdown { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .desk-user-switches {
   display: grid;
   gap: 10px;
