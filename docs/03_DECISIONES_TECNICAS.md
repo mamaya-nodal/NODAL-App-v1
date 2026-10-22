@@ -2645,3 +2645,13 @@ vigente sin aprobacion y evidencia suficiente.
   aislamiento de la rama de Julián dentro de una transacción de prueba revertida.
   No se adjudicaron traders reales sin selección del titular del panel.
 
+### APP-187 - Nómina Master jerárquica sin fusionar registros
+
+- **Fecha:** 2026-10-22. La nómina presenta cada usuario debajo del responsable
+  de su mesa vigente, conservando filtros, importes y códigos existentes.
+- El correo distingue registros homónimos. La unicidad se determina por UUID,
+  nunca por nombre. Asignar una mesa no autoriza borrar ni fusionar registros.
+- La jerarquía es una transformación de presentación testeada: admite ramas
+  anidadas, responsables ausentes y ciclos sin ocultar personas ni bloquearse.
+- La búsqueda conserva la referencia al responsable aunque este quede filtrado.
+

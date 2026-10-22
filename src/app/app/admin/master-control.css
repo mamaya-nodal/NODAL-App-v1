@@ -531,3 +531,7 @@
   color: var(--muted);
   margin-top: 4px;
 }
+.master-person-branch { position: relative; padding-block: 4px; }
+.master-branch-mark { position: absolute; inset-inline-start: -17px; color: var(--muted, #8c9b91); }
+.master-person-email, .master-person-parent { display: block; font-size: 11px; line-height: 1.5; opacity: .7; }
+.master-person-parent { font-size: 10px; }
