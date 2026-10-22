@@ -2628,3 +2628,20 @@ vigente sin aprobacion y evidencia suficiente.
   diez minutos y rechazaba la generación. El canje inmediato del instalador evita
   depender del tiempo de compilación. La regla es general para todos los usuarios.
 
+### APP-186 - Usuarios a cargo desde Admin Master
+
+- **Fecha:** 2026-10-22. La ficha de un Admin o Admin Master incorpora búsqueda,
+  selección de usuarios y una acción explícita para guardar la asignación.
+- **Persistencia:** reutiliza la transacción auditada de administración de mesas,
+  conservando los porcentajes, permisos y estado vigentes obtenidos en el servidor.
+  Un rol nuevo debe guardarse antes de asignarle personas. La vista histórica no
+  permite modificar asignaciones.
+- **Autorización:** Admin Master puede usar esta transacción sin tener una mesa
+  propia. Admin conserva el alcance de su rama, con validación de ciclos y destino
+  en la base de datos. La carga del panel Admin filtra personas y sus datos por la
+  mesa administrada y sus descendientes; la nómina global sigue siendo exclusiva
+  de Admin Master.
+- **Verificación:** en producción se comprobó el guardado desde Master y el
+  aislamiento de la rama de Julián dentro de una transacción de prueba revertida.
+  No se adjudicaron traders reales sin selección del titular del panel.
+

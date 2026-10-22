@@ -513,3 +513,21 @@
   .master-user-modal > footer :is(.primary-action, .secondary-action) { width: 100%; }
   .master-user-modal > footer { align-items: stretch; flex-direction: column-reverse; }
 }
+.master-assigned-users > input[type="search"] {
+  width: 100%;
+  margin-bottom: 14px;
+  min-height: 42px;
+}
+.master-assigned-users > div {
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+.master-assigned-users label {
+  padding: 8px;
+}
+.master-assigned-users small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}

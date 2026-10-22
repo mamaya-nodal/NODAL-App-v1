@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import type { MasterControlData } from "@/modules/admin/server/load-master-control";
 import { saveNodalUnit } from "./unit-actions";
 import { saveMasterUserRole, type MasterUserRole } from "./user-role-actions";
+import { saveMasterAssignments } from "./assignment-actions";
 
 import "./desks.css";
 import "./master-control.css";
@@ -249,6 +250,25 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   const [identitiesEnabled, setIdentitiesEnabled] = useState(profile?.identities_enabled === true);
   const [result, setResult] = useState("");
   const [saving, setSaving] = useState(false);
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>(
+    data.overview.people.filter((candidate) => candidate.deskId === managedDesk?.id && candidate.id !== person.id).map((candidate) => candidate.id),
+  );
+  const [assignmentQuery, setAssignmentQuery] = useState("");
+  const currentPeriod = data.month === data.currentMonth;
+  const assignmentCandidates = data.overview.people.filter((candidate) => candidate.id !== person.id && candidate.id !== data.actorUserId);
+  const saveAssignments = async () => {
+    setSaving(true);
+    setResult("");
+    try {
+      const response = await saveMasterAssignments({ userId: person.id, assignedUserIds });
+      setResult(response.message);
+      if (response.ok) router.refresh();
+    } catch {
+      setResult("No se pudo confirmar la asignación. Actualizá la página y revisá los usuarios a cargo.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const editingSelf = person.id === data.actorUserId;
   useEffect(() => {
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
@@ -274,13 +294,23 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
       return;
     }
     router.refresh();
-    onClose();
+    setResult("Rol y permisos guardados. Ya podés gestionar los usuarios a cargo.");
   };
   return <div aria-modal="true" className="desk-modal-backdrop" role="dialog" onMouseDown={onClose}><section className="desk-user-modal master-user-modal" onMouseDown={(event) => event.stopPropagation()}>
     <header><div><span>USUARIO NODAL</span><h2>{identifier} / {person.name}</h2></div><button className="desk-modal-close" onClick={onClose} type="button">×</button></header>
     <div className="master-user-metrics"><Metric label="Ganancia período" value={money(person.gross)} /><Metric label="Facturación histórica" value={money(data.historicalGrossByUser[person.id] ?? 0)} /><Metric label="Identidades" value={String(identities.length)} /></div>
     <div className="desk-user-fields"><label>Estado<input disabled value={person.access === "active" ? "Activo" : "Revocado"} /></label><label>Email de acceso<input disabled value={profile?.email ?? person.email} /></label><label>Email de contacto<input disabled value={profile?.contact_email ?? profile?.email ?? person.email} /></label><label>Rol<select disabled={data.demo || editingSelf || saving} onChange={(event) => { setRole(event.target.value as MasterUserRole); setResult(""); }} value={role}><option value="user">Usuario</option><option value="admin">Admin</option><option value="admin_master">Admin Master</option></select></label></div>
     <section className="desk-agreement-block"><h3>Acuerdo % NODAL</h3><label>Operaciones propias<div><input disabled value={(person.terms?.commission_bps ?? 0) / 100} /><span>%</span></div></label>{role !== "user" ? <label>% mesa<div><input disabled={data.demo || editingSelf || saving} inputMode="decimal" max="100" min="0" onChange={(event) => { setAdminPercent(event.target.value); setResult(""); }} type="number" value={adminPercent} /><span>%</span></div></label> : null}<small>{editingSelf ? "Por seguridad no podés modificar tu propio rol de Admin Master desde esta ficha. El acceso a Identidades sí puede administrarse." : "Admin Master puede modificar el rol, el porcentaje de mesa y el acceso a Identidades. Los cambios quedan auditados."}</small></section>
+    {role !== "user" ? <fieldset className="desk-assigned-users master-assigned-users" disabled={data.demo || saving || !managedDesk || !currentPeriod}>
+      <legend>Usuarios a cargo · {assignedUserIds.length}</legend>
+      <p>{!currentPeriod ? "Seleccioná el período actual para modificar la asignación." : !managedDesk ? "Guardá el nuevo rol para habilitar la asignación de usuarios." : "Seleccioná las personas que dependen de este administrador. Si seleccionás otro Admin, también se traslada su mesa. Al desmarcar una persona, vuelve a la mesa superior."}</p>
+      <input aria-label="Buscar usuarios para asignar" placeholder="Buscar por nombre o ID" value={assignmentQuery} onChange={(event) => setAssignmentQuery(event.target.value)} type="search" />
+      <div>{assignmentCandidates.filter((candidate) => `${candidate.name} ${data.identifiersByUser[candidate.id] ?? ""}`.toLocaleLowerCase().includes(assignmentQuery.toLocaleLowerCase())).map((candidate) => <label key={candidate.id}>
+        <input type="checkbox" checked={assignedUserIds.includes(candidate.id)} onChange={(event) => setAssignedUserIds((current) => event.target.checked ? [...current, candidate.id] : current.filter((id) => id !== candidate.id))} />
+        <span>{candidate.name}<small>{data.identifiersByUser[candidate.id] ?? "Sin ID"} · {data.overview.desks.find((desk) => desk.id === candidate.deskId)?.name ?? "Sin mesa"}</small></span>
+      </label>)}</div>
+      <button className="secondary-action" onClick={saveAssignments} type="button">{saving ? "Guardando…" : "Guardar usuarios a cargo"}</button>
+    </fieldset> : null}
     {result ? <p className="master-user-role-result" role="alert">{result}</p> : null}
     <div className="desk-user-switches"><article className="desk-ninja-state"><span>Conexión Ninja<small>Última transmisión: {dateTimeLabel(connector?.lastSeenAt)}</small></span><div><strong className={connector?.active ? "active" : "inactive"}>{connector?.active ? "Activo" : "Desactivado"}</strong><small>{connector?.version ? `Conector v${connector.version}` : "Sin versión registrada"}</small></div></article><label><span>Identidades<small>Habilitación administrada</small></span><select disabled={data.demo || saving} onChange={(event) => { setIdentitiesEnabled(event.target.value === "enabled"); setResult(""); }} value={identitiesEnabled ? "enabled" : "disabled"}><option value="disabled">No habilitadas</option><option value="enabled">Habilitadas</option></select></label></div>
     {identities.length ? <div className="desk-identities-table"><table><thead><tr><th>ID</th><th>Nombre</th><th>Estado</th></tr></thead><tbody>{identities.map((identity) => <tr key={identity.id}><td>{identity.id.slice(0, 8)}</td><td>{identity.name}</td><td>{identity.state}</td></tr>)}</tbody></table></div> : null}
