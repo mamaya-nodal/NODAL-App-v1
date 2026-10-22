@@ -2655,3 +2655,14 @@ vigente sin aprobacion y evidencia suficiente.
   anidadas, responsables ausentes y ciclos sin ocultar personas ni bloquearse.
 - La búsqueda conserva la referencia al responsable aunque este quede filtrado.
 
+### APP-188 - Estado editable y nómina compacta
+
+- **Fecha:** 2026-10-22. A pedido del titular se retiran correo y leyenda del
+  responsable de las filas; se conserva únicamente el anidado visual.
+- La ficha permite elegir Desactivado y confirmar al guardar. Reutiliza la RPC
+  auditada de revocación, sin borrar registros; la revocación de conectores sigue
+  la regla existente. La desactivación no guarda otros cambios de la ficha.
+- Se conservan las restricciones existentes: autenticación Master en servidor,
+  prohibición de autorrevocación y de revocar otro Master mediante esta RPC.
+- No se desactiva automáticamente ninguna cuenta homónima.
+

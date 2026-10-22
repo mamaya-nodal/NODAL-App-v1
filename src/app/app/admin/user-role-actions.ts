@@ -20,6 +20,20 @@ export type SaveMasterUserRoleResult = Readonly<{
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+export async function deactivateMasterUser(userId: string): Promise<SaveMasterUserRoleResult> {
+  if (!UUID_PATTERN.test(userId)) return { ok: false, message: "El usuario no es válido." };
+  const db = await requireNodalAdmin();
+  const { error } = await db.rpc("admin_revoke_nodal_student", {
+    target_user_id: userId,
+    management_reason: "Desactivación confirmada desde la ficha de Admin Master.",
+  });
+  if (error) return { ok: false, message: "No se pudo desactivar. No podés desactivar tu propio acceso ni el de un Admin Master desde esta acción." };
+  revalidatePath("/app/admin");
+  revalidatePath("/app/admin/users");
+  revalidatePath("/app/mi-mesa");
+  return { ok: true, message: "Acceso desactivado. Los registros se conservan." };
+}
+
 export async function saveMasterUserRole(
   input: SaveMasterUserRoleInput,
 ): Promise<SaveMasterUserRoleResult> {
