@@ -107,4 +107,17 @@ describe("Ninja connector source", () => {
     expect(connectorSource).toContain("INVENTARIO_REVISION_ERROR");
     expect(connectorSource).not.toContain("// heartbeat so newly connected or removed accounts are detected without a\n\t\t\t// NinjaScript recompile. The fingerprint prevents duplicate inventory sends.\n\t\t\tRefreshInventory(false);");
   });
+
+  it("el ejecutable general instala y actualiza sin pedir un código manual", () => {
+    const executableInstaller = readFileSync(
+      join(process.cwd(), "integrations", "ninjatrader", "installer", "NodalConnectorPilotInstaller.cs"),
+      "utf8",
+    );
+    expect(executableInstaller).toContain("ReadPairingCode");
+    expect(executableInstaller).toContain("ENLACE-([A-HJ-NP-Z2-9]{8})");
+    expect(executableInstaller).toContain("PairNewInstallation");
+    expect(executableInstaller).toContain("hasExistingSession ? pairingCode : string.Empty");
+    expect(executableInstaller).toContain("ProtectedData.Protect");
+    expect(executableInstaller).not.toContain("Pega el codigo");
+  });
 });

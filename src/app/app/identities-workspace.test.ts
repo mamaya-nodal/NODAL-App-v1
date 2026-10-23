@@ -6,8 +6,8 @@ import type { IdentitySummary } from "@/modules/identities/domain/identity-summa
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("./identity-actions", () => ({ assignIdentityAccount: vi.fn(), createIdentityDirectly: vi.fn(),
   sendIdentityConnectorInstallation: vi.fn(), unassignIdentityAccount: vi.fn(), setIdentitySignal: vi.fn(), updateIdentityOperationalStatus: vi.fn() }));
-vi.mock("./ninja-connector-panel", () => ({ NinjaConnectorPanel: ({ pairingLabel }: { pairingLabel: string }) =>
-  createElement("button", {}, pairingLabel) }));
+vi.mock("./ninja-connector-panel", () => ({ NinjaConnectorPanel: ({ downloadLabel }: { downloadLabel: string }) =>
+  createElement("button", {}, downloadLabel) }));
 import { IdentitiesWorkspace } from "./identities-workspace";
 
 const identity: IdentitySummary = { id: "identity", firstName: "Test", lastName: "Identity", contactEmail: "test@example.com",
@@ -19,17 +19,17 @@ const identity: IdentitySummary = { id: "identity", firstName: "Test", lastName:
 function render(value = identity) {
   return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], connectors: [], identities: [value], ownerName: "Titular", signalStates: {}, workspaceId: "workspace" }));
 }
-describe("identity pairing is independent of email delivery", () => {
-  it("offers a code after unlinking without requiring another email", () => {
-    expect(render()).toContain("Generar código");
+describe("identity installation is independent of email delivery", () => {
+  it("offers the automatic installer after unlinking without requiring another email", () => {
+    expect(render()).toContain("Descargar instalador");
     expect(render()).toContain("Enviar instalación");
   });
-  it.each(["sending", "sent", "downloaded", "failed"] as const)("keeps code generation for installation status %s", (status) => {
+  it.each(["sending", "sent", "downloaded", "failed"] as const)("keeps direct installation for status %s", (status) => {
     expect(render({ ...identity, connectorInstallation: { identityId: identity.id, status,
-      createdAt: "2026-09-24T00:00:00Z", expiresAt: "2026-09-25T00:00:00Z", sentAt: null } })).toContain("Generar código");
+      createdAt: "2026-09-24T00:00:00Z", expiresAt: "2026-09-25T00:00:00Z", sentAt: null } })).toContain("Descargar instalador");
   });
-  it("does not offer a code for an unapproved identity", () => {
-    expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Generar código");
+  it("does not offer an installer for an unapproved identity", () => {
+    expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Descargar instalador");
   });
   it("shows wallets assigned to the identity without changing its economic totals", () => {
     expect(render()).toContain("Billeteras");

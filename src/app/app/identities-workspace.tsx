@@ -277,7 +277,7 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, ownerNam
                   {identity.onboardingStatus === "approved" && <NinjaConnectorPanel
                     compact
                     connector={connector}
-                    pairingLabel="Generar código"
+                    downloadLabel={connector ? "Actualizar conector" : "Descargar instalador"}
                     targetIdentityId={identity.id}
                   />}
                     <button

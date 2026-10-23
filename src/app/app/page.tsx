@@ -1255,11 +1255,8 @@ async function renderPrivateAppPage({
           <details className="connector-recovery">
             <summary>Volver a vincular</summary>
             <div className="connector-recovery-panel">
-              <a className="connector-recovery-download" download href="/api/downloads/ninja-connector">
-                Descargar ZIP del conector
-              </a>
-              <small className="connector-recovery-help">Antes de actualizar, hacé clic derecho sobre el ZIP y elegí “Extraer todo”.</small>
               <NinjaConnectorPanel compact connector={ninjaConnector} />
+              <small className="connector-recovery-help">Cerrá NinjaTrader y ejecutá el instalador. El vínculo existente se conserva automáticamente.</small>
             </div>
           </details>
         </div>

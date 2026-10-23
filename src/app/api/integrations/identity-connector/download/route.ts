@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { connectorDownloadResponse } from "@/modules/ninja/server/connector-download";
+import { createInstallerAuthorization } from "@/modules/ninja/server/installer-authorization";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,12 +22,15 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createClient();
-  const { data: available, error } = await supabase.rpc("consume_identity_connector_download", {
+  const authorization = createInstallerAuthorization();
+  const { data: available, error } = await supabase.rpc("consume_identity_connector_download_with_pairing", {
+    target_code_hash: authorization.codeHash,
+    target_pairing_expires_at: authorization.expiresAt,
     target_installation_id: installationId,
     target_token: token,
   });
   if (error || !available) {
     return new Response("El enlace venció o fue reemplazado. Pedí uno nuevo al usuario NODAL.", { status: 410 });
   }
-  return connectorDownloadResponse();
+  return connectorDownloadResponse(authorization.code);
 }

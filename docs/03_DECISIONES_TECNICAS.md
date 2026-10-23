@@ -2688,3 +2688,133 @@ vigente sin aprobacion y evidencia suficiente.
   NODAL más bolsa administrativa para conservar los cierres existentes, mientras el
   cálculo de reparto usa la distribución final explícita.
 
+### APP-190 - Estado de conexión propio para cada instalación física de una identidad
+
+- **Fecha:** 2026-10-23. Diagnóstico confirmado sobre el diseño vigente a partir del
+  caso observado de Julián; implementación y validación en producción pendientes.
+- **Modelo operativo confirmado:** la PC personal del usuario y cada PC prestada por
+  una identidad ejecutan instalaciones físicas independientes de NinjaTrader y del
+  conector. Todas transmiten a la contabilidad del usuario NODAL titular, pero cada
+  instalación conserva su origen operativo y su estado de conexión propios. Un
+  trader u otro usuario NODAL mantiene, en cambio, broker y contabilidad separados.
+- **Causa del falso corte:** el conector físico mantiene su heartbeat, pero el destino
+  lógico de una identidad actualiza su señal al recibir inventario. Cuando la huella
+  del inventario no cambia, el envío se omite y el destino puede superar el umbral de
+  sesenta segundos aunque el proceso continúe vivo. Recompilar fuerza una captura y
+  sólo oculta temporalmente el problema.
+- **Corrección general pendiente:** separar `último heartbeat físico` de `última
+  actualización de inventario`. La identidad se considera en línea por el heartbeat
+  de su propia instalación física, el vínculo vigente y la recepción habilitada; no
+  hereda el estado del conector personal ni depende de que cambien las cuentas.
+- **Presentación:** mostrar por separado instalación vinculada, conector en línea,
+  recepción habilitada y fecha de los últimos datos. Recompilar no constituye una
+  acción de reparación aceptable.
+- **Validación requerida:** probar varias instalaciones del mismo titular durante
+  múltiples ventanas de expiración, inventarios sin cambios, reinicios, pérdida de
+  red y revocación. Un corte de una identidad no puede afectar a las demás.
+
+### APP-191 - Instalador único y emparejamiento contextual para conectores personales e identidades
+
+- **Fecha:** 2026-10-23. Decisión de producto confirmada; construcción pendiente.
+- **Distribución:** reemplazar el ZIP, la extracción y la compilación manual por un
+  instalador de Windows firmado. El mismo ejecutable sirve para todas las personas,
+  instalaciones personales e identidades; no se generan binarios personalizados.
+- **Emparejamiento:** se conserva el código temporal de un solo uso. Generarlo desde
+  la conexión personal crea un destino personal; generarlo desde la tarjeta de una
+  identidad crea un destino para esa identidad. Al canjearlo, el servidor vincula la
+  instalación física con el titular contable, el tipo de origen y, cuando corresponda,
+  la identidad. El código no contiene nombres, correos, credenciales ni secretos.
+- **Direccionamiento:** todas las instalaciones usan la misma API de producción. El
+  servidor decide el workspace y origen operativo según el vínculo; la identidad no
+  es un usuario NODAL ni una contabilidad independiente.
+- **Cuentas broker:** el origen físico no determina la propiedad. El titular puede
+  tener una cuenta principal y varias subcuentas propias, incluso dedicadas a distintas
+  identidades. Una misma cuenta observada desde varias PC se reconoce una vez; cuentas
+  o subcuentas distintas permanecen separadas pero consolidan en la contabilidad del
+  mismo titular. Proveedor, entorno e identificador estable forman la clave funcional.
+- **Ciclo posterior:** actualizar, reparar o reiniciar no requiere un código nuevo. La
+  reasignación a otra identidad o titular sí exige un vínculo nuevo y revocable. La app
+  debe mostrar equipo, destino, versión, última señal y acciones de reparar/desvincular.
+- **Criterio de terminación:** el instalador sólo informa éxito después de instalar el
+  Add-On mediante un mecanismo compatible con NinjaTrader, canjear el vínculo y recibir
+  una señal verificable. Debe preservar cola, credencial y trazabilidad durante una
+  actualización; la automatización final necesita ensayo en Windows limpio, firma de
+  código, actualización, reversión y varias PC remotas antes de publicarse.
+
+### APP-192 - Adopción voluntaria mediante valor de MIMICAL
+
+- **Fecha:** 2026-10-23. Estrategia de producto confirmada por Mauricio.
+- **Decisión:** NODAL no desarrollará como estrategia principal un supervisor para
+  descubrir identidades, traders u operaciones realizadas por fuera. Los usuarios
+  conservan la posibilidad de operar con herramientas externas. La adopción se busca
+  haciendo que registrarse y utilizar NODAL resulte más conveniente.
+- **Propuesta de valor:** MIMICAL será el principal incentivo operativo por sus
+  funciones adicionales frente a copiadores externos, incluyendo la gestión específica
+  de la cobertura. Registrar una PC personal, identidad o trader permite obtener su
+  acceso, configuración, actualizaciones, soporte e integración contable.
+- **Vinculación:** cada instalación autorizada de MIMICAL se asocia al usuario NODAL y
+  al origen declarado —Ninja personal o identidad registrada— mediante una licencia
+  individual.
+  MIMICAL se distribuye como un ZIP importable de NinjaScript, igual que otros Add-Ons;
+  no forma parte obligatoria del ejecutable del conector. Instalar el ZIP no habilita
+  el uso hasta activar la licencia desde NODAL App.
+- **Plazas personales e identidades:** desde su dashboard, el usuario inicia la
+  vinculación de la copia instalada en su Ninja personal y obtiene un código temporal.
+  Cada tarjeta de identidad registrada permite generar otro código para la copia
+  instalada en el Ninja de esa identidad. Cada instalación consume una licencia propia
+  y queda vinculada al titular contable y al origen correspondiente.
+- **Traders:** un trader no es una identidad ni una extensión contable de su
+  administrador. Como usuario NODAL independiente, habilita su propia instalación desde
+  su dashboard; el administrador superior no activa esa licencia desde su mesa.
+- **Activación y enlace:** NODAL App genera un código temporal, contextual y de un solo
+  uso. El usuario lo ingresa en MIMICAL dentro de NinjaTrader; MIMICAL lo canjea contra
+  el servidor y queda enlazado a esa instalación, al usuario titular y, cuando
+  corresponda, a la identidad seleccionada. El código no es la licencia permanente ni
+  debe guardarse. Una vez vinculada, la licencia se valida de forma transparente y no
+  exige ingresar códigos durante el uso normal. Cambiar de PC o reinstalar permite
+  revocar la instalación anterior y vincular una nueva con trazabilidad.
+- **Separación técnica:** licencia habilitada, instalación detectada, última actividad
+  y estado del conector son datos diferentes. Habilitar una licencia no demuestra que
+  MIMICAL esté abierto ni que el conector tenga señal.
+- **Finalidad:** la licencia organiza el acceso al producto y evita la cesión casual;
+  no se presenta como prueba de que no exista actividad externa.
+- **Experiencia:** dar de alta una identidad debe ser más simple que operar sin
+  registrarla. La app entrega el ZIP de NinjaScript, habilita la licencia correspondiente
+  y configura el contexto sin exigir pasos técnicos innecesarios.
+- **Telemetría:** cualquier dato técnico se limita a funcionamiento, soporte,
+  conciliación y mejora del producto, con información transparente. No se utiliza una
+  ausencia de MIMICAL como presunción automática de ocultamiento o incumplimiento.
+- **Seguridad operativa:** una interrupción de licencia, servidor o red nunca abandona
+  posiciones existentes. MIMICAL termina de forma segura el ciclo activo y sólo limita
+  el inicio de ciclos nuevos según la política de tolerancia definida y probada.
+- **Condición previa:** MIMICAL continúa en etapa de prueba. No será requisito de la
+  operatoria respaldada hasta validar distribución en otras PC, conexiones reales,
+  actualización, recuperación, cierre seguro y soporte operativo.
+
+### APP-193 - Instalador automático sin código visible
+
+- **Fecha:** 2026-10-23. Decisión de producto confirmada después de validar el
+  instalador 0.16 y su continuidad tras cerrar y abrir NinjaTrader.
+- **Vínculo obligatorio:** cada instalación continúa necesitando una autorización
+  temporal y contextual. Se reemplaza únicamente la carga manual del código, no el
+  control de titularidad ni el alcance personal o de identidad.
+- **Descarga:** el botón autenticado genera una autorización aleatoria de un solo uso,
+  válida cinco minutos, y devuelve el ejecutable general con esa autorización en el
+  nombre del archivo. El nombre no contiene usuario, correo, identidad, workspace ni
+  credenciales permanentes. La descarga de una identidad por correo crea el mismo tipo
+  de autorización al consumir el enlace temporal autorizado.
+- **Instalación nueva:** si no existe una sesión local válida, el ejecutable canjea la
+  autorización contra Producción, cifra la sesión con DPAPI del usuario Windows y
+  recién entonces instala el runtime. No solicita copiar ni escribir códigos.
+- **Actualización:** si encuentra una sesión vigente, conserva ID, credenciales, cola,
+  destinos e historial. La autorización descargada se entrega al runtime para confirmar
+  o agregar el destino solicitado sin reemplazar la instalación física.
+- **Interfaz:** `Descargar conector (.zip)`, `Generar código` y las instrucciones de
+  extracción/compilación se sustituyen por `Descargar instalador` o `Actualizar
+  conector`. NinjaTrader debe permanecer cerrado durante el reemplazo de archivos.
+- **Seguridad y pendiente externo:** el ejecutable probado aún no tiene firma comercial
+  porque el equipo no dispone de certificado de firma. La distribución debe informar
+  el aviso de editor desconocido hasta adquirir, custodiar y aplicar el certificado.
+  La falta de firma no habilita a relajar validación de origen, expiración, respaldo,
+  rollback ni verificación de señal.
+

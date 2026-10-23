@@ -7,6 +7,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $sourcePath = Join-Path $repoRoot "integrations\ninjatrader\NodalNinjaConnector.cs"
 $installerPath = Join-Path $repoRoot "integrations\ninjatrader\installer\NodalConnectorPilotInstaller.cs"
 $outputRoot = Join-Path $repoRoot $OutputDirectory
+$downloadRoot = Join-Path $repoRoot "private\downloads"
 $buildRoot = Join-Path $repoRoot "tmp\ninja-pilot-installer-build"
 $csc = "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 $ninjaBin = "C:\Program Files\NinjaTrader 8\bin"
@@ -17,10 +18,11 @@ foreach ($required in @($sourcePath, $installerPath, $csc, (Join-Path $ninjaBin 
   if (!(Test-Path -LiteralPath $required)) { throw "Falta el archivo requerido: $required" }
 }
 
-New-Item -ItemType Directory -Force -Path $buildRoot, $outputRoot | Out-Null
+New-Item -ItemType Directory -Force -Path $buildRoot, $outputRoot, $downloadRoot | Out-Null
 $runtimeSourcePath = Join-Path $buildRoot "NodalNinjaConnector.Runtime.cs"
 $runtimeDllPath = Join-Path $buildRoot "Nodal.NinjaConnector.dll"
-$outputExePath = Join-Path $outputRoot "NODAL-Conector-0.16-Piloto.exe"
+$outputExePath = Join-Path $outputRoot "NODAL-Conector-0.16.exe"
+$downloadExePath = Join-Path $downloadRoot "NODAL-Conector.exe"
 
 $runtimeSource = Get-Content -LiteralPath $sourcePath -Raw
 $classBefore = 'public class NodalNinjaConnector : AddOnBase'
@@ -52,6 +54,8 @@ $installerReferences = @(
   (Join-Path $framework "System.dll"),
   (Join-Path $framework "System.Core.dll"),
   (Join-Path $framework "System.Drawing.dll"),
+  (Join-Path $framework "System.Net.Http.dll"),
+  (Join-Path $framework "System.Web.Extensions.dll"),
   (Join-Path $framework "System.Windows.Forms.dll"),
   (Join-Path $framework "System.Security.dll")
 )
@@ -60,8 +64,11 @@ $installerArgs = @('/nologo', '/target:winexe', '/platform:anycpu', "/out:$outpu
 & $csc @installerArgs
 if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $outputExePath)) { throw "No se pudo compilar el instalador piloto." }
 
+Copy-Item -LiteralPath $outputExePath -Destination $downloadExePath -Force
+
 $hash = (Get-FileHash -LiteralPath $outputExePath -Algorithm SHA256).Hash
 $runtimeHash = (Get-FileHash -LiteralPath $runtimeDllPath -Algorithm SHA256).Hash
 Write-Output "INSTALLER=$outputExePath"
+Write-Output "DOWNLOAD=$downloadExePath"
 Write-Output "INSTALLER_SHA256=$hash"
 Write-Output "RUNTIME_SHA256=$runtimeHash"
