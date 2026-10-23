@@ -2818,3 +2818,20 @@ vigente sin aprobacion y evidencia suficiente.
   La falta de firma no habilita a relajar validación de origen, expiración, respaldo,
   rollback ni verificación de señal.
 
+### APP-194 - Primer trade automático toma la apertura confirmada
+
+- **Fecha:** 2026-10-23. Corrección general a partir del primer trade de Baltazar.
+- **Hallazgo:** la correlación identificó correctamente la cobertura y las cinco cuentas
+  prop, pero la escritura contable exigía un movimiento broker anterior. Al ser el primer
+  trade del período no existía todavía ese movimiento, aunque la apertura confirmada
+  conservaba exactamente el saldo inicial informado por NinjaTrader.
+- **Regla:** si no existe un movimiento broker anterior, el primer cierre automático usa
+  el saldo broker de la apertura confirmada. En una cuenta broker única debe coincidir al
+  centavo con la apertura técnica del trade; con varias subcuentas se aplica el resultado
+  al saldo consolidado de apertura. La falta o divergencia del saldo mantiene el lote
+  pendiente y no inventa una contrapartida.
+- **Interfaz:** el usuario continúa viendo solamente `Pendiente`; la causa técnica se
+  conserva para diagnóstico interno y no agrega instrucciones ni cargas manuales.
+- **Recuperación:** los lotes ya correlacionados que quedaron detenidos únicamente por
+  esta condición se confirman de forma idempotente cuando cumplen las mismas garantías.
+
