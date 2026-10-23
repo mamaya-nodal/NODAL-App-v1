@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.15 (server v2 required)
+// NODAL Ninja Connector v0.16 (server v2 required)
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -231,7 +231,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			}
 		}
 
-		private const string ConnectorVersion = "0.15";
+		private const string ConnectorVersion = "0.16";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10), MaxResponseContentBufferSize = 1024 * 1024 };
@@ -266,6 +266,8 @@ namespace NinjaTrader.NinjaScript.AddOns
 			else if (State == State.Active)
 			{
 				terminated = false;
+				Interlocked.Exchange(ref heartbeatInProgress, 0);
+				heartbeatWasHealthy = false;
 				settings = ConnectorSettings.Load();
 				telemetryQueuePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "NinjaTrader 8", "NODAL", TelemetryQueueFileName);
 				telemetry = new NodalReliableTelemetry(telemetryQueuePath, ConnectorSettings.ProtectTelemetry, ConnectorSettings.UnprotectTelemetry);
@@ -276,7 +278,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 				}
 
 				Account.AccountStatusUpdate += OnAccountStatusUpdate;
-				RefreshInventory();
+				TryRefreshInventory(true, "inicio");
 				heartbeatTimer = new Timer(_ => QueueHeartbeat(), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(15));
 				Write("INICIO|modo=solo_lectura|identidad=usuario_nodal|version=" + ConnectorVersion);
 				string installedSourceVersion = ConnectorSettings.ReadInstalledSourceVersion();
@@ -303,7 +305,22 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		private void OnAccountStatusUpdate(object sender, AccountStatusEventArgs e)
 		{
-			RefreshInventory();
+			TryRefreshInventory(true, "cambio_de_estado");
+		}
+
+		private void TryRefreshInventory(bool force, string reason)
+		{
+			try
+			{
+				RefreshInventory(force);
+			}
+			catch (Exception exception)
+			{
+				// NinjaTrader providers can mutate their account collections while a
+				// connection changes. Inventory is best effort; one transient read must
+				// never stop the independent heartbeat or require a recompilation.
+				Write("INVENTARIO_REVISION_ERROR|motivo=" + reason + "|" + exception.GetType().Name);
+			}
 		}
 
 		private void OnAccountItemUpdate(object sender, AccountItemEventArgs e)
@@ -576,14 +593,16 @@ namespace NinjaTrader.NinjaScript.AddOns
 			if (terminated || Interlocked.Exchange(ref heartbeatInProgress, 1) == 1)
 				return;
 
-			// AccountStatusUpdate is not guaranteed for every provider. Re-scan on each
-			// heartbeat so newly connected or removed accounts are detected without a
-			// NinjaScript recompile. The fingerprint prevents duplicate inventory sends.
-			RefreshInventory(false);
-
 			Task.Run(async () =>
 			{
-				try { await SendHeartbeatAsync(); }
+				try
+				{
+					// AccountStatusUpdate is not guaranteed for every provider. Re-scan on
+					// every cycle, but keep that optional read isolated from the heartbeat.
+					// The finally below always releases the cycle after any failure.
+					TryRefreshInventory(false, "heartbeat");
+					await SendHeartbeatAsync();
+				}
 				finally { Interlocked.Exchange(ref heartbeatInProgress, 0); }
 			});
 		}

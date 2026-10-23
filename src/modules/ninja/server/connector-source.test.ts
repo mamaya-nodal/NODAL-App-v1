@@ -100,4 +100,11 @@ describe("Ninja connector source", () => {
     expect(connectorSource).toContain("SendAuthorizedAsync(\"/api/integrations/ninjatrader/ingest\", capture.Payload)");
     expect(connectorSource).not.toContain("private async Task SendInventoryAsync(bool force)");
   });
+
+  it("una lectura transitoria fallida no bloquea los heartbeats siguientes", () => {
+    expect(connectorSource).toContain('TryRefreshInventory(false, "heartbeat")');
+    expect(connectorSource).toContain("finally { Interlocked.Exchange(ref heartbeatInProgress, 0); }");
+    expect(connectorSource).toContain("INVENTARIO_REVISION_ERROR");
+    expect(connectorSource).not.toContain("// heartbeat so newly connected or removed accounts are detected without a\n\t\t\t// NinjaScript recompile. The fingerprint prevents duplicate inventory sends.\n\t\t\tRefreshInventory(false);");
+  });
 });

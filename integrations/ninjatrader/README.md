@@ -75,6 +75,11 @@ NinjaTrader y envía esa misma captura. No vuelve a consultar las colecciones
 desde la tarea diferida de red, porque algunos proveedores devuelven una vista
 vacía fuera del callback aunque las cuentas estén conectadas y visibles.
 
+La versión 0.16 mantiene el heartbeat independiente de la lectura del inventario.
+Una excepción transitoria de NinjaTrader al cambiar conexiones o cuentas queda
+registrada y se reintenta en el ciclo siguiente, sin bloquear nuevos latidos ni
+obligar a recompilar el complemento para recuperar la señal.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.

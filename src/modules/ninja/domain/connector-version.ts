@@ -1,5 +1,5 @@
-export const LATEST_NINJA_CONNECTOR_VERSION = "0.15";
-export const CANDIDATE_NINJA_CONNECTOR_VERSION = "0.15";
+export const LATEST_NINJA_CONNECTOR_VERSION = "0.16";
+export const CANDIDATE_NINJA_CONNECTOR_VERSION = "0.16";
 
 export type ConnectorVersionState =
   | "current"
