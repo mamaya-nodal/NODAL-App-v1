@@ -338,7 +338,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
           <span>{simplified ? "NUEVO INICIO" : revision ? "EDICIÓN AUTORIZADA" : "PREPARACIÓN INICIAL"}</span>
           <h2>{simplified ? "Registrá tu situación actual" : revision ? "Rehacé tu punto de partida" : "Configurá tu punto de partida"}</h2>
           <p>
-            {simplified ? "NODAL tomará el saldo broker actual, conservará tus cuentas ya registradas y sumará las nuevas cuentas abiertas sin duplicarlas." : revision ? "La versión anterior quedará archivada. La nueva apertura reorganizará la contabilidad desde el corte que confirmes." : "Elegí si empezás desde cero o si necesitás reconstruir la situación con la que llegás a NODAL."}
+            {simplified ? "NODAL tomará el saldo broker y las cuentas que están visibles ahora. Los registros del inicio anterior quedarán archivados y no se sumarán." : revision ? "La versión anterior quedará archivada. La nueva apertura reorganizará la contabilidad desde el corte que confirmes." : "Elegí si empezás desde cero o si necesitás reconstruir la situación con la que llegás a NODAL."}
           </p>
         </div>
         <button onClick={() => setOpen(true)} type="button">
@@ -404,10 +404,10 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                   <div className={styles.formSection}>
                     <p className={styles.eyebrow}>CUENTAS INICIALES</p>
                     <h3>{simplified ? "Revisá tus cuentas abiertas y el flotante" : "¿Ya compraste cuentas para comenzar?"}</h3>
-                    <p className={styles.description}>{simplified ? "Estas son las cuentas que el conector personal está informando ahora. Las ya registradas se conservan y las nuevas se incorporan una sola vez." : "Ninja incorporará las cuentas detectadas. También podrás agregar cuentas operadas desde otra computadora."}</p>
+                    <p className={styles.description}>{simplified ? "Estas son las cuentas que el conector personal está informando ahora. Los registros anteriores se archivan y estas cuentas se incorporan una sola vez." : "Ninja incorporará las cuentas detectadas. También podrás agregar cuentas operadas desde otra computadora."}</p>
                     <div className={styles.detectedBox}>
                       <div><span>Cuentas nuevas detectadas ahora</span><strong>{simplified ? simplifiedAccounts.length : 0}</strong></div>
-                      <p>{simplified ? `${registeredAccountCount} cuentas ya registradas se conservarán sin volver a cargarlas.` : "Cuando el conector tenga señal, aparecerán aquí con su empresa e identificador."}</p>
+                      <p>{simplified ? `${registeredAccountCount} registros del inicio anterior quedarán archivados y no se sumarán a este total.` : "Cuando el conector tenga señal, aparecerán aquí con su empresa e identificador."}</p>
                     </div>
                     {simplified ? <>
                       <div className={styles.detectedAccountList}>
@@ -416,7 +416,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                           <b>{account.phase === "Evaluation" ? "Evaluación" : account.phase}</b>
                         </div>)}
                       </div>
-                      {simplifiedAccounts.length === 0 ? <div className={styles.tip}><strong>Sin cuentas prop nuevas</strong><span>Podés continuar si hoy no tenés cuentas nuevas en este Ninja. Las cuentas que ya estaban registradas se conservan.</span></div> : null}
+                      {simplifiedAccounts.length === 0 ? <div className={styles.tip}><strong>Sin cuentas prop detectadas</strong><span>Podés continuar si hoy no tenés cuentas conectadas en este Ninja. Los registros del inicio anterior no se trasladarán al nuevo corte.</span></div> : null}
                       <Field hint="Cobertura broker comprometida actualmente por todas las cuentas que siguen abiertas." label="Flotante actual comprometido (USD)" name="workingCapital" onChange={update} placeholder="0,00" type="number" value={draft.workingCapital} />
                     </> : <Field hint="Solo para explorar cómo se verá el resumen." label="Cuentas vírgenes que querés registrar" name="virginAccounts" onChange={update} placeholder="0" type="number" value={draft.virginAccounts} />}
                   </div>
@@ -503,7 +503,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                       <SummaryItem label="Posición observable" value={money(totals.observable)} />
                       <SummaryItem label="Resultado acumulado inferido" value={money(totals.inferredResult)} />
                       <SummaryItem label="Flotante" value={money(amount(draft.workingCapital))} />
-                      <SummaryItem label="Cuentas vigentes" value={String(simplified ? registeredAccountCount + simplifiedAccounts.length : amount(draft.virginAccounts) + amount(draft.liveEvaluationAccounts) + amount(draft.fundedAccounts))} />
+                      <SummaryItem label="Cuentas vigentes" value={String(simplified ? simplifiedAccounts.length : amount(draft.virginAccounts) + amount(draft.liveEvaluationAccounts) + amount(draft.fundedAccounts))} />
                       <SummaryItem label="Cuentas cerradas previas" value={draft.closedAccounts || "0"} />
                     </div>
                     <div className={`${styles.reconciliation} ${styles.reconciled}`}>

@@ -155,6 +155,7 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
     if (error.message.includes("OPENING_REVISION_NOT_AVAILABLE")) return { ok: false, message: "Este punto de partida no está disponible para edición." };
     if (error.message.includes("SIMPLIFIED_OPENING_ACCOUNT_NOT_OBSERVED")) return { ok: false, message: "Una de las cuentas dejó de estar visible en NinjaTrader. Actualizá y revisá nuevamente." };
     if (error.message.includes("SIMPLIFIED_OPENING_ACCOUNT_INVALID")) return { ok: false, message: "Revisá las cuentas detectadas antes de confirmar." };
+    if (error.message.includes("SIMPLIFIED_OPENING_EXISTING_ACCOUNT_HAS_ACTIVITY")) return { ok: false, message: "Un registro anterior tiene actividad económica y no puede archivarse automáticamente. No se modificó ningún dato." };
     return { ok: false, message: "No se pudo confirmar el punto de partida." };
   }
 

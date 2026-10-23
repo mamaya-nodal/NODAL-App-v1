@@ -2860,13 +2860,15 @@ vigente sin aprobacion y evidencia suficiente.
 - **Flujo:** después de actualizar, Inicio abre automáticamente una preparación corta:
   saldo broker y billeteras, cuentas prop nuevas detectadas y flotante comprometido,
   seguida de una vista previa. Ya no ofrece reconstruir operaciones históricas.
-- **Cuentas:** las cuentas previamente registradas se conservan y sus compras anteriores
-  quedan absorbidas por el nuevo corte. Las cuentas nuevas visibles en el conector se
-  registran como base con su empresa y fase detectadas, costo de apertura cero y vínculo
-  Ninja auditable. No se crean cantidades agregadas que luego puedan duplicarse.
+- **Cuentas:** en el reinicio piloto, los registros anteriores sin actividad se archivan
+  y se eliminan del inventario vigente; no se suman a lo que Ninja informa ahora. Las
+  cuentas actualmente visibles se registran como la única base, con empresa y fase
+  detectadas, costo de apertura cero y vínculo Ninja auditable. Si un registro anterior
+  tiene actividad económica, toda la operación se bloquea sin modificar datos.
 - **Identidades:** el piloto no exige actualizar al mismo tiempo los conectores de las
-  identidades. Cada uno se actualizará por separado; sus identidades, conectores y
-  cuentas ya registradas permanecen intactos durante el nuevo inicio personal.
+  identidades. Cada uno se actualizará por separado; la identidad y su conector
+  permanecen intactos. Sólo sus antiguos registros de cuenta sin actividad dejan de ser
+  inventario vigente y podrán detectarse nuevamente cuando esa instalación se actualice.
 - **Contabilidad y trazabilidad:** la apertura anterior se conserva en el historial de
   revisiones. El saldo actual se convierte en capital inicial, el resultado del nuevo
   ciclo comienza en cero y el flotante declarado queda como línea base para medir sólo
