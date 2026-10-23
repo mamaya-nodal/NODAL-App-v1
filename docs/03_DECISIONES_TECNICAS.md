@@ -2835,3 +2835,19 @@ vigente sin aprobacion y evidencia suficiente.
 - **Recuperación:** los lotes ya correlacionados que quedaron detenidos únicamente por
   esta condición se confirman de forma idempotente cuando cumplen las mismas garantías.
 
+### APP-195 - Piloto del recorrido natural de actualización con Julián
+
+- **Fecha:** 2026-10-23. Piloto autorizado antes del nuevo inicio simplificado.
+- **Alcance:** Julián recorre el mismo ingreso previsto para el despliegue general. Al
+  iniciar sesión con Google, su conector personal 0.15 ya vinculado no permite saltear
+  la pantalla inicial: la pantalla ofrece el instalador `.exe` 0.16 en lugar del ZIP.
+- **Avance:** descargar el archivo no completa el paso. La app continúa solamente
+  cuando el runtime instalado informa la versión 0.16, lo que demuestra que se cerró
+  NinjaTrader, se ejecutó la actualización y volvió a recibirse señal del conector.
+- **Continuidad:** la actualización conserva el vínculo existente. La pantalla de este
+  paso no ofrece desvincular, porque esa acción no forma parte del alta natural.
+- **Aislamiento:** el requisito se activa inicialmente sólo para Julián. Los demás
+  usuarios conservan su comportamiento actual hasta validar el piloto y autorizar el
+  despliegue general. El nuevo punto de partida se habilita después de verificar también
+  las instalaciones de sus identidades.
+

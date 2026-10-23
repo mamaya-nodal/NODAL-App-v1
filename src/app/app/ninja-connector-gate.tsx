@@ -8,6 +8,7 @@ import {
 } from "@/modules/admin/domain/administration-scope";
 
 import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
+import { LATEST_NINJA_CONNECTOR_VERSION } from "@/modules/ninja/domain/connector-version";
 import { ThemeToggle } from "./theme-toggle";
 import { WorkspaceIcon } from "./workspace-icon";
 
@@ -15,9 +16,10 @@ type Props = Readonly<{
   administrationScope: AdministrationScope;
   connector: NinjaConnectorStatus | null;
   message?: string;
+  updateRequired?: boolean;
 }>;
 
-export function NinjaConnectorGate({ administrationScope, connector, message }: Props) {
+export function NinjaConnectorGate({ administrationScope, connector, message, updateRequired = false }: Props) {
   const administration = [
     ...(canOpenDeskAdmin(administrationScope)
       ? [{ href: "/app/mi-mesa", label: "Admin" }]
@@ -54,15 +56,23 @@ export function NinjaConnectorGate({ administrationScope, connector, message }: 
         <div className="connector-gate-brand">
           <Image alt="NODAL Trading" height={27} priority src="/nodal-trading-lime.png" width={152} />
         </div>
-        <h1 id="connector-gate-title">{connector ? "Abrí NinjaTrader" : "Conectá NinjaTrader"}</h1>
+        <h1 id="connector-gate-title">{updateRequired ? "Actualizá NinjaTrader" : connector ? "Abrí NinjaTrader" : "Conectá NinjaTrader"}</h1>
         <p className="summary">
-          {connector
+          {updateRequired
+            ? `Descargá la versión ${LATEST_NINJA_CONNECTOR_VERSION}. El acceso continuará automáticamente cuando NODAL reciba la nueva señal.`
+            : connector
             ? "Tu vínculo ya está listo. El acceso se habilitará cuando NODAL reciba la señal del complemento."
             : "Vinculá el complemento una sola vez para habilitar tu espacio de trabajo."}
         </p>
 
         {message ? <p className="purchase-message success" role="status">{message}</p> : null}
-        <NinjaConnectorPanel compact connector={connector} monitor />
+        <NinjaConnectorPanel
+          allowRevoke={false}
+          compact
+          connector={connector}
+          downloadLabel={updateRequired ? "Descargar actualización" : undefined}
+          monitor
+        />
         <div className="connector-install-step">
           <span>Cerrá NinjaTrader, ejecutá el archivo descargado y volvé a abrirlo. No necesitás copiar ningún código.</span>
         </div>

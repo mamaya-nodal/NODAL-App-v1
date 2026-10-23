@@ -17,6 +17,7 @@ export type NinjaConnectorStatus = Readonly<{
 }>;
 
 type Props = Readonly<{
+  allowRevoke?: boolean;
   compact?: boolean;
   connector: NinjaConnectorStatus | null;
   downloadLabel?: string;
@@ -28,7 +29,7 @@ function isOnline(connector: NinjaConnectorStatus | null) {
   return Boolean(connector?.isOnline && connector.status === "active");
 }
 
-export function NinjaConnectorPanel({ compact = false, connector, downloadLabel, monitor = false, targetIdentityId = null }: Props) {
+export function NinjaConnectorPanel({ allowRevoke = true, compact = false, connector, downloadLabel, monitor = false, targetIdentityId = null }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const online = isOnline(connector);
@@ -96,7 +97,7 @@ export function NinjaConnectorPanel({ compact = false, connector, downloadLabel,
       </button>
 
       {error ? <p className="purchase-message error" role="alert">{error}</p> : null}
-      {connector ? (
+      {connector && allowRevoke ? (
         <form action={revokeNinjaConnector} className="ninja-revoke-form">
           <input name="connector_id" type="hidden" value={connector.connectorId} />
           <button className="secondary-action" type="submit">Desvincular</button>

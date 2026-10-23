@@ -39,6 +39,10 @@ import {
   type NinjaLiveBrokerBalance,
 } from "@/modules/ninja/domain/live-broker-balance";
 import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
+import {
+  automaticInstallerPilotEnabled,
+  connectorOnboardingState,
+} from "@/modules/ninja/domain/connector-onboarding";
 import { readOpeningBrokerState } from "@/modules/ninja/server/opening-broker-state";
 import type {
   AccountPhaseWithdrawal,
@@ -313,18 +317,23 @@ async function renderPrivateAppPage({
   }
 
   const connectorOnline = Boolean(ninjaConnector?.isOnline && ninjaConnector.status === "active");
+  const connectorSetupState = connectorOnboardingState({
+    connector: ninjaConnector,
+    pilotEnabled: automaticInstallerPilotEnabled(userId),
+  });
   const administrationScope = visibleAdministrationScope(
     nodalUser?.access_role,
     await administrationScopePromise,
   );
   const { purchase_result: purchaseResult, reset_result: resetResult, connector_result: connectorResult, transition_result: transitionResult } = await searchParamsPromise;
 
-  if (allowed && (!ninjaConnector || ninjaConnector.status !== "active")) {
+  if (allowed && connectorSetupState !== "ready") {
     return (
       <NinjaConnectorGate
         administrationScope={administrationScope}
         connector={ninjaConnector}
         message={singleValue(connectorResult) === "revoked" ? connectorMessages.revoked : undefined}
+        updateRequired={connectorSetupState === "update_required"}
       />
     );
   }
