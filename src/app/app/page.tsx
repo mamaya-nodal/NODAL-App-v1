@@ -95,6 +95,7 @@ import {
   type PersistedDailyControl,
 } from "./daily-control-preview";
 import { HomeOverview } from "./home-overview";
+import type { SimplifiedOpeningAccount } from "./opening-setup-preview";
 import type { RegisterAccount } from "./operation-register";
 import { ProgressSummary, type WalletIdentityView, type WalletView } from "./progress-summary";
 import { ThemeToggle } from "./theme-toggle";
@@ -389,6 +390,8 @@ async function renderPrivateAppPage({
   let openingRevisionEligible = false;
   let openingRevisionStatus: OpeningRevisionRequestStatus = null;
   let registeredAccountCount = 0;
+  let simplifiedOpeningAccounts: SimplifiedOpeningAccount[] = [];
+  let simplifiedOpeningPilot = false;
   let periodOpening: OperationalOpeningSnapshot = {
     accumulatedResultInCents: 0,
     brokerBalanceInCents: null,
@@ -536,7 +539,7 @@ async function renderPrivateAppPage({
           .eq("workspace_id", selection.workspace.id),
         supabase
           .from("period_opening_snapshots")
-          .select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference")
+          .select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference,revision_number")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("period_opening_account_batches")
@@ -779,6 +782,31 @@ async function renderPrivateAppPage({
         },
       ];
     });
+    const companiesByCode = new Map(companies.map((company) => [company.code.toUpperCase(), company]));
+    const seenSimplifiedOpeningAccounts = new Set<string>();
+    simplifiedOpeningAccounts = ninjaInventories
+      .filter((inventory) => inventory.connector_id === ninjaConnector?.connectorId)
+      .flatMap((inventory) => inventory.accounts.map((account) => ({
+        classification: classifyNinjaAccount(account, account.firstSeenAt ?? inventory.observed_at),
+        connectorId: inventory.connector_id,
+      })))
+      .flatMap(({ classification, connectorId }): SimplifiedOpeningAccount[] => {
+        if (classification.type !== "prop" || !classification.companyCode || !classification.phase) return [];
+        const company = companiesByCode.get(classification.companyCode.toUpperCase());
+        if (!company) return [];
+        const key = ninjaAccountRegistrationKey(connectorId, classification.connectionName, classification.accountName);
+        if (registeredNinjaAccountKeys.has(key) || seenSimplifiedOpeningAccounts.has(key)) return [];
+        seenSimplifiedOpeningAccounts.add(key);
+        return [{
+          accountName: classification.accountName,
+          companyId: company.id,
+          companyName: company.displayName,
+          connectionName: classification.connectionName,
+          connectorId,
+          firstSeenAt: classification.firstSeenAt,
+          phase: classification.phase,
+        }];
+      });
 
     const participantsByControlId = new Map<string, PersistedDailyControl["participants"]>();
     for (const participant of dailyControlParticipantRows ?? []) {
@@ -1145,6 +1173,7 @@ async function renderPrivateAppPage({
       mode: row.start_mode as PeriodOpeningRecord["mode"],
       periodId: row.period_id,
       personalWithdrawalsInCents: Number(row.personal_withdrawals_cents),
+      revisionNumber: Number(row.revision_number ?? 1),
       inferredResultInCents: Number(row.prior_realized_result_cents),
       virginAccounts: Number(row.virgin_accounts),
       walletBalanceInCents: Number(row.wallet_balance_cents),
@@ -1237,8 +1266,11 @@ async function renderPrivateAppPage({
       walletMovementCount: walletMovements.length,
     };
     openingRevisionEligible = canRequestPeriodOpeningRevision(openingEligibilityInput);
+    simplifiedOpeningPilot = automaticInstallerPilotEnabled(userId)
+      && openingSnapshot?.revisionNumber === 1;
     openingSetupEligible = canConfigurePeriodOpening(openingEligibilityInput)
-      || (openingSnapshot !== null && openingRevisionStatus === "approved");
+      || (openingSnapshot !== null && openingRevisionStatus === "approved")
+      || simplifiedOpeningPilot;
   }
 
   return (
@@ -1343,6 +1375,8 @@ async function renderPrivateAppPage({
           periodId={selection.period.id}
           periodLabel={formatPeriodLabel(selection.period.periodMonth)}
           registeredAccountCount={registeredAccountCount}
+          simplifiedOpeningAccounts={simplifiedOpeningAccounts}
+          simplifiedOpeningPilot={simplifiedOpeningPilot}
           summary={operationalSummary}
         />
       )}

@@ -42,6 +42,7 @@ const PROP_ACCOUNT_RULES: readonly PropAccountRule[] = [
   // Growth 50K. Funded y Live permanecen pendientes de ejemplos reales.
   { accountSizeInCents: 5_000_000, company: "FTMO", companyCode: "FTMO", pattern: /^FTMO\d+$/, phase: "Evaluation", product: "Growth" },
   { accountSizeInCents: 5_000_000, company: "Tradeify", companyCode: "TRADEFY", pattern: /^FTDFYSLX50[A-Z0-9-]*$/, phase: "Funded", product: "Select Flex" },
+  { accountSizeInCents: 2_500_000, company: "Tradeify", companyCode: "TRADEFY", pattern: /^TDFYSL25[A-Z0-9-]*$/, phase: "Evaluation", product: "Select" },
   { accountSizeInCents: 5_000_000, company: "Tradeify", companyCode: "TRADEFY", pattern: /^TDFYSL50[A-Z0-9-]*$/, phase: "Evaluation", product: "Select" },
   { accountSizeInCents: 5_000_000, company: "Take Profit Trader", companyCode: "TPT", pattern: /^TAKEPROFITPRO[A-Z0-9-]*$/, phase: "Funded", product: "PRO" },
   { accountSizeInCents: 5_000_000, company: "Take Profit Trader", companyCode: "TPT", pattern: /^TAKEPROFIT[A-Z0-9-]*$/, phase: "Evaluation", product: null },

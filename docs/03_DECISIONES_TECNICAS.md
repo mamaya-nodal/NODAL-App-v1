@@ -2851,3 +2851,24 @@ vigente sin aprobacion y evidencia suficiente.
   despliegue general. El nuevo punto de partida se habilita después de verificar también
   las instalaciones de sus identidades.
 
+### APP-196 - Inicio simplificado posterior a la actualización del conector
+
+- **Fecha:** 2026-10-23. Corrección del segundo tramo del piloto de Julián.
+- **Hallazgo:** la actualización personal a 0.16 se verificaba correctamente, pero al
+  volver a transmitir NinjaTrader la aplicación mostraba el panel anterior porque el
+  nuevo inicio contable todavía no estaba enlazado con esa verificación.
+- **Flujo:** después de actualizar, Inicio abre automáticamente una preparación corta:
+  saldo broker y billeteras, cuentas prop nuevas detectadas y flotante comprometido,
+  seguida de una vista previa. Ya no ofrece reconstruir operaciones históricas.
+- **Cuentas:** las cuentas previamente registradas se conservan y sus compras anteriores
+  quedan absorbidas por el nuevo corte. Las cuentas nuevas visibles en el conector se
+  registran como base con su empresa y fase detectadas, costo de apertura cero y vínculo
+  Ninja auditable. No se crean cantidades agregadas que luego puedan duplicarse.
+- **Identidades:** el piloto no exige actualizar al mismo tiempo los conectores de las
+  identidades. Cada uno se actualizará por separado; sus identidades, conectores y
+  cuentas ya registradas permanecen intactos durante el nuevo inicio personal.
+- **Contabilidad y trazabilidad:** la apertura anterior se conserva en el historial de
+  revisiones. El saldo actual se convierte en capital inicial, el resultado del nuevo
+  ciclo comienza en cero y el flotante declarado queda como línea base para medir sólo
+  su variación futura.
+

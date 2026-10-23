@@ -43,6 +43,17 @@ describe("classifyNinjaAccount", () => {
     expect(classifyNinjaAccount(account(name), "2026-08-26T12:00:00Z")).toMatchObject({ accountSizeInCents: 5_000_000, company, companyCode, phase, product, type: "prop" });
   });
 
+  it("reconoce las evaluaciones Tradeify de 25K usadas en el inicio simplificado", () => {
+    expect(classifyNinjaAccount(account("TDFYSL25759067926", "Tradefy - Juli"), "2026-10-23T15:53:13Z")).toMatchObject({
+      accountSizeInCents: 2_500_000,
+      company: "Tradeify",
+      companyCode: "TRADEFY",
+      phase: "Evaluation",
+      product: "Select",
+      type: "prop",
+    });
+  });
+
   it("no inventa clasificación para nomenclaturas ambiguas o no confirmadas", () => {
     expect(classifyNinjaAccount(account("2080996"), "2026-08-26T12:00:00Z").type).toBe("broker");
     expect(classifyNinjaAccount(account("FN***"), "2026-08-26T12:00:00Z").type).toBe("unknown");

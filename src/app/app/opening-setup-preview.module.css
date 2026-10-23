@@ -169,6 +169,13 @@
 .detectedBox > div { display: flex; align-items: center; justify-content: space-between; color: var(--app-copy); font-size: 11px; }
 .detectedBox strong { color: var(--app-title); font-size: 24px; }
 .detectedBox p { margin: 8px 0 0; color: var(--app-subtle); font-size: 10px; }
+.detectedAccountList { display: grid; gap: 8px; margin: 0 0 18px; }
+.detectedAccountList > div { display: flex; align-items: center; gap: 14px; padding: 11px 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-panel); }
+.detectedAccountList > div > div { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.detectedAccountList strong { color: var(--app-title); font-size: 11px; }
+.detectedAccountList span { overflow: hidden; color: var(--app-copy); font-size: 11px; text-overflow: ellipsis; }
+.detectedAccountList small { color: var(--app-subtle); font-size: 9px; }
+.detectedAccountList b { padding: 5px 8px; border-radius: 999px; background: color-mix(in srgb, var(--app-accent) 12%, var(--app-bg)); color: var(--app-accent); font-size: 9px; }
 .tip { display: flex; gap: 9px; margin-top: 19px; border-color: color-mix(in srgb, var(--app-accent) 28%, var(--app-border)); background: color-mix(in srgb, var(--app-accent) 8%, var(--app-panel)); color: var(--app-copy); font-size: 10px; line-height: 1.45; }
 .tip strong { flex: 0 0 auto; color: var(--app-accent); }
 .historyReference { margin-top: 18px; }

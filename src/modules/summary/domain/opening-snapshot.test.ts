@@ -7,6 +7,7 @@ const base: PeriodOpeningRecord = {
   contributedCapitalInCents: 1_500_000, cutoverDate: "2026-09-21", floatingInCents: -120_000,
   fundedAccounts: 2, fundingPendingInCents: 50_000, id: "opening", liveEvaluationAccounts: 3,
   mode: "reconstruct", personalWithdrawalsInCents: 200_000, inferredResultInCents: 50_000,
+  revisionNumber: 1,
   virginAccounts: 1, walletBalanceInCents: 300_000, wallets: [],
 };
 

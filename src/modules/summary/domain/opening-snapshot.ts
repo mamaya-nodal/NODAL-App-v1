@@ -30,6 +30,7 @@ export type PeriodOpeningRecord = Readonly<{
   liveEvaluationAccounts: number;
   mode: "reconstruct" | "zero";
   personalWithdrawalsInCents: number;
+  revisionNumber: number;
   inferredResultInCents: number;
   virginAccounts: number;
   walletBalanceInCents: number;

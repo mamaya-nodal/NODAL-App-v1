@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { OpeningAccountStage } from "@/modules/summary/domain/opening-snapshot";
 import { readOpeningBrokerState } from "@/modules/ninja/server/opening-broker-state";
+import type { SimplifiedOpeningAccount } from "./opening-setup-preview";
 
 type Result = Readonly<{ ok: boolean; message: string }>;
 type BatchInput = Readonly<{
@@ -26,6 +27,8 @@ export type OpeningSetupInput = Readonly<{
   periodId: string;
   personalWithdrawals: string;
   reconstructionDate: string;
+  simplified?: boolean;
+  simplifiedAccounts?: readonly SimplifiedOpeningAccount[];
   virginAccounts: string;
   wallets: ReadonlyArray<Readonly<{ balance: string; name: string }>>;
   workingCapital: string;
@@ -116,7 +119,17 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
         : "Conectá NinjaTrader para que NODAL tome el saldo broker antes de confirmar.",
     };
   }
-  const { error } = await supabase.rpc("confirm_nodal_period_opening_after_connector", {
+  const openingProcedure = input.simplified
+    ? "confirm_nodal_simplified_opening"
+    : "confirm_nodal_period_opening_after_connector";
+  const openingArguments = input.simplified ? {
+    target_accounts: input.simplifiedAccounts ?? [],
+    target_broker_balance_cents: liveBroker.balanceInCents,
+    target_cutover_date: input.reconstructionDate,
+    target_floating_cents: money.floating,
+    target_period_id: input.periodId,
+    target_wallets: wallets,
+  } : {
     target_batches: batches,
     target_broker_balance_cents: liveBroker.balanceInCents,
     target_closed_accounts_reference: accounts.closed,
@@ -131,7 +144,8 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
     target_start_mode: input.mode,
     target_virgin_accounts: accounts.virgin,
     target_wallets: wallets,
-  });
+  };
+  const { error } = await supabase.rpc(openingProcedure, openingArguments);
   if (error) {
     if (error.message.includes("already confirmed")) return { ok: false, message: "Este punto de partida ya fue confirmado." };
     if (error.message.includes("after period activity")) return { ok: false, message: "Ya existe actividad en el período. La apertura inicial no puede mezclarse con registros posteriores." };
@@ -139,6 +153,8 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
     if (error.message.includes("OPENING_REVISION_HAS_ACTIVITY")) return { ok: false, message: "Apareció actividad en el período. La edición fue bloqueada para proteger la contabilidad." };
     if (error.message.includes("OPENING_REVISION_REGISTERED_ACCOUNTS")) return { ok: false, message: "Las cuentas ya registradas se conservan automáticamente; no las vuelvas a cargar como lote inicial." };
     if (error.message.includes("OPENING_REVISION_NOT_AVAILABLE")) return { ok: false, message: "Este punto de partida no está disponible para edición." };
+    if (error.message.includes("SIMPLIFIED_OPENING_ACCOUNT_NOT_OBSERVED")) return { ok: false, message: "Una de las cuentas dejó de estar visible en NinjaTrader. Actualizá y revisá nuevamente." };
+    if (error.message.includes("SIMPLIFIED_OPENING_ACCOUNT_INVALID")) return { ok: false, message: "Revisá las cuentas detectadas antes de confirmar." };
     return { ok: false, message: "No se pudo confirmar el punto de partida." };
   }
 
