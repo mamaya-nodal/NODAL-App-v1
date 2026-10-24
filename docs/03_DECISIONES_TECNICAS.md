@@ -2874,3 +2874,22 @@ vigente sin aprobacion y evidencia suficiente.
   ciclo comienza en cero y el flotante declarado queda como línea base para medir sólo
   su variación futura.
 
+### APP-197 - Despliegue general del nuevo inicio, con Alfred preservado
+
+- **Fecha:** 2026-10-24. Despliegue autorizado después de validar el recorrido con
+  Julián.
+- **Alcance:** el instalador automático 0.16 y el inicio simplificado se habilitan para
+  los doce usuarios activos acordados. `SB Digitalmarkets` (Alfred) queda expresamente
+  fuera: no se modifican su contabilidad, cuentas, identidades, conectores ni apertura.
+- **Borrón contable:** la información anterior de los usuarios incluidos se copia a un
+  esquema privado recuperable y se retira del circuito vigente. Se conservan usuarios,
+  jerarquías, identidades, instalaciones y rutas de conectores.
+- **Recorrido:** cada titular actualiza su conector personal mediante el `.exe`, vuelve a
+  abrir NinjaTrader y confirma saldo broker, cuentas actualmente visibles, billeteras y
+  flotante. Recién esa confirmación forma la nueva base; no se reconstruye historial.
+- **Conectores virtuales:** un destino compartido no representa una instalación física y
+  no debe solicitar un `.exe`. Su apertura puede continuar con el inventario que recibe
+  por su ruta existente.
+- **Garantías:** el reinicio es transaccional, conserva respaldo y auditoría, elimina
+  exclusiones antiguas de registro y verifica que Alfred permanezca idéntico.
+
