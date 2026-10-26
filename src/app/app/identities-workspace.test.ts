@@ -5,7 +5,7 @@ import type { IdentitySummary } from "@/modules/identities/domain/identity-summa
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("./identity-actions", () => ({ assignIdentityAccount: vi.fn(), createIdentityDirectly: vi.fn(),
-  sendIdentityConnectorInstallation: vi.fn(), unassignIdentityAccount: vi.fn(), setIdentitySignal: vi.fn(), updateIdentityOperationalStatus: vi.fn() }));
+  retireIdentity: vi.fn(), sendIdentityConnectorInstallation: vi.fn(), unassignIdentityAccount: vi.fn(), setIdentitySignal: vi.fn(), updateIdentityOperationalStatus: vi.fn() }));
 vi.mock("./ninja-connector-panel", () => ({ NinjaConnectorPanel: ({ downloadLabel }: { downloadLabel: string }) =>
   createElement("button", {}, downloadLabel) }));
 import { IdentitiesWorkspace } from "./identities-workspace";
@@ -16,8 +16,8 @@ const identity: IdentitySummary = { id: "identity", firstName: "Test", lastName:
     { burned: true, code: "LUCID", id: "lucid", name: "Lucid", payoutCount: 4, progress: 1 },
   ], connectorInstallation: null, deteriorationLevel: 1, resultTotalInCents: 0, payoutTotalInCents: 0,
   wallets: [{ balanceInCents: 125_000, id: "wallet", identityId: "identity", name: "ARQ · Test" }] };
-function render(value = identity) {
-  return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], connectors: [], identities: [value], ownerName: "Titular", signalStates: {}, workspaceId: "workspace" }));
+function render(value = identity, configurationEnabled = true) {
+  return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], configurationEnabled, connectors: [], identities: [value], ownerName: "Titular", signalStates: {}, workspaceId: "workspace" }));
 }
 describe("identity installation is independent of email delivery", () => {
   it("offers the automatic installer after unlinking without requiring another email", () => {
@@ -30,6 +30,11 @@ describe("identity installation is independent of email delivery", () => {
   });
   it("does not offer an installer for an unapproved identity", () => {
     expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Descargar instalador");
+  });
+  it("shows identity configuration only when the capability and identity are enabled", () => {
+    expect(render()).toContain("Configuración");
+    expect(render(identity, false)).not.toContain("Complementos");
+    expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Complementos");
   });
   it("shows wallets assigned to the identity without changing its economic totals", () => {
     expect(render()).toContain("Billeteras o cuentas bancarias");

@@ -1562,6 +1562,7 @@ async function renderPrivateAppPage({
       {allowed && nodalUser?.identities_enabled && selection?.period && (
         <IdentitiesWorkspace
           accounts={identityAccounts}
+          configurationEnabled={nodalUser?.configuration_enabled === true}
           connectors={ninjaConnectors.filter((connector) => connector.identityId !== null)}
           identities={identitySummaries}
           ownerName={nodalUser?.display_name || nodalUser?.email || "Mi espacio"}

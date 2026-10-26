@@ -6,7 +6,12 @@ import { MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
 
 type PairingCode = Readonly<{ code: string; expiresAt: string }>;
 
-export function MimicalConfiguration({ enabled }: Readonly<{ enabled: boolean }>) {
+type MimicalAddonCardProps = Readonly<{
+  enabled: boolean;
+  identityId: string | null;
+}>;
+
+function MimicalAddonCard({ enabled, identityId }: MimicalAddonCardProps) {
   const [code, setCode] = useState<PairingCode | null>(null);
   const [busy, setBusy] = useState<"code" | "download" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +54,7 @@ export function MimicalConfiguration({ enabled }: Readonly<{ enabled: boolean }>
     setCopied(false);
     try {
       const response = await fetch("/api/addons/mimical/pairing-code", {
-        body: JSON.stringify({ identityId: null }),
+        body: JSON.stringify({ identityId }),
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -70,15 +75,6 @@ export function MimicalConfiguration({ enabled }: Readonly<{ enabled: boolean }>
   }
 
   return (
-    <section aria-labelledby="configuration-title" className="configuration-view" id="configuracion">
-      <div className="workspace-section-heading">
-        <div>
-          <p className="eyebrow">CONFIGURACIÓN</p>
-          <h2 id="configuration-title">Complementos</h2>
-        </div>
-        <p>Herramientas de NodalBots vinculadas a tu acceso NODAL.</p>
-      </div>
-
       <article className="addon-card">
         <div className="addon-card-heading">
           <div>
@@ -119,6 +115,53 @@ export function MimicalConfiguration({ enabled }: Readonly<{ enabled: boolean }>
         ) : <p className="notice">Este complemento todavía no está habilitado para tu usuario.</p>}
         {error ? <p className="purchase-message error" role="alert">{error}</p> : null}
       </article>
+  );
+}
+
+export function MimicalConfiguration({ enabled }: Readonly<{ enabled: boolean }>) {
+  return (
+    <section aria-labelledby="configuration-title" className="configuration-view" id="configuracion">
+      <div className="workspace-section-heading">
+        <div>
+          <p className="eyebrow">CONFIGURACIÓN</p>
+          <h2 id="configuration-title">Complementos</h2>
+        </div>
+        <p>Herramientas de NodalBots vinculadas a tu acceso NODAL.</p>
+      </div>
+      <MimicalAddonCard enabled={enabled} identityId={null} />
     </section>
+  );
+}
+
+export function IdentityMimicalConfiguration({
+  identityId,
+  identityName,
+  onClose,
+}: Readonly<{
+  identityId: string;
+  identityName: string;
+  onClose: () => void;
+}>) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div aria-labelledby="identity-configuration-title" aria-modal="true" className="identity-addon-modal-backdrop" onMouseDown={onClose} role="dialog">
+      <section className="identity-addon-modal" onMouseDown={(event) => event.stopPropagation()}>
+        <header>
+          <div>
+            <p className="eyebrow">CONFIGURACIÓN</p>
+            <h2 id="identity-configuration-title">{identityName}</h2>
+          </div>
+          <button aria-label="Cerrar configuración" onClick={onClose} type="button">×</button>
+        </header>
+        <MimicalAddonCard enabled identityId={identityId} />
+      </section>
+    </div>
   );
 }

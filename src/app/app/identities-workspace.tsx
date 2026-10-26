@@ -27,10 +27,12 @@ import {
   unassignIdentityAccount,
   updateIdentityOperationalStatus,
 } from "./identity-actions";
+import { IdentityMimicalConfiguration } from "./mimical-configuration";
 import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
 
 type Props = Readonly<{
   accounts: IdentityAccount[];
+  configurationEnabled: boolean;
   connectors: NinjaConnectorStatus[];
   identities: IdentitySummary[];
   ownerName: string;
@@ -165,11 +167,12 @@ function accountState(account: IdentityAccount) {
   return "Activa";
 }
 
-export function IdentitiesWorkspace({ accounts, connectors, identities, ownerName, signalStates, workspaceId }: Props) {
+export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors, identities, ownerName, signalStates, workspaceId }: Props) {
   const router = useRouter();
   const createFormRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+  const [configurationIdentity, setConfigurationIdentity] = useState<IdentitySummary | null>(null);
   const assignedIds = new Set(accounts.filter((account) => account.currentIdentityId).map((account) => account.id));
   const unassigned = accounts.filter((account) => !assignedIds.has(account.id));
 
@@ -298,6 +301,13 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, ownerNam
                 </button>
               </div>
 
+              {configurationEnabled && identity.onboardingStatus === "approved" ? (
+                <div className="identity-addon-configuration-row">
+                  <span><strong>Complementos</strong></span>
+                  <button onClick={() => setConfigurationIdentity(identity)} type="button">Configuración</button>
+                </div>
+              ) : null}
+
               <div className="identity-subsection-title"><strong>Billeteras o cuentas bancarias</strong><span>{identity.wallets.length}</span></div>
               <div className="identity-wallet-list">
                 {identity.wallets.length === 0 ? <p>Sin billeteras o cuentas bancarias asignadas.</p> : identity.wallets.map((wallet) => (
@@ -365,6 +375,13 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, ownerNam
         })}
         {identities.length === 0 && <p className="identity-empty-row">Sin identidades aprobadas.</p>}
       </div>
+      {configurationIdentity ? (
+        <IdentityMimicalConfiguration
+          identityId={configurationIdentity.id}
+          identityName={`${configurationIdentity.firstName} ${configurationIdentity.lastName}`}
+          onClose={() => setConfigurationIdentity(null)}
+        />
+      ) : null}
     </section>
   );
 }

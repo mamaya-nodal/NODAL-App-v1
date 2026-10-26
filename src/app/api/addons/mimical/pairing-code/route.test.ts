@@ -43,6 +43,35 @@ describe("POST /api/addons/mimical/pairing-code", () => {
     }));
   });
 
+  it("creates a one-use code tied to the selected identity", async () => {
+    const identityId = "22222222-2222-4222-8222-222222222222";
+    const response = await POST(new Request("https://app.test/api/addons/mimical/pairing-code", {
+      body: JSON.stringify({ identityId }),
+      headers: { "content-type": "application/json", origin: "https://app.test" },
+      method: "POST",
+    }));
+    expect(response.status).toBe(200);
+    expect(mocks.rpc).toHaveBeenLastCalledWith("create_addon_pairing_code", expect.objectContaining({
+      target_identity_id: identityId,
+      target_product_key: "mimical",
+    }));
+  });
+
+  it("rejects identity pairing when Identidades is disabled", async () => {
+    mocks.maybeSingle.mockResolvedValue({
+      data: { configuration_enabled: true, identities_enabled: false },
+      error: null,
+    });
+    mocks.rpc.mockReset().mockResolvedValueOnce({ data: true, error: null });
+    const response = await POST(new Request("https://app.test/api/addons/mimical/pairing-code", {
+      body: JSON.stringify({ identityId: "22222222-2222-4222-8222-222222222222" }),
+      headers: { "content-type": "application/json", origin: "https://app.test" },
+      method: "POST",
+    }));
+    expect(response.status).toBe(403);
+    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects a user whose Configuracion capability is disabled", async () => {
     mocks.maybeSingle.mockResolvedValue({
       data: { configuration_enabled: false, identities_enabled: false },

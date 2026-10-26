@@ -3028,3 +3028,21 @@ vigente sin aprobacion y evidencia suficiente.
   continúa en `1.1.0`; sólo se alinea la versión visible y el nombre del artefacto
   con su `FileVersion` corregida.
 
+### APP-207 - Vinculación independiente de MIMICAL para identidades
+
+- **Fecha:** 2026-10-26. Se completa el recorrido previsto para instalar MIMICAL en
+  la PC de cada identidad sin reutilizar la licencia personal del usuario NODAL.
+- **Interfaz:** cada identidad aprobada muestra `Configuración` dentro de su tarjeta
+  cuando el usuario tiene habilitadas las capacidades Configuración e Identidades.
+  La acción abre una ventana de complementos para descargar el ZIP universal y crear
+  un código temporal ligado exclusivamente a esa identidad.
+- **Separación:** la instalación personal y cada identidad conservan derechos,
+  códigos e instalaciones independientes. Vincular o reemplazar una instalación de
+  una identidad no revoca la personal ni las instalaciones de otras identidades.
+- **Autorización:** el servidor verifica sesión activa, ambas capacidades, propiedad
+  y aprobación de la identidad. El código vence en menos de diez minutos, se consume
+  una sola vez y no contiene credenciales del usuario.
+- **Operación:** el ZIP puede descargarse desde la PC del titular y trasladarse a la
+  PC remota; la atribución surge del código, no del archivo descargado. Reinicios de
+  NinjaTrader y cierres de sesión web conservan la credencial local ya vinculada.
+
