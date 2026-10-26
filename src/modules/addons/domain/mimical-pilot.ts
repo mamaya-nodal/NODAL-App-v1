@@ -6,6 +6,7 @@ export const MIMICAL_VERSION = "1.1.0";
 const MIMICAL_PILOT_USERS = new Set([
   "0c90d147-a048-48c9-8f89-e095bbadc249", // Julian Agustin Seco
   "f2f5f816-ec4f-46e1-b216-5267aeadc635", // Mauricio Amaya
+  "2b0f63da-bf32-41ee-86c2-98fb5dbe583b", // Lorena Mariel Malagreca
 ]);
 
 export function mimicalPilotEnabled(userId: string) {

@@ -35,7 +35,7 @@ describe("POST /api/addons/mimical/pairing-code", () => {
   });
 
   it("rejects users outside the pilot before creating a code", async () => {
-    mocks.getUser.mockResolvedValue({ data: { user: { id: "2b0f63da-bf32-41ee-86c2-98fb5dbe583b" } } });
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "00000000-0000-0000-0000-000000000001" } } });
     mocks.rpc.mockReset().mockResolvedValueOnce({ data: true, error: null });
     const response = await POST(new Request("https://app.test/api/addons/mimical/pairing-code", {
       body: "{}", headers: { "content-type": "application/json", origin: "https://app.test" }, method: "POST",

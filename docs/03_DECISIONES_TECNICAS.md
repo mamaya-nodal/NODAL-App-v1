@@ -2938,3 +2938,14 @@ vigente sin aprobacion y evidencia suficiente.
   exacta de entradas, la ausencia de carpetas contenedoras, el XML, la referencia y
   la cabecera de la DLL antes de publicar otra versión.
 
+### APP-201 - Tercera usuaria del piloto MIMICAL
+
+- **Fecha:** 2026-10-26. Mauricio autoriza la activación personal para Lorena Mariel
+  Malagreca.
+- **Alcance:** Lorena accede desde `Configuración > Complementos` a la descarga, la
+  generación del código y la vinculación de su instalación personal. Julián y Mauricio
+  conservan sus accesos.
+- **Límite:** esta ampliación no concede licencias a las instalaciones de las identidades
+  de Lorena. Las reglas de código de un solo uso, revalidación y protección del ciclo
+  activo permanecen sin cambios.
+
