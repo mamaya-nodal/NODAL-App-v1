@@ -315,7 +315,7 @@ namespace NinjaTrader.NinjaScript.AddOns
         private bool applyingConfiguration;
         private bool refreshingAccounts;
         private bool closingWindow;
-        private bool licenseAuthorized;
+        private volatile bool licenseAuthorized;
         private bool licenseValidationRunning;
         private DateTime nextLicenseCheckUtc = DateTime.MinValue;
 

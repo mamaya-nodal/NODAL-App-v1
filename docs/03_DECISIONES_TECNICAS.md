@@ -2905,7 +2905,8 @@ vigente sin aprobacion y evidencia suficiente.
   el usuario local. Copiar el ZIP o conocer la URL no concede acceso.
 - **Autorización continua:** el servidor vuelve a comprobar el producto, el usuario,
   el contexto y la instalación. La baja del usuario, del derecho o de la identidad
-  impide iniciar ciclos nuevos. Reinstalar sin la credencial local exige otro código.
+  impide iniciar ciclos nuevos. Durante el piloto la instalación revalida cada minuto;
+  reinstalar sin la credencial local exige otro código.
 - **Seguridad operativa:** licenciamiento y motor de órdenes están separados. Una baja,
   un rechazo o una indisponibilidad de red no cancela órdenes, no ejecuta `Flatten` y
   no interrumpe protecciones del ciclo ya iniciado; el bloqueo se aplica únicamente a
