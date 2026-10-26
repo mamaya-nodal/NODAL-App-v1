@@ -2992,3 +2992,17 @@ vigente sin aprobacion y evidencia suficiente.
 - **Trazabilidad:** rol, mesa y ambas capacidades se guardan en una sola transacción y
   el cambio queda registrado en el historial de gestión.
 
+### APP-205 - Cuentas prop de identidades en el inicio simplificado
+
+- **Fecha:** 2026-10-26. Corrección originada por el caso real de Lorena: el conector
+  personal informaba su broker y el conector de su identidad informaba cinco cuentas
+  Tradeify, pero la apertura sólo consultaba el inventario del conector personal.
+- **Regla:** el inicio simplificado reúne las cuentas prop observadas por todos los
+  conectores activos del titular, incluidos los conectores exclusivos de identidades.
+  Las cuentas broker continúan excluidas de la lista de cuentas prop iniciales.
+- **Atribución:** cada cuenta conserva el identificador del conector que la observó.
+  Al confirmar la apertura, el vínculo Ninja existente asigna automáticamente la cuenta
+  a la identidad correspondiente sin separar su contabilidad de la del titular.
+- **Duplicados:** una cuenta ya registrada con ese conector, conexión y número no vuelve
+  a ofrecerse ni puede incorporarse dos veces dentro de la misma apertura.
+

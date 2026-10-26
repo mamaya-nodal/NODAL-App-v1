@@ -39,6 +39,7 @@ import {
   type NinjaLiveBrokerBalance,
 } from "@/modules/ninja/domain/live-broker-balance";
 import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
+import { buildSimplifiedOpeningAccounts } from "@/modules/ninja/domain/simplified-opening-accounts";
 import {
   automaticInstallerPilotEnabled,
   connectorOnboardingState,
@@ -783,31 +784,15 @@ async function renderPrivateAppPage({
         },
       ];
     });
-    const companiesByCode = new Map(companies.map((company) => [company.code.toUpperCase(), company]));
-    const seenSimplifiedOpeningAccounts = new Set<string>();
-    simplifiedOpeningAccounts = ninjaInventories
-      .filter((inventory) => inventory.connector_id === ninjaConnector?.connectorId)
-      .flatMap((inventory) => inventory.accounts.map((account) => ({
-        classification: classifyNinjaAccount(account, account.firstSeenAt ?? inventory.observed_at),
+    simplifiedOpeningAccounts = buildSimplifiedOpeningAccounts({
+      companies,
+      inventories: ninjaInventories.map((inventory) => ({
+        accounts: inventory.accounts,
         connectorId: inventory.connector_id,
-      })))
-      .flatMap(({ classification, connectorId }): SimplifiedOpeningAccount[] => {
-        if (classification.type !== "prop" || !classification.companyCode || !classification.phase) return [];
-        const company = companiesByCode.get(classification.companyCode.toUpperCase());
-        if (!company) return [];
-        const key = ninjaAccountRegistrationKey(connectorId, classification.connectionName, classification.accountName);
-        if (registeredNinjaAccountKeys.has(key) || seenSimplifiedOpeningAccounts.has(key)) return [];
-        seenSimplifiedOpeningAccounts.add(key);
-        return [{
-          accountName: classification.accountName,
-          companyId: company.id,
-          companyName: company.displayName,
-          connectionName: classification.connectionName,
-          connectorId,
-          firstSeenAt: classification.firstSeenAt,
-          phase: classification.phase,
-        }];
-      });
+        observedAt: inventory.observed_at,
+      })),
+      registeredAccountKeys: registeredNinjaAccountKeys,
+    });
 
     const participantsByControlId = new Map<string, PersistedDailyControl["participants"]>();
     for (const participant of dailyControlParticipantRows ?? []) {
