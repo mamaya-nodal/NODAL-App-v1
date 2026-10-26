@@ -7,7 +7,7 @@ import { parsePurchasePriceToCents } from "@/modules/purchases/domain/purchase-r
 
 type Result = Readonly<{ ok: boolean; message: string; walletId?: string }>;
 const uuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-const walletKinds = ["external_contribution", "personal_withdrawal"] as const;
+const walletKinds = ["external_contribution", "personal_withdrawal", "contribution_refund"] as const;
 const brokerTransferKinds = ["broker_to_wallet", "wallet_to_broker"] as const;
 
 async function client() {

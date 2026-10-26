@@ -33,7 +33,7 @@ export type WalletMovement = Readonly<{
   destinationWalletId?: string | null;
   feeInCents?: number;
   id: string;
-  kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker" | "wallet_to_wallet";
+  kind: "external_contribution" | "personal_withdrawal" | "contribution_refund" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker" | "wallet_to_wallet";
   occurredOn: string;
   observation: string | null;
   periodLabel?: string;
@@ -204,7 +204,9 @@ export function buildOperationalSummary(input: Readonly<{
   const legacyBrokerToWallet = sum(orderedControls.filter((control) => control.kind === "withdrawal" && control.originDestination === "Saldo billetera").map((control) => (control.movementInCents ?? 0) - (control.transferFeeInCents ?? 0)));
   const externalWallet = sum(input.walletMovements.filter((movement) => movement.kind === "external_contribution").map((movement) => movement.amountInCents));
   const priorPendingCollection = sum(input.walletMovements.filter((movement) => movement.kind === "prior_pending_collection").map((movement) => movement.amountInCents));
-  const personalWalletWithdrawal = sum(input.walletMovements.filter((movement) => movement.kind === "personal_withdrawal").map((movement) => movement.amountInCents));
+  const personalWalletWithdrawal = sum(input.walletMovements
+    .filter((movement) => movement.kind === "personal_withdrawal" || movement.kind === "contribution_refund")
+    .map((movement) => movement.amountInCents));
   const brokerToWallet = sum(input.walletMovements
     .filter((movement) => movement.kind === "broker_to_wallet" && !movement.dailyControlId)
     .map((movement) => movement.amountInCents - (movement.feeInCents ?? 0)));

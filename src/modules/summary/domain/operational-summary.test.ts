@@ -98,6 +98,20 @@ describe("operational summary", () => {
     expect(summary.positionDifferenceInCents).toBe(0);
   });
 
+  it("registra la devolución de aporte o pago de tarjeta sin confundirla con resultado", () => {
+    const summary = buildOperationalSummary({
+      accounts: [{ id: "card-purchase", state: "virgin", stateOrigin: "automatic", priceInCents: 10_000, fundsOrigin: "Aporte trader" }],
+      controls: [], entries: [], phaseWithdrawals: [],
+      fundingWithdrawals: [{ id: "payout", accountId: "funded", amountInCents: 50_000, approvedOn: "2026-10-10", collectedOn: "2026-10-11", walletId: "bank" }],
+      walletMovements: [{ id: "refund", walletId: "bank", kind: "contribution_refund", amountInCents: 10_000, occurredOn: "2026-10-12", observation: null }],
+    });
+
+    expect(summary.capitalNetInCents).toBe(0);
+    expect(summary.walletBalanceInCents).toBe(40_000);
+    expect(summary.periodResultInCents).toBe(40_000);
+    expect(summary.positionDifferenceInCents).toBe(0);
+  });
+
   it("registra el fee real de billetera a broker como costo sin convertir el traspaso en capital", () => {
     const summary = buildOperationalSummary({
       accounts: [], entries: [], fundingWithdrawals: [], phaseWithdrawals: [],

@@ -52,4 +52,22 @@ describe("period opening", () => {
     expect(opening.walletBalanceInCents).toBe(-300);
     expect(opening.accumulatedResultInCents).toBe(-300);
   });
+
+  it("arrastra una devolución de aporte como reducción de capital y fondos", () => {
+    const opening = buildPeriodOpening({
+      controls: [],
+      currentPeriodId: "november",
+      fundingWithdrawals: [],
+      periodIdsInOrder: ["october", "november"],
+      purchases: [],
+      walletMovements: [
+        { amountInCents: 20_000, id: "contribution", kind: "external_contribution", observation: null, occurredOn: "2026-10-01", periodId: "october", walletId: "bank" },
+        { amountInCents: 5_000, id: "refund", kind: "contribution_refund", observation: null, occurredOn: "2026-10-15", periodId: "october", walletId: "bank" },
+      ],
+    });
+
+    expect(opening.capitalNetInCents).toBe(15_000);
+    expect(opening.walletBalanceInCents).toBe(15_000);
+    expect(opening.accumulatedResultInCents).toBe(0);
+  });
 });

@@ -49,7 +49,7 @@ export function buildHomeDailyHistory(results: readonly HomeDailyResult[]): Home
 
 export type CapitalHistoryWalletMovement = Readonly<{
   amountInCents: number;
-  kind: "external_contribution" | "personal_withdrawal" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker" | "wallet_to_wallet";
+  kind: "external_contribution" | "personal_withdrawal" | "contribution_refund" | "prior_pending_collection" | "broker_to_wallet" | "wallet_to_broker" | "wallet_to_wallet";
   periodId: string;
 }>;
 
@@ -104,7 +104,7 @@ export function buildCapitalHistory(input: Readonly<{
           .filter((movement) => movement.periodId === period.id)
           .map((movement) => {
             if (movement.kind === "external_contribution") return movement.amountInCents;
-            if (movement.kind === "personal_withdrawal") return -movement.amountInCents;
+            if (movement.kind === "personal_withdrawal" || movement.kind === "contribution_refund") return -movement.amountInCents;
             return 0;
           }),
       );

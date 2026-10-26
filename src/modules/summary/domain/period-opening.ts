@@ -53,7 +53,9 @@ export function buildPeriodOpening(input: Readonly<{
   const collectedNet = sum(collectedFunding.map((withdrawal) => withdrawal.amountInCents - (withdrawal.feeInCents ?? 0)));
   const priorPendingCollections = sum(wallet.filter((movement) => movement.kind === "prior_pending_collection").map((movement) => movement.amountInCents));
   const externalWallet = sum(wallet.filter((movement) => movement.kind === "external_contribution").map((movement) => movement.amountInCents));
-  const personalWallet = sum(wallet.filter((movement) => movement.kind === "personal_withdrawal").map((movement) => movement.amountInCents));
+  const personalWallet = sum(wallet
+    .filter((movement) => movement.kind === "personal_withdrawal" || movement.kind === "contribution_refund")
+    .map((movement) => movement.amountInCents));
   const brokerWalletIn = sum(wallet.filter((movement) => movement.kind === "broker_to_wallet" && !movement.dailyControlId).map((movement) => movement.amountInCents - (movement.feeInCents ?? 0)));
   const brokerWalletOut = sum(wallet.filter((movement) => movement.kind === "wallet_to_broker" && !movement.dailyControlId).map((movement) => movement.amountInCents));
   const walletToWalletFees = sum(wallet.filter((movement) => movement.kind === "wallet_to_wallet").map((movement) => movement.feeInCents ?? 0));

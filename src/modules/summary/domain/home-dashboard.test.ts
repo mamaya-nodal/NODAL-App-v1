@@ -37,11 +37,12 @@ describe("home dashboard", () => {
       walletMovements: [
         { amountInCents: 20_000, kind: "external_contribution", periodId: "ene" },
         { amountInCents: 4_000, kind: "personal_withdrawal", periodId: "feb" },
+        { amountInCents: 2_000, kind: "contribution_refund", periodId: "feb" },
         { amountInCents: 15_000, kind: "wallet_to_wallet", periodId: "feb" },
       ],
     })).toEqual([
       { capitalInCents: 80_000, periodMonth: "2026-01-01" },
-      { capitalInCents: 71_000, periodMonth: "2026-02-01" },
+      { capitalInCents: 69_000, periodMonth: "2026-02-01" },
     ]);
   });
 });

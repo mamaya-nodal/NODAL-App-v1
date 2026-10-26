@@ -97,6 +97,7 @@ const date = (value: string) =>
 const labels = {
   external_contribution: "Aporte externo a billetera o cuenta bancaria",
   personal_withdrawal: "Retiro personal desde billetera o cuenta bancaria",
+  contribution_refund: "Devolución de aporte / pago de tarjeta",
   broker_to_wallet: "Transferencia broker → billetera/cuenta bancaria",
   wallet_to_broker: "Transferencia billetera/cuenta bancaria → broker",
   wallet_to_wallet: "Transferencia entre billeteras/cuentas bancarias",
@@ -631,7 +632,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             </select>
             <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
             <select name="kind" onChange={(event) => setMovementKind(event.target.value as keyof typeof labels)} value={movementKind}>
-              {Object.entries(labels).filter(([value]) => value === "external_contribution" || value === "personal_withdrawal" || value === "wallet_to_wallet").map(([value, label]) => (
+              {Object.entries(labels).filter(([value]) => value === "external_contribution" || value === "personal_withdrawal" || value === "contribution_refund" || value === "wallet_to_wallet").map(([value, label]) => (
                 <option disabled={value === "wallet_to_wallet" && wallets.length < 2} key={value} value={value}>{label}</option>
               ))}
             </select>

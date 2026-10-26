@@ -2963,3 +2963,15 @@ vigente sin aprobacion y evidencia suficiente.
   conservan una observación opcional. El dato se persiste y se incluye en la descarga
   del historial completo.
 
+### APP-203 - Devolución de aporte y pago de tarjeta diferenciados del retiro personal
+
+- **Fecha:** 2026-10-26. Nuevo motivo genérico dentro del formulario existente de
+  movimientos de fondos: `Devolución de aporte / pago de tarjeta`.
+- **Uso:** permite registrar que fondos de una billetera o cuenta bancaria devuelven
+  capital adelantado por el trader, incluido el pago de una tarjeta utilizada para
+  comprar cuentas prop. No exige una observación para distinguir el motivo.
+- **Efecto contable:** reduce simultáneamente el saldo de la ubicación de fondos y el
+  capital neto aportado. No genera ganancia, pérdida ni un segundo gasto por la compra.
+- **Separación:** `Retiro personal` se conserva como opción independiente. El nuevo
+  motivo se guarda, audita, muestra y exporta con su clasificación propia.
+
