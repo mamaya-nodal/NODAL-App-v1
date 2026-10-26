@@ -2949,3 +2949,17 @@ vigente sin aprobacion y evidencia suficiente.
   de Lorena. Las reglas de código de un solo uso, revalidación y protección del ciclo
   activo permanecen sin cambios.
 
+### APP-202 - Billeteras y cuentas bancarias como una misma ubicación de fondos
+
+- **Fecha:** 2026-10-26. Ampliación terminológica para usuarios que cobran payouts o
+  administran fondos de la actividad mediante una cuenta bancaria.
+- **Alcance:** las pantallas existentes presentan la categoría como `Billetera o cuenta
+  bancaria`. Una cuenta bancaria se registra por el mismo circuito manual y participa
+  en compras, cobros, transferencias, saldos e identidades sin crear otra contabilidad.
+- **Límite:** no se modifican tablas, asientos, cálculos ni tipos internos. La tarjeta
+  de crédito no se modela como una ubicación de fondos; las compras financiadas por el
+  usuario conservan `Aporte nuevo del trader`.
+- **Trazabilidad existente:** los movimientos manuales y las conciliaciones broker-fondos
+  conservan una observación opcional. El dato se persiste y se incluye en la descarga
+  del historial completo.
+

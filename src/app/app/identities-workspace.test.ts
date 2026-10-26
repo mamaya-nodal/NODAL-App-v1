@@ -32,7 +32,7 @@ describe("identity installation is independent of email delivery", () => {
     expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Descargar instalador");
   });
   it("shows wallets assigned to the identity without changing its economic totals", () => {
-    expect(render()).toContain("Billeteras");
+    expect(render()).toContain("Billeteras o cuentas bancarias");
     expect(render()).toContain("ARQ · Test");
     expect(render()).toContain("US$\u00a01.250");
   });

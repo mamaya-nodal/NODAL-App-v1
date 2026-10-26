@@ -131,9 +131,9 @@ const purchaseMessages: Record<string, string> = {
   not_created: "La compra no pudo confirmarse. No se guardó ningún dato.",
   period_not_current:
     "Ese período no admite una compra con fecha automática. La carga histórica sigue pendiente de definición.",
-  wallet_insufficient: "La billetera elegida no tiene saldo suficiente para pagar esta cuenta. No se guardó ningún dato.",
-  wallet_not_available: "La billetera elegida ya no está disponible. Elegí otra billetera.",
-  wallet_required: "Elegí la billetera desde la que querés pagar la cuenta.",
+  wallet_insufficient: "La billetera o cuenta bancaria elegida no tiene saldo suficiente para pagar esta cuenta. No se guardó ningún dato.",
+  wallet_not_available: "La billetera o cuenta bancaria elegida ya no está disponible. Elegí otra.",
+  wallet_required: "Elegí la billetera o cuenta bancaria desde la que querés pagar la cuenta.",
 };
 
 const resetMessages: Record<string, string> = {
@@ -1182,7 +1182,7 @@ async function renderPrivateAppPage({
       wallets: (openingWalletRows ?? []).filter((wallet) => wallet.opening_snapshot_id === row.id).map((wallet) => ({
         balanceInCents: Number(wallet.balance_cents),
         id: wallet.wallet_id,
-        name: wallet.nodal_wallets[0]?.name ?? "Billetera",
+        name: wallet.nodal_wallets[0]?.name ?? "Billetera o cuenta bancaria",
       })),
     }));
     openingSnapshot = openingRecords.find((record) => record.periodId === selection.period!.id) ?? null;

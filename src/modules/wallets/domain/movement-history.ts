@@ -23,11 +23,11 @@ export function buildWalletMovementHistoryCsv(input: Readonly<{
     movement.occurredOn,
     movement.periodLabel ?? "",
     movement.createdAt ?? "",
-    input.walletNames[movement.walletId ?? ""] ?? "Billetera",
+    input.walletNames[movement.walletId ?? ""] ?? "Billetera o cuenta bancaria",
     movement.destinationWalletId
-      ? input.walletNames[movement.destinationWalletId] ?? "Billetera"
+      ? input.walletNames[movement.destinationWalletId] ?? "Billetera o cuenta bancaria"
       : "",
-    input.labels[movement.kind] ?? "Movimiento de billetera",
+    input.labels[movement.kind] ?? "Movimiento de fondos",
     (movement.amountInCents / 100).toFixed(2),
     ((movement.feeInCents ?? 0) / 100).toFixed(2),
     movement.observation ?? "",
@@ -36,7 +36,7 @@ export function buildWalletMovementHistoryCsv(input: Readonly<{
   ]);
 
   return [
-    ["Fecha", "Período", "Registrado", "Billetera origen", "Billetera destino", "Tipo", "Importe USD", "Fee USD", "Observación", "Origen", "ID"],
+    ["Fecha", "Período", "Registrado", "Billetera/cuenta bancaria origen", "Billetera/cuenta bancaria destino", "Tipo", "Importe USD", "Fee USD", "Observación", "Origen", "ID"],
     ...rows,
   ].map((row) => row.map(csvValue).join(",")).join("\r\n");
 }

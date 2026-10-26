@@ -16,7 +16,7 @@ const PROVIDERS: ReadonlyArray<{ id: Provider; label: string; mode: "Automática
   { id: "grabrfi", label: "GrabrFi", mode: "Manual" },
   { id: "global66", label: "Global66", mode: "Manual" },
   { id: "metamask", label: "MetaMask", mode: "Automática" },
-  { id: "other", label: "Otra", mode: "Manual" },
+  { id: "other", label: "Otra billetera o cuenta bancaria", mode: "Manual" },
 ];
 
 const amount = (cents: number) => new Intl.NumberFormat("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100);
@@ -106,16 +106,16 @@ export function WalletConnections({ defaultDate, maxDate, minDate, periodId, wal
     <details className="wallet-create-inline wallet-add-flow" onToggle={(event) => {
       if (!event.currentTarget.open) { setProvider(null); setProviderDraft(""); setMessage(""); }
     }}>
-      <summary>+ Agregar billetera</summary>
+      <summary>+ Agregar billetera o cuenta bancaria</summary>
       {!provider ? <div className="wallet-provider-picker">
-        <select aria-label="Empresa de la billetera" value={providerDraft} onChange={(event) => setProviderDraft(event.target.value as Provider | "")}>
-          <option value="">Seleccionar empresa</option>
+        <select aria-label="Empresa, banco o proveedor" value={providerDraft} onChange={(event) => setProviderDraft(event.target.value as Provider | "")}>
+          <option value="">Seleccionar empresa, banco o proveedor</option>
           {PROVIDERS.map((item) => <option key={item.id} value={item.id}>{item.label} · {item.mode}</option>)}
         </select>
         <button disabled={!providerDraft} onClick={acceptProvider} type="button">Aceptar</button>
       </div> : <form className="summary-form wallet-provider-form" key={provider} onSubmit={addWallet}>
-        {provider === "other" && <input name="company" placeholder="Empresa" required />}
-        <input name="wallet_name" placeholder="Nombre de la billetera" required />
+        {provider === "other" && <input name="company" placeholder="Empresa o banco" required />}
+        <input name="wallet_name" placeholder="Nombre de la billetera o cuenta bancaria" required />
         {provider === "metamask" ? <>
           <select name="identity" defaultValue="" aria-label="Identidad">
             <option value="">Titular / sin identidad asignada</option>
@@ -131,11 +131,11 @@ export function WalletConnections({ defaultDate, maxDate, minDate, periodId, wal
         </> : <>
           <input defaultValue={defaultDate} max={maxDate} min={minDate} name="date" required type="date" />
           <input inputMode="decimal" name="opening_balance" placeholder="Saldo inicial USD" />
-          <select name="identity" defaultValue="" aria-label="Asignación de la billetera">
+          <select name="identity" defaultValue="" aria-label="Asignación de la billetera o cuenta bancaria">
             <option value="">Titular</option>
             {data?.identities.map((identity) => <option key={identity.id} value={identity.id}>{identity.first_name} {identity.last_name}</option>)}
           </select>
-          <button disabled={busy}>{busy ? "Creando…" : "Crear billetera"}</button>
+          <button disabled={busy}>{busy ? "Creando…" : "Crear billetera o cuenta bancaria"}</button>
         </>}
         <button className="wallet-flow-back" onClick={() => setProvider(null)} type="button">Volver</button>
       </form>}

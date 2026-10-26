@@ -298,9 +298,9 @@ export function IdentitiesWorkspace({ accounts, connectors, identities, ownerNam
                 </button>
               </div>
 
-              <div className="identity-subsection-title"><strong>Billeteras</strong><span>{identity.wallets.length}</span></div>
+              <div className="identity-subsection-title"><strong>Billeteras o cuentas bancarias</strong><span>{identity.wallets.length}</span></div>
               <div className="identity-wallet-list">
-                {identity.wallets.length === 0 ? <p>Sin billeteras asignadas.</p> : identity.wallets.map((wallet) => (
+                {identity.wallets.length === 0 ? <p>Sin billeteras o cuentas bancarias asignadas.</p> : identity.wallets.map((wallet) => (
                   <div className="identity-wallet-row" key={wallet.id}>
                     <strong>{wallet.name}</strong>
                     <span>{money(wallet.balanceInCents)}</span>

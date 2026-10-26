@@ -193,7 +193,7 @@ export async function updateRegisteredAccountPurchase(input: Readonly<{
   }
   const walletId = input.fundsOrigin === "Saldo generado" ? input.walletId : null;
   if (input.fundsOrigin === "Saldo generado" && !walletId) {
-    return { ok: false, message: "Elegí la billetera utilizada para la compra." };
+    return { ok: false, message: "Elegí la billetera o cuenta bancaria utilizada para la compra." };
   }
 
   const supabase = await createClient();
@@ -210,10 +210,10 @@ export async function updateRegisteredAccountPurchase(input: Readonly<{
       return { ok: false, message: "Ya no puede modificarse porque la cuenta registra actividad." };
     }
     if (error.message.includes("unused_account_purchase_wallet_insufficient")) {
-      return { ok: false, message: "La billetera elegida no tiene saldo suficiente." };
+      return { ok: false, message: "La billetera o cuenta bancaria elegida no tiene saldo suficiente." };
     }
     if (error.message.includes("wallet_required") || error.message.includes("wallet_not_available")) {
-      return { ok: false, message: "Elegí una billetera disponible." };
+      return { ok: false, message: "Elegí una billetera o cuenta bancaria disponible." };
     }
     return { ok: false, message: "No se pudo modificar el registro de la cuenta." };
   }

@@ -19,14 +19,14 @@ export function PurchasePaymentFields({ wallets }: Readonly<{ wallets: WalletOpt
       <label>Forma de pago
         <select name="funds_origin" onChange={(event) => setSource(event.target.value as typeof source)} value={source}>
           <option value="Aporte trader">Aporte nuevo del trader</option>
-          <option disabled={wallets.length === 0} value="Saldo generado">Desde una billetera</option>
+          <option disabled={wallets.length === 0} value="Saldo generado">Desde una billetera o cuenta bancaria</option>
         </select>
       </label>
       {source === "Saldo generado" && (
         <>
-          <label>Billetera
+          <label>Billetera o cuenta bancaria
             <select defaultValue="" name="wallet_id" required>
-              <option disabled value="">Elegí una billetera</option>
+              <option disabled value="">Elegí una billetera o cuenta bancaria</option>
               {wallets.map((wallet) => (
                 <option key={wallet.id} value={wallet.id}>
                   {wallet.name} — disponible {money(wallet.balanceInCents)}
@@ -34,7 +34,7 @@ export function PurchasePaymentFields({ wallets }: Readonly<{ wallets: WalletOpt
               ))}
             </select>
           </label>
-          <small className="purchase-wallet-help">La compra se descuenta únicamente de la billetera elegida.</small>
+          <small className="purchase-wallet-help">La compra se descuenta únicamente de la billetera o cuenta bancaria elegida.</small>
         </>
       )}
     </>

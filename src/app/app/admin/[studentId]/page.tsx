@@ -95,7 +95,7 @@ export default async function StudentAdminDetail({ params, searchParams }: Props
               <Row label="Diferencia de capital" value={money(summary.positionDifferenceInCents)} warn={summary.positionDifferenceInCents !== 0} />
               <Row label="Diferencia de ganancias" value={money(summary.realizedReconciliationDifferenceInCents)} warn={summary.realizedReconciliationDifferenceInCents !== 0} />
               <Row label="Retiros pendientes" value={money(summary.fundingPendingInCents)} />
-              <Row label="Saldo billetera" value={money(summary.walletBalanceInCents)} />
+              <Row label="Saldo en billeteras o cuentas bancarias" value={money(summary.walletBalanceInCents)} />
             </Detail>
           </section>
         </>

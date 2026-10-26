@@ -201,11 +201,11 @@ function WalletEditor({ onChange, wallets }: Readonly<{
 }>) {
   return <div className={styles.walletEditor}>
     {wallets.map((wallet, index) => <div className={styles.walletRow} key={wallet.id}>
-      <label className={styles.field}><span>Nombre de la billetera</span><input aria-label={`Nombre de billetera ${index + 1}`} onChange={(event) => onChange(wallets.map((item) => item.id === wallet.id ? { ...item, name: event.target.value } : item))} value={wallet.name} /></label>
-      <label className={styles.field}><span>Saldo (USD)</span><input aria-label={`Saldo de billetera ${index + 1}`} inputMode="decimal" min="0" onChange={(event) => onChange(wallets.map((item) => item.id === wallet.id ? { ...item, balance: event.target.value } : item))} type="number" value={wallet.balance} /></label>
-      {wallets.length > 1 ? <button aria-label={`Eliminar billetera ${index + 1}`} className={styles.removeWallet} onClick={() => onChange(wallets.filter((item) => item.id !== wallet.id))} type="button">×</button> : null}
+      <label className={styles.field}><span>Nombre de la billetera o cuenta bancaria</span><input aria-label={`Nombre de billetera o cuenta bancaria ${index + 1}`} onChange={(event) => onChange(wallets.map((item) => item.id === wallet.id ? { ...item, name: event.target.value } : item))} value={wallet.name} /></label>
+      <label className={styles.field}><span>Saldo (USD)</span><input aria-label={`Saldo de billetera o cuenta bancaria ${index + 1}`} inputMode="decimal" min="0" onChange={(event) => onChange(wallets.map((item) => item.id === wallet.id ? { ...item, balance: event.target.value } : item))} type="number" value={wallet.balance} /></label>
+      {wallets.length > 1 ? <button aria-label={`Eliminar billetera o cuenta bancaria ${index + 1}`} className={styles.removeWallet} onClick={() => onChange(wallets.filter((item) => item.id !== wallet.id))} type="button">×</button> : null}
     </div>)}
-    <button className={styles.secondaryButton} onClick={() => onChange([...wallets, { balance: "", id: crypto.randomUUID(), name: "" }])} type="button">+ Agregar billetera</button>
+    <button className={styles.secondaryButton} onClick={() => onChange([...wallets, { balance: "", id: crypto.randomUUID(), name: "" }])} type="button">+ Agregar billetera o cuenta bancaria</button>
   </div>;
 }
 
@@ -468,7 +468,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                   <div className={styles.formSection}>
                     <p className={styles.eyebrow}>POSICIÓN ACTUAL</p>
                     <h3>¿Qué dinero existe hoy dentro del circuito?</h3>
-                    <p className={styles.description}>Los movimientos entre broker y billetera no son aportes nuevos. Registramos cada ubicación una sola vez.</p>
+                    <p className={styles.description}>Los movimientos entre broker y billetera o cuenta bancaria no son aportes nuevos. Registramos cada ubicación una sola vez.</p>
                     <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{liveBrokerBalance ? money(liveBrokerBalance.balanceInCents / 100) : "Sin datos de Ninja"}</strong><small>Se toma automáticamente del conector y no se edita aquí.</small></div>
                     {brokerClaims}
                     <WalletEditor onChange={setWallets} wallets={wallets} />

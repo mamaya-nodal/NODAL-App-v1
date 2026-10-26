@@ -146,7 +146,7 @@ export async function retireIdentity(identityId: string): Promise<ActionResult> 
       message: reason.includes("active account")
         ? "Quitá primero las cuentas asignadas a esta identidad."
         : reason.includes("wallet")
-          ? "Quitá primero las billeteras asignadas a esta identidad."
+          ? "Quitá primero las billeteras o cuentas bancarias asignadas a esta identidad."
           : reason.includes("active connector")
             ? "Desvinculá primero el conector activo de esta identidad."
             : "No se pudo eliminar la identidad.",

@@ -81,7 +81,7 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
   });
   const walletNames = wallets.flatMap((wallet) => wallet ? [wallet.name.toLocaleLowerCase("es")] : []);
   if (wallets.some((wallet) => wallet === null) || new Set(walletNames).size !== walletNames.length) {
-    return { ok: false, message: "Completá nombre y saldo de cada billetera, sin repetir nombres." };
+    return { ok: false, message: "Completá nombre y saldo de cada billetera o cuenta bancaria, sin repetir nombres." };
   }
 
   const batches = input.batches.flatMap((batch) => {

@@ -301,13 +301,13 @@ function AccountCard({ item, wallets }: Readonly<{
               <label>Origen de fondos
                 <select onChange={(event) => setFundsOrigin(event.target.value as typeof fundsOrigin)} value={fundsOrigin}>
                   <option value="Aporte trader">Aporte nuevo del trader</option>
-                  <option disabled={wallets.length === 0} value="Saldo generado">Desde una billetera</option>
+                  <option disabled={wallets.length === 0} value="Saldo generado">Desde una billetera o cuenta bancaria</option>
                 </select>
               </label>
               {fundsOrigin === "Saldo generado" && (
-                <label>Billetera
+                <label>Billetera o cuenta bancaria
                   <select onChange={(event) => setWalletId(event.target.value)} required value={walletId}>
-                    <option disabled value="">Elegí una billetera</option>
+                    <option disabled value="">Elegí una billetera o cuenta bancaria</option>
                     {wallets.map((wallet) => (
                       <option key={wallet.id} value={wallet.id}>{wallet.name} · disponible {money(wallet.balanceInCents)}</option>
                     ))}

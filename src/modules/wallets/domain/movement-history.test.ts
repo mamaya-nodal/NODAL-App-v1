@@ -32,7 +32,7 @@ describe("wallet movement history", () => {
       walletNames: { wallet: "Metamask Alf" },
     });
 
-    expect(csv).toContain('"Fecha","Período","Registrado","Billetera origen"');
+    expect(csv).toContain('"Fecha","Período","Registrado","Billetera/cuenta bancaria origen"');
     expect(csv.indexOf('"new"')).toBeLessThan(csv.indexOf('"old"'));
     expect(csv).toContain('"4731.00"');
     expect(csv).toContain('"Octubre 2026"');

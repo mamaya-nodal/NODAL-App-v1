@@ -95,11 +95,11 @@ const date = (value: string) =>
   );
 
 const labels = {
-  external_contribution: "Aporte externo a billetera",
-  personal_withdrawal: "Retiro personal desde billetera",
-  broker_to_wallet: "Transferencia broker → billetera",
-  wallet_to_broker: "Transferencia billetera → broker",
-  wallet_to_wallet: "Transferencia entre billeteras",
+  external_contribution: "Aporte externo a billetera o cuenta bancaria",
+  personal_withdrawal: "Retiro personal desde billetera o cuenta bancaria",
+  broker_to_wallet: "Transferencia broker → billetera/cuenta bancaria",
+  wallet_to_broker: "Transferencia billetera/cuenta bancaria → broker",
+  wallet_to_wallet: "Transferencia entre billeteras/cuentas bancarias",
 } as const;
 
 const MOVEMENT_HISTORY_PAGE_SIZE = 10;
@@ -425,13 +425,13 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       )}
 
       <details className="demo-operation-disclosure accounting-balances">
-        <summary><span>Billeteras y otros saldos</span><strong>{money(walletBalances.availableInCents)}</strong><i aria-hidden="true" /></summary>
+        <summary><span>Billeteras o cuentas bancarias</span><strong>{money(walletBalances.availableInCents)}</strong><i aria-hidden="true" /></summary>
         <div className="demo-wallets">
           {wallets.map((wallet) => (
             <div className="named-wallet-row" key={wallet.id}>
               {walletEditingId === wallet.id ? (
                 <form onSubmit={(event) => updateWalletName(event, wallet.id)}>
-                  <label htmlFor={`wallet-name-${wallet.id}`}>Nombre de la billetera</label>
+                  <label htmlFor={`wallet-name-${wallet.id}`}>Nombre de la billetera o cuenta bancaria</label>
                   <div>
                     <input
                       aria-label={`Nombre de ${wallet.name}`}
@@ -463,7 +463,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                 </form>
               ) : (
                 <div className="named-wallet-display">
-                  <span>Nombre de la billetera</span>
+                  <span>Nombre de la billetera o cuenta bancaria</span>
                   <div>
                     <strong>{walletNames[wallet.id] ?? wallet.name}</strong>
                     <button
@@ -579,7 +579,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             rightLines={[{ href: "#contabilidad", label: "Saldo contable", valueInCents: walletBalances.accountingInCents }]}
             rightTitle="Según movimientos registrados"
             rightTotal={walletBalances.accountingInCents}
-            title="Billeteras"
+            title="Billeteras o cuentas bancarias"
           />}
         </div>
       </details>
@@ -594,13 +594,13 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             <div className="broker-transfer-reconciliation" role="status">
               <div className="broker-transfer-heading">
                 <strong>Transferencia pendiente</strong>
-                <span>{brokerDifferenceInCents > 0 ? "Billetera → broker" : "Broker → billetera"} · {money(Math.abs(brokerDifferenceInCents))}</span>
+                <span>{brokerDifferenceInCents > 0 ? "Billetera/cuenta bancaria → broker" : "Broker → billetera/cuenta bancaria"} · {money(Math.abs(brokerDifferenceInCents))}</span>
               </div>
               <form className="summary-form broker-transfer-form" onSubmit={reconcileBrokerTransfer}>
                 <label>
-                  <span>Billetera relacionada</span>
+                  <span>Billetera o cuenta bancaria relacionada</span>
                   <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required>
-                    <option disabled value="">Seleccionar billetera</option>
+                    <option disabled value="">Seleccionar billetera o cuenta bancaria</option>
                     {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
                   </select>
                 </label>
@@ -626,7 +626,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           )}
           <form className="summary-form" onSubmit={wallet}>
             <select name="wallet" onChange={(event) => setMovementWalletId(event.target.value)} required value={movementWalletId}>
-              <option disabled value="">Billetera</option>
+              <option disabled value="">Billetera o cuenta bancaria</option>
               {wallets.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
             <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
@@ -637,7 +637,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
             </select>
             {movementKind === "wallet_to_wallet" && (
               <select defaultValue="" name="destination_wallet" required>
-                <option disabled value="">Billetera de destino</option>
+                <option disabled value="">Billetera o cuenta bancaria de destino</option>
                 {wallets.filter((item) => item.id !== movementWalletId).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
             )}
@@ -658,7 +658,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
               <div className="summary-list">
                 {visibleWalletMovements.map((movement) => (
                   <p key={movement.id}>
-                    <strong>{date(movement.occurredOn)}</strong>{movement.periodLabel ? ` · ${movement.periodLabel}` : ""} · {walletHistoryNames[movement.walletId ?? ""] ?? wallets.find((wallet) => wallet.id === movement.walletId)?.name ?? "Billetera"}{movement.kind === "wallet_to_wallet" ? ` → ${walletHistoryNames[movement.destinationWalletId ?? ""] ?? wallets.find((wallet) => wallet.id === movement.destinationWalletId)?.name ?? "Billetera"}` : ""} · {labels[movement.kind as keyof typeof labels] ?? "Movimiento de billetera"} · {money(movement.amountInCents)}{(movement.feeInCents ?? 0) > 0 ? ` · Fee ${money(movement.feeInCents ?? 0)}` : ""}
+                    <strong>{date(movement.occurredOn)}</strong>{movement.periodLabel ? ` · ${movement.periodLabel}` : ""} · {walletHistoryNames[movement.walletId ?? ""] ?? wallets.find((wallet) => wallet.id === movement.walletId)?.name ?? "Billetera o cuenta bancaria"}{movement.kind === "wallet_to_wallet" ? ` → ${walletHistoryNames[movement.destinationWalletId ?? ""] ?? wallets.find((wallet) => wallet.id === movement.destinationWalletId)?.name ?? "Billetera o cuenta bancaria"}` : ""} · {labels[movement.kind as keyof typeof labels] ?? "Movimiento de fondos"} · {money(movement.amountInCents)}{(movement.feeInCents ?? 0) > 0 ? ` · Fee ${money(movement.feeInCents ?? 0)}` : ""}
                   </p>
                 ))}
               </div>
@@ -709,8 +709,8 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                   ) : (
                     <form className="payout-collection-form" onSubmit={(event) => collect(event, item.id)}>
                       <span className="payout-pending-status">Pendiente de acreditación</span>
-                      <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required aria-label="Billetera de destino">
-                        <option disabled value="">Billetera</option>
+                      <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required aria-label="Billetera o cuenta bancaria de destino">
+                        <option disabled value="">Billetera o cuenta bancaria</option>
                         {wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name}</option>)}
                       </select>
                       <input aria-label="Fecha de cobro" defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="collected_on" required type="date" />
