@@ -3066,4 +3066,7 @@ vigente sin aprobacion y evidencia suficiente.
   en revisión 1, sin actividad y con la autorización general aún sin consumir.
   Identidades, conectores, rutas e inventarios actuales se preservan; Alfred permanece
   excluido.
+- **Ejecución inicial:** en Lorena se retiraron siete registros anteriores después de
+  verificar revisión 1 y ausencia total de actividad. El resultado quedó auditado y el
+  inventario reciente de cinco cuentas Tradeify se conservó intacto.
 
