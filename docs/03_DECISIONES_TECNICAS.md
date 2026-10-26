@@ -3056,6 +3056,10 @@ vigente sin aprobacion y evidencia suficiente.
 - **Cambio:** una variación del inventario recarga siempre la vista; durante el
   formulario sólo se siguen suprimiendo recargas provocadas exclusivamente por el
   estado en línea. Así aparecen las cuentas nuevas sin recargar por cada heartbeat.
+- **Inventario transitorio vacío:** algunos ciclos 0.16 informan correctamente las
+  cuentas y pocos segundos después emiten un inventario vacío. Sólo para construir el
+  nuevo inicio, la app conserva durante treinta minutos la última observación no vacía
+  de cada conector. La vista operativa normal continúa usando el inventario más reciente.
 - **Borrón pendiente:** el despliegue general del 24 de octubre había respaldado la
   contabilidad anterior, pero dejó cuentas y vínculos en el circuito vigente hasta la
   confirmación. Una reparación elimina esos residuos sólo para usuarios que continúan

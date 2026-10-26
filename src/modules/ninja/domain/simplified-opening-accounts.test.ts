@@ -59,4 +59,27 @@ describe("simplified opening accounts", () => {
 
     expect(result).toEqual([]);
   });
+
+  it("keeps a recently observed identity account through a transient empty inventory", () => {
+    const result = buildSimplifiedOpeningAccounts({
+      companies: [{ code: "TRADEFY", displayName: "Tradeify", id: "tradeify" }],
+      inventories: [
+        {
+          accounts: [],
+          connectorId: "identity-david",
+          observedAt: "2026-10-26T19:16:40.000Z",
+        },
+        {
+          accounts: [account("FTDFYSLX50691920237", "Tradify")],
+          connectorId: "identity-david",
+          observedAt: "2026-10-26T19:16:32.000Z",
+        },
+      ],
+      registeredAccountKeys: new Set(),
+    });
+
+    expect(result.map((candidate) => candidate.accountName)).toEqual([
+      "FTDFYSLX50691920237",
+    ]);
+  });
 });

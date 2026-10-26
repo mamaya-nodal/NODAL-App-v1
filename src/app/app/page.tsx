@@ -408,6 +408,7 @@ async function renderPrivateAppPage({
     const privileged = serviceUrl && serviceKey ? createServiceClient(serviceUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     }) : null;
+    const recentOpeningInventorySince = new Date(Date.now() - 30 * 60 * 1_000).toISOString();
     const [
       { data: companyRows },
       { data: accountRows },
@@ -417,6 +418,7 @@ async function renderPrivateAppPage({
       { data: ninjaLinkRows },
       { data: ninjaAccountRegistrationExclusionRows },
       { data: ninjaInventoryRows },
+      { data: recentOpeningInventoryRows },
       { data: ninjaOperationProbeRows },
       { data: ninjaReconciliationRows },
       { data: ninjaTransitionRows },
@@ -472,6 +474,13 @@ async function renderPrivateAppPage({
           .from("ninja_account_registration_exclusions")
           .select("connector_id,connection_name,external_account_name"),
         supabase.rpc("get_current_user_ninja_inventory"),
+        (privileged ?? supabase)
+          .from("ninja_inventory_snapshots")
+          .select("connector_id,observed_at,accounts")
+          .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
+          .gte("observed_at", recentOpeningInventorySince)
+          .order("observed_at", { ascending: false })
+          .limit(500),
         supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),
         supabase.rpc("get_current_user_ninja_reconciliation_details", { target_limit: 100 }),
         supabase.rpc("get_current_user_ninja_change_events", { target_limit: 8 }),
@@ -786,7 +795,11 @@ async function renderPrivateAppPage({
     });
     simplifiedOpeningAccounts = buildSimplifiedOpeningAccounts({
       companies,
-      inventories: ninjaInventories.map((inventory) => ({
+      inventories: [
+        ...ninjaInventories,
+        ...((recentOpeningInventoryRows ?? []) as NinjaInventoryRpcRow[])
+          .filter((inventory) => inventory.accounts.length > 0),
+      ].map((inventory) => ({
         accounts: inventory.accounts,
         connectorId: inventory.connector_id,
         observedAt: inventory.observed_at,
