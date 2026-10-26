@@ -8,6 +8,7 @@ export type MasterUserRole = "admin" | "admin_master" | "user";
 
 export type SaveMasterUserRoleInput = Readonly<{
   adminBps: number | null;
+  configurationEnabled: boolean;
   identitiesEnabled: boolean;
   role: MasterUserRole;
   userId: string;
@@ -40,9 +41,13 @@ export async function saveMasterUserRole(
   const userId = String(input.userId ?? "").trim();
   const role = String(input.role ?? "") as MasterUserRole;
   const adminBps = input.adminBps;
+  const configurationEnabled = input.configurationEnabled;
   const identitiesEnabled = input.identitiesEnabled;
 
-  if (!UUID_PATTERN.test(userId) || !["user", "admin", "admin_master"].includes(role) || typeof identitiesEnabled !== "boolean") {
+  if (!UUID_PATTERN.test(userId)
+    || !["user", "admin", "admin_master"].includes(role)
+    || typeof configurationEnabled !== "boolean"
+    || typeof identitiesEnabled !== "boolean") {
     return { message: "Los datos del rol no son válidos.", ok: false };
   }
   if (role !== "user" && (!Number.isInteger(adminBps) || adminBps! < 0 || adminBps! > 10_000)) {
@@ -52,6 +57,7 @@ export async function saveMasterUserRole(
   const db = await requireNodalAdmin();
   const { error } = await db.rpc("admin_update_nodal_user_access", {
     target_admin_bps: role === "user" ? null : adminBps,
+    target_configuration_enabled: configurationEnabled,
     target_identities_enabled: identitiesEnabled,
     target_role: role,
     target_user_id: userId,
@@ -76,5 +82,5 @@ export async function saveMasterUserRole(
   revalidatePath("/app/admin");
   revalidatePath("/app/admin/users");
   revalidatePath("/app/mi-mesa");
-  return { message: "Rol, mesa y acceso a Identidades actualizados con trazabilidad.", ok: true };
+  return { message: "Rol, mesa y accesos actualizados con trazabilidad.", ok: true };
 }

@@ -8,7 +8,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   const supabase = await requireNodalAdmin();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = user
-    ? await supabase.from("nodal_users").select("display_name, email").eq("id", user.id).maybeSingle()
+    ? await supabase.from("nodal_users").select("display_name, email, configuration_enabled").eq("id", user.id).maybeSingle()
     : { data: null };
   const { data: connectorRows } = user
     ? await supabase.rpc("get_current_user_ninja_connector_status_v2")
@@ -25,6 +25,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
         : typeof user?.user_metadata?.picture === "string"
           ? user.user_metadata.picture
           : null}
+      configurationEnabled={profile?.configuration_enabled === true}
       userLabel={profile?.display_name || profile?.email || "Administrador"}
       versionInfo={{
         appRevision: appRelease.revision,

@@ -15,12 +15,13 @@ import {
 type Props = Readonly<{
   avatarUrl?: string | null;
   children: ReactNode;
+  configurationEnabled: boolean;
   scope?: "desk" | "master";
   userLabel: string;
   versionInfo: WorkspaceVersionInfo;
 }>;
 
-export function AdminWorkspace({ avatarUrl, children, scope = "master", userLabel, versionInfo }: Props) {
+export function AdminWorkspace({ avatarUrl, children, configurationEnabled, scope = "master", userLabel, versionInfo }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const demo = scope === "master" && searchParams.get("demo") === "1";
@@ -61,7 +62,7 @@ export function AdminWorkspace({ avatarUrl, children, scope = "master", userLabe
           <div />
           <div className="workspace-top-actions">
             <ThemeToggle />
-            <WorkspaceUserMenu avatarUrl={avatarUrl} userLabel={userLabel} versionInfo={versionInfo} />
+            <WorkspaceUserMenu avatarUrl={avatarUrl} configurationEnabled={configurationEnabled} userLabel={userLabel} versionInfo={versionInfo} />
           </div>
         </header>
         <div className="app-page-shell workspace-content admin-page-shell">{children}</div>

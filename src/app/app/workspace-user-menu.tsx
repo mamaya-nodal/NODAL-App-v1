@@ -19,6 +19,7 @@ type MenuSection = "configuration" | "help" | "version";
 
 type Props = Readonly<{
   avatarUrl?: string | null;
+  configurationEnabled: boolean;
   userLabel: string;
   username?: string;
   versionInfo: WorkspaceVersionInfo;
@@ -35,6 +36,7 @@ function initials(label: string) {
 
 export function WorkspaceUserMenu({
   avatarUrl,
+  configurationEnabled,
   userLabel,
   username,
   versionInfo,
@@ -107,9 +109,11 @@ export function WorkspaceUserMenu({
       {open ? (
         <div className="workspace-user-popover">
           <div aria-label="Menú del usuario" className="workspace-user-options" role="menu">
-            <a href="#configuracion" onClick={() => { setOpen(false); setSection(null); }} role="menuitem">
-              Configuración
-            </a>
+            {configurationEnabled ? (
+              <a href="#configuracion" onClick={() => { setOpen(false); setSection(null); }} role="menuitem">
+                Configuración
+              </a>
+            ) : null}
             <button
               aria-current={section === "help" ? "true" : undefined}
               onClick={() => selectSection("help")}

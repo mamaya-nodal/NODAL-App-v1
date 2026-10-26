@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { mimicalPilotEnabled } from "@/modules/addons/domain/mimical-pilot";
+import { MIMICAL_PRODUCT_KEY } from "@/modules/addons/domain/mimical-pilot";
 import { createInstallerAuthorization, isIdentityId } from "@/modules/ninja/server/installer-authorization";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +16,14 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
-  const { data: active, error } = await supabase.rpc("is_current_user_active");
-  if (error || !active || !mimicalPilotEnabled(user.id)) return new Response("Forbidden", { status: 403 });
+  const [{ data: active, error }, { data: profile, error: profileError }] = await Promise.all([
+    supabase.rpc("is_current_user_active"),
+    supabase.from("nodal_users")
+      .select("configuration_enabled,identities_enabled")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
+  if (error || profileError || !active || !profile?.configuration_enabled) return new Response("Forbidden", { status: 403 });
   let payload: unknown = {};
   try { payload = await request.json(); } catch { /* personal context */ }
   const identityId = payload && typeof payload === "object" && "identityId" in payload
@@ -26,12 +32,13 @@ export async function POST(request: Request) {
   if (identityId !== null && identityId !== undefined && !isIdentityId(identityId)) {
     return Response.json({ error: "La identidad no es válida." }, { status: 422 });
   }
+  if (identityId && !profile.identities_enabled) return new Response("Forbidden", { status: 403 });
   const authorization = createInstallerAuthorization();
   const { error: pairingError } = await supabase.rpc("create_addon_pairing_code", {
     target_code_hash: authorization.codeHash,
     target_expires_at: authorization.expiresAt,
     target_identity_id: identityId ?? null,
-    target_product_key: "mimical",
+    target_product_key: MIMICAL_PRODUCT_KEY,
   });
   if (pairingError) return Response.json({ error: "No se pudo generar el código." }, { status: 409 });
   return Response.json({ code: authorization.code, expiresAt: authorization.expiresAt }, {

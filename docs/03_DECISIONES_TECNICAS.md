@@ -2975,3 +2975,20 @@ vigente sin aprobacion y evidencia suficiente.
 - **Separación:** `Retiro personal` se conserva como opción independiente. El nuevo
   motivo se guarda, audita, muestra y exporta con su clasificación propia.
 
+### APP-204 - Configuración e Identidades como capacidades visibles administradas
+
+- **Fecha:** 2026-10-26. Configuración pasa a habilitarse o deshabilitarse por usuario
+  exclusivamente desde la ficha de Admin Master, con un control equivalente al de
+  Identidades.
+- **Navegación:** cuando una capacidad está deshabilitada, su opción no aparece en la
+  barra lateral, la navegación móvil, el encabezado anterior ni el menú del usuario.
+  Tampoco se renderiza una pantalla vacía ni se admite seleccionarla por hash.
+- **Complementos:** habilitar Configuración activa el derecho personal de MIMICAL.
+  Deshabilitarla vence códigos pendientes, revoca instalaciones y derechos activos e
+  impide descargas o nuevas vinculaciones aunque se conozca la URL.
+- **Valores iniciales:** las altas nuevas comienzan con Configuración e Identidades
+  deshabilitadas. Los derechos MIMICAL vigentes de Julián, Mauricio y Lorena se
+  preservan al migrar y dejan Configuración habilitada para esos usuarios.
+- **Trazabilidad:** rol, mesa y ambas capacidades se guardan en una sola transacción y
+  el cambio queda registrado en el historial de gestión.
+

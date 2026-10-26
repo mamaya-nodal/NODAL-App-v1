@@ -139,6 +139,7 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     display_name: name,
     email: `${id.replace("demo-", "")}@nodal.test`,
     id,
+    configuration_enabled: index % 4 !== 2,
     identities_enabled: index % 5 !== 3,
   }]));
   const identitiesByUser = Object.fromEntries(personSpecs.map(([id, name], index) => [id,

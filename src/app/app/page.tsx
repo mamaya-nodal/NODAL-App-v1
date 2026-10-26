@@ -107,7 +107,6 @@ import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary
 import { IdentitiesWorkspace } from "./identities-workspace";
 import { BrokerAccountClaims, type PendingBrokerAccountView } from "./broker-account-claims";
 import { MimicalConfiguration } from "./mimical-configuration";
-import { mimicalPilotEnabled } from "@/modules/addons/domain/mimical-pilot";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -228,7 +227,7 @@ async function renderPrivateAppPage({
 
   const { data: nodalUser, error: accessError } = await readWithRetry(() => supabase
     .from("nodal_users")
-    .select("id, email, display_name, access_state, access_role, identities_enabled")
+    .select("id, email, display_name, access_state, access_role, identities_enabled, configuration_enabled")
     .eq("id", userId)
     .maybeSingle());
 
@@ -1280,6 +1279,8 @@ async function renderPrivateAppPage({
       administrationScope={administrationScope}
       authorized={allowed}
       avatarUrl={typeof claimsData?.claims.user_metadata?.avatar_url === "string" ? claimsData.claims.user_metadata.avatar_url : null}
+      configurationEnabled={nodalUser?.configuration_enabled === true}
+      identitiesEnabled={nodalUser?.identities_enabled === true}
       initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "accounts" : "home"}
       userLabel={nodalUser?.display_name || nodalUser?.email || userEmail || "Alumno"}
       username={typeof claimsData?.claims.user_metadata?.username === "string" ? claimsData.claims.user_metadata.username : undefined}
@@ -1340,7 +1341,7 @@ async function renderPrivateAppPage({
             <a href="#operaciones">Operaciones</a>
             <a href="#contabilidad">Contabilidad</a>
             {nodalUser?.identities_enabled ? <a href="#identidades">Identidades</a> : null}
-            <a href="#configuracion">Configuración</a>
+            {nodalUser?.configuration_enabled ? <a href="#configuracion">Configuración</a> : null}
             {canOpenDeskAdmin(administrationScope) ? <Link href="/app/mi-mesa">Admin</Link> : null}
             {canOpenMasterAdmin(administrationScope) ? <Link href="/app/admin">Admin Master</Link> : null}
             <form action="/auth/logout" className="logout-form" method="post">
@@ -1584,7 +1585,7 @@ async function renderPrivateAppPage({
         />
       )}
 
-      {allowed ? <MimicalConfiguration enabled={mimicalPilotEnabled(userId)} /> : null}
+      {allowed && nodalUser?.configuration_enabled ? <MimicalConfiguration enabled /> : null}
 
       {allowed && !selection && (
         <p className="notice">

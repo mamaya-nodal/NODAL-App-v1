@@ -18,9 +18,11 @@ import {
   type WorkspaceVersionInfo,
 } from "./workspace-user-menu";
 
-type View = "home" | "accounts" | "operations" | "accounting" | "identities" | "configuration";
+export type WorkspaceView = "home" | "accounts" | "operations" | "accounting" | "identities" | "configuration";
 
-const views: ReadonlyArray<Readonly<{ hash: string; icon: WorkspaceIconName; label: string; value: View }>> = [
+type WorkspaceViewDefinition = Readonly<{ hash: string; icon: WorkspaceIconName; label: string; value: WorkspaceView }>;
+
+const views: ReadonlyArray<WorkspaceViewDefinition> = [
   { hash: "inicio", icon: "home", label: "Inicio", value: "home" },
   { hash: "cuentas", icon: "plus", label: "Cuentas", value: "accounts" },
   { hash: "operaciones", icon: "daily", label: "Operaciones", value: "operations" },
@@ -29,7 +31,7 @@ const views: ReadonlyArray<Readonly<{ hash: string; icon: WorkspaceIconName; lab
   { hash: "configuracion", icon: "settings", label: "Configuración", value: "configuration" },
 ];
 
-const legacyViews: Readonly<Record<string, View>> = {
+const legacyViews: Readonly<Record<string, WorkspaceView>> = {
   actividad: "accounting",
   compras: "accounts",
   "control-diario": "operations",
@@ -42,15 +44,30 @@ type Props = Readonly<{
   authorized: boolean;
   avatarUrl?: string | null;
   children: ReactNode;
-  initialView?: View;
+  configurationEnabled: boolean;
+  identitiesEnabled: boolean;
+  initialView?: WorkspaceView;
   userLabel: string;
   username?: string;
   versionInfo: WorkspaceVersionInfo;
 }>;
 
-function viewFromHash(fallback: View): View {
+export function availableWorkspaceViews(input: Readonly<{
+  configurationEnabled: boolean;
+  identitiesEnabled: boolean;
+}>): ReadonlyArray<WorkspaceViewDefinition> {
+  return views.filter((view) => (
+    (view.value !== "identities" || input.identitiesEnabled)
+    && (view.value !== "configuration" || input.configurationEnabled)
+  ));
+}
+
+function viewFromHash(fallback: WorkspaceView, availableViews: ReadonlyArray<WorkspaceViewDefinition>): WorkspaceView {
   const hash = window.location.hash.replace("#", "");
-  return views.find((view) => view.hash === hash)?.value ?? legacyViews[hash] ?? fallback;
+  const directView = availableViews.find((view) => view.hash === hash)?.value;
+  if (directView) return directView;
+  const legacyView = legacyViews[hash];
+  return legacyView && availableViews.some((view) => view.value === legacyView) ? legacyView : fallback;
 }
 
 function subscribe(callback: () => void) {
@@ -63,17 +80,21 @@ export function AppWorkspace({
   authorized,
   avatarUrl,
   children,
+  configurationEnabled,
+  identitiesEnabled,
   initialView = "home",
   userLabel,
   username,
   versionInfo,
 }: Props) {
+  const visibleViews = availableWorkspaceViews({ configurationEnabled, identitiesEnabled });
+  const permittedInitialView = visibleViews.some((view) => view.value === initialView) ? initialView : "home";
   // Una actualizaciÃ³n de datos no debe reinterpretar avisos viejos de la URL
   // ni sacar al usuario de la pantalla que estaba usando.
-  const initialViewRef = useRef(initialView);
+  const initialViewRef = useRef(permittedInitialView);
   const activeView = useSyncExternalStore(
     subscribe,
-    () => viewFromHash(initialViewRef.current),
+    () => viewFromHash(initialViewRef.current, visibleViews),
     () => initialViewRef.current,
   );
 
@@ -86,7 +107,9 @@ export function AppWorkspace({
     if (!link) return;
 
     const hash = link.getAttribute("href")?.slice(1);
-    if (!views.some((view) => view.hash === hash) && !legacyViews[hash ?? ""]) return;
+    const legacyView = legacyViews[hash ?? ""];
+    if (!visibleViews.some((view) => view.hash === hash)
+      && (!legacyView || !visibleViews.some((view) => view.value === legacyView))) return;
 
     event.preventDefault();
     window.history.replaceState(null, "", `#${hash}`);
@@ -111,7 +134,7 @@ export function AppWorkspace({
         </a>
 
         <nav className="workspace-navigation" aria-label="Navegación principal">
-          {views.map((view) => (
+          {visibleViews.map((view) => (
             <a
               aria-current={activeView === view.value ? "page" : undefined}
               href={`#${view.hash}`}
@@ -142,6 +165,7 @@ export function AppWorkspace({
             <ThemeToggle />
             <WorkspaceUserMenu
               avatarUrl={avatarUrl}
+              configurationEnabled={configurationEnabled}
               userLabel={userLabel}
               username={username}
               versionInfo={versionInfo}
@@ -152,7 +176,7 @@ export function AppWorkspace({
         <div className="app-page-shell workspace-content">{children}</div>
 
         <nav className="workspace-mobile-navigation" aria-label="Navegación móvil">
-          {views.map((view) => (
+          {visibleViews.map((view) => (
             <a
               aria-current={activeView === view.value ? "page" : undefined}
               href={`#${view.hash}`}

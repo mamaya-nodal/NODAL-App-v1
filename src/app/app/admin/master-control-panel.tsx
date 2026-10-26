@@ -228,6 +228,7 @@ function SystemBoard({ data, onOpenUser, people, selectedUnitId }: Readonly<{ da
             <span>Usuario: {person.distribution.user_bps / 100}% · NODAL: {person.distribution.nodal_bps / 100}%</span>
             <span>Bolsa admin: {person.distribution.admin_pool_bps / 100}%</span>
             <span>Identidades: {profile?.identities_enabled ? "habilitadas" : "no habilitadas"} · {activeIdentities}/{identities.length}</span>
+            <span>Configuración: {profile?.configuration_enabled ? "habilitada" : "no habilitada"}</span>
             <span>Ninja: {connector?.active ? "Activo" : "Desactivado"}{connector?.version ? ` · v${connector.version}` : " · sin versión"}</span>
           </small> : isExpanded ? <small>{node.detail}</small> : null}
         </article>;
@@ -250,6 +251,7 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   const [nodalPercent, setNodalPercent] = useState(String(person.distribution.nodal_bps / 100));
   const [adminPoolPercent, setAdminPoolPercent] = useState(String(person.distribution.admin_pool_bps / 100));
   const [distributionReason, setDistributionReason] = useState("Acuerdo comercial vigente");
+  const [configurationEnabled, setConfigurationEnabled] = useState(profile?.configuration_enabled === true);
   const [identitiesEnabled, setIdentitiesEnabled] = useState(profile?.identities_enabled === true);
   const [result, setResult] = useState("");
   const [saving, setSaving] = useState(false);
@@ -312,6 +314,7 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
     setResult("");
     const response = await saveMasterUserRole({
       adminBps: role === "user" ? null : (managedDesk?.terms.nodal_bps ?? 10_000),
+      configurationEnabled,
       identitiesEnabled,
       role,
       userId: person.id,
@@ -367,7 +370,7 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
       <button className="secondary-action" onClick={saveAssignments} type="button">{saving ? "Guardando…" : "Guardar usuarios a cargo"}</button>
     </fieldset> : null}
     {result ? <p className="master-user-role-result" role="alert">{result}</p> : null}
-    <div className="desk-user-switches"><article className="desk-ninja-state"><span>Conexión Ninja<small>Última transmisión: {dateTimeLabel(connector?.lastSeenAt)}</small></span><div><strong className={connector?.active ? "active" : "inactive"}>{connector?.active ? "Activo" : "Desactivado"}</strong><small>{connector?.version ? `Conector v${connector.version}` : "Sin versión registrada"}</small></div></article><label><span>Identidades<small>Habilitación administrada</small></span><select disabled={data.demo || saving} onChange={(event) => { setIdentitiesEnabled(event.target.value === "enabled"); setResult(""); }} value={identitiesEnabled ? "enabled" : "disabled"}><option value="disabled">No habilitadas</option><option value="enabled">Habilitadas</option></select></label></div>
+    <div className="desk-user-switches"><article className="desk-ninja-state"><span>Conexión Ninja<small>Última transmisión: {dateTimeLabel(connector?.lastSeenAt)}</small></span><div><strong className={connector?.active ? "active" : "inactive"}>{connector?.active ? "Activo" : "Desactivado"}</strong><small>{connector?.version ? `Conector v${connector.version}` : "Sin versión registrada"}</small></div></article><label><span>Identidades<small>Habilitación administrada</small></span><select disabled={data.demo || saving} onChange={(event) => { setIdentitiesEnabled(event.target.value === "enabled"); setResult(""); }} value={identitiesEnabled ? "enabled" : "disabled"}><option value="disabled">No habilitadas</option><option value="enabled">Habilitadas</option></select></label><label><span>Configuración<small>Complementos administrados</small></span><select disabled={data.demo || saving} onChange={(event) => { setConfigurationEnabled(event.target.value === "enabled"); setResult(""); }} value={configurationEnabled ? "enabled" : "disabled"}><option value="disabled">No habilitada</option><option value="enabled">Habilitada</option></select></label></div>
     {identities.length ? <div className="desk-identities-table"><table><thead><tr><th>ID</th><th>Nombre</th><th>Estado</th></tr></thead><tbody>{identities.map((identity) => <tr key={identity.id}><td>{identity.id.slice(0, 8)}</td><td>{identity.name}</td><td>{identity.state}</td></tr>)}</tbody></table></div> : null}
     <footer><button className="secondary-action" onClick={onClose} type="button">Cerrar</button>{!data.demo ? <button className="primary-action" disabled={saving} onClick={saveRole} type="button">{saving ? "Guardando…" : "Guardar cambios"}</button> : null}{data.demo ? <button className="primary-action" disabled type="button">Registros simulados</button> : <Link className="primary-action" href={`/app/admin/${person.id}`}>Ver registros del usuario</Link>}</footer>
   </section></div>;

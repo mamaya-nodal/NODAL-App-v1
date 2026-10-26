@@ -17,7 +17,7 @@ export default async function MyDeskLayout({ children }: Readonly<{ children: Re
   if (!user) redirect("/");
   const { data: profile } = await supabase
     .from("nodal_users")
-    .select("display_name,email")
+    .select("display_name,email,configuration_enabled")
     .eq("id", user.id)
     .maybeSingle();
   const { data: connectorRows } = await supabase.rpc(
@@ -30,6 +30,7 @@ export default async function MyDeskLayout({ children }: Readonly<{ children: Re
 
   return (
     <AdminWorkspace
+      configurationEnabled={profile?.configuration_enabled === true}
       scope="desk"
       userLabel={profile?.display_name || profile?.email || "Administrador de mesa"}
       versionInfo={{

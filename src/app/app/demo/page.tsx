@@ -40,6 +40,8 @@ export default async function AccountingDemoPage() {
       administrationScope={administrationScope}
       authorized
       avatarUrl={typeof user?.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null}
+      configurationEnabled
+      identitiesEnabled
       initialView="accounts"
       userLabel={nodalUser?.display_name || nodalUser?.email || user?.email || "Simulación"}
       username={typeof user?.user_metadata?.username === "string" ? user.user_metadata.username : undefined}

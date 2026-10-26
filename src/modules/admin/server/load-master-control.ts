@@ -37,7 +37,7 @@ export async function loadMasterControl(
   const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult, openingRevisionRequestsResult] = await Promise.all([
     db.from("nodal_units").select("id,ordinal,name,code,root_desk_id,responsible_name,responsible_email,agreement_bps").order("ordinal"),
     db.from("nodal_users")
-      .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled")
+      .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled,configuration_enabled")
       .in("id", userIds),
     db.from("nodal_user_identifiers")
       .select("user_id,desk_id,display_id,valid_from,valid_to,reason")

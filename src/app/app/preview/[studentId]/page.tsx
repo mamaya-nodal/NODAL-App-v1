@@ -135,6 +135,8 @@ export default async function AdminUserPreview({ params }: Props) {
     <AppWorkspace
       administrationScope={{ kind: "master" }}
       authorized
+      configurationEnabled={false}
+      identitiesEnabled={false}
       userLabel={student.display_name || student.email}
       username={student.display_name || student.email}
       versionInfo={{
