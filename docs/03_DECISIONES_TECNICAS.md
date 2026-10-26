@@ -3006,3 +3006,20 @@ vigente sin aprobacion y evidencia suficiente.
 - **Duplicados:** una cuenta ya registrada con ese conector, conexión y número no vuelve
   a ofrecerse ni puede incorporarse dos veces dentro de la misma apertura.
 
+### APP-206 - MIMICAL admite Stop Limit inversas con offset
+
+- **Fecha:** 2026-10-26. Corrección solicitada por Mauricio a partir de cuatro
+  bloqueos documentados en SIM en la versión 1.1.0 con licencia NODAL.
+- **Causa:** Transform exigía que límite y stop fueran iguales para una StopLimit
+  de ratio negativo. Las entradas con un tick de offset quedaban sin réplica.
+- **Cambio:** Buy/Sell StopLimit se admiten con offset. Las seguidoras positivas
+  conservan ambos precios; la inversa genera Limit opuesta al precio de activación,
+  preservando el criterio que ya se aplicaba a StopMarket y StopLimit sin offset.
+- **Alcance:** FileVersion 1.1.0.1, AssemblyVersion y protocolo de licencia 1.1.0.
+  No cambia habilitaciones, credenciales, rutas ATM ni parámetros del trailing.
+- **Validación:** 324 comprobaciones del Transform real, 51 controles anteriores,
+  31 del planificador, 8 de licencia, evidencia SIM histórica y estructura/hash
+  del paquete. No se declara una nueva ejecución SIM de órdenes en esta ronda.
+- **Trazabilidad:** `docs/MIMICAL_STOPLIMIT_2026-10-26.md` contiene diagnóstico,
+  versión, hashes, instrucciones y checkpoint de recuperación.
+

@@ -5,4 +5,4 @@ using System.Reflection;
 [assembly: AssemblyCompany("NODAL")]
 [assembly: AssemblyProduct("NodalBots MIMICAL")]
 [assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.1")]

@@ -954,7 +954,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 configurationPending = false;
                 SaveSettings();
                 SetStatus("ACTIVO · " + leader.Name + " → " + String.Join(", ", followers.Select(f => f.Account.Name + " " + f.Ratio.ToString(CultureInfo.InvariantCulture))), ColorBrush(90, 211, 134));
-                Log("CONFIG", leader.Name, leaderInstrument.FullName, "", "", "", "", 0, 0, 0, 0, "log=" + logPath + ";build=1.1.0-nodal-license");
+                Log("CONFIG", leader.Name, leaderInstrument.FullName, "", "", "", "", 0, 0, 0, 0, "log=" + logPath + ";build=1.1.0.1-stoplimit");
                 foreach (FollowerConfig follower in followers)
                     Log("FOLLOWER_CONFIG", follower.Account.Name, follower.Instrument.FullName, "", "", "", "", 0, 0, 0, 0, "ratio=" + follower.Ratio.ToString(CultureInfo.InvariantCulture) + ";crossOrder=" + follower.CrossOrder.ToString());
             }
@@ -2509,8 +2509,12 @@ namespace NinjaTrader.NinjaScript.AddOns
             {
                 type = OrderType.Limit; targetLimit = stop; targetStop = 0; return;
             }
-            if (source.OrderType == OrderType.StopLimit && Same(limit, stop))
+            if (source.OrderType == OrderType.StopLimit)
             {
+                // Like a StopMarket, the inverse order rests at the leader's
+                // activation price. The limit is the leader's execution offset,
+                // not another activation level for the opposite position.
+                // This mapping is also used for moves and ATM stop exits.
                 type = OrderType.Limit; targetLimit = stop; targetStop = 0; return;
             }
             throw new NotSupportedException("Combinación inversa no validada: " + source.OrderType + " limit=" + limit + " stop=" + stop);
