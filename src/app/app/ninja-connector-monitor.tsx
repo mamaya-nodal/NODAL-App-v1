@@ -11,6 +11,14 @@ type Props = Readonly<{
   refreshOnChange?: boolean;
 }>;
 
+export function shouldReloadForNinjaStatus(input: Readonly<{
+  connectionChanged: boolean;
+  inventoryChanged: boolean;
+  refreshOnConnectionChange: boolean;
+}>) {
+  return input.inventoryChanged || (input.refreshOnConnectionChange && input.connectionChanged);
+}
+
 export function NinjaConnectorMonitor({ inventoryRevision, linked = true, online, refreshOnChange = true }: Props) {
   useEffect(() => {
     let active = true;
@@ -31,7 +39,12 @@ export function NinjaConnectorMonitor({ inventoryRevision, linked = true, online
         const inventoryChanged = inventoryRevision !== undefined &&
           typeof result.inventoryRevision === "string" &&
           result.inventoryRevision !== inventoryRevision;
-        if (active && response.ok && refreshOnChange && (Boolean(result.linked) !== linked || Boolean(result.online) !== online || inventoryChanged)) {
+        const connectionChanged = Boolean(result.linked) !== linked || Boolean(result.online) !== online;
+        if (active && response.ok && shouldReloadForNinjaStatus({
+          connectionChanged,
+          inventoryChanged,
+          refreshOnConnectionChange: refreshOnChange,
+        })) {
           // Una recarga completa conserva el hash de la sección activa. El refresh
           // del router puede reconstruir la URL del servidor sin ese fragmento.
           window.location.reload();

@@ -3046,3 +3046,20 @@ vigente sin aprobacion y evidencia suficiente.
   PC remota; la atribución surge del código, no del archivo descargado. Reinicios de
   NinjaTrader y cierres de sesión web conservan la credencial local ya vinculada.
 
+### APP-208 - Inventario de identidades visible durante el inicio simplificado
+
+- **Fecha:** 2026-10-26. Corrección verificada con el caso real de Lorena y cinco
+  cuentas Tradeify Funded transmitidas por el conector de una identidad.
+- **Causa:** la apertura podía quedar renderizada con inventario cero si el conector
+  de la identidad transmitía después de abrir el formulario. El monitor detectaba el
+  cambio, pero suprimía la recarga mientras la apertura estaba habilitada.
+- **Cambio:** una variación del inventario recarga siempre la vista; durante el
+  formulario sólo se siguen suprimiendo recargas provocadas exclusivamente por el
+  estado en línea. Así aparecen las cuentas nuevas sin recargar por cada heartbeat.
+- **Borrón pendiente:** el despliegue general del 24 de octubre había respaldado la
+  contabilidad anterior, pero dejó cuentas y vínculos en el circuito vigente hasta la
+  confirmación. Una reparación elimina esos residuos sólo para usuarios que continúan
+  en revisión 1, sin actividad y con la autorización general aún sin consumir.
+  Identidades, conectores, rutas e inventarios actuales se preservan; Alfred permanece
+  excluido.
+
