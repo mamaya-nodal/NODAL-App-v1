@@ -18,8 +18,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\integrations\mimical\t
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\integrations\mimical\tests\Test-CrossedEntry.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\integrations\mimical\tests\Test-CrossedEntryEvidence.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\integrations\mimical\tests\Test-MimicalLicense.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\integrations\mimical\Empaquetar.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\integrations\mimical\tests\Test-MimicalPackage.ps1
 ```
 
 El artefacto servido por la app está en `private/downloads/MIMICAL-NodalBots.zip`.
 No contiene credenciales ni un código prefijado; el código se genera después de la
 autenticación Google y se canjea una sola vez.
+
+El importador de NinjaTrader exige `Info.xml` en la raíz del ZIP. El paquete debe
+contener exactamente `Info.xml`, `AdditionalReferences.txt`, `Mimical.cs` y
+`NodalBots.Mimical.dll`, sin una carpeta contenedora adicional.

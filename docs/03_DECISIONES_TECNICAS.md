@@ -2925,3 +2925,16 @@ vigente sin aprobacion y evidencia suficiente.
 - **Reglas:** descarga autenticada, código de un solo uso, credencial local protegida,
   revalidación y protección del ciclo activo permanecen idénticas al piloto original.
 
+### APP-200 - Paquete MIMICAL importable por NinjaTrader
+
+- **Fecha:** 2026-10-26. Corrección posterior a la primera descarga del piloto.
+- **Causa:** el ZIP 1.1 contenía `Info.xml` y los demás archivos dentro de una carpeta
+  intermedia `MIMICAL_1.1`. El importador de NinjaTrader exige encontrar `Info.xml`
+  directamente en la raíz y por eso informaba que faltaba o estaba corrupto.
+- **Corrección:** el artefacto conserva la DLL 1.1 ya verificada, pero publica en la
+  raíz `Info.xml`, `AdditionalReferences.txt`, `Mimical.cs` y
+  `NodalBots.Mimical.dll`, igual que el paquete 1.0 de referencia.
+- **Regresión:** el proceso de empaquetado y una prueba automática validan la lista
+  exacta de entradas, la ausencia de carpetas contenedoras, el XML, la referencia y
+  la cabecera de la DLL antes de publicar otra versión.
+

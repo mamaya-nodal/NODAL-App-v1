@@ -11,6 +11,9 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# Compilación local de MIMICAL; el ZIP publicable se versiona por separado.
+integrations/mimical/compilacion_local/
+
 # Estado interno generado por Supabase CLI.
 supabase/.temp/
 supabase/.branches/
