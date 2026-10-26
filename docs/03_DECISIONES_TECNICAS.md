@@ -3022,4 +3022,9 @@ vigente sin aprobacion y evidencia suficiente.
   del paquete. No se declara una nueva ejecución SIM de órdenes en esta ronda.
 - **Trazabilidad:** `docs/MIMICAL_STOPLIMIT_2026-10-26.md` contiene diagnóstico,
   versión, hashes, instrucciones y checkpoint de recuperación.
+- **Publicación en la app:** la descarga autenticada conserva el ZIP verificado con
+  SHA-256 `CFA20A84851E92FFD99E9E75E8D2AF76CCBC14ADCBB6E933B51124B76EF9B045`
+  y lo presenta como `MIMICAL-1.1.0.1-NodalBots.zip`. El protocolo de licencia
+  continúa en `1.1.0`; sólo se alinea la versión visible y el nombre del artefacto
+  con su `FileVersion` corregida.
 
