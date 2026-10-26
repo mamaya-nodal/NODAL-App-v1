@@ -2916,3 +2916,12 @@ vigente sin aprobacion y evidencia suficiente.
   tiene derecho inicial. La habilitación visual en tarjetas de identidades y el
   despliegue general quedan sujetos a validar primero este recorrido personal en SIM.
 
+### APP-199 - Segundo usuario del piloto MIMICAL
+
+- **Fecha:** 2026-10-26. Mauricio solicita probar personalmente el mismo recorrido ya
+  publicado para Julián.
+- **Alcance:** se habilita el contexto personal de Mauricio, conservando el de Julián.
+  No se habilitan otros usuarios ni instalaciones de identidades.
+- **Reglas:** descarga autenticada, código de un solo uso, credencial local protegida,
+  revalidación y protección del ciclo activo permanecen idénticas al piloto original.
+

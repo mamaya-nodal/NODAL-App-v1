@@ -5,6 +5,7 @@ export const MIMICAL_VERSION = "1.1.0";
 // no alcanza con que el componente exista o que el usuario conozca la URL.
 const MIMICAL_PILOT_USERS = new Set([
   "0c90d147-a048-48c9-8f89-e095bbadc249", // Julian Agustin Seco
+  "f2f5f816-ec4f-46e1-b216-5267aeadc635", // Mauricio Amaya
 ]);
 
 export function mimicalPilotEnabled(userId: string) {
