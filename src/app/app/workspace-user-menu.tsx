@@ -107,14 +107,9 @@ export function WorkspaceUserMenu({
       {open ? (
         <div className="workspace-user-popover">
           <div aria-label="Menú del usuario" className="workspace-user-options" role="menu">
-            <button
-              aria-current={section === "configuration" ? "true" : undefined}
-              onClick={() => selectSection("configuration")}
-              role="menuitem"
-              type="button"
-            >
+            <a href="#configuracion" onClick={() => { setOpen(false); setSection(null); }} role="menuitem">
               Configuración
-            </button>
+            </a>
             <button
               aria-current={section === "help" ? "true" : undefined}
               onClick={() => selectSection("help")}
@@ -132,13 +127,6 @@ export function WorkspaceUserMenu({
               Versión
             </button>
           </div>
-
-          {section === "configuration" ? (
-            <div className="workspace-user-section">
-              <strong>Configuración</strong>
-              <p>Las preferencias personales se incorporarán en este espacio.</p>
-            </div>
-          ) : null}
 
           {section === "help" ? (
             <div className="workspace-user-section">

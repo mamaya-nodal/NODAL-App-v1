@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Library</OutputType>
+    <AssemblyName>NodalBots.Mimical</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <LangVersion>13.0</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Mimical.cs" />
+    <Compile Include="MimicalLicense.cs" />
+    <Compile Include="Mimical.AssemblyInfo.cs" />
+    <Reference Include="NinjaTrader.Core"><HintPath>C:\Program Files\NinjaTrader 8\bin\NinjaTrader.Core.dll</HintPath></Reference>
+    <Reference Include="NinjaTrader.Gui"><HintPath>C:\Program Files\NinjaTrader 8\bin\NinjaTrader.Gui.dll</HintPath></Reference>
+    <Reference Include="WindowsBase" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+  </ItemGroup>
+</Project>

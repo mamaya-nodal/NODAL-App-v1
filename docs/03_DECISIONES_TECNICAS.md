@@ -2893,3 +2893,25 @@ vigente sin aprobacion y evidencia suficiente.
 - **Garantías:** el reinicio es transaccional, conserva respaldo y auditoría, elimina
   exclusiones antiguas de registro y verifica que Alfred permanezca idéntico.
 
+### APP-198 - Piloto de MIMICAL vinculado a NODAL con Julián
+
+- **Fecha:** 2026-10-26. Implementación inicial autorizada para probar el circuito
+  completo con Julián antes de habilitarlo a otros usuarios o identidades.
+- **Acceso:** el inicio de sesión con Google no es una licencia transportable. Sólo
+  autoriza a Julián, dentro de NODAL App, a descargar el ZIP vigente y generar un
+  código aleatorio de ocho caracteres, válido cinco minutos y utilizable una vez.
+- **Instalación:** MIMICAL canjea el código desde NinjaTrader por una credencial de
+  instalación. El token no se guarda en texto plano: Windows lo protege con DPAPI para
+  el usuario local. Copiar el ZIP o conocer la URL no concede acceso.
+- **Autorización continua:** el servidor vuelve a comprobar el producto, el usuario,
+  el contexto y la instalación. La baja del usuario, del derecho o de la identidad
+  impide iniciar ciclos nuevos. Reinstalar sin la credencial local exige otro código.
+- **Seguridad operativa:** licenciamiento y motor de órdenes están separados. Una baja,
+  un rechazo o una indisponibilidad de red no cancela órdenes, no ejecuta `Flatten` y
+  no interrumpe protecciones del ciclo ya iniciado; el bloqueo se aplica únicamente a
+  un ciclo nuevo.
+- **Alcance del piloto:** la interfaz personal aparece en `Configuración > Complementos`.
+  Las tablas y funciones aceptan contexto personal o de identidad, pero sólo Julián
+  tiene derecho inicial. La habilitación visual en tarjetas de identidades y el
+  despliegue general quedan sujetos a validar primero este recorrido personal en SIM.
+

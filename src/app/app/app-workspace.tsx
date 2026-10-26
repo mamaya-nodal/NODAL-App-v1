@@ -18,7 +18,7 @@ import {
   type WorkspaceVersionInfo,
 } from "./workspace-user-menu";
 
-type View = "home" | "accounts" | "operations" | "accounting" | "identities";
+type View = "home" | "accounts" | "operations" | "accounting" | "identities" | "configuration";
 
 const views: ReadonlyArray<Readonly<{ hash: string; icon: WorkspaceIconName; label: string; value: View }>> = [
   { hash: "inicio", icon: "home", label: "Inicio", value: "home" },
@@ -26,6 +26,7 @@ const views: ReadonlyArray<Readonly<{ hash: string; icon: WorkspaceIconName; lab
   { hash: "operaciones", icon: "daily", label: "Operaciones", value: "operations" },
   { hash: "contabilidad", icon: "summary", label: "Contabilidad", value: "accounting" },
   { hash: "identidades", icon: "identities", label: "Identidades", value: "identities" },
+  { hash: "configuracion", icon: "settings", label: "Configuración", value: "configuration" },
 ];
 
 const legacyViews: Readonly<Record<string, View>> = {

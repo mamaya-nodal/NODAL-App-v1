@@ -106,6 +106,8 @@ import { OpeningAccountReferences, OpeningOperationReference } from "./opening-s
 import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary";
 import { IdentitiesWorkspace } from "./identities-workspace";
 import { BrokerAccountClaims, type PendingBrokerAccountView } from "./broker-account-claims";
+import { MimicalConfiguration } from "./mimical-configuration";
+import { mimicalPilotEnabled } from "@/modules/addons/domain/mimical-pilot";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -1338,6 +1340,7 @@ async function renderPrivateAppPage({
             <a href="#operaciones">Operaciones</a>
             <a href="#contabilidad">Contabilidad</a>
             {nodalUser?.identities_enabled ? <a href="#identidades">Identidades</a> : null}
+            <a href="#configuracion">Configuración</a>
             {canOpenDeskAdmin(administrationScope) ? <Link href="/app/mi-mesa">Admin</Link> : null}
             {canOpenMasterAdmin(administrationScope) ? <Link href="/app/admin">Admin Master</Link> : null}
             <form action="/auth/logout" className="logout-form" method="post">
@@ -1580,6 +1583,8 @@ async function renderPrivateAppPage({
           workspaceId={selection.workspace.id}
         />
       )}
+
+      {allowed ? <MimicalConfiguration enabled={mimicalPilotEnabled(userId)} /> : null}
 
       {allowed && !selection && (
         <p className="notice">
