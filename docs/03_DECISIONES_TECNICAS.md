@@ -3202,3 +3202,15 @@ vigente sin aprobacion y evidencia suficiente.
   `SET CONSTRAINTS ALL DEFERRED`. Esto evita que el `search_path` cerrado impida
   resolver por nombre las dos claves foráneas circulares de unidad y mesa raíz.
 
+### APP-218 - El consolidado Admin Master usa una lectura privilegiada posterior a la autorización
+
+- **Fecha:** 2026-10-27. El acceso al panel se autoriza primero con la sesión y el
+  rol Admin Master. Una vez autorizado, el consolidado económico se reconstruye
+  en el servidor con el cliente privilegiado, porque las políticas de privacidad
+  de cada usuario impiden que una sesión común lea cuentas, compras y operaciones
+  ajenas.
+- **Alcance:** la lectura privilegiada se limita al informe oficial consolidado.
+  Las demás vistas administrativas conservan su cliente acotado por sesión.
+- **Motivo:** separar autenticación de autorización y lectura evita que el panel
+  muestre ceros falsos mientras la contabilidad individual sí contiene actividad.
+

@@ -1,4 +1,4 @@
-import { requireNodalAdmin } from "./admin-access";
+import { adminReportingDb } from "./admin-reporting-db";
 import { readAll } from "./read-all";
 import { loadPeriodSummaries } from "./load-period-summaries";
 import { accountingPeriodMonthAt } from "@/modules/accounting/domain/period-calendar";
@@ -18,7 +18,7 @@ export async function loadDesks(
   requestedMonth?: string,
   options?: Readonly<{ officialMasterReporting?: boolean }>,
 ) {
-  const db = await requireNodalAdmin();
+  const db = await adminReportingDb(Boolean(options?.officialMasterReporting));
   const [users, spaces, desks, terms, userTerms, distributions, distributionShares, history] = await Promise.all([
     readAll(db
       .from("nodal_users")
