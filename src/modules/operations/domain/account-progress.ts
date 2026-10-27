@@ -49,6 +49,7 @@ export function advancePhaseThroughApprovedPayouts(
 }
 
 export function resolveCurrentAccountProgress(input: Readonly<{
+  baseline?: Readonly<{ completedTradeDays: number; phase: AccountPhase }> | null;
   entries: readonly AccountProgressEntry[];
   observedClosedTradeCount?: number;
   operationalState: AccountOperationalState | null;
@@ -62,7 +63,9 @@ export function resolveCurrentAccountProgress(input: Readonly<{
       input.entries.some((entry) => entry.phase === candidate) ? candidate : latest,
     null);
     phase = input.operationalState === "Funded" || input.operationalState === "Live"
-      ? latestRecordedPhase && latestRecordedPhase !== "Evaluacion" ? latestRecordedPhase : "Primera vuelta"
+      ? latestRecordedPhase && latestRecordedPhase !== "Evaluacion"
+        ? latestRecordedPhase
+        : input.baseline?.phase && input.baseline.phase !== "Evaluacion" ? input.baseline.phase : "Primera vuelta"
       : latestRecordedPhase ?? "Evaluacion";
     phase = advancePhaseThroughApprovedPayouts(phase, input.payouts);
   }
@@ -75,9 +78,11 @@ export function resolveCurrentAccountProgress(input: Readonly<{
   // numeración se reinicia y sólo las entradas de la nueva vuelta son seguras.
   const canUseObservedCount = phase === "Evaluacion"
     || (phase === "Primera vuelta" && input.payouts.length === 0);
-  const completedTrades = canUseObservedCount
+  const observedTrades = canUseObservedCount
     ? Math.max(recordedTrades, input.observedClosedTradeCount ?? 0)
     : recordedTrades;
+  const baselineCompletedTrades = input.baseline?.phase === phase ? input.baseline.completedTradeDays : 0;
+  const completedTrades = baselineCompletedTrades + observedTrades;
   return { phase, tradeDay: completedTrades + 1 };
 }
 

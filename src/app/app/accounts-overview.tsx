@@ -16,6 +16,7 @@ import {
   accountPowerLevel,
   accountProgressLabel,
   resolveCurrentAccountProgress,
+  type AccountPhase,
   type AccountOperationalState,
   type ApprovedAccountPayout,
 } from "@/modules/operations/domain/account-progress";
@@ -44,6 +45,8 @@ export type AccountOverviewAccount = RegisterAccount & Readonly<{
   canDelete?: boolean;
   canEditPurchase?: boolean;
   currentCashValueInCents: number | null;
+  baselineCompletedTradeDays?: number;
+  baselinePhase?: AccountPhase | null;
   currentOperationalState: AccountOperationalState | null;
   initialBalanceInCents: number | null;
   minimumNetLiquidationInCents: number | null;
@@ -51,6 +54,7 @@ export type AccountOverviewAccount = RegisterAccount & Readonly<{
   periodLabel: string;
   periodMonth: string;
   purchaseWalletId: string | null;
+  openInvestmentInCents?: number;
   technicalTradeCount: number;
   economicHistory?: AccountEconomicHistoryRow[];
 }>;
@@ -121,6 +125,10 @@ function presentation(
     account,
     operationalState,
     progress: resolveCurrentAccountProgress({
+      baseline: account.baselinePhase ? {
+        completedTradeDays: account.baselineCompletedTradeDays ?? 0,
+        phase: account.baselinePhase,
+      } : null,
       entries: accountEntries,
       observedClosedTradeCount: account.technicalTradeCount,
       operationalState,
@@ -392,7 +400,7 @@ export function AccountsOverview({ accounts, currentPeriodMonth, entries, payout
   const virgin = visible.filter((item) => item.account.state === "virgin");
   const closed = visible.filter((item) => item.account.state === "closed");
   const closedPeriodCount = new Set(closed.map((item) => item.account.periodMonth)).size;
-  const invested = currentItems.reduce((total, item) => total + (item.account.priceInCents ?? 0), 0);
+  const invested = currentItems.reduce((total, item) => total + (item.account.openInvestmentInCents ?? item.account.priceInCents ?? 0), 0);
 
   return (
     <>

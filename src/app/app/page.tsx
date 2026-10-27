@@ -51,6 +51,8 @@ import type {
 } from "@/modules/operations/domain/account-phase-results";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
 import { isPayoutEligibleAccount } from "@/modules/operations/domain/account-progress";
+import type { AccountPhase } from "@/modules/operations/domain/account-progress";
+import { resolveOpenInvestmentInCents } from "@/modules/operations/domain/open-investment";
 import {
   buildOperationalSummary,
   type OperationalSummary,
@@ -467,7 +469,7 @@ async function renderPrivateAppPage({
           .order("occurred_on", { ascending: false }),
         supabase
           .from("ninja_account_links")
-          .select("account_id, connector_id, connection_name, external_account_name, phase, closed_at, linked_at")
+          .select("account_id, connector_id, connection_name, external_account_name, phase, closed_at, linked_at, accounting_phase, completed_trade_days")
           .order("linked_at"),
         supabase
           .from("ninja_account_registration_exclusions")
@@ -600,6 +602,14 @@ async function renderPrivateAppPage({
       id: company.id,
     }));
     const activeNinjaLinks = (ninjaLinkRows ?? []).filter((link) => link.closed_at === null);
+    const operationalBaselineByAccountId = new Map(activeNinjaLinks.flatMap((link) =>
+      link.accounting_phase && link.completed_trade_days !== null
+        ? [[link.account_id, {
+          completedTradeDays: Number(link.completed_trade_days),
+          phase: link.accounting_phase as AccountPhase,
+        }] as const]
+        : [],
+    ));
     const registeredNinjaAccountNames = new Set(activeNinjaLinks.map((link) => link.external_account_name));
     registeredNinjaAccountKeys = resolveRegisteredNinjaAccountKeys(
       (ninjaLinkRows ?? []).map((link) => ({
@@ -854,6 +864,7 @@ async function renderPrivateAppPage({
       const ninjaBalance = ninjaAccountBalances.get(account.id);
       const manualBalance = manualBalanceByAccountId.get(account.id);
       const purchaseCost = purchase ? Number(purchase.price_cents) : 0;
+      const operationalBaseline = operationalBaselineByAccountId.get(account.id) ?? null;
       let accumulated = -purchaseCost;
       const sessionById = new Map(technicalSessionRows.map((session) => [Number(session.id), session]));
       const controlByBatchId = new Map(technicalBatchRows.flatMap((batch) =>
@@ -879,6 +890,7 @@ async function renderPrivateAppPage({
       }];
       const detectedHistory = buildDetectedAccountEconomicHistory({
         accumulatedInCents: accumulated,
+        baseline: operationalBaseline,
         accountingEntries: (historicalOperationEntryRows ?? [])
           .filter((entry) => entry.account_id === account.id)
           .map((entry) => ({ dailyControlId: entry.daily_control_id, phase: entry.phase })),
@@ -933,6 +945,8 @@ async function renderPrivateAppPage({
         || (historicalPhaseWithdrawalRows ?? []).some((withdrawal) => withdrawal.account_id === account.id)
         || technicalMemberRows.some((member) => member.account_id === account.id);
       return [{
+        baselineCompletedTradeDays: operationalBaseline?.completedTradeDays ?? 0,
+        baselinePhase: operationalBaseline?.phase ?? null,
         canDelete: (account.state === "virgin" || account.state === "closed")
           && !hasRecordedActivity,
         canEditPurchase: Boolean(purchase) && !hasRecordedActivity,
@@ -949,6 +963,10 @@ async function renderPrivateAppPage({
         ninjaConnectionName: ninjaConnectionNamesByAccountId.get(account.id) ?? null,
         periodLabel: formatPeriodLabel(period.periodMonth),
         periodMonth: period.periodMonth,
+        openInvestmentInCents: resolveOpenInvestmentInCents({
+          accountingState: account.state as AccountView["state"],
+          accumulatedInCents: accumulated,
+        }),
         priceInCents: purchase ? Number(purchase.price_cents) : null,
         purchaseNumber: purchase?.purchase_number ?? null,
         purchaseWalletId: purchase?.wallet_id ?? null,

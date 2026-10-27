@@ -3148,3 +3148,17 @@ vigente sin aprobacion y evidencia suficiente.
   confirmar, todas las observaciones del mismo número convergen a la cuenta general
   del usuario, sin duplicar el saldo ni exigir confirmaciones adicionales.
 
+### APP-215 - El alta conserva la vuelta, el día alcanzado y la inversión abierta
+
+- **Fecha:** 2026-10-27. Una cuenta ya operada debe registrar en su alta la vuelta
+  actual y el último día completado. La primera operación posterior recibe el día
+  siguiente; por ejemplo, una cuenta registrada en `Cuarta vuelta · Día 3` asigna
+  su siguiente operación a `Cuarta vuelta · Día 4`.
+- **Conciliación:** la vuelta declarada es un punto operativo auditable y permite
+  contabilizar operaciones de cuentas Funded/Live cuya historia anterior no está
+  en NODAL. No se vuelve a inferir silenciosamente `Primera vuelta`.
+- **Invertido:** representa capital todavía comprometido en cuentas abiertas. Se
+  obtiene de la magnitud negativa del acumulado económico vigente: incluye el costo
+  pendiente y las pérdidas de cobertura posteriores; nunca incluye cuentas cerradas
+  ni muestra una magnitud negativa.
+

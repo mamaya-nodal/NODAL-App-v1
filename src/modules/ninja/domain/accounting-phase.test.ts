@@ -12,6 +12,13 @@ describe("accounting phase at operation time", () => {
   it("does not infer the round of an imported funded account with unknown history", () => {
     expect(resolveNinjaAccountingPhase({ ...base, fundedStartedAt: null })).toBeNull();
   });
+  it("uses the round declared when an already active account was registered", () => {
+    expect(resolveNinjaAccountingPhase({
+      ...base,
+      baseline: { effectiveAt: "2026-09-28T16:00:00Z", phase: "Cuarta vuelta" },
+      fundedStartedAt: null,
+    })).toBe("Cuarta vuelta");
+  });
   it("ignores future transitions and future recorded phases", () => {
     expect(resolveNinjaAccountingPhase({ ...base, openedAt: "2026-09-27T10:00:00Z", entries: [{ phase: "Primera vuelta", occurredAt: "2026-09-29T10:00:00Z" }] })).toBeNull();
   });

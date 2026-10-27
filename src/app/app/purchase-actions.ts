@@ -106,12 +106,16 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
   const purchasedOn = formText(formData, "purchased_on");
   const connectorId = formText(formData, "connector_id");
   const firstSeenAt = formText(formData, "first_seen_at");
+  const accountingPhase = formText(formData, "accounting_phase");
+  const completedTradeDays = Number(formText(formData, "completed_trade_days"));
   let priceCents: number;
 
   try {
     priceCents = parsePurchasePriceToCents(formText(formData, "price"));
     validatePurchaseDraft({ companyId, fundsOrigin, priceCents });
     if (!/^\d{4}-\d{2}-\d{2}$/.test(purchasedOn) || Number.isNaN(Date.parse(firstSeenAt))) throw new Error();
+    if (!["Evaluacion", "Primera vuelta", "Segunda vuelta", "Tercera vuelta", "Cuarta vuelta", "Quinta vuelta"].includes(accountingPhase)) throw new Error();
+    if (!Number.isInteger(completedTradeDays) || completedTradeDays < 0) throw new Error();
   } catch {
     redirect(safeContextUrl(mode, period, "invalid_data"));
   }
@@ -134,8 +138,10 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
     }
   }
 
-  const { error } = await supabase.rpc("create_nodal_detected_purchase_with_wallet", {
+  const { error } = await supabase.rpc("create_nodal_detected_purchase_with_progress", {
+    target_accounting_phase: accountingPhase,
     target_company_id: companyId,
+    target_completed_trade_days: completedTradeDays,
     target_connection_name: formText(formData, "connection_name"),
     target_external_account_name: formText(formData, "external_account_name"),
     target_first_seen_at: firstSeenAt,

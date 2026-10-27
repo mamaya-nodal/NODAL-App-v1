@@ -22,4 +22,18 @@ describe("buildDetectedAccountEconomicHistory", () => {
       { accumulatedInCents: -143_735, brokerResultInCents: -97_690, phase: "Primera vuelta", propResultInCents: 383_848, tradeNumber: 3 },
     ]);
   });
+  it("numera como día 4 la primera operación posterior a un alta en día 3", () => {
+    expect(buildDetectedAccountEconomicHistory({
+      accumulatedInCents: 0,
+      baseline: { completedTradeDays: 3, phase: "Cuarta vuelta" },
+      accountingEntries: [{ dailyControlId: "control-4", phase: "Cuarta vuelta" }],
+      trades: [{ brokerResultInCents: -4_352, dailyControlId: "control-4", openedAt: "2026-10-27T17:00:00Z", propResultInCents: 16_300 }],
+    })).toEqual([{
+      accumulatedInCents: -4_352,
+      brokerResultInCents: -4_352,
+      phase: "Cuarta vuelta",
+      propResultInCents: 16_300,
+      tradeNumber: 4,
+    }]);
+  });
 });

@@ -5,9 +5,10 @@ import {
   accountProgressLabel,
   isPayoutEligibleAccount,
   resolveCurrentAccountProgress,
+  type AccountPhase,
 } from "./account-progress";
 
-const entry = (dailyControlId: string, phase: "Evaluacion" | "Primera vuelta" | "Segunda vuelta") => ({
+const entry = (dailyControlId: string, phase: AccountPhase) => ({
   dailyControlId,
   phase,
 });
@@ -107,5 +108,14 @@ describe("progreso operativo de una cuenta", () => {
       operationalState: "Live",
       payouts: [],
     })).toEqual({ phase: "Segunda vuelta", tradeDay: 2 });
+  });
+
+  it("continúa desde el día declarado al registrar una cuenta avanzada", () => {
+    expect(resolveCurrentAccountProgress({
+      baseline: { completedTradeDays: 3, phase: "Cuarta vuelta" },
+      entries: [entry("trade-4", "Cuarta vuelta")],
+      operationalState: "Funded",
+      payouts: [],
+    })).toEqual({ phase: "Cuarta vuelta", tradeDay: 5 });
   });
 });

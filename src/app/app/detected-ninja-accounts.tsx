@@ -140,6 +140,16 @@ export function DetectedNinjaAccounts({ companyIds, excludedAccountKeys, registe
             <div className="ninja-registration-fields">
               <label>Fecha de compra sugerida<input defaultValue={account.suggestedPurchaseDate} name="purchased_on" required type="date" /></label>
               <label>Precio de compra (USD)<input inputMode="decimal" min="0" name="price" placeholder="Completar" required step="0.01" type="number" /></label>
+              <label>{account.phase === "Evaluation" ? "Etapa actual" : "Vuelta actual"}
+                <select defaultValue={account.phase === "Evaluation" ? "Evaluacion" : "Primera vuelta"} name="accounting_phase" required>
+                  {account.phase === "Evaluation"
+                    ? <option value="Evaluacion">Evaluación</option>
+                    : ["Primera vuelta", "Segunda vuelta", "Tercera vuelta", "Cuarta vuelta", "Quinta vuelta"].map((phase) => (
+                      <option key={phase} value={phase}>{phase}</option>
+                    ))}
+                </select>
+              </label>
+              <label>Último día completado<input defaultValue="0" inputMode="numeric" min="0" name="completed_trade_days" required step="1" type="number" /></label>
               <PurchasePaymentFields wallets={[...wallets]} />
             </div>
             <div className="ninja-detected-footer">

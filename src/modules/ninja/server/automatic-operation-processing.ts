@@ -81,7 +81,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
 
   const [{ data: sessions, error: sessionsError }, { data: links, error: linksError }, { data: inventory }] = await Promise.all([
     supabase.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,execution_count,instruments,direction,quantity").eq("connector_id", connectorId).is("excluded_at", null).order("opened_at").order("id"),
-    supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at,phase,closure_reason,life_id").eq("connector_id", connectorId),
+    supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at,phase,closure_reason,life_id,accounting_phase,completed_trade_days").eq("connector_id", connectorId),
     supabase.from("ninja_inventory_snapshots").select("accounts,observed_at").eq("connector_id", connectorId).order("observed_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (sessionsError || linksError || !sessions?.length) return { persistedBatches: 0 };
@@ -263,12 +263,20 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
           totalCashBalance: null,
           unrealizedProfitLoss: null,
         }, session.opened_at).phase;
+      const operationalBaseline = (links ?? [])
+        .filter((link) => link.account_id === prop.accountId && link.accounting_phase &&
+          Date.parse(link.first_seen_at) <= Date.parse(session.opened_at))
+        .sort((left, right) => Date.parse(right.first_seen_at) - Date.parse(left.first_seen_at))[0];
       return [{
         accountId: prop.accountId,
         allocatedBrokerResultInCents: prop.allocatedBrokerResultInCents,
         companyId: account.company_id,
         periodId: account.period_id,
         phase: resolveNinjaAccountingPhase({
+          baseline: operationalBaseline?.accounting_phase ? {
+            effectiveAt: operationalBaseline.first_seen_at,
+            phase: operationalBaseline.accounting_phase as Exclude<AccountingPhase, null>,
+          } : null,
           detectedPhase,
           openedAt: session.opened_at,
           // Only a confirmed transition of this same logical account proves its first funded round.

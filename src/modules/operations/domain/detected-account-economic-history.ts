@@ -25,23 +25,30 @@ export type DetectedEconomicHistoryItem = Readonly<{
 export function buildDetectedAccountEconomicHistory(input: Readonly<{
   accumulatedInCents: number;
   accountingEntries: readonly DetectedTradeAccountingEntry[];
+  baseline?: Readonly<{ completedTradeDays: number; phase: string }> | null;
   trades: readonly DetectedTradeHistoryItem[];
 }>): DetectedEconomicHistoryItem[] {
   const phaseByControlId = new Map(
     input.accountingEntries.map((entry) => [entry.dailyControlId, entry.phase]),
   );
   let accumulated = input.accumulatedInCents;
+  const phaseTradeCounts = new Map<string, number>();
 
   return [...input.trades]
     .sort((left, right) => left.openedAt.localeCompare(right.openedAt) || left.dailyControlId.localeCompare(right.dailyControlId))
     .map((trade, index) => {
+      const phase = phaseByControlId.get(trade.dailyControlId) ?? "Evaluacion";
+      const phaseTradeCount = (phaseTradeCounts.get(phase) ?? 0) + 1;
+      phaseTradeCounts.set(phase, phaseTradeCount);
       accumulated += trade.brokerResultInCents;
       return {
         accumulatedInCents: accumulated,
         brokerResultInCents: trade.brokerResultInCents,
-        phase: phaseByControlId.get(trade.dailyControlId) ?? "Evaluacion",
+        phase,
         propResultInCents: trade.propResultInCents,
-        tradeNumber: index + 1,
+        tradeNumber: input.baseline
+          ? (input.baseline.phase === phase ? input.baseline.completedTradeDays : 0) + phaseTradeCount
+          : index + 1,
       };
     });
 }
