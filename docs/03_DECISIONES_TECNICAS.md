@@ -3214,3 +3214,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **Motivo:** separar autenticación de autorización y lectura evita que el panel
   muestre ceros falsos mientras la contabilidad individual sí contiene actividad.
 
+### APP-219 - Admin Master distingue facturación bruta de ganancia del usuario
+
+- **Fecha:** 2026-10-27. El ranking y la facturación del sistema continúan usando
+  el resultado realizado bruto de cuentas cerradas. La columna y la ficha llamadas
+  `Ganancia período` muestran en cambio el ingreso real de la persona: participación
+  propia después de comisión más participación en la bolsa administrativa.
+- **Ejemplo de control:** una facturación de Baltazar de USD 270 distribuida en
+  50% trader, 25% Julián y 25% NODAL muestra USD 270 en el ranking, USD 135 de
+  ganancia para Baltazar, USD 67,50 de ganancia para Julián y USD 67,50 para NODAL.
+
