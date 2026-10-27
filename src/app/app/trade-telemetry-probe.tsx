@@ -9,6 +9,7 @@ import {
   reconciliationPairLabel,
   reconciliationPosition,
 } from "@/modules/ninja/domain/reconciliation-view";
+import { happenedAfterOpening, observedAfterOpening } from "@/modules/ninja/domain/opening-cutoff";
 import { assignManualAccountsToCoverage } from "./coverage-assignment-actions";
 import { confirmUncoveredTrade } from "./uncovered-trade-actions";
 import { retryCoverageReconciliation } from "./reconcile-coverage-actions";
@@ -64,6 +65,7 @@ type AutomaticBatchRow = Readonly<{
 type Props = Readonly<{
   brokerAccountNames?: readonly string[];
   manualAccounts?: readonly ManualCoverageAccount[];
+  openingCutoffAt?: string | null;
   propAccountNames?: readonly string[];
   todayOperationCount?: number;
   todayResultInCents?: number;
@@ -304,6 +306,7 @@ function latestOpenPosition(events: NinjaTelemetryRow[], connectionName: string,
 export function TradeTelemetryProbe({
   brokerAccountNames = [],
   manualAccounts = [],
+  openingCutoffAt = null,
   propAccountNames = [],
   todayOperationCount = 0,
   todayResultInCents = 0,
@@ -312,9 +315,12 @@ export function TradeTelemetryProbe({
   const [operations, setOperations] = useState<TechnicalOperationRow[]>([]);
   const [batches, setBatches] = useState<AutomaticBatchRow[]>([]);
   const [available, setAvailable] = useState(true);
-  const probes = useMemo(() => buildNinjaOperationProbe(events, new Date()), [events]);
+  const currentEvents = useMemo(() => observedAfterOpening(events, openingCutoffAt), [events, openingCutoffAt]);
+  const currentOperations = useMemo(() => happenedAfterOpening(operations, openingCutoffAt), [operations, openingCutoffAt]);
+  const currentBatches = useMemo(() => happenedAfterOpening(batches, openingCutoffAt), [batches, openingCutoffAt]);
+  const probes = useMemo(() => buildNinjaOperationProbe(currentEvents, new Date()), [currentEvents]);
   const visibleProbes = probes.filter((probe) =>
-    probe.status !== "waiting" || operations.some((operation) =>
+    probe.status !== "waiting" || currentOperations.some((operation) =>
       operation.connection_name === probe.connectionName && operation.account_name === probe.accountName,
     ),
   );
@@ -329,12 +335,12 @@ export function TradeTelemetryProbe({
     total + (probe.netLiquidation !== null && probe.cashValue !== null ? probe.netLiquidation - probe.cashValue : 0), 0);
   const historyMonthKeys = new Set(currentAndPreviousMonthKeys(new Date()));
   const reconciliationMonths = new Map<string, AutomaticBatchRow[]>();
-  for (const batch of batches.filter((candidate) =>
+  for (const batch of currentBatches.filter((candidate) =>
     candidate.accounting_status === "committed" && candidate.settled_at !== null && historyMonthKeys.has(candidate.opened_at.slice(0, 7)))) {
     const key = batch.opened_at.slice(0, 7);
     reconciliationMonths.set(key, [...(reconciliationMonths.get(key) ?? []), batch]);
   }
-  const automationBatches = batches.filter((batch) => batch.accounting_status !== "committed").slice(0, 30);
+  const automationBatches = currentBatches.filter((batch) => batch.accounting_status !== "committed").slice(0, 30);
   const activeGroups = [
     activeProps.length > 0 ? { label: "Cuentas prop", probes: activeProps } : null,
     activeBroker.length > 0 ? { label: "Cobertura", probes: activeBroker } : null,
@@ -452,7 +458,7 @@ export function TradeTelemetryProbe({
           <summary>Datos técnicos recientes</summary>
           <div className="telemetry-probe-grid">
           {closedProbes.map((probe) => {
-            const operation = operations.find((candidate) =>
+            const operation = currentOperations.find((candidate) =>
               candidate.connection_name === probe.connectionName && candidate.account_name === probe.accountName,
             );
             return <article key={`${probe.connectionName}-${probe.accountName}`}>
@@ -491,8 +497,8 @@ export function TradeTelemetryProbe({
               <div className="demo-group-title demo-live-title"><h3>{group.label}</h3><span>{group.probes.length}</span></div>
               <div className="demo-live-operations">
                 {group.probes.map((probe) => {
-                  const positions = latestOpenPosition(events, probe.connectionName, probe.accountName);
-                  const operation = operations.find((candidate) =>
+                  const positions = latestOpenPosition(currentEvents, probe.connectionName, probe.accountName);
+                  const operation = currentOperations.find((candidate) =>
                     candidate.connection_name === probe.connectionName && candidate.account_name === probe.accountName && candidate.status !== "closed",
                   );
                   return <article className={`demo-live-operation${group.label === "Cobertura" ? " demo-broker-operation" : ""}`} key={`${probe.connectionName}-${probe.accountName}`}>

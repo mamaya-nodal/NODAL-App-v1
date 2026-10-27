@@ -119,6 +119,7 @@ type DailyControlPreviewProps = {
   ninjaBrokerBalanceHistory?: readonly NinjaBrokerBalanceHistoryItem[];
   ninjaBrokerSourceNotice: string | null;
   ninjaOnline: boolean;
+  openingCutoffAt?: string | null;
   openingBalanceInCents?: number | null;
   periodId: string;
   propAccountNames?: readonly string[];
@@ -144,6 +145,7 @@ export function DailyControlPreview({
   ninjaBrokerBalanceHistory = [],
   ninjaBrokerSourceNotice,
   ninjaOnline,
+  openingCutoffAt = null,
   openingBalanceInCents = null,
   periodId,
   propAccountNames = [],
@@ -683,6 +685,7 @@ export function DailyControlPreview({
       <TradeTelemetryProbe
         brokerAccountNames={brokerAccountNames}
         manualAccounts={manualCoverageAccounts}
+        openingCutoffAt={openingCutoffAt}
         propAccountNames={propAccountNames}
         todayOperationCount={rows.filter((row) => row.kind === "balance_update" && row.operatedOn === currentOperationalDay()).length}
         todayResultInCents={rows

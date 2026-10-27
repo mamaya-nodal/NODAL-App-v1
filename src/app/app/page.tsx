@@ -31,6 +31,7 @@ import { readAll } from "@/modules/admin/server/read-all";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
 import { registeredNinjaAccountKeys as resolveRegisteredNinjaAccountKeys } from "@/modules/ninja/domain/account-registration-eligibility";
 import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
+import { happenedAfterOpening, openingCutoffTimestamp } from "@/modules/ninja/domain/opening-cutoff";
 import type { NinjaAccountSnapshot } from "@/modules/ninja/domain/ingestion-payload";
 import {
   applyNinjaBrokerAccountAliases,
@@ -194,11 +195,13 @@ type NinjaOperationProbeRpcRow = {
   connection_name: string;
   minimum_net_liquidation: number | string | null;
   minimum_net_liquidation_at: string | null;
+  opened_at: string;
   status: "closed" | "open" | "settling";
 };
 
 type NinjaReconciliationRpcRow = {
   accounting_status: string;
+  opened_at: string;
 };
 
 async function renderPrivateAppPage({
@@ -390,6 +393,7 @@ async function renderPrivateAppPage({
   let openingSetupEligible = false;
   let openingRevisionEligible = false;
   let openingRevisionStatus: OpeningRevisionRequestStatus = null;
+  let reconciliationOpeningCutoffAt: string | null = null;
   let registeredAccountCount = 0;
   let simplifiedOpeningPilot = false;
   let periodOpening: OperationalOpeningSnapshot = {
@@ -534,7 +538,7 @@ async function renderPrivateAppPage({
           .eq("workspace_id", selection.workspace.id),
         supabase
           .from("period_opening_snapshots")
-          .select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference,revision_number")
+          .select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference,revision_number,created_at,updated_at")
           .in("period_id", selection.workspace.periods.map((workspacePeriod) => workspacePeriod.id)),
         supabase
           .from("period_opening_account_batches")
@@ -639,9 +643,15 @@ async function renderPrivateAppPage({
       }] as const),
     ));
     const technicalSessions = (ninjaOperationProbeRows ?? []) as NinjaOperationProbeRpcRow[];
-    hasPendingNinjaOperation = technicalSessions.some((session) => session.status === "open" || session.status === "settling")
-      || ((ninjaReconciliationRows ?? []) as NinjaReconciliationRpcRow[])
-        .some((batch) => batch.accounting_status !== "committed");
+    const selectedOpeningRow = (openingSnapshotRows ?? []).find((row) => row.period_id === selection.period!.id);
+    reconciliationOpeningCutoffAt = openingCutoffTimestamp(selectedOpeningRow);
+    const currentTechnicalSessions = happenedAfterOpening(technicalSessions, reconciliationOpeningCutoffAt);
+    const currentReconciliations = happenedAfterOpening(
+      (ninjaReconciliationRows ?? []) as NinjaReconciliationRpcRow[],
+      reconciliationOpeningCutoffAt,
+    );
+    hasPendingNinjaOperation = currentTechnicalSessions.some((session) => session.status === "open" || session.status === "settling")
+      || currentReconciliations.some((batch) => batch.accounting_status !== "committed");
     const technicalSessionsByAccount = new Map<string, NinjaOperationProbeRpcRow[]>();
     for (const session of technicalSessions) {
       const key = `${session.connection_name}\u0000${session.account_name}`;
@@ -1511,6 +1521,7 @@ async function renderPrivateAppPage({
             initialLiveNinjaBalance={liveNinjaBrokerBalance}
             ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}
             ninjaOnline={connectorOnline}
+            openingCutoffAt={reconciliationOpeningCutoffAt}
             openingBalanceInCents={periodOpening.brokerBalanceInCents}
             periodId={selection.period.id}
             propAccountNames={connectedNinjaPropAccountNames}

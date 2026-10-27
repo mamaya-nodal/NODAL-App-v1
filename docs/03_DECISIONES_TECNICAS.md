@@ -3127,3 +3127,14 @@ vigente sin aprobacion y evidencia suficiente.
   su conector físico para el alta, la omisión y la trazabilidad, pero no se crean
   paneles vacíos repetidos por cada instalación.
 
+### APP-213 - Una nueva apertura corta las conciliaciones técnicas anteriores
+
+- **Fecha:** 2026-10-27. La telemetría y los lotes de conciliación anteriores a
+  la apertura confirmada se conservan como evidencia técnica, pero no se muestran
+  en `Operaciones` ni se consideran pendientes del ciclo nuevo.
+- **Corte:** los lotes ya asociados a un período respetan la última revisión de
+  apertura de ese período. Los lotes todavía sin asignación respetan la apertura
+  vigente del período real abierto del usuario.
+- **Motivo:** un reinicio contable no debe convertir coberturas históricas sin
+  asignar en tareas del nuevo ciclo ni contaminar su estado operativo.
+

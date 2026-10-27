@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { buildNinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
+import { happenedAfterOpening, openingCutoffTimestamp } from "@/modules/ninja/domain/opening-cutoff";
 import { parsePurchasePriceToCents } from "@/modules/purchases/domain/purchase-rules";
 
 type Result = Readonly<{ ok: boolean; message: string; walletId?: string }>;
@@ -63,17 +64,24 @@ export async function reconcileBrokerWalletTransfer(input: Readonly<{
   }
   const { supabase, user } = await client();
   if (!user) return { ok: false, message: "La sesión venció." };
-  const [inventoryResult, probeResult, reconciliationResult] = await Promise.all([
+  const [inventoryResult, probeResult, reconciliationResult, openingResult] = await Promise.all([
     supabase.rpc("get_current_user_ninja_inventory"),
     supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),
     supabase.rpc("get_current_user_ninja_reconciliation_details", { target_limit: 100 }),
+    supabase.from("period_opening_snapshots").select("created_at,updated_at").eq("period_id", input.periodId).maybeSingle(),
   ]);
-  if (inventoryResult.error || probeResult.error || reconciliationResult.error) {
+  if (inventoryResult.error || probeResult.error || reconciliationResult.error || openingResult.error) {
     return { ok: false, message: "No se pudo verificar el saldo actual de NinjaTrader." };
   }
-  const probes = Array.isArray(probeResult.data) ? probeResult.data as Array<{ status?: string }> : [];
+  const cutoffAt = openingCutoffTimestamp(openingResult.data);
+  const probes = Array.isArray(probeResult.data)
+    ? happenedAfterOpening(probeResult.data as Array<{ opened_at: string; status?: string }>, cutoffAt)
+    : [];
   const reconciliations = Array.isArray(reconciliationResult.data)
-    ? reconciliationResult.data as Array<{ accounting_status?: string }>
+    ? happenedAfterOpening(
+      reconciliationResult.data as Array<{ accounting_status?: string; opened_at: string }>,
+      cutoffAt,
+    )
     : [];
   if (probes.some((probe) => probe.status === "open" || probe.status === "settling")
     || reconciliations.some((item) => item.accounting_status !== "committed")) {
