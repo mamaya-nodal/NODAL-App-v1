@@ -41,8 +41,9 @@ import {
 import { buildNinjaInventoryRevision } from "@/modules/ninja/domain/inventory-revision";
 import { buildSimplifiedOpeningAccounts } from "@/modules/ninja/domain/simplified-opening-accounts";
 import {
-  automaticInstallerPilotEnabled,
+  automaticInstallerEnabled,
   connectorOnboardingState,
+  shouldUseSimplifiedOpening,
 } from "@/modules/ninja/domain/connector-onboarding";
 import { readOpeningBrokerState } from "@/modules/ninja/server/opening-broker-state";
 import type {
@@ -322,7 +323,7 @@ async function renderPrivateAppPage({
   const connectorOnline = Boolean(ninjaConnector?.isOnline && ninjaConnector.status === "active");
   const connectorSetupState = connectorOnboardingState({
     connector: ninjaConnector,
-    pilotEnabled: automaticInstallerPilotEnabled(userId),
+    automaticInstallerEnabled: automaticInstallerEnabled(userId),
   });
   const administrationScope = visibleAdministrationScope(
     nodalUser?.access_role,
@@ -1265,11 +1266,13 @@ async function renderPrivateAppPage({
       walletMovementCount: walletMovements.length,
     };
     openingRevisionEligible = canRequestPeriodOpeningRevision(openingEligibilityInput);
-    simplifiedOpeningPilot = automaticInstallerPilotEnabled(userId)
-      && openingSnapshot?.revisionNumber === 1;
+    simplifiedOpeningPilot = shouldUseSimplifiedOpening({
+      automaticInstallerEnabled: automaticInstallerEnabled(userId),
+      hasOpeningSnapshot: openingSnapshot !== null,
+      openingRevisionApproved: openingRevisionStatus === "approved",
+    });
     openingSetupEligible = canConfigurePeriodOpening(openingEligibilityInput)
-      || (openingSnapshot !== null && openingRevisionStatus === "approved")
-      || simplifiedOpeningPilot;
+      || (openingSnapshot !== null && openingRevisionStatus === "approved");
   }
 
   return (

@@ -3070,3 +3070,22 @@ vigente sin aprobacion y evidencia suficiente.
   verificar revisión 1 y ausencia total de actividad. El resultado quedó auditado y el
   inventario reciente de cinco cuentas Tradeify se conservó intacto.
 
+### APP-209 - Inicio simplificado universal para usuarios nuevos
+
+- **Fecha:** 2026-10-27. Corrección originada por Franco Seco: tenía el conector
+  0.16 activo, pero recibía la reconstrucción anterior porque el nuevo recorrido
+  dependía de una lista manual de usuarios.
+- **Regla:** el instalador automático y el inicio simplificado quedan habilitados
+  por defecto para usuarios actuales y futuros. Alfred conserva explícitamente el
+  recorrido anterior mientras su contabilidad siga siendo la referencia operativa.
+- **Primera apertura:** el inicio simplificado puede crear el primer punto de partida
+  de un período programado, abrirlo mediante el disparador contable existente e
+  incorporar las cuentas prop que Ninja observa en ese momento. No exige una apertura
+  anterior ni una solicitud de edición.
+- **Ediciones:** si ya existe una apertura, el mismo formulario sólo puede reemplazarla
+  cuando Admin Master aprobó la solicitud y las protecciones de actividad permiten la
+  revisión. Una apertura ya confirmada no vuelve a mostrarse automáticamente.
+- **Trazabilidad:** las cuentas anteriores sin actividad se respaldan en auditoría antes
+  de reemplazarse; si existe actividad económica, toda la operación se cancela sin
+  modificar datos. Identidades y conectores se preservan.
+
