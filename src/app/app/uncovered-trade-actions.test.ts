@@ -29,4 +29,11 @@ describe("broker-only confirmation action", () => {
     expect((await confirmUncoveredTrade(input)).ok).toBe(false);
     expect(mocks.refresh).not.toHaveBeenCalled();
   });
+  it("explains that prior broker movements must be reconciled first", async () => {
+    mocks.rpc.mockResolvedValue({ error: { message: "Broker opening balance missing" } });
+    expect(await confirmUncoveredTrade(input)).toEqual({
+      ok: false,
+      message: "Primero conciliá los movimientos anteriores del broker.",
+    });
+  });
 });

@@ -3165,3 +3165,23 @@ vigente sin aprobacion y evidencia suficiente.
   conciliación formal siga esperando la vuelta de otra cuenta. La app no pierde el
   capital comprometido ni altera el orden contable para forzar su confirmación.
 
+### APP-216 - Reversiones de dirección se separan en operaciones económicas
+
+- **Fecha:** 2026-10-27. Una posición broker cubierta y una activación accidental
+  inmediatamente posterior no pueden compartir el resultado de un único tramo de
+  saldo ni volver a contarse como dos pérdidas completas.
+- **Separación:** cuando la telemetría demuestra dos ciclos cerrados consecutivos
+  con cambio de dirección, dos ejecuciones completas por ciclo y un instrumento con
+  valor por punto conocido, el motor calcula el bruto de cada ciclo y distribuye los
+  costos reales para que la suma coincida exactamente con el cambio de saldo.
+- **Protección:** si faltan ejecuciones, precios, cantidades o el valor del contrato,
+  se conserva el agregado y no se inventa una división. Las reaperturas en la misma
+  dirección mantienen el comportamiento anterior.
+- **Primer saldo:** si la comisión de entrada llega antes que la primera posición,
+  el Net Liquidation plano previo conserva la base completa y evita perder esa
+  comisión en el primer cierre del período.
+- **Caso validado:** Franco Seco queda en una secuencia continua: cobertura Tradeify
+  de `-US$ 95,74`, activación accidental sin cobertura de `-US$ 55,74` y saldo final
+  técnico de `US$ 1.676,39` para ese par de ciclos. Sus cinco Tradeify se registran
+  desde `Primera vuelta · Día 1`; la operación posterior corresponde al Día 2.
+

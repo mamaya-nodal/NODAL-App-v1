@@ -87,6 +87,27 @@ describe("Ninja technical operations", () => {
     }));
   });
 
+  it("recupera el saldo previo cuando la comisión llega entre ejecución y posición", () => {
+    const operations = buildNinjaTechnicalOperations([
+      row(1, "execution", "2026-10-27T16:54:31.046Z", { orderAction: "BuyToCover", price: 29_791.5, quantity: 1 }, "NQ DEC26"),
+      row(2, "balance", "2026-10-27T16:54:31.582Z", {
+        cashValue: 1_862.23,
+        netLiquidation: 1_863.61,
+        realizedProfitLoss: 0,
+        unrealizedProfitLoss: 0,
+      }),
+      row(3, "position", "2026-10-27T16:54:32.395Z", { marketPosition: "Long", quantity: 1 }, "NQ DEC26"),
+      row(4, "position", "2026-10-27T17:03:32.256Z", { marketPosition: "Flat", quantity: 0 }, "NQ DEC26"),
+      row(5, "balance", "2026-10-27T17:03:33.564Z", { cashValue: 1_827.87, netLiquidation: 1_827.87 }),
+    ], new Date("2026-10-27T17:03:45.000Z"), 1_862.23);
+
+    expect(operations[0]).toEqual(expect.objectContaining({
+      closingBalance: 1_827.87,
+      openingBalance: 1_863.61,
+      result: -35.74,
+    }));
+  });
+
   it("mantiene un mismo ciclo si vuelve a abrir antes de diez segundos", () => {
     const operations = buildNinjaTechnicalOperations([
       row(1, "balance", "2026-09-07T18:00:00.000Z", { cashValue: 100_000 }),
@@ -98,6 +119,38 @@ describe("Ninja technical operations", () => {
     ], new Date("2026-09-07T18:00:30.000Z"));
     expect(operations).toHaveLength(1);
     expect(operations[0].status).toBe("open");
+  });
+
+  it("separa una reversión cerrada en la cobertura y el trade accidental", () => {
+    const operations = buildNinjaTechnicalOperations([
+      row(1, "balance", "2026-10-27T17:08:54.000Z", { cashValue: 1_827.87, netLiquidation: 1_827.87 }),
+      row(2, "execution", "2026-10-27T17:08:56.849Z", { orderAction: "SellShort", price: 29_805.75, quantity: 1 }, "NQ DEC26"),
+      row(3, "position", "2026-10-27T17:08:55.771Z", { averagePrice: 29_805.75, marketPosition: "Short", quantity: 1 }, "NQ DEC26"),
+      row(4, "execution", "2026-10-27T17:11:07.631Z", { orderAction: "BuyToCover", price: 29_810.25, quantity: 1 }, "NQ DEC26"),
+      row(5, "position", "2026-10-27T17:11:07.374Z", { marketPosition: "Flat", quantity: 0 }, "NQ DEC26"),
+      row(6, "execution", "2026-10-27T17:11:08.726Z", { orderAction: "BuyToCover", price: 29_809.75, quantity: 1 }, "NQ DEC26"),
+      row(7, "position", "2026-10-27T17:11:07.820Z", { averagePrice: 29_809.75, marketPosition: "Long", quantity: 1 }, "NQ DEC26"),
+      row(8, "execution", "2026-10-27T17:11:10.288Z", { orderAction: "Sell", price: 29_807.25, quantity: 1 }, "NQ DEC26"),
+      row(9, "position", "2026-10-27T17:11:09.915Z", { marketPosition: "Flat", quantity: 0 }, "NQ DEC26"),
+      row(10, "balance", "2026-10-27T17:11:11.126Z", { cashValue: 1_676.39, netLiquidation: 1_676.39 }),
+    ], new Date("2026-10-27T17:11:22.000Z"));
+
+    expect(operations).toEqual([
+      expect.objectContaining({
+        closingBalance: 1_732.13,
+        direction: "Short",
+        openingBalance: 1_827.87,
+        openingEventId: 3,
+        result: -95.74,
+      }),
+      expect.objectContaining({
+        closingBalance: 1_676.39,
+        direction: "Long",
+        openingBalance: 1_732.13,
+        openingEventId: 7,
+        result: -55.74,
+      }),
+    ]);
   });
 
   it("no inventa una operación nueva con una ejecución de cierre recibida después del saldo plano", () => {

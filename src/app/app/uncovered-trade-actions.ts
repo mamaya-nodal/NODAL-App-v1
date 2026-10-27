@@ -24,7 +24,7 @@ export async function confirmUncoveredTrade(input: Readonly<{
   });
   if (error) {
     const detail = error.message.toLowerCase();
-    return { ok: false, message: detail.includes("earlier broker")
+    return { ok: false, message: detail.includes("earlier broker") || detail.includes("opening balance missing")
       ? "Primero conciliá los movimientos anteriores del broker."
       : detail.includes("historical trade")
         ? "Hay registros posteriores. Este trade necesita una corrección histórica controlada."
