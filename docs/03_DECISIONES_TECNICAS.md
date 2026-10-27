@@ -3138,3 +3138,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **Motivo:** un reinicio contable no debe convertir coberturas históricas sin
   asignar en tareas del nuevo ciclo ni contaminar su estado operativo.
 
+### APP-214 - La cuenta broker se confirma por número económico
+
+- **Fecha:** 2026-10-27. Una misma cuenta broker observada desde el Ninja personal
+  y desde uno o más Ninja de identidades se presenta una sola vez para confirmar.
+- **Identidad:** el número de cuenta normalizado define la cuenta económica; el
+  conector físico y el nombre local de la conexión quedan como fuentes de lectura.
+- **Actualidad:** si hay varias observaciones se conserva la más reciente. Al
+  confirmar, todas las observaciones del mismo número convergen a la cuenta general
+  del usuario, sin duplicar el saldo ni exigir confirmaciones adicionales.
+

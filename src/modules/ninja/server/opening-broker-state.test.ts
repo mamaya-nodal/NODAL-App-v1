@@ -59,6 +59,20 @@ describe("opening broker read authorization and recovery", () => {
     expect(service.calls.find((call) => call.table === "ninja_unclaimed_broker_accounts")?.filters)
       .toContainEqual(["proposed_destination_connector_id", ["own"]]);
   });
+  it("offers one confirmation when two physical Ninjas report the same economic broker account", async () => {
+    const user = userDatabase();
+    const personal = pending("own", "2141240", "2026-10-27T13:07:59Z");
+    const identity = { ...pending("own", "2141240", "2026-10-27T15:20:39Z"),
+      connection_name: "Broker", physical_connector_id: "identity-physical" };
+    serviceClient.mockReturnValue(database({ ninja_unclaimed_broker_accounts: [personal, identity] }));
+    const result = await readOpeningBrokerState(user as unknown as SupabaseClient, "user", [{
+      connector_id: "own", observed_at: "2026-10-27T15:20:40Z", accounts: [],
+    }]);
+    expect(result.pendingAccounts).toEqual([{
+      accountName: "2141240", balanceInCents: 698204, connectionName: "Broker",
+      observedAt: "2026-10-27T15:20:39Z", physicalConnectorId: "identity-physical",
+    }]);
+  });
   it("recovers only the receipt matching authenticated ownership and preserves its observation time", async () => {
     const user = userDatabase([owned()]);
     const service = database({ ninja_event_receipts: [{ physical_connector_id: "physical", payload, status: "pending" }] });

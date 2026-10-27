@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceClient } from "@/lib/supabase/service";
 import { DataReadError } from "@/lib/supabase/require-read";
 import { reportReadFailure } from "@/lib/supabase/read-with-retry";
-import { buildBrokerBalanceAfterClaim, type ClaimedBrokerObservation, type PendingOpeningBrokerAccount } from "../domain/broker-claim-balance";
+import { buildBrokerBalanceAfterClaim, deduplicatePendingBrokerAccounts, type ClaimedBrokerObservation, type PendingOpeningBrokerAccount } from "../domain/broker-claim-balance";
 import type { NinjaInventoryView } from "../domain/live-broker-balance";
 import { isNinjaTradeTelemetryBatch, type NinjaBalanceTelemetryEvent } from "../domain/trade-telemetry";
 
@@ -60,11 +60,13 @@ export async function readOpeningBrokerState(userClient: SupabaseClient, userId:
     return isNinjaTradeTelemetryBatch(batch) && batch.events[0].kind === "balance" ? batch.events[0] as NinjaBalanceTelemetryEvent : null;
   }
   const ownedKeys = new Set((ownershipResult.data ?? []).map((row) => `${row.physical_connector_id}\u0000${row.connection_name}\u0000${row.account_name}`));
+  const ownedAccountNumbers = new Set((ownershipResult.data ?? []).map((row) => row.account_name.trim().toUpperCase()));
   const pendingAccounts: PendingOpeningBrokerAccount[] = [];
   for (const row of pendingResult.data ?? []) {
     if (!personalIds.has(row.proposed_destination_connector_id)
       || isolated.has(`${row.proposed_destination_connector_id}\u0000${row.connection_name}`)
-      || ownedKeys.has(`${row.physical_connector_id}\u0000${row.connection_name}\u0000${row.account_name}`)) continue;
+      || ownedKeys.has(`${row.physical_connector_id}\u0000${row.connection_name}\u0000${row.account_name}`)
+      || ownedAccountNumbers.has(row.account_name.trim().toUpperCase())) continue;
     // Older pending receipt retries could rewind the pending row. The lossless
     // transport ledger retains the actual latest observation.
     const sample = await receivedSample(row.physical_connector_id, row.connection_name, row.account_name);
@@ -91,5 +93,8 @@ export async function readOpeningBrokerState(userClient: SupabaseClient, userId:
         sample });
     }
   }
-  return { liveBrokerBalance: buildBrokerBalanceAfterClaim(inventories, observations), pendingAccounts };
+  return {
+    liveBrokerBalance: buildBrokerBalanceAfterClaim(inventories, observations),
+    pendingAccounts: deduplicatePendingBrokerAccounts(pendingAccounts),
+  };
 }

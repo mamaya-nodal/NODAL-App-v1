@@ -32,3 +32,24 @@ export type PendingOpeningBrokerAccount = Readonly<{
   observedAt: string;
   physicalConnectorId: string;
 }>;
+
+/** A broker account is an economic account of the NODAL user. The physical
+ * NinjaTrader installation and its local connection label are only observation
+ * sources, so the same account number must be confirmed once. */
+export function deduplicatePendingBrokerAccounts(
+  accounts: readonly PendingOpeningBrokerAccount[],
+): PendingOpeningBrokerAccount[] {
+  const freshestByAccountNumber = new Map<string, PendingOpeningBrokerAccount>();
+  for (const account of accounts) {
+    const key = account.accountName.trim().toUpperCase();
+    const current = freshestByAccountNumber.get(key);
+    const currentAt = current ? Date.parse(current.observedAt) : Number.NEGATIVE_INFINITY;
+    const candidateAt = Date.parse(account.observedAt);
+    if (!current
+      || (Number.isFinite(candidateAt) && (!Number.isFinite(currentAt) || candidateAt > currentAt))
+      || (candidateAt === currentAt && current.balanceInCents === null && account.balanceInCents !== null)) {
+      freshestByAccountNumber.set(key, account);
+    }
+  }
+  return [...freshestByAccountNumber.values()];
+}

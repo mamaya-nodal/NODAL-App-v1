@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBrokerBalanceAfterClaim, type ClaimedBrokerObservation } from "./broker-claim-balance";
+import { buildBrokerBalanceAfterClaim, deduplicatePendingBrokerAccounts, type ClaimedBrokerObservation } from "./broker-claim-balance";
 
 const empty = { accounts: [], observed_at: "2026-10-08T12:29:48Z" };
 function observation(accountName = "1850465", cashValue: number | null = 6982.04): ClaimedBrokerObservation {
@@ -33,5 +33,16 @@ describe("balance after explicit broker ownership confirmation", () => {
     expect(buildBrokerBalanceAfterClaim([{
       observed_at: "2026-10-08T12:41:00Z", accounts: [{ ...sample.sample, cashValue: 7000, connectionStatus: "Connected" }],
     }], [{ ...sample, latestInventoryAt: "2026-10-08T12:41:00Z" }])?.balanceInCents).toBe(700000);
+  });
+});
+
+describe("pending broker ownership confirmation", () => {
+  it("shows the same broker account once when personal and identity Ninjas observe it", () => {
+    expect(deduplicatePendingBrokerAccounts([
+      { accountName: "2141240", balanceInCents: 515654, connectionName: "Live", observedAt: "2026-10-27T13:07:59Z", physicalConnectorId: "personal" },
+      { accountName: "2141240", balanceInCents: 515654, connectionName: "Broker", observedAt: "2026-10-27T15:20:39Z", physicalConnectorId: "identity" },
+    ])).toEqual([
+      { accountName: "2141240", balanceInCents: 515654, connectionName: "Broker", observedAt: "2026-10-27T15:20:39Z", physicalConnectorId: "identity" },
+    ]);
   });
 });
