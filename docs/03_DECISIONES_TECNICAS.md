@@ -3117,3 +3117,13 @@ vigente sin aprobacion y evidencia suficiente.
   conserva únicamente la fase y el estado demostrables. La migración repara bajo
   la misma regla los vínculos activos que habían quedado sin fase y deja auditoría.
 
+### APP-212 - La bandeja de cuentas usa únicamente observaciones vigentes
+
+- **Fecha:** 2026-10-27. La confirmación de una nueva cuenta broker en `Cuentas`
+  usa el mismo estado de lectura validado que la apertura: descarta observaciones
+  históricas cuando existe un inventario posterior que ya no contiene la cuenta.
+- **Presentación:** los inventarios del Ninja personal y de las identidades se
+  muestran en una sola bandeja de cuentas nuevas. Cada cuenta conserva por detrás
+  su conector físico para el alta, la omisión y la trazabilidad, pero no se crean
+  paneles vacíos repetidos por cada instalación.
+

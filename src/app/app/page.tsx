@@ -421,7 +421,6 @@ async function renderPrivateAppPage({
       { data: ninjaRegistrationTransitionRows },
       { data: ninjaBrokerBalanceRows },
       { data: ninjaBrokerAccountAliasRows },
-      { data: unclaimedBrokerRows },
       { data: historicalPurchaseRows },
       { data: historicalAccountRows },
       { data: historicalOperationEntryRows },
@@ -488,10 +487,6 @@ async function renderPrivateAppPage({
         supabase
           .from("ninja_broker_account_aliases")
           .select("connection_name,account_name,display_name"),
-        (privileged ?? supabase)
-          .from("ninja_unclaimed_broker_accounts")
-          .select("physical_connector_id,connection_name,account_name,proposed_destination_connector_id,last_observed_at,latest_balance_cents")
-          .in("proposed_destination_connector_id", ninjaConnectors.filter((connector) => connector.status === "active").map((connector) => connector.connectorId)),
         supabase
           .from("purchases")
           .select("id, account_id, period_id, purchase_number, purchased_on, price_cents, funds_origin, wallet_id")
@@ -679,18 +674,6 @@ async function renderPrivateAppPage({
         technicalTradeCount: sessions.length,
       }] as const];
     }));
-    const latestPendingBrokerByNumber = new Map<string, (typeof unclaimedBrokerRows extends Array<infer Row> | null ? Row : never)>();
-    for (const row of unclaimedBrokerRows ?? []) {
-      const key = row.account_name.trim().toUpperCase();
-      const current = latestPendingBrokerByNumber.get(key);
-      if (!current || row.last_observed_at > current.last_observed_at) latestPendingBrokerByNumber.set(key, row);
-    }
-    pendingBrokerAccounts = [...latestPendingBrokerByNumber.values()].map((row) => ({
-      accountName: row.account_name,
-      balanceInCents: row.latest_balance_cents === null ? null : Number(row.latest_balance_cents),
-      connectionName: row.connection_name,
-      physicalConnectorId: row.physical_connector_id,
-    }));
     ninjaInventoryRevision = buildNinjaInventoryRevision(ninjaInventories);
     const connectedNinjaAccounts = ninjaInventories.flatMap((inventory) =>
       inventory.accounts.filter(
@@ -708,8 +691,21 @@ async function renderPrivateAppPage({
         "prop",
     );
     connectedNinjaPropAccountNames = connectedPropAccounts.map((account) => account.accountName);
+    const openingBrokerState = await readOpeningBrokerState(supabase, userId, ninjaInventories);
+    const latestPendingBrokerByNumber = new Map<string, (typeof openingBrokerState.pendingAccounts)[number]>();
+    for (const account of openingBrokerState.pendingAccounts) {
+      const key = account.accountName.trim().toUpperCase();
+      const current = latestPendingBrokerByNumber.get(key);
+      if (!current || account.observedAt > current.observedAt) latestPendingBrokerByNumber.set(key, account);
+    }
+    pendingBrokerAccounts = [...latestPendingBrokerByNumber.values()].map((account) => ({
+      accountName: account.accountName,
+      balanceInCents: account.balanceInCents,
+      connectionName: account.connectionName,
+      physicalConnectorId: account.physicalConnectorId,
+    }));
     liveNinjaBrokerBalance = applyNinjaBrokerAccountAliases(
-      (await readOpeningBrokerState(supabase, userId, ninjaInventories)).liveBrokerBalance,
+      openingBrokerState.liveBrokerBalance,
       (ninjaBrokerAccountAliasRows ?? []).map((alias): NinjaBrokerAccountAlias => ({
         accountName: alias.account_name,
         connectionName: alias.connection_name,
@@ -1397,14 +1393,23 @@ async function renderPrivateAppPage({
 
           <BrokerAccountClaims accounts={pendingBrokerAccounts} />
 
-          {ninjaInventories.map((inventory) => {
-            const accounts = inventory.accounts.map((account) => classifyNinjaAccount(
-              account,
-              account.firstSeenAt ?? inventory.observed_at,
-            ));
-            const companyIds = Object.fromEntries(companies.flatMap((company) => [[company.code.toLowerCase(), company.id], [company.displayName.toLowerCase(), company.id]]));
-            return <DetectedNinjaAccounts accounts={accounts} companyIds={companyIds} connectorId={inventory.connector_id} excludedAccountKeys={excludedNinjaAccountKeys} key={inventory.connector_id} registeredAccountKeys={registeredNinjaAccountKeys} mode={selection.workspace.modality} online={connectorOnline} period={selection.period!.periodMonth} periodId={selection.period!.id} wallets={walletViews} />;
-          })}
+          {ninjaInventories.length > 0 ? <DetectedNinjaAccounts
+            companyIds={Object.fromEntries(companies.flatMap((company) => [[company.code.toLowerCase(), company.id], [company.displayName.toLowerCase(), company.id]]))}
+            excludedAccountKeys={excludedNinjaAccountKeys}
+            registeredAccountKeys={registeredNinjaAccountKeys}
+            mode={selection.workspace.modality}
+            period={selection.period.periodMonth}
+            periodId={selection.period.id}
+            sources={ninjaInventories.map((inventory) => ({
+              accounts: inventory.accounts.map((account) => classifyNinjaAccount(
+                account,
+                account.firstSeenAt ?? inventory.observed_at,
+              )),
+              connectorId: inventory.connector_id,
+              online: Boolean(ninjaConnectors.find((connector) => connector.connectorId === inventory.connector_id)?.isOnline),
+            }))}
+            wallets={walletViews}
+          /> : null}
 
           {openingSnapshot ? <OpeningAccountReferences opening={openingSnapshot} /> : null}
 

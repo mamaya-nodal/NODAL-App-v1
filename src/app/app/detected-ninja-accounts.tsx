@@ -9,15 +9,17 @@ import { createDetectedPurchase } from "./purchase-actions";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
 
 type Props = {
-  accounts: readonly DetectedNinjaAccount[];
   companyIds: Readonly<Record<string, string>>;
-  connectorId: string;
   excludedAccountKeys: ReadonlySet<string>;
   registeredAccountKeys: ReadonlySet<string>;
   mode: string;
-  online: boolean;
   period: string;
   periodId: string;
+  sources: readonly Readonly<{
+    accounts: readonly DetectedNinjaAccount[];
+    connectorId: string;
+    online: boolean;
+  }>[];
   wallets: ReadonlyArray<{ balanceInCents: number; id: string; name: string }>;
 };
 
@@ -39,33 +41,60 @@ function parseOmissions(value: string): ReadonlySet<string> {
   } catch { return new Set(); }
 }
 
-export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, excludedAccountKeys, registeredAccountKeys, mode, online, period, periodId, wallets }: Props) {
+function omissionStorageKey(connectorId: string) {
+  return `nodal:omitted-ninja-accounts:${connectorId}`;
+}
+
+function readAllOmissions(sources: Props["sources"]) {
+  const keys = sources.flatMap((source) => [
+    ...parseOmissions(readOmissions(omissionStorageKey(source.connectorId))),
+  ]);
+  return JSON.stringify([...new Set(keys)].sort());
+}
+
+export function DetectedNinjaAccounts({ companyIds, excludedAccountKeys, registeredAccountKeys, mode, period, periodId, sources, wallets }: Props) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
-  const omissionStorageKey = `nodal:omitted-ninja-accounts:${connectorId}`;
-  const omittedKeys = parseOmissions(useSyncExternalStore(subscribeToOmissions, () => readOmissions(omissionStorageKey), () => "[]"));
-  const detectedPropAccounts = accounts.filter((account) => account.type === "prop");
-  const propAccounts = detectedPropAccounts.filter((account) => {
-    const key = ninjaAccountRegistrationKey(connectorId, account.connectionName, account.accountName);
-    return !registeredAccountKeys.has(key) && !excludedAccountKeys.has(key) && !omittedKeys.has(key);
-  });
+  const omittedKeys = parseOmissions(useSyncExternalStore(
+    subscribeToOmissions,
+    () => readAllOmissions(sources),
+    () => "[]",
+  ));
+  const propAccounts = sources.flatMap((source) => source.accounts
+    .filter((account) => account.type === "prop")
+    .map((account) => ({ account, connectorId: source.connectorId })))
+    .filter(({ account, connectorId }) => {
+      const key = ninjaAccountRegistrationKey(connectorId, account.connectionName, account.accountName);
+      return !registeredAccountKeys.has(key) && !excludedAccountKeys.has(key) && !omittedKeys.has(key);
+    });
+  const online = sources.some((source) => source.online);
 
   function refreshAccounts() {
-    try { window.sessionStorage.removeItem(omissionStorageKey); } catch { /* Sin almacenamiento, no hay omisiones guardadas. */ }
+    for (const source of sources) {
+      try { window.sessionStorage.removeItem(omissionStorageKey(source.connectorId)); } catch { /* Sin almacenamiento, no hay omisiones guardadas. */ }
+    }
     window.dispatchEvent(new Event(omissionsChangedEvent));
     setRefreshMessage(null);
     startRefresh(async () => {
       try {
-        const response = await fetch("/api/ninja-account-registration-exclusions/restore", {
-          body: JSON.stringify({ connectorId }),
-          headers: { "content-type": "application/json" },
-          method: "POST",
-        });
-        const result = await response.json() as { message?: unknown; ok?: unknown };
-        setRefreshMessage(typeof result.message === "string"
-          ? result.message
-          : "No pudimos actualizar las cuentas detectadas.");
+        const results = await Promise.all(sources.map(async (source) => {
+          const response = await fetch("/api/ninja-account-registration-exclusions/restore", {
+            body: JSON.stringify({ connectorId: source.connectorId }),
+            headers: { "content-type": "application/json" },
+            method: "POST",
+          });
+          return response.json() as Promise<{ message?: unknown; ok?: unknown; restoredCount?: unknown }>;
+        }));
+        const failed = results.find((result) => result.ok !== true);
+        const restored = results.reduce((total, result) => total + Number(result.restoredCount ?? 0), 0);
+        setRefreshMessage(failed && typeof failed.message === "string"
+          ? failed.message
+          : restored > 0
+            ? restored === 1
+              ? "La cuenta eliminada quedó habilitada para volver a registrarse."
+              : `${restored} cuentas eliminadas volvieron a quedar disponibles para registrar.`
+            : "Listado actualizado con la última información de NinjaTrader.");
       } catch {
         setRefreshMessage("No pudimos actualizar las cuentas detectadas.");
       }
@@ -73,17 +102,18 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, exclu
     });
   }
 
-  function omitAccount(account: DetectedNinjaAccount) {
+  function omitAccount(connectorId: string, account: DetectedNinjaAccount) {
     const key = ninjaAccountRegistrationKey(connectorId, account.connectionName, account.accountName);
-    const next = new Set([...omittedKeys, key]);
-    try { window.sessionStorage.setItem(omissionStorageKey, JSON.stringify([...next])); } catch { return; }
+    const storageKey = omissionStorageKey(connectorId);
+    const next = new Set([...parseOmissions(readOmissions(storageKey)), key]);
+    try { window.sessionStorage.setItem(storageKey, JSON.stringify([...next])); } catch { return; }
     window.dispatchEvent(new Event(omissionsChangedEvent));
   }
 
   return (
     <section className="ninja-detections" aria-labelledby="ninja-detections-title">
       <div className="ninja-detections-heading">
-        <h3 id="ninja-detections-title">NinjaTrader</h3>
+        <h3 id="ninja-detections-title">Cuentas nuevas detectadas</h3>
         <div className="ninja-detections-controls">
           <button className="secondary-action" disabled={refreshing} onClick={refreshAccounts} title="Volver a mostrar cuentas omitidas y actualizar el listado" type="button">
             {refreshing ? "Actualizando…" : "Actualizar"}
@@ -96,8 +126,8 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, exclu
       {refreshMessage ? <p className="ninja-refresh-message" role="status">{refreshMessage}</p> : null}
       {propAccounts.length === 0 ? <p className="ninja-empty">Sin cuentas nuevas</p> : null}
       {propAccounts.length > 0 ? (
-        <div className="ninja-detected-grid">{propAccounts.map((account) => (
-          <form action={createDetectedPurchase} className="ninja-detected-card" key={`${account.connectionName}-${account.accountName}`}>
+        <div className="ninja-detected-grid">{propAccounts.map(({ account, connectorId }) => (
+          <form action={createDetectedPurchase} className="ninja-detected-card" key={`${connectorId}-${account.connectionName}-${account.accountName}`}>
             <input name="mode" type="hidden" value={mode} />
             <input name="period" type="hidden" value={period} />
             <input name="period_id" type="hidden" value={periodId} />
@@ -115,7 +145,7 @@ export function DetectedNinjaAccounts({ accounts, companyIds, connectorId, exclu
             <div className="ninja-detected-footer">
               <p className="ninja-detected-note">Primera detección: {account.suggestedPurchaseDate}</p>
               <div className="ninja-detected-actions">
-                <button className="secondary-action" onClick={() => omitAccount(account)} type="button">Omitir</button>
+                <button className="secondary-action" onClick={() => omitAccount(connectorId, account)} type="button">Omitir</button>
                 <button className="primary-action" disabled={!companyIds[account.companyCode?.toLowerCase() ?? ""]} type="submit">Registrar cuenta</button>
               </div>
             </div>

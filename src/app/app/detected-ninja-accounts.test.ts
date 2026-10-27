@@ -11,11 +11,11 @@ import { DetectedNinjaAccounts } from "./detected-ninja-accounts";
 describe("Ninja account registration inbox", () => {
   it("offers Omitir on a pending prop and Actualizar in the NinjaTrader header", () => {
     const html = renderToStaticMarkup(createElement(DetectedNinjaAccounts, {
-      accounts: [{ accountName: "LFE123", accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID",
+      companyIds: { lucid: "company-id" }, excludedAccountKeys: new Set<string>(),
+      registeredAccountKeys: new Set<string>(), mode: "real", period: "2026-09-01", periodId: "period-id",
+      sources: [{ accounts: [{ accountName: "LFE123", accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID",
         connectionName: "Ninja", firstSeenAt: "2026-09-30T12:00:00Z", phase: "Evaluation", product: "Flex",
-        suggestedPurchaseDate: "2026-09-30", type: "prop" }],
-      companyIds: { lucid: "company-id" }, connectorId: "connector-id", excludedAccountKeys: new Set<string>(),
-      registeredAccountKeys: new Set<string>(), mode: "real", online: true, period: "2026-09-01", periodId: "period-id", wallets: [],
+        suggestedPurchaseDate: "2026-09-30", type: "prop" }], connectorId: "connector-id", online: true }], wallets: [],
     }));
     expect(html).toContain("Actualizar");
     expect(html).toContain("Omitir");
@@ -27,12 +27,27 @@ describe("Ninja account registration inbox", () => {
       connectionName: "Ninja", firstSeenAt: "2026-10-02T12:00:00Z", phase: "Evaluation", product: "Flex",
       suggestedPurchaseDate: "2026-10-02", type: "prop" } as const;
     const html = renderToStaticMarkup(createElement(DetectedNinjaAccounts, {
-      accounts: [{ ...account, accountName: "LFE0011" }, { ...account, accountName: "LFE0012" }],
-      companyIds: { lucid: "company-id" }, connectorId: "connector-id", excludedAccountKeys: new Set<string>(),
-      registeredAccountKeys: new Set<string>(), mode: "real", online: true, period: "2026-10-01", periodId: "period-id", wallets: [],
+      companyIds: { lucid: "company-id" }, excludedAccountKeys: new Set<string>(),
+      registeredAccountKeys: new Set<string>(), mode: "real", period: "2026-10-01", periodId: "period-id",
+      sources: [{ accounts: [{ ...account, accountName: "LFE0011" }, { ...account, accountName: "LFE0012" }], connectorId: "connector-id", online: true }], wallets: [],
     }));
     expect(html.match(/class="ninja-detected-card"/g)).toHaveLength(2);
     expect(html).toContain("LFE0011");
     expect(html).toContain("LFE0012");
+  });
+
+  it("unifies multiple connectors into a single empty Ninja section", () => {
+    const html = renderToStaticMarkup(createElement(DetectedNinjaAccounts, {
+      companyIds: {}, excludedAccountKeys: new Set<string>(), registeredAccountKeys: new Set<string>(),
+      mode: "real", period: "2026-10-01", periodId: "period-id", wallets: [],
+      sources: [
+        { accounts: [], connectorId: "personal", online: true },
+        { accounts: [], connectorId: "identity-one", online: false },
+        { accounts: [], connectorId: "identity-two", online: false },
+      ],
+    }));
+    expect(html.match(/class="ninja-detections"/g)).toHaveLength(1);
+    expect(html.match(/>Actualizar</g)).toHaveLength(1);
+    expect(html).toContain("Sin cuentas nuevas");
   });
 });
