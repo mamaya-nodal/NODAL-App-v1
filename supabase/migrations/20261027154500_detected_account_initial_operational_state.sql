@@ -206,4 +206,3 @@ revoke all on function public.nodal_detected_ninja_phase(text) from public,anon;
 revoke all on function public.nodal_detected_ninja_initial_balance_cents(text) from public,anon;
 grant execute on function public.nodal_detected_ninja_phase(text) to authenticated;
 grant execute on function public.nodal_detected_ninja_initial_balance_cents(text) to authenticated;
-
