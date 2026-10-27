@@ -3104,3 +3104,16 @@ vigente sin aprobacion y evidencia suficiente.
   vigente confirma el inicio simplificado con una lista vacía y flotante cero. Las
   cuentas sólo nacen mediante su alta posterior y auditable.
 
+### APP-211 - El alta detectada conserva fase y actividad observable
+
+- **Fecha:** 2026-10-27. El identificador de una cuenta detectada por Ninja define
+  su fase inicial cuando coincide con una nomenclatura aprobada. Por ejemplo,
+  `LFF...` se registra como `Funded`, no como `Evaluation`.
+- **Estado:** una cuenta `Funded` o `Live` se registra viva. Una cuenta de
+  evaluación también se registra viva si su cash value observado difiere del saldo
+  inicial conocido para ese producto; sólo una evaluación intacta puede nacer
+  virgen.
+- **Alcance:** no se infiere el número de vuelta sin historia suficiente. El alta
+  conserva únicamente la fase y el estado demostrables. La migración repara bajo
+  la misma regla los vínculos activos que habían quedado sin fase y deja auditoría.
+
