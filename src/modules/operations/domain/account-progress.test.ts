@@ -118,4 +118,14 @@ describe("progreso operativo de una cuenta", () => {
       payouts: [],
     })).toEqual({ phase: "Cuarta vuelta", tradeDay: 5 });
   });
+
+  it("refleja como día siguiente una operación técnica aún pendiente de conciliación", () => {
+    expect(resolveCurrentAccountProgress({
+      baseline: { completedTradeDays: 3, phase: "Cuarta vuelta" },
+      entries: [],
+      observedClosedTradeCount: 1,
+      operationalState: "Funded",
+      payouts: [],
+    })).toEqual({ phase: "Cuarta vuelta", tradeDay: 5 });
+  });
 });

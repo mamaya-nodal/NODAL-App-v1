@@ -77,7 +77,8 @@ export function resolveCurrentAccountProgress(input: Readonly<{
   // su conciliación contable todavía esté en curso. Después de un payout la
   // numeración se reinicia y sólo las entradas de la nueva vuelta son seguras.
   const canUseObservedCount = phase === "Evaluacion"
-    || (phase === "Primera vuelta" && input.payouts.length === 0);
+    || (phase === "Primera vuelta" && input.payouts.length === 0)
+    || input.baseline?.phase === phase;
   const observedTrades = canUseObservedCount
     ? Math.max(recordedTrades, input.observedClosedTradeCount ?? 0)
     : recordedTrades;

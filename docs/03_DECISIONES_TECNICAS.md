@@ -3161,4 +3161,7 @@ vigente sin aprobacion y evidencia suficiente.
   obtiene de la magnitud negativa del acumulado económico vigente: incluye el costo
   pendiente y las pérdidas de cobertura posteriores; nunca incluye cuentas cerradas
   ni muestra una magnitud negativa.
+- **Oportunidad:** una cobertura técnica cerrada actualiza `Invertido` aunque su
+  conciliación formal siga esperando la vuelta de otra cuenta. La app no pierde el
+  capital comprometido ni altera el orden contable para forzar su confirmación.
 

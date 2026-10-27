@@ -938,6 +938,16 @@ async function renderPrivateAppPage({
         economicHistory.push({ accumulatedInCents: accumulated, brokerResultInCents: null, concept: "Payout",
           phase: row.phase ?? "Funded", propResultInCents: null, tradeNumber: null });
       });
+      const observedNinjaAccumulated = -purchaseCost
+        + technicalMemberRows
+          .filter((member) => member.account_id === account.id)
+          .reduce((total, member) => total + Number(member.allocated_broker_result_cents ?? 0), 0)
+        + (historicalFundingWithdrawalRows ?? [])
+          .filter((row) => row.account_id === account.id && row.collected_on)
+          .reduce((total, row) => total + Number(row.amount_cents) - Number(row.collection_fee_cents ?? 0), 0);
+      const investmentAccumulated = ninjaNamesByAccountId.has(account.id)
+        ? observedNinjaAccumulated
+        : accumulated;
       const hasRecordedActivity = Boolean(manualBalance)
         || (ninjaBalance?.technicalTradeCount ?? 0) > 0
         || (historicalOperationEntryRows ?? []).some((entry) => entry.account_id === account.id)
@@ -965,7 +975,7 @@ async function renderPrivateAppPage({
         periodMonth: period.periodMonth,
         openInvestmentInCents: resolveOpenInvestmentInCents({
           accountingState: account.state as AccountView["state"],
-          accumulatedInCents: accumulated,
+          accumulatedInCents: investmentAccumulated,
         }),
         priceInCents: purchase ? Number(purchase.price_cents) : null,
         purchaseNumber: purchase?.purchase_number ?? null,
