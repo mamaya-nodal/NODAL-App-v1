@@ -6,9 +6,20 @@ alter table public.ninja_account_links
   add column if not exists accounting_phase public.operation_phase,
   add column if not exists completed_trade_days integer;
 
-alter table public.ninja_account_links
-  add constraint ninja_account_links_completed_trade_days_check
-  check (completed_trade_days is null or completed_trade_days >= 0);
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'ninja_account_links_completed_trade_days_check'
+      and conrelid = 'public.ninja_account_links'::regclass
+  ) then
+    alter table public.ninja_account_links
+      add constraint ninja_account_links_completed_trade_days_check
+      check (completed_trade_days is null or completed_trade_days >= 0);
+  end if;
+end;
+$$;
 
 create or replace function public.create_nodal_detected_purchase_with_progress(
   target_period_id uuid,
