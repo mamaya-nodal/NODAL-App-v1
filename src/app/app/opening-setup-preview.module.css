@@ -119,7 +119,7 @@
 .close { width: 38px; height: 38px; border: 1px solid var(--app-border); border-radius: 50%; background: var(--app-panel); color: var(--app-copy); font-size: 25px; cursor: pointer; }
 .previewNotice { display: flex; align-items: center; gap: 10px; padding: 10px 24px; background: #fff5d6; color: #73580b; font-size: 11px; }
 .previewNotice strong { padding: 4px 8px; border-radius: 999px; background: #f0c850; color: #3b2d02; font-size: 9px; letter-spacing: .7px; }
-.body { display: grid; min-height: 0; grid-template-columns: 205px minmax(0, 1fr); }
+.body { display: grid; overflow: hidden; min-height: 0; flex: 1; grid-template-columns: 205px minmax(0, 1fr); }
 .steps { display: flex; flex-direction: column; gap: 6px; padding: 24px 15px; border-right: 1px solid var(--app-border); background: var(--app-sidebar); }
 .steps > div { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 7px 9px; border-radius: 10px; color: var(--app-subtle); font-size: 11px; font-weight: 750; }
 .steps i { display: grid; width: 24px; height: 24px; flex: 0 0 24px; border: 1px solid var(--app-border-strong); border-radius: 50%; place-items: center; font-size: 9px; font-style: normal; }
@@ -127,7 +127,7 @@
 .steps .activeStep i { border-color: var(--app-action); background: var(--app-action); color: var(--app-action-text); }
 .steps .completedStep { color: var(--app-accent); }
 .steps .completedStep i { border-color: color-mix(in srgb, var(--app-accent) 38%, transparent); background: color-mix(in srgb, var(--app-accent) 12%, transparent); }
-.content { overflow-y: auto; min-height: 455px; padding: 32px 38px 36px; }
+.content { overflow-y: auto; min-height: 0; padding: 32px 38px 36px; }
 .intro,
 .formSection { max-width: 720px; margin: 0 auto; }
 .eyebrow { margin: 0 0 9px; }

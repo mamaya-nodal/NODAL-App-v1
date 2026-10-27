@@ -12,16 +12,6 @@ import styles from "./opening-setup-preview.module.css";
 
 type StartMode = "reconstruct" | "zero";
 
-export type SimplifiedOpeningAccount = Readonly<{
-  accountName: string;
-  companyId: string;
-  companyName: string;
-  connectionName: string;
-  connectorId: string;
-  firstSeenAt: string;
-  phase: "Evaluation" | "Funded" | "Live";
-}>;
-
 type Props = Readonly<{
   autoOpen?: boolean;
   initialOpening?: PeriodOpeningRecord | null;
@@ -30,7 +20,6 @@ type Props = Readonly<{
   registeredAccountCount?: number;
   revision?: boolean;
   simplified?: boolean;
-  simplifiedAccounts?: readonly SimplifiedOpeningAccount[];
 }>;
 
 type WalletDraft = Readonly<{ balance: string; id: string; name: string }>;
@@ -121,6 +110,7 @@ function batchFromOpening(opening?: PeriodOpeningRecord | null): BatchDraft {
 
 const zeroSteps = ["Punto de partida", "Dinero disponible", "Cuentas iniciales", "Vista previa"];
 const reconstructionSteps = ["Punto de partida", "Fecha de corte", "Cuentas actuales", "Dinero actual", "Progreso previo", "Vista previa"];
+const simplifiedSteps = ["Dinero disponible", "Vista previa"];
 
 function amount(value: string): number {
   const normalized = value.replace(/\s/g, "").replace(",", ".");
@@ -209,11 +199,11 @@ function WalletEditor({ onChange, wallets }: Readonly<{
   </div>;
 }
 
-export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, liveBrokerBalance: initialBrokerBalance = null, periodId, registeredAccountCount = 0, revision = false, simplified = false, simplifiedAccounts = [] }: Props) {
+export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, liveBrokerBalance: initialBrokerBalance = null, periodId, registeredAccountCount = 0, revision = false, simplified = false }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(autoOpen);
   const [mode, setMode] = useState<StartMode | null>(simplified ? "zero" : null);
-  const [step, setStep] = useState(simplified ? 1 : 0);
+  const [step, setStep] = useState(0);
   const preserveRegisteredAccounts = revision && registeredAccountCount > 0;
   const [draft, setDraft] = useState<Draft>(() => draftFromOpening(initialOpening, preserveRegisteredAccounts));
   const [wallets, setWallets] = useState<WalletDraft[]>(() => walletsFromOpening(initialOpening));
@@ -224,7 +214,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
   const [pendingBrokerAccounts, setPendingBrokerAccounts] = useState<PendingOpeningBrokerAccount[]>([]);
   const [claimingAccount, setClaimingAccount] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const steps = mode === "reconstruct" ? reconstructionSteps : zeroSteps;
+  const steps = simplified ? simplifiedSteps : mode === "reconstruct" ? reconstructionSteps : zeroSteps;
   const lastStep = steps.length - 1;
 
   useEffect(() => {
@@ -302,7 +292,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
 
   function restart() {
     setMode(simplified ? "zero" : null);
-    setStep(simplified ? 1 : 0);
+    setStep(0);
     setDraft(draftFromOpening(initialOpening, preserveRegisteredAccounts));
     setBatch(batchFromOpening(initialOpening));
     setWallets(walletsFromOpening(initialOpening));
@@ -320,7 +310,6 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
         mode,
         periodId,
         simplified,
-        simplifiedAccounts,
         wallets,
       });
       setMessage(result.message);
@@ -338,7 +327,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
           <span>{simplified ? "NUEVO INICIO" : revision ? "EDICIÓN AUTORIZADA" : "PREPARACIÓN INICIAL"}</span>
           <h2>{simplified ? "Registrá tu situación actual" : revision ? "Rehacé tu punto de partida" : "Configurá tu punto de partida"}</h2>
           <p>
-            {simplified ? "NODAL tomará el saldo broker y las cuentas que están visibles ahora. Los registros del inicio anterior quedarán archivados y no se sumarán." : revision ? "La versión anterior quedará archivada. La nueva apertura reorganizará la contabilidad desde el corte que confirmes." : "Elegí si empezás desde cero o si necesitás reconstruir la situación con la que llegás a NODAL."}
+            {simplified ? "NODAL tomará el saldo broker y el dinero disponible fuera del broker." : revision ? "La versión anterior quedará archivada. La nueva apertura reorganizará la contabilidad desde el corte que confirmes." : "Elegí si empezás desde cero o si necesitás reconstruir la situación con la que llegás a NODAL."}
           </p>
         </div>
         <button onClick={() => setOpen(true)} type="button">
@@ -364,16 +353,16 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
 
             <div className={styles.body}>
               <nav aria-label="Progreso de la preparación" className={styles.steps}>
-                {steps.map((label, index) => simplified && index === 0 ? null : (
+                {steps.map((label, index) => (
                   <div className={index === step ? styles.activeStep : index < step ? styles.completedStep : ""} key={label}>
-                    <i>{index < step ? "✓" : simplified ? index : index + 1}</i>
-                    <span>{simplified && index === 2 ? "Cuentas y flotante" : label}</span>
+                    <i>{index < step ? "✓" : index + 1}</i>
+                    <span>{label}</span>
                   </div>
                 ))}
               </nav>
 
               <div className={styles.content}>
-                {step === 0 ? (
+                {!simplified && step === 0 ? (
                   <div className={styles.intro}>
                     <p className={styles.eyebrow}>ELEGÍ UNA OPCIÓN</p>
                     <h3>¿Cómo empezás a usar NODAL?</h3>
@@ -389,7 +378,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                   </div>
                 ) : null}
 
-                {mode === "zero" && step === 1 ? (
+                {mode === "zero" && step === (simplified ? 0 : 1) ? (
                   <div className={styles.formSection}>
                     <p className={styles.eyebrow}>DINERO DISPONIBLE</p>
                     <h3>¿Con qué fondos comenzás?</h3>
@@ -400,25 +389,16 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                   </div>
                 ) : null}
 
-                {mode === "zero" && step === 2 ? (
+                {!simplified && mode === "zero" && step === 2 ? (
                   <div className={styles.formSection}>
                     <p className={styles.eyebrow}>CUENTAS INICIALES</p>
-                    <h3>{simplified ? "Revisá tus cuentas abiertas y el flotante" : "¿Ya compraste cuentas para comenzar?"}</h3>
-                    <p className={styles.description}>{simplified ? "Estas son las cuentas que el conector personal está informando ahora. Los registros anteriores se archivan y estas cuentas se incorporan una sola vez." : "Ninja incorporará las cuentas detectadas. También podrás agregar cuentas operadas desde otra computadora."}</p>
+                    <h3>¿Ya compraste cuentas para comenzar?</h3>
+                    <p className={styles.description}>Ninja incorporará las cuentas detectadas. También podrás agregar cuentas operadas desde otra computadora.</p>
                     <div className={styles.detectedBox}>
-                      <div><span>Cuentas nuevas detectadas ahora</span><strong>{simplified ? simplifiedAccounts.length : 0}</strong></div>
-                      <p>{simplified ? `${registeredAccountCount} registros del inicio anterior quedarán archivados y no se sumarán a este total.` : "Cuando el conector tenga señal, aparecerán aquí con su empresa e identificador."}</p>
+                      <div><span>Cuentas nuevas detectadas ahora</span><strong>0</strong></div>
+                      <p>Cuando el conector tenga señal, aparecerán aquí con su empresa e identificador.</p>
                     </div>
-                    {simplified ? <>
-                      <div className={styles.detectedAccountList}>
-                        {simplifiedAccounts.map((account) => <div key={`${account.connectorId}:${account.connectionName}:${account.accountName}`}>
-                          <div><strong>{account.companyName}</strong><span>{account.accountName}</span><small>{account.connectionName}</small></div>
-                          <b>{account.phase === "Evaluation" ? "Evaluación" : account.phase}</b>
-                        </div>)}
-                      </div>
-                      {simplifiedAccounts.length === 0 ? <div className={styles.tip}><strong>Sin cuentas prop detectadas</strong><span>Podés continuar si hoy no tenés cuentas conectadas en este Ninja. Los registros del inicio anterior no se trasladarán al nuevo corte.</span></div> : null}
-                      <Field hint="Cobertura broker comprometida actualmente por todas las cuentas que siguen abiertas." label="Flotante actual comprometido (USD)" name="workingCapital" onChange={update} placeholder="0,00" type="number" value={draft.workingCapital} />
-                    </> : <Field hint="Solo para explorar cómo se verá el resumen." label="Cuentas vírgenes que querés registrar" name="virginAccounts" onChange={update} placeholder="0" type="number" value={draft.virginAccounts} />}
+                    <Field hint="Solo para explorar cómo se verá el resumen." label="Cuentas vírgenes que querés registrar" name="virginAccounts" onChange={update} placeholder="0" type="number" value={draft.virginAccounts} />
                   </div>
                 ) : null}
 
@@ -502,9 +482,9 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                       <SummaryItem label="Capital neto aportado" value={money(totals.netCapital)} />
                       <SummaryItem label="Posición observable" value={money(totals.observable)} />
                       <SummaryItem label="Resultado acumulado inferido" value={money(totals.inferredResult)} />
-                      <SummaryItem label="Flotante" value={money(amount(draft.workingCapital))} />
-                      <SummaryItem label="Cuentas vigentes" value={String(simplified ? simplifiedAccounts.length : amount(draft.virginAccounts) + amount(draft.liveEvaluationAccounts) + amount(draft.fundedAccounts))} />
-                      <SummaryItem label="Cuentas cerradas previas" value={draft.closedAccounts || "0"} />
+                      {!simplified ? <SummaryItem label="Flotante" value={money(amount(draft.workingCapital))} /> : null}
+                      {!simplified ? <SummaryItem label="Cuentas vigentes" value={String(amount(draft.virginAccounts) + amount(draft.liveEvaluationAccounts) + amount(draft.fundedAccounts))} /> : null}
+                      {!simplified ? <SummaryItem label="Cuentas cerradas previas" value={draft.closedAccounts || "0"} /> : null}
                     </div>
                     <div className={`${styles.reconciliation} ${styles.reconciled}`}>
                       <div><span>Diferencia de apertura</span><strong>{money(0)}</strong></div>
@@ -519,8 +499,8 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
               {!simplified ? <button className={styles.textButton} onClick={restart} type="button">Cambiar opción</button> : <span />}
               {message ? <p className={styles.actionMessage} role="status">{message}</p> : null}
               <div>
-                {step > (simplified ? 1 : 0) ? <button className={styles.backButton} onClick={() => setStep((current) => Math.max(simplified ? 1 : 0, current - 1))} type="button">Atrás</button> : null}
-                {step > 0 && step < lastStep ? <button className={styles.nextButton} onClick={() => setStep((current) => Math.min(lastStep, current + 1))} type="button">Continuar</button> : null}
+                {step > 0 ? <button className={styles.backButton} onClick={() => setStep((current) => Math.max(0, current - 1))} type="button">Atrás</button> : null}
+                {mode && step < lastStep ? <button className={styles.nextButton} onClick={() => setStep((current) => Math.min(lastStep, current + 1))} type="button">Continuar</button> : null}
                 {step === lastStep ? <button className={styles.nextButton} disabled={isPending || claimingAccount !== null} onClick={finishSetup} type="button">{isPending ? "Guardando…" : revision ? "Guardar nuevo punto de partida" : "Confirmar punto de partida"}</button> : null}
               </div>
             </footer>

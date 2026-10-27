@@ -3089,3 +3089,18 @@ vigente sin aprobacion y evidencia suficiente.
   de reemplazarse; si existe actividad económica, toda la operación se cancela sin
   modificar datos. Identidades y conectores se preservan.
 
+### APP-210 - La apertura no registra cuentas ni flotante
+
+- **Fecha:** 2026-10-27. La preparación simplificada deja de incorporar cuentas
+  vivas y deja de solicitar o persistir flotante. Registra únicamente el saldo
+  broker y el dinero disponible fuera del broker.
+- **Alta de cuentas:** después de confirmar la apertura, las cuentas observadas por
+  Ninja se incorporan por el formulario ordinario de `Cuentas`. Si una cuenta ya
+  tiene flotante al incorporarse, el usuario carga como precio el precio de compra
+  más ese flotante. No se crea otro campo, cartel ni recorrido especial.
+- **Aplicación:** la regla es la predeterminada para usuarios actuales y futuros.
+  Alfred conserva expresamente la apertura y la contabilidad anteriores.
+- **Protección:** aunque una interfaz anterior envíe cuentas o flotante, la acción
+  vigente confirma el inicio simplificado con una lista vacía y flotante cero. Las
+  cuentas sólo nacen mediante su alta posterior y auditable.
+

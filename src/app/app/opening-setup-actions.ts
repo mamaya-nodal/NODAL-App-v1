@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import type { OpeningAccountStage } from "@/modules/summary/domain/opening-snapshot";
+import { simplifiedOpeningBaseline } from "@/modules/summary/domain/simplified-opening-policy";
 import { readOpeningBrokerState } from "@/modules/ninja/server/opening-broker-state";
-import type { SimplifiedOpeningAccount } from "./opening-setup-preview";
 
 type Result = Readonly<{ ok: boolean; message: string }>;
 type BatchInput = Readonly<{
@@ -28,7 +28,6 @@ export type OpeningSetupInput = Readonly<{
   personalWithdrawals: string;
   reconstructionDate: string;
   simplified?: boolean;
-  simplifiedAccounts?: readonly SimplifiedOpeningAccount[];
   virginAccounts: string;
   wallets: ReadonlyArray<Readonly<{ balance: string; name: string }>>;
   workingCapital: string;
@@ -122,11 +121,12 @@ export async function confirmOpeningSetup(input: OpeningSetupInput): Promise<Res
   const openingProcedure = input.simplified
     ? "confirm_nodal_simplified_opening"
     : "confirm_nodal_period_opening_after_connector";
+  const simplifiedBaseline = simplifiedOpeningBaseline();
   const openingArguments = input.simplified ? {
-    target_accounts: input.simplifiedAccounts ?? [],
+    target_accounts: simplifiedBaseline.accounts,
     target_broker_balance_cents: liveBroker.balanceInCents,
     target_cutover_date: input.reconstructionDate,
-    target_floating_cents: money.floating,
+    target_floating_cents: simplifiedBaseline.floatingInCents,
     target_period_id: input.periodId,
     target_wallets: wallets,
   } : {
