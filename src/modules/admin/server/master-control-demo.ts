@@ -11,10 +11,10 @@ import type { MasterControlData } from "./load-master-control";
 const months = ["2026-08-01", "2026-09-01", "2026-10-01"] as const;
 
 const units = [
-  { agreement_bps: 2500, code: "ND", id: "demo-unit-nd", name: "Unidad NODAL", ordinal: 1, responsible_email: "mauricio@nodal.test", responsible_name: "Mauricio Amaya", root_desk_id: "demo-nd-root" },
-  { agreement_bps: 3000, code: "HW", id: "demo-unit-hw", name: "Unidad Highway", ordinal: 2, responsible_email: "elena@highway.test", responsible_name: "Elena Ruiz", root_desk_id: "demo-hw-root" },
-  { agreement_bps: 3600, code: "AT", id: "demo-unit-at", name: "Unidad Atlas", ordinal: 3, responsible_email: "martina@atlas.test", responsible_name: "Martina López", root_desk_id: "demo-at-root" },
-  { agreement_bps: 3300, code: "AP", id: "demo-unit-ap", name: "Unidad Apex", ordinal: 4, responsible_email: "tomas@apex.test", responsible_name: "Tomás Vidal", root_desk_id: "demo-ap-root" },
+  { agreement_bps: 2500, code: "ND", id: "demo-unit-nd", included_in_master_reporting: true, name: "Unidad NODAL", ordinal: 1, responsible_email: "mauricio@nodal.test", responsible_name: "Mauricio Amaya", root_desk_id: "demo-nd-root" },
+  { agreement_bps: 3000, code: "HW", id: "demo-unit-hw", included_in_master_reporting: true, name: "Unidad Highway", ordinal: 2, responsible_email: "elena@highway.test", responsible_name: "Elena Ruiz", root_desk_id: "demo-hw-root" },
+  { agreement_bps: 3600, code: "AT", id: "demo-unit-at", included_in_master_reporting: true, name: "Unidad Atlas", ordinal: 3, responsible_email: "martina@atlas.test", responsible_name: "Martina López", root_desk_id: "demo-at-root" },
+  { agreement_bps: 3300, code: "AP", id: "demo-unit-ap", included_in_master_reporting: true, name: "Unidad Apex", ordinal: 4, responsible_email: "tomas@apex.test", responsible_name: "Tomás Vidal", root_desk_id: "demo-ap-root" },
 ] as const;
 
 const desks: Desk[] = [
@@ -179,6 +179,7 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     demo: true,
     distributionAdminShares: [],
     distributionSettings: [],
+    excludedFromMasterReportingUserIds: [],
     historicalGrossByUser,
     historicCommission: Object.fromEntries(current.overview.people.map((person) => [person.id, person.commission])),
     history: [],
@@ -198,6 +199,7 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     pendingAccessCount: 6,
     pendingAccessRequests: [],
     pendingOpeningRevisionRequests: [],
+    periodOverviews: availableSnapshots.slice().reverse(),
     performanceHistory: availableSnapshots.map((snapshot) => ({
       gross: snapshot.overview.gross,
       month: snapshot.month,
@@ -206,6 +208,8 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     periods: [...months].reverse(),
     profilesByUser,
     ready: true,
+    reportingUnitCount: units.length,
+    reportingUserCount: current.overview.people.length,
     unitByDesk,
     unitByUser,
     unitSummaries,

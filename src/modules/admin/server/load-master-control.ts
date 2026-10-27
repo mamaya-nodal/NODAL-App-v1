@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServiceClient } from "@/lib/supabase/service";
 import { transmittedWithinLast24Hours } from "../domain/connector-activity";
+import { calculateDeskOverview } from "../domain/desks";
 import { requireNodalAdmin } from "./admin-access";
 import { loadDesks } from "./load-desks";
 
@@ -14,6 +15,7 @@ type UnitRow = Readonly<{
   responsible_email: string;
   responsible_name: string;
   root_desk_id: string;
+  included_in_master_reporting: boolean;
 }>;
 
 export type MasterUnitSummary = Readonly<{
@@ -28,14 +30,14 @@ export async function loadMasterControl(
   requestedMonth?: string,
 ) {
   const [deskData, adminDb] = await Promise.all([
-    loadDesks("real", requestedMonth),
+    loadDesks("real", requestedMonth, { officialMasterReporting: true }),
     requireNodalAdmin(),
   ]);
   const { data: claimsData } = await adminDb.auth.getClaims();
   const db = createServiceClient();
   const userIds = deskData.overview.people.map((person) => person.id);
   const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult, openingRevisionRequestsResult] = await Promise.all([
-    db.from("nodal_units").select("id,ordinal,name,code,root_desk_id,responsible_name,responsible_email,agreement_bps").order("ordinal"),
+    db.from("nodal_units").select("id,ordinal,name,code,root_desk_id,responsible_name,responsible_email,agreement_bps,included_in_master_reporting").order("ordinal"),
     db.from("nodal_users")
       .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled,configuration_enabled")
       .in("id", userIds),
@@ -127,9 +129,53 @@ export async function loadMasterControl(
     person.id,
     resolveUnitId(person.deskId),
   ]));
+  const excludedUnitIds = new Set(units
+    .filter((unit) => !unit.included_in_master_reporting)
+    .map((unit) => unit.id));
+  const excludedUserIds = new Set(deskData.overview.people
+    .filter((person) => excludedUnitIds.has(unitByUser[person.id]))
+    .map((person) => person.id));
+  const rebuildReportingOverview = (snapshot: (typeof deskData.periodOverviews)[number]) => calculateDeskOverview(
+    snapshot.overview.desks.map((desk) => ({
+      created_at: desk.created_at,
+      id: desk.id,
+      name: desk.name,
+      parent_id: desk.parent_id,
+    })),
+    snapshot.overview.desks.map((desk) => desk.terms),
+    snapshot.overview.people.map((person) => ({
+      access: person.access,
+      email: person.email,
+      gross: excludedUserIds.has(person.id) ? 0 : person.gross,
+      id: person.id,
+      legacyCommission: excludedUserIds.has(person.id) ? 0 : person.legacyCommission,
+      master: person.master,
+      name: person.name,
+    })),
+    snapshot.overview.people.flatMap((person) => person.terms ? [person.terms] : []),
+    snapshot.month,
+    deskData.distributionSettings,
+    deskData.distributionAdminShares,
+  );
+  const reportingPeriodOverviews = deskData.periodOverviews.map((snapshot) => ({
+    month: snapshot.month,
+    overview: rebuildReportingOverview(snapshot),
+  }));
+  const overview = reportingPeriodOverviews.find((snapshot) => snapshot.month === deskData.month)?.overview
+    ?? rebuildReportingOverview({ month: deskData.month, overview: deskData.overview });
+  const historicalGrossByUser = Object.fromEntries(overview.people.map((person) => [
+    person.id,
+    reportingPeriodOverviews.reduce((sum, snapshot) => sum
+      + (snapshot.overview.people.find((candidate) => candidate.id === person.id)?.gross ?? 0), 0),
+  ]));
+  const historicCommission = Object.fromEntries(overview.people.map((person) => [
+    person.id,
+    reportingPeriodOverviews.reduce((sum, snapshot) => sum
+      + (snapshot.overview.people.find((candidate) => candidate.id === person.id)?.commission ?? 0), 0),
+  ]));
   const unitSummaries: MasterUnitSummary[] = units.map((unit) => {
-    const people = deskData.overview.people.filter((person) => unitByUser[person.id] === unit.id);
-    const desks = deskData.overview.desks.filter((desk) => resolveUnitId(desk.id) === unit.id && desk.terms.active);
+    const people = overview.people.filter((person) => unitByUser[person.id] === unit.id);
+    const desks = overview.desks.filter((desk) => resolveUnitId(desk.id) === unit.id && desk.terms.active);
     const root = desks.find((desk) => desk.id === unit.root_desk_id);
     return {
       deskCount: desks.length,
@@ -142,6 +188,24 @@ export async function loadMasterControl(
 
   return {
     ...deskData,
+    overview,
+    historicCommission,
+    historicalGrossByUser,
+    performanceHistory: reportingPeriodOverviews
+      .slice()
+      .reverse()
+      .map((snapshot) => ({
+        gross: snapshot.overview.gross,
+        month: snapshot.month,
+        nodalIncome: snapshot.overview.nodalIncome,
+      })),
+    chart: reportingPeriodOverviews
+      .slice(0, 12)
+      .reverse()
+      .map((snapshot) => ({
+        month: snapshot.month,
+        values: Object.fromEntries(snapshot.overview.desks.map((desk) => [desk.id, desk.gross])),
+      })),
     actorUserId: claimsData?.claims.sub ?? null,
     demo: false,
     connectorByUser,
@@ -163,6 +227,10 @@ export async function loadMasterControl(
     unitByDesk,
     unitByUser,
     unitSummaries,
+    excludedFromMasterReportingUserIds: [...excludedUserIds],
+    reportingUnitCount: units.filter((unit) => unit.included_in_master_reporting).length,
+    reportingUserCount: overview.people.filter((person) => person.access === "active"
+      && !excludedUserIds.has(person.id)).length,
     units,
   };
 }

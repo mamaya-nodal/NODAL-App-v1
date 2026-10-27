@@ -11,10 +11,12 @@ import {
   type UserDistributionTerms,
   type UserDistributionAdminShare,
 } from "../domain/desks";
+import { isMasterReportingMonth, MASTER_REPORTING_START_MONTH } from "../domain/master-reporting";
 
 export async function loadDesks(
   mode: "real" | "practice",
   requestedMonth?: string,
+  options?: Readonly<{ officialMasterReporting?: boolean }>,
 ) {
   const db = await requireNodalAdmin();
   const [users, spaces, desks, terms, userTerms, distributions, distributionShares, history] = await Promise.all([
@@ -53,6 +55,7 @@ export async function loadDesks(
       ),
     ]),
   ]
+    .filter((period) => !options?.officialMasterReporting || isMasterReportingMonth(period))
     .sort()
     .reverse();
   const month = periods.includes(requestedMonth ?? "")
@@ -60,12 +63,16 @@ export async function loadDesks(
     : currentMonth;
   const allPeriods = (spaces.data ?? []).flatMap((s) =>
     s.periods
-      .filter((p) => p.period_month <= month)
+      .filter((p) => p.period_month <= month
+        && (!options?.officialMasterReporting || isMasterReportingMonth(p.period_month)))
       .map((p) => ({ ...p, user: s.owner_user_id })),
   );
   const summaries = await loadPeriodSummaries(
     db,
     allPeriods.map((p) => p.id),
+    options?.officialMasterReporting
+      ? { officialReportingStartMonth: MASTER_REPORTING_START_MONTH }
+      : undefined,
   );
   const deskRows: Desk[] = missing
     ? [
@@ -169,6 +176,7 @@ export async function loadDesks(
         month: snapshot.month,
         nodalIncome: snapshot.overview.nodalIncome,
       })),
+    periodOverviews: historical,
     chart: historical
       .slice(0, 12)
       .reverse()

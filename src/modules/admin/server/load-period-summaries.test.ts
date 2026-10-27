@@ -115,6 +115,37 @@ describe("shared period summaries", () => {
     expect(summary.capitalNetInCents).toBe(2_300_000);
   });
 
+  it("starts Admin Master billing at the official reset timestamp", async () => {
+    const data: Record<string, Row[]> = {
+      periods: [{ id: "oct", workspace_id: "w", period_month: "2026-10-01", lifecycle_status: "open", workspaces: { owner_user_id: "u" } }],
+      accounts: [{ id: "old", period_id: "oct", state: "closed", state_origin: "automatic" }],
+      purchases: [{
+        account_id: "old", created_at: "2026-10-20T12:00:00Z", funds_origin: "Aporte trader",
+        period_id: "oct", price_cents: 10_000, purchased_on: "2026-10-20",
+      }],
+      operation_entries: [{
+        account_id: "old", created_at: "2026-10-20T13:00:00Z", destination: "NETO BROKER +",
+        id: "entry-old", magnitude_cents: 25_000, operated_on: "2026-10-20", participant_role: "leader",
+        period_id: "oct", phase: "Evaluacion",
+      }],
+      period_opening_snapshots: [{
+        id: "opening", period_id: "oct", start_mode: "zero", cutover_date: "2026-10-24",
+        broker_balance_cents: 0, wallet_balance_cents: 0, funding_pending_cents: 0,
+        contributed_capital_cents: 0, personal_withdrawals_cents: 0,
+        prior_realized_result_cents: 0, floating_cents: 0, virgin_accounts: 0,
+        live_evaluation_accounts: 0, funded_accounts: 0, closed_accounts_reference: 0,
+        revision_number: 1, created_at: "2026-10-24T22:04:15Z", updated_at: "2026-10-24T22:04:15Z",
+      }],
+    };
+    const ordinary = (await loadPeriodSummaries(client(data), ["oct"])).get("oct")!.summary;
+    const official = (await loadPeriodSummaries(client(data), ["oct"], {
+      officialReportingStartMonth: "2026-10-01",
+    })).get("oct")!.summary;
+    expect(ordinary.realizedGainInCents).not.toBe(0);
+    expect(official.realizedGainInCents).toBe(0);
+    expect(official.periodResultInCents).toBe(0);
+  });
+
   it("an empty request performs no reads", async () => {
     expect((await loadPeriodSummaries(client({}), [])).size).toBe(0);
   });

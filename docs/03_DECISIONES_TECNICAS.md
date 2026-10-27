@@ -3185,3 +3185,20 @@ vigente sin aprobacion y evidencia suficiente.
   técnico de `US$ 1.676,39` para ese par de ciclos. Sus cinco Tradeify se registran
   desde `Primera vuelta · Día 1`; la operación posterior corresponde al Día 2.
 
+### APP-217 - Admin Master informa solamente el ciclo oficial posterior al reinicio
+
+- **Fecha:** 2026-10-27. La facturación del Admin Master es la suma del resultado
+  realizado de todos los usuarios pertenecientes a unidades incluidas. El historial
+  oficial comienza en octubre de 2026 y, dentro de ese mes, en la apertura de
+  reinicio de cada usuario. Registros anteriores al corte no se trasladan al
+  consolidado; si no hay actividad posterior, el valor es cero.
+- **Aislamiento:** `Unidad Especial` permanece administrable, pero se excluye de
+  indicadores, historia y rankings generales. SB Digitalmarkets (Alfred) y
+  Sebastián Bonincontro pertenecen a esa unidad. Su contabilidad individual no se
+  elimina ni modifica por esta exclusión.
+- **Ranking:** se ordena por facturación del período, de mayor a menor. Los empates
+  se resuelven por nombre para que la presentación sea estable.
+- **Alta de unidades:** la transacción difiere todas sus restricciones mediante
+  `SET CONSTRAINTS ALL DEFERRED`. Esto evita que el `search_path` cerrado impida
+  resolver por nombre las dos claves foráneas circulares de unidad y mesa raíz.
+
