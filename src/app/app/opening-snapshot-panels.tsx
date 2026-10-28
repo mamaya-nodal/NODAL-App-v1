@@ -14,7 +14,7 @@ function date(value: string) {
   return new Intl.DateTimeFormat("es-AR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
 
-export function OpeningSnapshotHome({
+export function OpeningSnapshotCompact({
   opening,
   periodId,
   revisionEligible,
@@ -29,11 +29,14 @@ export function OpeningSnapshotHome({
     ? opening.contributedCapitalInCents + opening.walletBalanceInCents
     : opening.contributedCapitalInCents - opening.personalWithdrawalsInCents;
   const live = opening.liveEvaluationAccounts + opening.fundedAccounts;
-  return <article className={styles.savedOpening}>
-    <div><span>PUNTO DE PARTIDA REGISTRADO</span><h2>{opening.mode === "zero" ? "Ciclo iniciado desde cero" : "Situación anterior reconstruida"}</h2><p>Corte al {date(opening.cutoverDate)} · los movimientos posteriores se calculan sobre esta apertura.</p><OpeningRevisionRequest eligible={revisionEligible} periodId={periodId} status={revisionStatus} /></div>
-    <div className={styles.savedMetrics}>
+  return <article className={styles.savedOpeningCompact}>
+    <div className={styles.compactOpeningSummary}>
+      <div><span>PUNTO DE PARTIDA</span><strong>{opening.mode === "zero" ? "Inicio desde cero" : "Situación reconstruida"}</strong><small>Corte {date(opening.cutoverDate)}</small></div>
+      <OpeningRevisionRequest eligible={revisionEligible} periodId={periodId} status={revisionStatus} />
+    </div>
+    <div className={styles.compactOpeningMetrics}>
       <p><span>Capital neto inicial</span><strong>{money(capital)}</strong></p>
-      <p><span>Resultado acumulado inferido</span><strong>{money(opening.inferredResultInCents)}</strong></p>
+      <p><span>Resultado previo</span><strong>{money(opening.inferredResultInCents)}</strong></p>
       <p><span>Cuentas vigentes</span><strong>{opening.virginAccounts + live}</strong></p>
     </div>
   </article>;

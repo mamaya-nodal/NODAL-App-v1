@@ -6424,21 +6424,24 @@ html[data-theme="day"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 43px;
-  margin-bottom: 12px;
-  padding: 0 14px;
-  border: 1px solid var(--app-border);
-  border-radius: 13px;
-  background: color-mix(in srgb, var(--app-panel) 92%, transparent);
+  gap: 22px;
+  min-height: 76px;
+  margin-bottom: 14px;
+  padding: 14px 20px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 38%, var(--app-border));
+  border-radius: 17px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--app-accent) 11%, var(--app-panel)), var(--app-panel));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%);
   color: var(--app-copy);
   font-size: var(--home-label-size);
 }
-.home-live-status span { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+.home-live-status > div { display: grid; gap: 5px; }
+.home-live-status span { display: inline-flex; align-items: center; gap: 8px; color: var(--app-title); font-size: 13px; font-weight: 800; }
+.home-live-status small { color: var(--app-subtle); font-size: 10px; }
 .home-live-status span i { width: 7px; height: 7px; border-radius: 50%; background: var(--app-subtle); }
 .home-live-status span.online { color: var(--app-accent); }
 .home-live-status span.online i { background: var(--app-accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--app-accent) 13%, transparent); }
-.home-live-status strong { color: var(--app-title); font-weight: 700; }
+.home-live-status > strong { color: var(--app-title); font-size: clamp(25px, 3vw, 32px); font-weight: 800; letter-spacing: -1.1px; }
 
 .home-financial-grid {
   display: grid;

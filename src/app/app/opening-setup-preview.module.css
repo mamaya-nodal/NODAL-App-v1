@@ -38,6 +38,7 @@
 }
 
 .savedOpening,
+.savedOpeningCompact,
 .openingAccounts,
 .openingOperation {
   margin-bottom: 14px;
@@ -47,6 +48,18 @@
   background: linear-gradient(130deg, color-mix(in srgb, var(--app-accent) 9%, var(--app-panel)), var(--app-panel));
 }
 .savedOpening { display: grid; align-items: center; gap: 18px; grid-template-columns: minmax(220px, .8fr) minmax(420px, 1.2fr); }
+.savedOpeningCompact { display: grid; align-items: center; gap: 16px; grid-template-columns: minmax(220px, 1fr) auto; padding: 12px 14px; }
+.compactOpeningSummary { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 16px; }
+.compactOpeningSummary > div:first-child { display: grid; min-width: 0; gap: 3px; }
+.compactOpeningSummary > div:first-child > span { color: var(--app-accent); font-size: 8px; font-weight: 900; letter-spacing: 1px; }
+.compactOpeningSummary > div:first-child > strong { color: var(--app-title); font-size: 13px; }
+.compactOpeningSummary > div:first-child > small { color: var(--app-subtle); font-size: 9px; }
+.compactOpeningSummary .revisionRequest,
+.compactOpeningSummary .revisionStatus { flex: 0 0 auto; margin-top: 0; }
+.compactOpeningMetrics { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(110px, 1fr)); }
+.compactOpeningMetrics p { min-width: 0; margin: 0; padding: 9px 10px; border-radius: 9px; background: var(--app-panel); }
+.compactOpeningMetrics span { display: block; margin-bottom: 3px; color: var(--app-subtle); font-size: 8px; }
+.compactOpeningMetrics strong { color: var(--app-title); font-size: 11px; white-space: nowrap; }
 .savedOpening > div:first-child > span,
 .openingAccounts > div:first-child > span,
 .openingOperation span { color: var(--app-accent); font-size: 9px; font-weight: 900; letter-spacing: 1px; }
@@ -207,6 +220,9 @@
 
 @media (max-width: 760px) {
   .savedOpening { grid-template-columns: 1fr; }
+  .savedOpeningCompact { grid-template-columns: 1fr; }
+  .compactOpeningSummary { align-items: flex-start; flex-direction: column; }
+  .compactOpeningMetrics { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .savedMetrics,
   .openingCounts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .launcher { align-items: stretch; flex-direction: column; }
@@ -236,4 +252,8 @@
   .textButton { display: none; }
   .footer > div { width: 100%; }
   .footer :is(.backButton, .nextButton) { flex: 1; }
+}
+
+@media (max-width: 480px) {
+  .compactOpeningMetrics { grid-template-columns: 1fr; }
 }

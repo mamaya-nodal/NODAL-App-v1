@@ -106,7 +106,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
 import { AccountsOverview, type AccountOverviewAccount, type AccountOverviewPayout } from "./accounts-overview";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
-import { OpeningAccountReferences, OpeningOperationReference } from "./opening-snapshot-panels";
+import { OpeningAccountReferences, OpeningOperationReference, OpeningSnapshotCompact } from "./opening-snapshot-panels";
 import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary";
 import { IdentitiesWorkspace } from "./identities-workspace";
 import { BrokerAccountClaims, type PendingBrokerAccountView } from "./broker-account-claims";
@@ -1386,7 +1386,6 @@ async function renderPrivateAppPage({
           dashboard={personalDashboard}
           dailyHistory={homeDailyHistory}
           liveBrokerBalance={liveNinjaBrokerBalance}
-          openingRevisionEligible={openingRevisionEligible}
           openingRevisionStatus={openingRevisionStatus}
           openingSetupPreview={openingSetupEligible}
           openingSnapshot={openingSnapshot}
@@ -1567,6 +1566,12 @@ async function renderPrivateAppPage({
           <div className="workspace-section-heading">
             <h2 id="accounting-title">Contabilidad</h2>
           </div>
+          {openingSnapshot ? <OpeningSnapshotCompact
+            opening={openingSnapshot}
+            periodId={selection.period.id}
+            revisionEligible={openingRevisionEligible}
+            revisionStatus={openingRevisionStatus}
+          /> : null}
           <ProgressSummary
             accounts={accountHistory.map((account) => {
               const hasFundedEntry = operationEntryHistory.some((entry) =>

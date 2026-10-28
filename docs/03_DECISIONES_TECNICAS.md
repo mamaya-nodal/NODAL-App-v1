@@ -3237,3 +3237,12 @@ vigente sin aprobacion y evidencia suficiente.
 - La identificación económica sigue resolviéndose por número de cuenta: la
   misma cuenta observada desde varias PC se deduplica, mientras que otro número
   se conserva como subcuenta propia.
+### APP-223 — Inicio prioriza el saldo broker operativo
+
+- Una apertura ya confirmada deja de ocupar la cabecera de Inicio. Su referencia
+  auditable se conserva en formato compacto al comienzo de Contabilidad, junto con
+  la solicitud de edición cuando corresponda.
+- Inicio destaca el saldo broker conectado en una tarjeta de mayor jerarquía visual
+  e informa cuántas cuentas broker componen el saldo deduplicado.
+- La pantalla de carga o revisión del punto de partida mantiene su comportamiento:
+  sólo cambia la ubicación de la referencia después de confirmarlo.
