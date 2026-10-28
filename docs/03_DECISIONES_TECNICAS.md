@@ -3275,3 +3275,16 @@ vigente sin aprobacion y evidencia suficiente.
 - **Protección:** el cambio es general, conserva trazabilidad e idempotencia y no
   modifica movimientos existentes. Las regresiones cubren depósitos y retiros entre
   dos operaciones, además del reintento de una sesión histórica.
+
+### APP-226 — El panel Admin de mesa es estrictamente de solo lectura
+
+- **Fecha:** 2026-10-28. Un Admin puede supervisar únicamente los usuarios y las
+  mesas pertenecientes a su propia rama, pero no administra accesos ni estructura.
+- **Consulta:** conserva indicadores, desempeño, facturación, estructura, estado
+  operativo, conexión Ninja, distribución económica e Identidades de su rama.
+- **Exclusividad Admin Master:** altas e invitaciones, activación, pausa, baja,
+  roles, asignaciones, movimientos de usuarios o ramas y capacidades de
+  Identidades/Configuración se gestionan únicamente desde Admin Master.
+- **Seguridad:** los controles desaparecen de `Mi mesa` y las mutaciones quedan
+  bloqueadas también en acciones de servidor y RPC. Ocultar botones no se considera
+  una restricción de autorización suficiente.

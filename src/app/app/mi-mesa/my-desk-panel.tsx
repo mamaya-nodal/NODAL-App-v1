@@ -1,35 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
-  useTransition,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
 import type { MyDeskPanelData } from "@/modules/admin/server/load-my-desk";
-import { saveDeskUser, sendDeskUserInvitation, type DeskActionResult } from "./actions";
 
 import "../admin/desks.css";
 
 type DeskRow = MyDeskPanelData["overview"]["desks"][number];
 type PersonRow = MyDeskPanelData["overview"]["people"][number];
 
-type EditablePerson = {
-  adminBps: number | null;
-  assignedUserIds: string[];
-  commissionBps: number | null;
-  contactEmail: string;
-  dependencyDestinationDeskId: string | null;
-  identitiesEnabled: boolean;
-  membershipDeskId: string;
-  role: "admin" | "student";
-  state: "active" | "paused" | "inactive";
-};
+type UserState = "active" | "paused" | "inactive";
 
 type BoardNode = {
   children: BoardNode[];
@@ -73,7 +60,7 @@ function dateTimeLabel(value: string | null | undefined) {
   }).format(new Date(value));
 }
 
-function stateLabel(state: EditablePerson["state"]) {
+function stateLabel(state: UserState) {
   if (state === "paused") return "Pausa";
   if (state === "inactive") return "Baja";
   return "Activo";
@@ -136,57 +123,19 @@ function UserPerformanceChart({ data }: Readonly<{
   </svg>;
 }
 
-function buildEditablePeople(data: MyDeskPanelData) {
-  return Object.fromEntries(data.overview.people.map((person) => {
-    const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id);
-    return [person.id, {
-      adminBps: managedDesk?.terms.nodal_bps ?? null,
-      assignedUserIds: [...(managedDesk?.members ?? [])],
-      commissionBps: person.terms?.commission_bps ?? null,
-      contactEmail: data.profilesByUser[person.id]?.contact_email ?? data.profilesByUser[person.id]?.email ?? person.email,
-      dependencyDestinationDeskId: managedDesk?.parent_id ?? null,
-      identitiesEnabled: data.profilesByUser[person.id]?.identities_enabled === true,
-      membershipDeskId: person.terms?.desk_id ?? person.deskId,
-      role: managedDesk ? "admin" : "student",
-      state: (person.terms?.state ?? "active") as EditablePerson["state"],
-    } satisfies EditablePerson];
-  })) as Record<string, EditablePerson>;
-}
-
-function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
+function UserDetailModal({ data, onClose, person }: Readonly<{
   data: MyDeskPanelData;
-  editable: EditablePerson;
   onClose: () => void;
-  onSave: (next: EditablePerson) => Promise<DeskActionResult>;
   person: PersonRow;
 }>) {
-  const [draft, setDraft] = useState(editable);
-  const [result, setResult] = useState<DeskActionResult | null>(null);
-  const [pending, startTransition] = useTransition();
   const details = data.detailByUser[person.id];
   const identities = details?.identities ?? [];
   const connector = data.connectorByUser[person.id];
-  const canEdit = data.demo || (!data.preview && person.id !== data.userId);
   const identifier = data.displayIdByUser[person.id] || "ID pendiente";
   const identifierHistory = data.identifierHistoryByUser[person.id] ?? [];
   const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id) ?? null;
-  const managedSubtreeIds = useMemo(() => {
-    if (!managedDesk) return new Set<string>();
-    const ids = new Set<string>();
-    const pending = [managedDesk.id];
-    while (pending.length > 0) {
-      const current = pending.shift()!;
-      if (ids.has(current)) continue;
-      ids.add(current);
-      for (const desk of data.overview.desks) if (desk.parent_id === current) pending.push(desk.id);
-    }
-    return ids;
-  }, [data.overview.desks, managedDesk]);
-  const destinationDesks = data.overview.desks.filter((desk) => desk.terms.active && !managedSubtreeIds.has(desk.id));
-  const dependencyCount = managedDesk
-    ? managedDesk.members.filter((id) => id !== person.id).length + managedDesk.children.length
-    : 0;
-  const removesAdministration = Boolean(managedDesk) && (draft.role !== "admin" || draft.state === "inactive");
+  const state = (person.terms?.state ?? "active") as UserState;
+  const identitiesEnabled = data.profilesByUser[person.id]?.identities_enabled === true;
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -195,23 +144,6 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
-
-  function save() {
-    if (removesAdministration && dependencyCount > 0 && !draft.dependencyDestinationDeskId) {
-      setResult({ ok: false, message: "Elegí la mesa que recibirá a sus usuarios y mesas dependientes." });
-      return;
-    }
-    const movesManagedStructure = Boolean(managedDesk) && draft.membershipDeskId !== editable.membershipDeskId;
-    const warning = draft.state === "inactive"
-      ? `¿Está seguro de que quiere dar de baja a ${person.name}?`
-      : removesAdministration && dependencyCount > 0
-        ? `Se trasladarán ${dependencyCount} dependencias antes de quitar el rol Admin. ¿Continuar?`
-        : movesManagedStructure
-          ? `El usuario y toda su mesa dependiente se trasladarán juntos. ¿Continuar?`
-          : null;
-    if (warning && !window.confirm(warning)) return;
-    startTransition(async () => setResult(await onSave(draft)));
-  }
 
   return <div aria-labelledby="desk-user-dialog-title" aria-modal="true" className="desk-modal-backdrop" role="dialog" onMouseDown={onClose}>
     <section className="desk-user-modal" onMouseDown={(event) => event.stopPropagation()}>
@@ -226,30 +158,11 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
         <div className="desk-user-quick-data"><span>Última operación<strong>{dateLabel(data.lastOperatedOnByUser[person.id])}</strong></span><span>Ruta mayor ganancia<strong>{details?.largestGainRoute ?? "Sin datos"}</strong></span></div>
       </div>
       <div className="desk-user-fields">
-        <label>Estado<select disabled={!canEdit} value={draft.state} onChange={(event) => setDraft({ ...draft, state: event.target.value as EditablePerson["state"] })}><option value="active">Activo</option><option value="paused">Pausa</option><option value="inactive">Baja</option></select></label>
+        <label>Estado<input disabled value={stateLabel(state)} /></label>
         <label>Email de acceso<input disabled value={data.profilesByUser[person.id]?.email ?? person.email} /><small>La cuenta de Google no se cambia desde este panel.</small></label>
-        <label>Email de contacto<input disabled={!canEdit} type="email" value={draft.contactEmail} onChange={(event) => setDraft({ ...draft, contactEmail: event.target.value })} /></label>
-        <label>Rol<select disabled={!canEdit || person.id === data.userId} value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value as EditablePerson["role"] })}><option value="student">Usuario</option><option value="admin">Admin</option></select></label>
+        <label>Email de contacto<input disabled value={data.profilesByUser[person.id]?.contact_email ?? data.profilesByUser[person.id]?.email ?? person.email} /></label>
+        <label>Rol<input disabled value={managedDesk ? "Admin" : "Usuario"} /></label>
       </div>
-      {person.id !== data.userId ? <section className="desk-structure-move">
-        <div><h3>Mesa de pertenencia</h3><p>{managedDesk ? "Si cambia, su mesa completa y todos sus dependientes se trasladan con el administrador." : "Define en qué mesa participa este usuario."}</p></div>
-        <select disabled={!canEdit} value={draft.membershipDeskId} onChange={(event) => setDraft({ ...draft, membershipDeskId: event.target.value })}>
-          {destinationDesks.map((desk) => <option key={desk.id} value={desk.id}>{desk.name}</option>)}
-        </select>
-      </section> : null}
-      {removesAdministration && dependencyCount > 0 ? <section className="desk-structure-move warning">
-        <div><h3>Destino de dependencias</h3><p>Antes de quitar el rol Admin, elegí dónde conservar sus {dependencyCount} usuarios o mesas dependientes.</p></div>
-        <select disabled={!canEdit} value={draft.dependencyDestinationDeskId ?? ""} onChange={(event) => setDraft({ ...draft, dependencyDestinationDeskId: event.target.value || null })}>
-          <option value="">Elegir mesa de destino</option>
-          {destinationDesks.map((desk) => <option key={desk.id} value={desk.id}>{desk.name}</option>)}
-        </select>
-      </section> : null}
-      {draft.role === "admin" ? <fieldset className="desk-assigned-users">
-        <legend>Usuarios adjudicados</legend><p>Si adjudicás otro administrador, su mesa y toda su estructura se trasladan con él.</p>
-        <div>{data.overview.people.filter((candidate) => candidate.id !== person.id && candidate.id !== data.userId).map((candidate) => <label key={candidate.id}>
-          <input checked={draft.assignedUserIds.includes(candidate.id)} disabled={!canEdit} onChange={(event) => setDraft({ ...draft, assignedUserIds: event.target.checked ? [...draft.assignedUserIds, candidate.id] : draft.assignedUserIds.filter((id) => id !== candidate.id) })} type="checkbox" />{data.displayIdByUser[candidate.id] || "Sin ID"} · {candidate.name}
-        </label>)}</div>
-      </fieldset> : null}
       <section className="desk-agreement-block">
         <h3>Distribución de ganancias</h3>
         <div className="desk-agreement-summary">
@@ -264,58 +177,12 @@ function UserDetailModal({ data, editable, onClose, onSave, person }: Readonly<{
       </section>
       <div className="desk-user-switches">
         <article className="desk-ninja-state"><span>Conexión Ninja<small>Última transmisión: {dateTimeLabel(connector?.lastSeenAt)}</small></span><div><strong className={connector?.active ? "active" : "inactive"}>{connector?.active ? "Activo" : "Desactivado"}</strong><small>{connector?.version ? `Conector v${connector.version}` : "Sin versión registrada"}</small></div></article>
-        <label><span>Identidades<small>{identities.length} registradas</small></span><select disabled={!canEdit} value={draft.identitiesEnabled ? "enabled" : "disabled"} onChange={(event) => setDraft({ ...draft, identitiesEnabled: event.target.value === "enabled" })}><option value="enabled">Habilitadas</option><option value="disabled">No habilitadas</option></select></label>
+        <label><span>Identidades<small>{identities.length} registradas</small></span><input disabled value={identitiesEnabled ? "Habilitadas" : "No habilitadas"} /></label>
       </div>
-      {draft.identitiesEnabled ? <div className="desk-identities-table"><table><thead><tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Ganancia período</th><th>Facturación</th></tr></thead><tbody>{identities.map((identity) => <tr key={identity.id}><td>{identity.id}</td><td>{identity.name}</td><td>{identity.state}</td><td>{money(identity.periodGain)}</td><td>{money(identity.billing)}</td></tr>)}</tbody></table>{identities.length === 0 ? <p>Este usuario no tiene identidades registradas.</p> : null}</div> : null}
-      {result ? <p className={`desk-modal-saved ${result.ok ? "" : "error"}`} role="status">{result.message}</p> : null}
-      <footer><button className="secondary-action" onClick={onClose} type="button">Cancelar</button><button className="primary-action" disabled={!canEdit || pending} onClick={save} type="button">{pending ? "Guardando…" : "Guardar cambios"}</button></footer>
+      {identitiesEnabled ? <div className="desk-identities-table"><table><thead><tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Ganancia período</th><th>Facturación</th></tr></thead><tbody>{identities.map((identity) => <tr key={identity.id}><td>{identity.id}</td><td>{identity.name}</td><td>{identity.state}</td><td>{money(identity.periodGain)}</td><td>{money(identity.billing)}</td></tr>)}</tbody></table>{identities.length === 0 ? <p>Este usuario no tiene identidades registradas.</p> : null}</div> : null}
+      <footer><button className="secondary-action" onClick={onClose} type="button">Cerrar</button></footer>
     </section>
   </div>;
-}
-
-function InvitationPanel({ data }: Readonly<{ data: MyDeskPanelData }>) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [inviter, setInviter] = useState(data.userId);
-  const [demoSent, setDemoSent] = useState(data.invitations);
-  const [result, setResult] = useState<DeskActionResult | null>(null);
-  const [pending, startTransition] = useTransition();
-  const people = data.overview.people;
-
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!email.trim()) return;
-    if (data.demo) {
-      setDemoSent((current) => [{ createdAt: new Date().toISOString(), email: email.trim(), id: `demo-${Date.now()}`, referredByUserId: inviter, status: "pending_approval" }, ...current]);
-      setEmail("");
-      setResult({ ok: true, message: "Invitación simulada en el escenario de prueba." });
-      return;
-    }
-    startTransition(async () => {
-      const next = await sendDeskUserInvitation({ email, referredByUserId: inviter });
-      setResult(next);
-      if (next.ok) { setEmail(""); router.refresh(); }
-    });
-  }
-
-  const invitations = data.demo ? demoSent : data.invitations;
-  const invitationStatus = (status: string) => status === "approved" ? "Aprobado como usuario NODAL"
-    : status === "rejected" ? "Rechazado por Admin Master"
-      : status === "failed" ? "No se pudo enviar el correo"
-        : "Pendiente de aprobación de Admin Master";
-
-  return <section className="desk-surface desk-invitation-panel">
-    <button aria-expanded={open} className="desk-add-user" onClick={() => setOpen((value) => !value)} type="button"><span>+ Agregar usuario</span><span>{open ? "−" : "+"}</span></button>
-    {open ? <div className="desk-invitation-content"><form onSubmit={submit}>
-      <label>Email<input placeholder="persona@correo.com" required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-      <label>Invitación enviada por<select value={inviter} onChange={(event) => setInviter(event.target.value)}>{people.map((person) => <option key={person.id} value={person.id}>{person.id === data.userId ? "Titular · " : ""}{person.name}</option>)}</select></label>
-      <button className="primary-action" disabled={pending || data.preview} type="submit">{pending ? "Enviando…" : "Enviar invitación"}</button>
-    </form>{result ? <p className={`desk-modal-saved ${result.ok ? "" : "error"}`} role="status">{result.message}</p> : null}<div className="desk-invitation-statuses">{invitations.map((invitation) => {
-      const sender = people.find((person) => person.id === invitation.referredByUserId)?.name ?? "Titular";
-      return <article key={invitation.id}><span>{invitation.status === "approved" ? "✓" : invitation.status === "failed" || invitation.status === "rejected" ? "!" : "→"}</span><div><strong>{invitation.email}</strong><small>{invitationStatus(invitation.status)} · invitado por {sender}</small></div></article>;
-    })}</div>{data.demo ? <p className="desk-demo-footnote">En este escenario el envío es simulado y no genera correos ni altas reales.</p> : null}</div> : null}
-  </section>;
 }
 
 function buildBoardTree(data: MyDeskPanelData, rootDesk: DeskRow | null, manager: PersonRow): BoardNode {
@@ -447,7 +314,6 @@ export function MyDeskPanel({ data, demoAvailable = false }: Readonly<{ data: My
   const desk = data.deskId ? data.overview.desks.find((row) => row.id === data.deskId) ?? null : null;
   const manager = data.overview.people.find((person) => person.id === data.userId);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [editableByUser, setEditableByUser] = useState(() => buildEditablePeople(data));
   if (!manager) return <p className="notice">No se pudo reconstruir el titular del panel.</p>;
   const directMembers = desk ? data.overview.people.filter((person) => person.deskId === desk.id) : [];
   const people = data.preview ? [manager] : [manager, ...data.overview.people.filter((person) => person.id !== manager.id)];
@@ -465,21 +331,9 @@ export function MyDeskPanel({ data, demoAvailable = false }: Readonly<{ data: My
     <section className="my-desk-summary" aria-label="Resumen administrativo"><article className="my-desk-hero"><span>Ganancia del período</span><strong>{money(manager.totalIncome)}</strong><small>{money(manager.ownIncome)} propias · {money(manager.mesaIncome)} administración</small></article><article className="my-desk-summary-card"><Metric label="Ganancia histórica" value={money(historicGain)} /></article><article className="my-desk-summary-card"><Metric label="Facturación del período" value={money(structureBilling)} /></article><article className="my-desk-summary-card"><Metric label="Integrantes mesa principal" value={String(directMembers.length)} /></article><article className="my-desk-summary-card"><Metric label="Mesas dependientes" value={String(dependentDeskCount)} /></article></section>
     <section className="my-desk-structure-summary"><article className="my-desk-structure-primary"><span>Toda la estructura</span><strong>{money(structureBilling)}</strong><small>{desk?.structureMembers.length ?? 0} integrantes · {dependentDeskCount} mesas dependientes</small></article><article><Metric label="Mesa directa" value={money(directBilling)} note={`${directMembers.length} integrantes`} /></article></section>
     <section className="desk-surface"><div className="admin-section-heading"><div><h2>Resultados por período</h2></div></div><HistoryChart data={data.history} /></section>
-    <InvitationPanel data={data} />
-    <section className="desk-surface"><div className="admin-section-heading"><div><h2>Usuarios</h2></div><span className="calculated-badge">{people.length}</span></div><div className="desk-table-scroll"><table className="desk-table my-desk-user-table"><thead><tr><th>ID</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Ganancia período</th><th>Facturación histórica</th></tr></thead><tbody>{people.map((person) => { const editable = editableByUser[person.id]; return <tr key={person.id}><td><span className="desk-user-id">{data.displayIdByUser[person.id] || "ID pendiente"}</span></td><td><button className="desk-person" onClick={() => setSelectedPersonId(person.id)} type="button">{person.name}</button></td><td>{person.id === data.userId ? "Titular" : editable?.role === "admin" ? "Admin" : "Usuario"}</td><td><span className={`desk-status ${editable?.state === "active" ? "active" : "inactive"}`}>{stateLabel(editable?.state ?? "active")}</span></td><td>{money(person.totalIncome)}</td><td>{money(data.historicalBillingByUser[person.id] ?? 0)}</td></tr>; })}</tbody></table></div></section>
+    <section className="desk-surface"><div className="admin-section-heading"><div><h2>Usuarios</h2></div><span className="calculated-badge">{people.length}</span></div><div className="desk-table-scroll"><table className="desk-table my-desk-user-table"><thead><tr><th>ID</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Ganancia período</th><th>Facturación histórica</th></tr></thead><tbody>{people.map((person) => { const managedDesk = data.overview.desks.find((candidate) => candidate.terms.active && candidate.terms.manager_id === person.id); const state = (person.terms?.state ?? "active") as UserState; return <tr key={person.id}><td><span className="desk-user-id">{data.displayIdByUser[person.id] || "ID pendiente"}</span></td><td><button className="desk-person" onClick={() => setSelectedPersonId(person.id)} type="button">{person.name}</button></td><td>{person.id === data.userId ? "Titular" : managedDesk ? "Admin" : "Usuario"}</td><td><span className={`desk-status ${state === "active" ? "active" : "inactive"}`}>{stateLabel(state)}</span></td><td>{money(person.totalIncome)}</td><td>{money(data.historicalBillingByUser[person.id] ?? 0)}</td></tr>; })}</tbody></table></div></section>
     <section className="desk-surface desk-board-section"><div className="admin-section-heading"><div><h2>Estructura completa</h2></div></div><StructureBoard data={data} manager={manager} onOpenUser={setSelectedPersonId} rootDesk={desk} /></section>
     <section className="desk-surface desk-ranking-surface"><div className="admin-section-heading"><div><h2>Ranking de la mesa</h2></div></div><Ranking data={data} people={people} /></section>
-    {selectedPerson && editableByUser[selectedPerson.id] ? <UserDetailModal key={selectedPerson.id} data={data} editable={editableByUser[selectedPerson.id]} onClose={() => setSelectedPersonId(null)} onSave={async (next) => {
-      if (data.demo) {
-        setEditableByUser((current) => ({ ...current, [selectedPerson.id]: next }));
-        return { ok: true, message: "Cambios aplicados al escenario de prueba." };
-      }
-      const result = await saveDeskUser({ ...next, userId: selectedPerson.id });
-      if (result.ok) {
-        setEditableByUser((current) => ({ ...current, [selectedPerson.id]: next }));
-        window.location.reload();
-      }
-      return result;
-    }} person={selectedPerson} /> : null}
+    {selectedPerson ? <UserDetailModal key={selectedPerson.id} data={data} onClose={() => setSelectedPersonId(null)} person={selectedPerson} /> : null}
   </div>;
 }

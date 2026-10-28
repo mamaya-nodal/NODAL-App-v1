@@ -84,13 +84,6 @@ export type DeskPanelIdentityRow = Readonly<{
   periodGain: number;
   state: string;
 }>;
-export type DeskPanelInvitation = Readonly<{
-  createdAt: string;
-  email: string;
-  id: string;
-  referredByUserId: string;
-  status: string;
-}>;
 export type DeskPanelIdentifierHistory = Readonly<{
   deskId: string;
   displayId: string;
@@ -143,7 +136,6 @@ export type MyDeskPanelData = Readonly<{
   history: readonly DeskPanelHistoryPoint[];
   identitiesByUser: Readonly<Record<string, DeskPanelIdentitySummary>>;
   identifierHistoryByUser: Readonly<Record<string, readonly DeskPanelIdentifierHistory[]>>;
-  invitations: readonly DeskPanelInvitation[];
   lastOperatedOnByUser: Readonly<Record<string, string | null>>;
   month: string;
   overview: ReturnType<typeof calculateDeskOverview>;
@@ -250,13 +242,6 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
   if (identityResult.error || connectorResult.error || termsWindowResult.error) {
     throw new Error("No se pudo completar el estado de la estructura.");
   }
-
-  const invitationResult = deskId
-    ? await service.from("nodal_user_invitations")
-      .select("id,recipient_email,referred_by_user_id,status,created_at")
-      .eq("desk_id", deskId).order("created_at", { ascending: false })
-    : { data: [], error: null };
-  if (invitationResult.error) throw new Error("No se pudieron cargar las invitaciones de la mesa.");
 
   const currentPeriodIds = workspaceRows.flatMap((workspace) => workspace.periods
     .filter((period) => period.period_month === month).map((period) => period.id));
@@ -526,13 +511,6 @@ export async function loadMyDeskPanel(): Promise<MyDeskPanelData> {
     }),
     identitiesByUser,
     identifierHistoryByUser,
-    invitations: (invitationResult.data ?? []).map((invitation) => ({
-      createdAt: invitation.created_at,
-      email: invitation.recipient_email,
-      id: invitation.id,
-      referredByUserId: invitation.referred_by_user_id,
-      status: invitation.status,
-    })),
     lastOperatedOnByUser,
     month,
     overview,

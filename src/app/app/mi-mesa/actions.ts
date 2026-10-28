@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
 
-import { createClient } from "@/lib/supabase/server";
+import { requireNodalAdmin } from "@/modules/admin/server/admin-access";
 
 export type DeskActionResult = Readonly<{ message: string; ok: boolean }>;
 
@@ -48,7 +48,7 @@ export async function sendDeskUserInvitation(input: Readonly<{
   if (!isUuid(input.referredByUserId) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return { ok: false, message: "Ingresá un correo válido y elegí quién realiza la invitación." };
   }
-  const supabase = await createClient();
+  const supabase = await requireNodalAdmin("/app/admin/users");
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
 
@@ -123,7 +123,7 @@ export async function saveDeskUser(input: Readonly<{
     || (input.role === "admin" && (!Number.isInteger(input.adminBps) || input.adminBps === null || input.adminBps < 0 || input.adminBps > 10_000))) {
     return { ok: false, message: "Revisá los porcentajes y la asignación de usuarios." };
   }
-  const supabase = await createClient();
+  const supabase = await requireNodalAdmin("/app/admin");
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
   const { error } = await supabase.rpc("desk_admin_save_user_v2", {

@@ -188,13 +188,6 @@ export function buildAdminPanelDemo(): MyDeskPanelData {
       validFrom: "2026-08-01T12:00:00Z",
       validTo: null,
     }]])),
-    invitations: [{
-      createdAt: "2026-09-18T12:00:00Z",
-      email: "demo.aprobado@nodal.test",
-      id: "demo-invitation-approved",
-      referredByUserId: USER.mauricio,
-      status: "approved",
-    }],
     lastOperatedOnByUser: {
       [USER.mauricio]: "2026-10-03", [USER.laura]: "2026-10-02", [USER.sofia]: "2026-10-03",
       [USER.pablo]: "2026-10-01", [USER.diego]: "2026-10-03", [USER.camila]: "2026-09-29", [USER.nicolas]: "2026-10-02",
