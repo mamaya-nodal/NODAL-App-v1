@@ -1,9 +1,17 @@
 param(
-    [string]$ArchivePath = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent | Split-Path -Parent) 'private\downloads\MIMICAL-NodalBots.zip')
+    [ValidateSet('personal', 'identity')]
+    [string]$Scope = 'personal',
+    [string]$ArchivePath
 )
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+$repositoryRoot = (Split-Path $PSScriptRoot -Parent | Split-Path -Parent | Split-Path -Parent)
+if ([string]::IsNullOrWhiteSpace($ArchivePath)) {
+    $archiveName = if ($Scope -eq 'identity') { 'MIMICAL-NodalBots-Identity.zip' } else { 'MIMICAL-NodalBots.zip' }
+    $ArchivePath = Join-Path $repositoryRoot "private\downloads\$archiveName"
+}
 
 function Assert-True([bool]$Condition, [string]$Message) {
     if (-not $Condition) { throw $Message }
@@ -55,5 +63,5 @@ finally {
     $archive.Dispose()
 }
 
-Write-Output "OK: paquete MIMICAL importable; Info.xml y los cuatro archivos están en la raíz."
+Write-Output "OK: paquete MIMICAL $Scope importable; Info.xml y los cuatro archivos están en la raíz."
 Get-FileHash -LiteralPath $absoluteArchivePath -Algorithm SHA256

@@ -14,19 +14,28 @@ describe("POST /api/integrations/mimical/activate", () => {
   it("exchanges the one-use code for an installation credential", async () => {
     mocks.activateMimical.mockResolvedValue({ installationId: "install", installationToken: "secret", ownerLabel: "Julian" });
     const response = await POST(new Request("https://app.test/api/integrations/mimical/activate", {
-      body: JSON.stringify({ code: "ABCD2345", installationKey: "11111111-1111-4111-8111-111111111111", mimicalVersion: "1.1.0" }),
+      body: JSON.stringify({ activationScope: "identity", code: "ABCD2345", installationKey: "11111111-1111-4111-8111-111111111111", mimicalVersion: "1.1.0.2" }),
       headers: { "content-type": "application/json" }, method: "POST",
     }));
     expect(response.status).toBe(201);
-    expect(mocks.activateMimical).toHaveBeenCalledOnce();
+    expect(mocks.activateMimical).toHaveBeenCalledWith(expect.objectContaining({ activationScope: "identity" }));
   });
 
   it("rejects an expired or consumed code", async () => {
     mocks.activateMimical.mockResolvedValue(null);
     const response = await POST(new Request("https://app.test/api/integrations/mimical/activate", {
-      body: JSON.stringify({ code: "ABCD2345", installationKey: "11111111-1111-4111-8111-111111111111", mimicalVersion: "1.1.0" }),
+      body: JSON.stringify({ activationScope: "personal", code: "ABCD2345", installationKey: "11111111-1111-4111-8111-111111111111", mimicalVersion: "1.1.0.2" }),
       headers: { "content-type": "application/json" }, method: "POST",
     }));
     expect(response.status).toBe(401);
+  });
+
+  it("rejects old packages that do not declare their activation scope", async () => {
+    const response = await POST(new Request("https://app.test/api/integrations/mimical/activate", {
+      body: JSON.stringify({ code: "ABCD2345", installationKey: "11111111-1111-4111-8111-111111111111", mimicalVersion: "1.1.0.1" }),
+      headers: { "content-type": "application/json" }, method: "POST",
+    }));
+    expect(response.status).toBe(422);
+    expect(mocks.activateMimical).not.toHaveBeenCalled();
   });
 });

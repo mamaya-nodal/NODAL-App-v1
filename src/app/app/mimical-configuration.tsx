@@ -4,17 +4,21 @@ import { useEffect, useState } from "react";
 
 import { MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
 
+import { sendIdentityMimicalInstallation } from "./identity-actions";
+
 type PairingCode = Readonly<{ code: string; expiresAt: string }>;
 
 type MimicalAddonCardProps = Readonly<{
   enabled: boolean;
+  identityEmail?: string | null;
   identityId: string | null;
 }>;
 
-function MimicalAddonCard({ enabled, identityId }: MimicalAddonCardProps) {
+function MimicalAddonCard({ enabled, identityEmail = null, identityId }: MimicalAddonCardProps) {
   const [code, setCode] = useState<PairingCode | null>(null);
-  const [busy, setBusy] = useState<"code" | "download" | null>(null);
+  const [busy, setBusy] = useState<"code" | "download" | "send" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -46,6 +50,17 @@ function MimicalAddonCard({ enabled, identityId }: MimicalAddonCardProps) {
     } finally {
       setBusy(null);
     }
+  }
+
+  async function sendToIdentity() {
+    if (!identityId) return;
+    setBusy("send");
+    setError(null);
+    setMessage(null);
+    const result = await sendIdentityMimicalInstallation(identityId);
+    if (result.ok) setMessage(result.message);
+    else setError(result.message);
+    setBusy(null);
   }
 
   async function generateCode() {
@@ -90,14 +105,22 @@ function MimicalAddonCard({ enabled, identityId }: MimicalAddonCardProps) {
         {enabled ? (
           <>
             <ol className="addon-steps">
-              <li>Descargá e importá el ZIP en NinjaTrader.</li>
+              <li>{identityId
+                ? `Enviá el instalador al correo de la identidad${identityEmail ? ` (${identityEmail})` : ""}.`
+                : "Descargá e importá el ZIP en NinjaTrader."}</li>
               <li>Generá el código desde esta pantalla.</li>
               <li>Abrí MIMICAL en NinjaTrader e ingresá el código una sola vez.</li>
             </ol>
             <div className="addon-actions">
-              <button className="secondary-action" disabled={busy !== null} onClick={download} type="button">
-                {busy === "download" ? "Preparando…" : `Descargar MIMICAL v${MIMICAL_VERSION}`}
-              </button>
+              {identityId ? (
+                <button className="secondary-action" disabled={busy !== null || !identityEmail} onClick={sendToIdentity} type="button">
+                  {busy === "send" ? "Enviando…" : "Enviar MIMICAL por correo"}
+                </button>
+              ) : (
+                <button className="secondary-action" disabled={busy !== null} onClick={download} type="button">
+                  {busy === "download" ? "Preparando…" : `Descargar MIMICAL v${MIMICAL_VERSION}`}
+                </button>
+              )}
               <button className="primary-action" disabled={busy !== null} onClick={generateCode} type="button">
                 {busy === "code" ? "Generando…" : code ? "Generar otro código" : "Generar código de vinculación"}
               </button>
@@ -110,6 +133,7 @@ function MimicalAddonCard({ enabled, identityId }: MimicalAddonCardProps) {
                 <small>Vence a las {new Date(code.expiresAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} y sólo puede usarse una vez.</small>
               </div>
             ) : null}
+            {message ? <p className="purchase-message success" role="status">{message}</p> : null}
             <p className="addon-safety-note">Si tu acceso NODAL deja de estar habilitado, MIMICAL no podrá iniciar ciclos nuevos. Una operación ya iniciada conserva su protección hasta finalizar.</p>
           </>
         ) : <p className="notice">Este complemento todavía no está habilitado para tu usuario.</p>}
@@ -134,11 +158,13 @@ export function MimicalConfiguration({ enabled }: Readonly<{ enabled: boolean }>
 }
 
 export function IdentityMimicalConfiguration({
+  identityEmail,
   identityId,
   identityName,
   onClose,
 }: Readonly<{
   identityId: string;
+  identityEmail: string | null;
   identityName: string;
   onClose: () => void;
 }>) {
@@ -160,7 +186,7 @@ export function IdentityMimicalConfiguration({
           </div>
           <button aria-label="Cerrar configuración" onClick={onClose} type="button">×</button>
         </header>
-        <MimicalAddonCard enabled identityId={identityId} />
+        <MimicalAddonCard enabled identityEmail={identityEmail} identityId={identityId} />
       </section>
     </div>
   );

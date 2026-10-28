@@ -377,6 +377,7 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
       </div>
       {configurationIdentity ? (
         <IdentityMimicalConfiguration
+          identityEmail={configurationIdentity.contactEmail}
           identityId={configurationIdentity.id}
           identityName={`${configurationIdentity.firstName} ${configurationIdentity.lastName}`}
           onClose={() => setConfigurationIdentity(null)}

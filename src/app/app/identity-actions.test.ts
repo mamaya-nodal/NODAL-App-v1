@@ -22,7 +22,7 @@ vi.mock("@/lib/supabase/server", () => ({
   },
 }));
 
-import { createIdentityDirectly, retireIdentity } from "./identity-actions";
+import { createIdentityDirectly, retireIdentity, sendIdentityMimicalInstallation } from "./identity-actions";
 
 const identityId = "09c293db-6514-471c-8bd1-981f2d97f5f8";
 const installationId = "6522d107-cd3e-4730-aef4-ee172cd8c4bd";
@@ -111,6 +111,26 @@ describe("identity access gate", () => {
     expect(mocks.rpc).toHaveBeenCalledWith("retire_nodal_identity", {
       target_identity_id: identityId,
     });
+  });
+
+  it("dispatches MIMICAL to the selected identity email", async () => {
+    mocks.maybeSingle.mockResolvedValue({
+      data: { configuration_enabled: true, identities_enabled: true },
+      error: null,
+    });
+    mocks.rpc.mockResolvedValueOnce({ data: installationId, error: null });
+
+    const result = await sendIdentityMimicalInstallation(identityId);
+
+    expect(result.ok).toBe(true);
+    expect(result.message).toContain("correo de la identidad");
+    expect(mocks.rpc).toHaveBeenCalledWith("create_identity_mimical_installation", expect.objectContaining({
+      target_identity_id: identityId,
+    }));
+    expect(fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      body: expect.stringContaining('"action":"send_mimical_installation"'),
+      method: "POST",
+    }));
   });
 
 });

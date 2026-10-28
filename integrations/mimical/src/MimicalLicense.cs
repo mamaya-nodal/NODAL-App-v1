@@ -12,6 +12,7 @@ namespace NinjaTrader.NinjaScript.AddOns
     [DataContract]
     internal sealed class MimicalActivationRequest
     {
+        [DataMember(Name = "activationScope")] public string ActivationScope;
         [DataMember(Name = "code")] public string Code;
         [DataMember(Name = "installationKey")] public string InstallationKey;
         [DataMember(Name = "mimicalVersion")] public string MimicalVersion;
@@ -49,7 +50,12 @@ namespace NinjaTrader.NinjaScript.AddOns
     internal sealed class MimicalLicenseClient
     {
         private const string ApiBase = "https://app.nodaltrading.com";
-        private const string Version = "1.1.0";
+#if MIMICAL_IDENTITY
+        private const string ActivationScope = "identity";
+#else
+        private const string ActivationScope = "personal";
+#endif
+        private const string Version = "1.1.0.2";
         private readonly string licensePath;
         private string installationId;
         private string installationToken;
@@ -74,7 +80,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 {
                     MimicalActivationResponse response = Post<MimicalActivationRequest, MimicalActivationResponse>(
                         "/api/integrations/mimical/activate",
-                        new MimicalActivationRequest { Code = code, InstallationKey = InstallationKey, MimicalVersion = Version },
+                        new MimicalActivationRequest { ActivationScope = ActivationScope, Code = code, InstallationKey = InstallationKey, MimicalVersion = Version },
                         null);
                     installationId = response.InstallationId;
                     installationToken = response.InstallationToken;

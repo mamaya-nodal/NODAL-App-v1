@@ -36,6 +36,7 @@ function firstRow(value: unknown): Record<string, unknown> | null {
 }
 
 export async function activateMimical(input: Readonly<{
+  activationScope: "identity" | "personal";
   code: string;
   installationKey: string;
   mimicalVersion: string;
@@ -43,10 +44,12 @@ export async function activateMimical(input: Readonly<{
   const code = normalizeMimicalCode(input.code);
   if (code.length !== 8 || !/^[0-9a-f-]{36}$/i.test(input.installationKey)) return null;
   if (!/^[0-9A-Za-z._-]{1,40}$/.test(input.mimicalVersion)) return null;
+  if (input.activationScope !== "identity" && input.activationScope !== "personal") return null;
   const supabase = serviceClient();
   if (!supabase) throw new MimicalServiceUnavailable();
   const token = randomBytes(32).toString("base64url");
-  const { data, error } = await supabase.rpc("redeem_addon_pairing_code", {
+  const { data, error } = await supabase.rpc("redeem_scoped_addon_pairing_code", {
+    target_activation_scope: input.activationScope,
     target_code_hash: hashMimicalSecret(code),
     target_installation_key: input.installationKey,
     target_installation_token_hash: hashMimicalSecret(token),

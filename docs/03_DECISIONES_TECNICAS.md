@@ -3246,3 +3246,17 @@ vigente sin aprobacion y evidencia suficiente.
   e informa cuántas cuentas broker componen el saldo deduplicado.
 - La pantalla de carga o revisión del punto de partida mantiene su comportamiento:
   sólo cambia la ubicación de la referencia después de confirmarlo.
+### APP-224 — MIMICAL de identidades se entrega por correo
+
+- NODAL permanece abierta solamente en la PC del usuario titular. Por eso, desde
+  la configuración de una identidad no se descarga MIMICAL localmente: se envía
+  un enlace temporal al correo registrado de esa identidad.
+- El enlace vence en 24 horas, entrega únicamente el ZIP vigente y deja trazabilidad
+  de creación, envío y descarga. La identidad no necesita una cuenta NODAL.
+- El código de vinculación se genera en la misma tarjeta, queda ligado a la identidad
+  seleccionada, vence a los pocos minutos y sólo puede consumirse una vez.
+- La descarga local se conserva exclusivamente en Configuración del propio usuario,
+  porque corresponde al Ninja instalado en su PC titular.
+- Los paquetes declaran su contexto de activación. El paquete personal sólo acepta
+  códigos personales; el paquete enviado a una identidad sólo acepta códigos ligados
+  a identidades aprobadas. Los contextos no son intercambiables.

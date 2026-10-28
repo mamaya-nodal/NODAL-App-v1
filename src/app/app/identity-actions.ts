@@ -21,9 +21,14 @@ async function authenticatedClient() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = user
-    ? await supabase.from("nodal_users").select("identities_enabled").eq("id", user.id).maybeSingle()
+    ? await supabase.from("nodal_users").select("configuration_enabled,identities_enabled").eq("id", user.id).maybeSingle()
     : { data: null };
-  return { identitiesEnabled: profile?.identities_enabled === true, supabase, user };
+  return {
+    configurationEnabled: profile?.configuration_enabled === true,
+    identitiesEnabled: profile?.identities_enabled === true,
+    supabase,
+    user,
+  };
 }
 
 const identitiesDisabled = (): ActionResult => ({
@@ -90,6 +95,45 @@ export async function sendIdentityConnectorInstallation(identityId: string): Pro
   if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
   if (!identitiesEnabled) return identitiesDisabled();
   return dispatchIdentityConnectorInstallation(supabase, identityId);
+}
+
+export async function sendIdentityMimicalInstallation(identityId: string): Promise<ActionResult> {
+  if (!isUuid(identityId)) return { ok: false, message: "La identidad no es válida." };
+  const { configurationEnabled, identitiesEnabled, supabase, user } = await authenticatedClient();
+  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
+  if (!configurationEnabled) return { ok: false, message: "Configuración todavía no fue habilitada por un administrador." };
+
+  const token = randomBytes(32).toString("hex");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const { data: installationId, error } = await supabase.rpc("create_identity_mimical_installation", {
+    target_expires_at: expiresAt,
+    target_identity_id: identityId,
+    target_token_hash: tokenHash,
+  });
+  if (error || !installationId) {
+    return { ok: false, message: "No se pudo preparar MIMICAL para esta identidad." };
+  }
+
+  const automationUrl = process.env.IDENTITY_ONBOARDING_AUTOMATION_URL ?? DEFAULT_IDENTITY_AUTOMATION_URL;
+  try {
+    const response = await fetch(automationUrl, {
+      body: JSON.stringify({ action: "send_mimical_installation", installationId, token }),
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+    if (!response.ok) throw new Error(`Identity automation returned ${response.status}`);
+    const result = await response.json() as { ok?: boolean };
+    if (!result.ok) throw new Error("Identity automation rejected the installation");
+  } catch (sendError) {
+    console.error("Identity MIMICAL installation dispatch failed", sendError);
+    await supabase.rpc("cancel_identity_mimical_installation", { target_installation_id: installationId });
+    return { ok: false, message: "No se pudo enviar el correo. Intentá nuevamente." };
+  }
+
+  return { ok: true, message: "MIMICAL fue enviado al correo de la identidad. El enlace vence en 24 horas." };
 }
 
 export async function createIdentityDirectly(input: Readonly<{

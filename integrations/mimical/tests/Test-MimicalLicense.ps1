@@ -11,6 +11,7 @@ $checks = @(
     @{ Name = 'Sólo se bloquea el comienzo de un ciclo nuevo'; Pass = $engine.Contains('startsNewCycle && !licenseAuthorized') },
     @{ Name = 'El token se protege con DPAPI'; Pass = $license.Contains('ProtectedData.Protect') -and $license.Contains('DataProtectionScope.CurrentUser') },
     @{ Name = 'El código se canjea en el servidor NODAL'; Pass = $license.Contains('/api/integrations/mimical/activate') },
+    @{ Name = 'La activación informa si el paquete es personal o de identidad'; Pass = $license.Contains('ActivationScope = "identity"') -and $license.Contains('ActivationScope = "personal"') -and $license.Contains('Name = "activationScope"') },
     @{ Name = 'La autorización se revalida periódicamente'; Pass = $engine.Contains('DateTime.UtcNow.AddMinutes(1)') -and $license.Contains('/api/integrations/mimical/validate') }
 )
 

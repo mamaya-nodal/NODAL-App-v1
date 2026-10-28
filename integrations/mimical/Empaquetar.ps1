@@ -1,9 +1,17 @@
 param(
-    [string]$DllPath = (Join-Path $PSScriptRoot 'compilacion_local\NodalBots.Mimical.dll'),
-    [string]$OutputPath = (Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) 'private\downloads\MIMICAL-NodalBots.zip')
+    [ValidateSet('personal', 'identity')]
+    [string]$Scope = 'personal',
+    [string]$DllPath = '',
+    [string]$OutputPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
+$downloadsDirectory = Join-Path (Split-Path $PSScriptRoot -Parent | Split-Path -Parent) 'private\downloads'
+if (-not $DllPath) { $DllPath = Join-Path $PSScriptRoot "compilacion_local\$Scope\NodalBots.Mimical.dll" }
+if (-not $OutputPath) {
+    $filename = if ($Scope -eq 'identity') { 'MIMICAL-NodalBots-Identity.zip' } else { 'MIMICAL-NodalBots.zip' }
+    $OutputPath = Join-Path $downloadsDirectory $filename
+}
 $packageDirectory = Join-Path $PSScriptRoot 'package'
 $files = [ordered]@{
     'AdditionalReferences.txt' = Join-Path $packageDirectory 'AdditionalReferences.txt'
