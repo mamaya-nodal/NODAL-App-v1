@@ -29,6 +29,7 @@ import { loadMyAdministrationScope } from "@/modules/admin/server/administration
 import { loadPeriodSummaries } from "@/modules/admin/server/load-period-summaries";
 import { readAll } from "@/modules/admin/server/read-all";
 import { classifyNinjaAccount } from "@/modules/ninja/domain/account-classification";
+import { effectiveConnectorSignal } from "@/modules/ninja/domain/connector-status";
 import { registeredNinjaAccountKeys as resolveRegisteredNinjaAccountKeys } from "@/modules/ninja/domain/account-registration-eligibility";
 import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
 import { happenedAfterOpening, openingCutoffTimestamp } from "@/modules/ninja/domain/opening-cutoff";
@@ -323,7 +324,7 @@ async function renderPrivateAppPage({
     ninjaConnector = ninjaConnectors.find((connector) => connector.identityId === null) ?? null;
   }
 
-  const connectorOnline = Boolean(ninjaConnector?.isOnline && ninjaConnector.status === "active");
+  let connectorOnline = false;
   const connectorSetupState = connectorOnboardingState({
     connector: ninjaConnector,
     automaticInstallerEnabled: automaticInstallerEnabled(userId),
@@ -736,6 +737,10 @@ async function renderPrivateAppPage({
       connectedBrokerAccounts.map((account) => account.accountName),
       liveNinjaBrokerBalance,
     );
+    connectorOnline = effectiveConnectorSignal(
+      ninjaConnectors,
+      connectedNinjaBrokerAccountNames.length > 0,
+    ).online;
     if (connectedNinjaAccounts.length > 0 && connectedNinjaBrokerAccountNames.length === 0) {
       ninjaBrokerSourceNotice =
         "NinjaTrader está conectado, pero no informa ninguna cuenta broker. Los saldos automáticos se reanudarán cuando una cuenta broker vuelva a aparecer en Accounts.";

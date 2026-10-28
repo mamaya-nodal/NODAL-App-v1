@@ -5,7 +5,7 @@ import {
   applyNinjaBrokerAccountAliases,
   type NinjaBrokerAccountAlias,
 } from "@/modules/ninja/domain/live-broker-balance";
-import { principalConnectorSignal } from "@/modules/ninja/domain/connector-status";
+import { effectiveConnectorSignal } from "@/modules/ninja/domain/connector-status";
 import { readOpeningBrokerState } from "@/modules/ninja/server/opening-broker-state";
 
 export const dynamic = "force-dynamic";
@@ -45,14 +45,14 @@ export async function GET() {
     displayName: alias.display_name,
   }));
   const connectorStatuses = (statusResult.data ?? []) as ConnectorStatusRow[];
-  const principalSignal = principalConnectorSignal(connectorStatuses.map((connector) => ({
-    identityId: connector.identity_id,
-    isOnline: connector.is_online,
-    status: connector.status,
-  })));
   let brokerBalance;
   try { brokerBalance = (await readOpeningBrokerState(supabase, user.id, inventoryResult.data ?? [])).liveBrokerBalance; }
   catch { return Response.json({ error: "No pudimos consultar el saldo broker" }, { status: 503, headers: { "Cache-Control": "no-store" } }); }
+  const effectiveSignal = effectiveConnectorSignal(connectorStatuses.map((connector) => ({
+    identityId: connector.identity_id,
+    isOnline: connector.is_online,
+    status: connector.status,
+  })), brokerBalance !== null);
   return Response.json(
     {
       inventoryRevision: error
@@ -64,8 +64,8 @@ export async function GET() {
             brokerBalance,
             aliases,
           ),
-      linked: !error && principalSignal.linked,
-      online: !error && principalSignal.online,
+      linked: !error && effectiveSignal.linked,
+      online: !error && effectiveSignal.online,
     },
     { headers: { "Cache-Control": "no-store, max-age=0" }, status: error ? 503 : 200 },
   );

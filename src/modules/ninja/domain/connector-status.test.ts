@@ -1,18 +1,38 @@
 import { describe, expect, it } from "vitest";
 
-import { principalConnectorSignal } from "./connector-status";
+import { effectiveConnectorSignal } from "./connector-status";
 
-describe("principalConnectorSignal", () => {
-  it("does not confuse an online identity connector with the principal connector", () => {
-    expect(principalConnectorSignal([
+describe("effectiveConnectorSignal", () => {
+  it("reports the user connected when a broker is detected through an identity", () => {
+    expect(effectiveConnectorSignal([
       { identityId: null, isOnline: false, status: "active" },
       { identityId: "identity-1", isOnline: true, status: "active" },
-    ])).toEqual({ linked: true, online: false });
+    ], true)).toEqual({ linked: true, online: true });
   });
 
-  it("does not report a principal link when only an identity connector exists", () => {
-    expect(principalConnectorSignal([
+  it("reports the user connected when only an identity detects the broker", () => {
+    expect(effectiveConnectorSignal([
       { identityId: "identity-1", isOnline: true, status: "active" },
-    ])).toEqual({ linked: false, online: false });
+    ], true)).toEqual({ linked: true, online: true });
+  });
+
+  it("does not call a heartbeat without a detected broker connected", () => {
+    expect(effectiveConnectorSignal([
+      { identityId: null, isOnline: true, status: "active" },
+      { identityId: "identity-1", isOnline: true, status: "active" },
+    ], false)).toEqual({ linked: true, online: false });
+  });
+
+  it("does not treat a stored broker snapshot as a current connection", () => {
+    expect(effectiveConnectorSignal([
+      { identityId: null, isOnline: false, status: "active" },
+      { identityId: "identity-1", isOnline: false, status: "active" },
+    ], true)).toEqual({ linked: true, online: false });
+  });
+
+  it("ignores a stored broker when every connector is revoked", () => {
+    expect(effectiveConnectorSignal([
+      { identityId: "identity-1", isOnline: true, status: "revoked" },
+    ], true)).toEqual({ linked: false, online: false });
   });
 });

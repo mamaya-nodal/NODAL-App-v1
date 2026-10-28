@@ -3224,3 +3224,16 @@ vigente sin aprobacion y evidencia suficiente.
   50% trader, 25% Julián y 25% NODAL muestra USD 270 en el ranking, USD 135 de
   ganancia para Baltazar, USD 67,50 de ganancia para Julián y USD 67,50 para NODAL.
 
+### APP-222 — La conexión general sigue la detección broker en cualquier Ninja
+
+- Un usuario se considera conectado cuando la aplicación detecta al menos una
+  cuenta broker desde su Ninja personal o desde el Ninja de cualquiera de sus
+  identidades.
+- Un heartbeat sin cuenta broker detectada no alcanza para mostrar el estado
+  general como conectado.
+- Un saldo histórico tampoco alcanza por sí solo: la cuenta debe estar
+  detectada y al menos uno de los conectores activos del usuario debe conservar
+  señal reciente.
+- La identificación económica sigue resolviéndose por número de cuenta: la
+  misma cuenta observada desde varias PC se deduplica, mientras que otro número
+  se conserva como subcuenta propia.
