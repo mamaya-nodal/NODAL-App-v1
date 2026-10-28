@@ -3,7 +3,17 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const { rows, rpc, state } = vi.hoisted(() => ({
   rows: vi.fn(),
   rpc: vi.fn(),
-  state: { previousCommitted: true },
+  state: {
+    currentClosingBalance: null as number | null,
+    currentOpeningBalance: null as number | null,
+    manualControl: null as null | {
+      balance_after_cents: number;
+      created_at: string;
+      received_balance_cents: number | null;
+      sync_issue_reason: string | null;
+    },
+    previousCommitted: true,
+  },
 }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc, from: (table: string) => {
   const filters: Record<string, unknown> = {};
@@ -39,6 +49,9 @@ const previous = { ...current, id: 10, opening_event_id: 100, opened_at: "2026-0
 
 beforeEach(() => {
   vi.resetAllMocks();
+  state.currentClosingBalance = null;
+  state.currentOpeningBalance = null;
+  state.manualControl = null;
   state.previousCommitted = true;
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-only");
@@ -46,9 +59,17 @@ beforeEach(() => {
     if (table === "ninja_operation_probe_sessions" && single && filters["not:excluded_at"]) {
       return { data: { closing_balance: 4_345.94, settled_at: "2026-09-28T15:07:30Z" }, error: null };
     }
+    const currentSession = {
+      ...current,
+      closing_balance: state.currentClosingBalance ?? current.closing_balance,
+      opening_balance: state.currentOpeningBalance ?? current.opening_balance,
+    };
+    const manualControlIsEffective = state.manualControl &&
+      typeof filters["lte:created_at"] === "string" &&
+      state.manualControl.created_at <= filters["lte:created_at"];
     const data: Record<string, unknown> = {
       ninja_connectors: null,
-      ninja_operation_probe_sessions: [previous, current, prop],
+      ninja_operation_probe_sessions: [previous, currentSession, prop],
       ninja_account_links: [{ account_id: "account", connection_name: prop.connection_name, external_account_name: prop.account_name,
         first_seen_at: "2026-09-30T15:46:55Z", closed_at: null, life_id: null, phase: null, closure_reason: null }],
       ninja_inventory_snapshots: null,
@@ -58,8 +79,10 @@ beforeEach(() => {
       periods: single
         ? { id: "period", workspace_id: "workspace", period_month: "2026-09-01" }
         : [],
-      daily_controls: null,
-      ninja_broker_balance_events: { balance_cents: 538_474 },
+      daily_controls: single && filters.period_id === "period" && manualControlIsEffective
+        ? state.manualControl
+        : null,
+      ninja_broker_balance_events: { balance_cents: 538_474, observed_at: "2026-09-30T14:00:00Z" },
       operation_entries: [],
       funding_withdrawals: [],
       ninja_operation_batches: state.previousCommitted && single && filters.broker_session_id === 10
@@ -99,4 +122,40 @@ it("never uses an excluded technical session as the expected broker balance", as
     expect.objectContaining({ "not:excluded_at": expect.anything() }),
     true,
   );
+});
+
+it("uses a manual deposit recorded after the preceding committed trade", async () => {
+  state.manualControl = {
+    balance_after_cents: 600_000,
+    created_at: "2026-09-30T15:30:00Z",
+    received_balance_cents: null,
+    sync_issue_reason: null,
+  };
+  state.currentOpeningBalance = 6_000;
+  state.currentClosingBalance = 5_839.36;
+
+  const result = await persistAutomaticOperationBatches("connector", 20, true);
+
+  expect(result.previews?.find((preview) => preview.brokerSessionId === 20)?.projection).toMatchObject({
+    reason: null,
+    status: "shadow_ready",
+  });
+});
+
+it("uses a manual withdrawal recorded after the preceding committed trade", async () => {
+  state.manualControl = {
+    balance_after_cents: 500_000,
+    created_at: "2026-09-30T15:30:00Z",
+    received_balance_cents: null,
+    sync_issue_reason: null,
+  };
+  state.currentOpeningBalance = 5_000;
+  state.currentClosingBalance = 4_839.36;
+
+  const result = await persistAutomaticOperationBatches("connector", 20, true);
+
+  expect(result.previews?.find((preview) => preview.brokerSessionId === 20)?.projection).toMatchObject({
+    reason: null,
+    status: "shadow_ready",
+  });
 });

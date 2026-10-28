@@ -12,6 +12,19 @@ import { resolveSessionAccountLink } from "../domain/session-account-link";
 
 type AccountingPhase = AutomaticAccountingMember["phase"];
 
+type ExpectedBalanceCheckpoint = Readonly<{
+  balanceInCents: number;
+  effectiveAt: string;
+}>;
+
+function isLaterCheckpoint(
+  current: ExpectedBalanceCheckpoint | undefined,
+  candidate: ExpectedBalanceCheckpoint,
+) {
+  if (!current) return true;
+  return Date.parse(candidate.effectiveAt) >= Date.parse(current.effectiveAt);
+}
+
 function dateInBuenosAires(value: string) {
   return new Intl.DateTimeFormat("en-CA", {
     day: "2-digit", month: "2-digit", timeZone: "America/Argentina/Buenos_Aires", year: "numeric",
@@ -169,13 +182,25 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
     : { data: [], error: null };
   if (timingError) return { persistedBatches: 0 };
   const controlTimes = new Map((timedBatches ?? []).map((batch) => [batch.daily_control_id, batch.opened_at]));
-  const expectedBalanceByPeriod = new Map<string, number | null>();
+  const expectedBalanceByPeriod = new Map<string, ExpectedBalanceCheckpoint>();
+  const updateExpectedBalance = (
+    periodId: string,
+    balanceInCents: number,
+    effectiveAt: string,
+  ) => {
+    const candidate = { balanceInCents, effectiveAt };
+    if (isLaterCheckpoint(expectedBalanceByPeriod.get(periodId), candidate)) {
+      expectedBalanceByPeriod.set(periodId, candidate);
+    }
+  };
   const loadExpectedBalance = async (periodId: string, openedAt: string) => {
-    if (expectedBalanceByPeriod.has(periodId)) return expectedBalanceByPeriod.get(periodId) ?? null;
+    // Refresh on every batch. A manual deposit or withdrawal may have happened
+    // after the preceding committed trade, and that newer checkpoint must win.
     const { data: currentControl } = await supabase.from("daily_controls")
       .select("balance_after_cents,created_at,received_balance_cents,sync_issue_reason")
       .eq("period_id", periodId)
       .lte("created_at", openedAt)
+      .order("created_at", { ascending: false })
       .order("control_number", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -183,32 +208,30 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       const value = !aggregateBrokerBalance && currentControl.sync_issue_reason && currentControl.received_balance_cents !== null
         ? Number(currentControl.received_balance_cents)
         : Number(currentControl.balance_after_cents);
-      expectedBalanceByPeriod.set(periodId, value);
-      return value;
+      updateExpectedBalance(periodId, value, currentControl.created_at);
     }
+    const refreshed = expectedBalanceByPeriod.get(periodId);
+    if (refreshed) return refreshed.balanceInCents;
     const { data: currentPeriod } = await supabase.from("periods").select("workspace_id,period_month").eq("id", periodId).maybeSingle();
-    if (!currentPeriod) {
-      expectedBalanceByPeriod.set(periodId, null);
-      return null;
-    }
+    if (!currentPeriod) return null;
     const { data: priorPeriods } = await supabase.from("periods").select("id")
       .eq("workspace_id", currentPeriod.workspace_id)
       .lt("period_month", currentPeriod.period_month)
       .order("period_month", { ascending: false });
     for (const prior of priorPeriods ?? []) {
-      const { data: priorControl } = await supabase.from("daily_controls").select("balance_after_cents,received_balance_cents,sync_issue_reason")
+      const { data: priorControl } = await supabase.from("daily_controls").select("balance_after_cents,created_at,received_balance_cents,sync_issue_reason")
         .eq("period_id", prior.id).order("control_number", { ascending: false }).limit(1).maybeSingle();
       if (priorControl) {
         const value = !aggregateBrokerBalance && priorControl.sync_issue_reason && priorControl.received_balance_cents !== null
           ? Number(priorControl.received_balance_cents)
           : Number(priorControl.balance_after_cents);
-        expectedBalanceByPeriod.set(periodId, value);
+        updateExpectedBalance(periodId, value, priorControl.created_at);
         return value;
       }
     }
     const { data: automaticBaseline } = await supabase
       .from("ninja_broker_balance_events")
-      .select("balance_cents")
+      .select("balance_cents,observed_at")
       .eq("connector_id", connectorId)
       .lte("observed_at", openedAt)
       .order("observed_at", { ascending: false })
@@ -216,10 +239,9 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       .maybeSingle();
     if (automaticBaseline) {
       const value = Number(automaticBaseline.balance_cents);
-      expectedBalanceByPeriod.set(periodId, value);
+      updateExpectedBalance(periodId, value, automaticBaseline.observed_at);
       return value;
     }
-    expectedBalanceByPeriod.set(periodId, null);
     return null;
   };
   let persistedBatches = 0;
@@ -235,9 +257,11 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
     if (existingCommitted?.accounting_status === "committed" && existingCommitted.daily_control_id) {
       persistedBatches += 1;
       if (existingCommitted.accounting_period_id && batch.broker.closingBalance !== null) {
-        expectedBalanceByPeriod.set(
+        await loadExpectedBalance(existingCommitted.accounting_period_id, batch.broker.openedAt);
+        updateExpectedBalance(
           existingCommitted.accounting_period_id,
           roundLikeSheets(batch.broker.closingBalance * 100),
+          batch.broker.settledAt ?? batch.broker.openedAt,
         );
       }
       continue;
@@ -386,11 +410,12 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
           target_batch_id: storedBatchId,
         });
         if (!commitError) {
-          expectedBalanceByPeriod.set(
+          updateExpectedBalance(
             projection.periodId,
             aggregateBrokerBalance && expectedOpeningBalanceInCents !== null
               ? expectedOpeningBalanceInCents + batch.brokerResultInCents
               : brokerClosingBalanceInCents,
+            batch.broker.settledAt ?? batch.broker.openedAt,
           );
         } else {
           await supabase.from("ninja_operation_batches").update({

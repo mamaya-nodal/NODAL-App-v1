@@ -3260,3 +3260,18 @@ vigente sin aprobacion y evidencia suficiente.
 - Los paquetes declaran su contexto de activación. El paquete personal sólo acepta
   códigos personales; el paquete enviado a una identidad sólo acepta códigos ligados
   a identidades aprobadas. Los contextos no son intercambiables.
+### APP-225 — Los movimientos de fondos prevalecen en la continuidad broker
+
+- **Fecha:** 2026-10-28. Corrección general a partir de cuatro conciliaciones de
+  Franco Seco bloqueadas después de un depósito manual correctamente registrado.
+- **Regla:** antes de conciliar cada operación, el saldo esperado se actualiza con el
+  último control contable efectivo anterior a su apertura. Un depósito o retiro
+  posterior a una operación confirmada prevalece sobre el cierre anterior y no se
+  registra como resultado operativo.
+- **Reproceso:** las operaciones se recorren en orden temporal. Una operación ya
+  confirmada sólo aporta su saldo de cierre si es posterior al último movimiento de
+  fondos conocido. Al confirmar una pendiente, su cierre se convierte en la base de
+  la siguiente sin duplicar controles ni entradas.
+- **Protección:** el cambio es general, conserva trazabilidad e idempotencia y no
+  modifica movimientos existentes. Las regresiones cubren depósitos y retiros entre
+  dos operaciones, además del reintento de una sesión histórica.
