@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { confirmOpeningSetup } from "./opening-setup-actions";
-import { claimOpeningBrokerAccount, getOpeningBrokerState } from "./opening-broker-actions";
+import { claimOpeningBrokerAccount, discardOpeningBrokerAccount, getOpeningBrokerState } from "./opening-broker-actions";
 import type { PendingOpeningBrokerAccount } from "@/modules/ninja/domain/broker-claim-balance";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import type { PeriodOpeningRecord } from "@/modules/summary/domain/opening-snapshot";
@@ -213,6 +213,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
   const [liveBrokerBalance, setLiveBrokerBalance] = useState(initialBrokerBalance);
   const [pendingBrokerAccounts, setPendingBrokerAccounts] = useState<PendingOpeningBrokerAccount[]>([]);
   const [claimingAccount, setClaimingAccount] = useState<string | null>(null);
+  const [discardingAccount, setDiscardingAccount] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const steps = simplified ? simplifiedSteps : mode === "reconstruct" ? reconstructionSteps : zeroSteps;
   const lastStep = steps.length - 1;
@@ -247,6 +248,37 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
     finally { setClaimingAccount(null); }
   }
 
+  async function discardBroker(accountName: string) {
+    setDiscardingAccount(accountName);
+    setMessage(null);
+    try {
+      const result = await discardOpeningBrokerAccount({ accountName });
+      if (result.ok) {
+        setLiveBrokerBalance(result.liveBrokerBalance);
+        setPendingBrokerAccounts(result.pendingAccounts);
+      } else setMessage(result.message);
+    } catch { setMessage("No se pudo descartar la cuenta. Volvé a intentar."); }
+    finally { setDiscardingAccount(null); }
+  }
+
+  const brokerActionBusy = claimingAccount !== null || discardingAccount !== null;
+
+  const includedBrokerAccounts = liveBrokerBalance?.sourceAccounts.length ? (
+    <div className={styles.brokerClaims}>
+      <strong>Cuentas broker incluidas en tu saldo</strong>
+      {liveBrokerBalance.sourceAccounts.map((account) => (
+        <div className={styles.brokerClaimRow} key={`${account.connectionName}:${account.accountName}`}>
+          <div><strong>{account.accountName}</strong><small>{account.connectionName}</small></div>
+          <span>{money(account.balanceInCents / 100)}</span>
+          <button className={styles.discardButton} disabled={brokerActionBusy}
+            onClick={() => void discardBroker(account.accountName)} type="button">
+            {discardingAccount === account.accountName ? "Descartando…" : "Descartar"}
+          </button>
+        </div>
+      ))}
+    </div>
+  ) : null;
+
   const brokerClaims = pendingBrokerAccounts.length > 0 ? (
     <div className={styles.brokerClaims}>
       <strong>Confirmá tus cuentas broker</strong>
@@ -256,9 +288,15 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
         return <div className={styles.brokerClaimRow} key={key}>
           <div><strong>{account.accountName}</strong><small>{account.connectionName}</small></div>
           <span>{account.balanceInCents === null ? "Sin saldo informado" : money(account.balanceInCents / 100)}</span>
-          <button className={styles.backButton} disabled={claimingAccount !== null} onClick={() => void claimBroker(account)} type="button">
-            {claimingAccount === key ? "Confirmando…" : "Es mía"}
-          </button>
+          <div className={styles.brokerClaimActions}>
+            <button className={styles.discardButton} disabled={brokerActionBusy}
+              onClick={() => void discardBroker(account.accountName)} type="button">
+              {discardingAccount === account.accountName ? "Descartando…" : "Descartar"}
+            </button>
+            <button className={styles.backButton} disabled={brokerActionBusy} onClick={() => void claimBroker(account)} type="button">
+              {claimingAccount === key ? "Confirmando…" : "Es mía"}
+            </button>
+          </div>
         </div>;
       })}
     </div>
@@ -384,6 +422,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                     <h3>¿Con qué fondos comenzás?</h3>
                     <p className={styles.description}>El saldo broker se tomará del conector. Informá solamente el dinero disponible fuera del broker.</p>
                     <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{liveBrokerBalance ? money(liveBrokerBalance.balanceInCents / 100) : "Sin datos de Ninja"}</strong><small>Se toma automáticamente del conector y no se edita aquí.</small></div>
+                    {includedBrokerAccounts}
                     {brokerClaims}
                     <WalletEditor onChange={setWallets} wallets={wallets} />
                   </div>
@@ -450,6 +489,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                     <h3>¿Qué dinero existe hoy dentro del circuito?</h3>
                     <p className={styles.description}>Los movimientos entre broker y billetera o cuenta bancaria no son aportes nuevos. Registramos cada ubicación una sola vez.</p>
                     <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{liveBrokerBalance ? money(liveBrokerBalance.balanceInCents / 100) : "Sin datos de Ninja"}</strong><small>Se toma automáticamente del conector y no se edita aquí.</small></div>
+                    {includedBrokerAccounts}
                     {brokerClaims}
                     <WalletEditor onChange={setWallets} wallets={wallets} />
                     <div className={styles.fields}>
@@ -501,7 +541,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
               <div>
                 {step > 0 ? <button className={styles.backButton} onClick={() => setStep((current) => Math.max(0, current - 1))} type="button">Atrás</button> : null}
                 {mode && step < lastStep ? <button className={styles.nextButton} onClick={() => setStep((current) => Math.min(lastStep, current + 1))} type="button">Continuar</button> : null}
-                {step === lastStep ? <button className={styles.nextButton} disabled={isPending || claimingAccount !== null} onClick={finishSetup} type="button">{isPending ? "Guardando…" : revision ? "Guardar nuevo punto de partida" : "Confirmar punto de partida"}</button> : null}
+                {step === lastStep ? <button className={styles.nextButton} disabled={isPending || brokerActionBusy} onClick={finishSetup} type="button">{isPending ? "Guardando…" : revision ? "Guardar nuevo punto de partida" : "Confirmar punto de partida"}</button> : null}
               </div>
             </footer>
           </section>

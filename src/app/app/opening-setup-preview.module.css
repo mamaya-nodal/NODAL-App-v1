@@ -179,6 +179,9 @@
 .brokerClaimRow small { color: var(--app-subtle); font-size: 10px; }
 .brokerClaimRow > span { color: var(--app-title); font-size: 12px; font-weight: 800; }
 .brokerClaimRow button:disabled { opacity: .6; cursor: wait; }
+.brokerClaimActions { display: flex; align-items: center; gap: 8px; }
+.discardButton { min-height: 40px; padding: 0 14px; border: 1px solid var(--app-border); border-radius: 10px; background: transparent; color: var(--app-copy); font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.discardButton:hover:not(:disabled) { border-color: #cc5757; color: #b33f3f; }
 .detectedBox > div { display: flex; align-items: center; justify-content: space-between; color: var(--app-copy); font-size: 11px; }
 .detectedBox strong { color: var(--app-title); font-size: 24px; }
 .detectedBox p { margin: 8px 0 0; color: var(--app-subtle); font-size: 10px; }
@@ -249,6 +252,8 @@
   .actionMessage { width: 100%; flex-basis: 100%; text-align: left; }
   .footer { flex-wrap: wrap; }
   .brokerClaimRow { flex-wrap: wrap; }
+  .brokerClaimActions { width: 100%; }
+  .brokerClaimActions button { flex: 1; }
   .textButton { display: none; }
   .footer > div { width: 100%; }
   .footer :is(.backButton, .nextButton) { flex: 1; }

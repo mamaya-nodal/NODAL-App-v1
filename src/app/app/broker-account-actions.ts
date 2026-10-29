@@ -66,3 +66,26 @@ export async function claimBrokerAccount(input: Readonly<{
   revalidatePath("/app");
   return { ok: true, message: `Cuenta broker ${accountName} confirmada para tu espacio NODAL.` };
 }
+
+export async function discardBrokerAccount(input: Readonly<{
+  accountName: string;
+}>): Promise<ActionResult> {
+  const accountName = input.accountName.trim();
+  if (!accountName) return { ok: false, message: "La cuenta broker detectada no es válida." };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  const { error } = await supabase.rpc("discard_ninja_broker_account", {
+    target_account_name: accountName,
+  });
+  if (error) {
+    return {
+      ok: false,
+      message: error.message.includes("not available")
+        ? "La cuenta ya no está disponible para descartar. Actualizá el panel."
+        : "No se pudo descartar la cuenta broker.",
+    };
+  }
+  revalidatePath("/app");
+  return { ok: true, message: `Cuenta broker ${accountName} descartada de tu espacio NODAL.` };
+}

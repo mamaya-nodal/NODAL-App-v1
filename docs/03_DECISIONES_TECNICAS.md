@@ -3308,3 +3308,17 @@ vigente sin aprobacion y evidencia suficiente.
 - **Fuente:** la supervisión usa períodos, cuentas, vínculos Ninja, asignaciones de
   Identidad, operaciones y conciliaciones existentes en Supabase después de validar
   la sesión Admin Master.
+
+### APP-228 — Una partición broker compartida requiere decisión explícita
+
+- **Fecha:** 2026-10-29. Cuando un Ninja observa cuentas broker de más de una
+  persona, NODAL no presume que todas pertenecen al usuario conectado.
+- **Decisión:** cada número pendiente puede confirmarse con `Es mía` o excluirse
+  con `Descartar`. La exclusión se aplica por usuario y número de cuenta, no por
+  conexión, para conservar las demás particiones visibles en el mismo Ninja.
+- **Efecto:** una cuenta descartada no integra el saldo de apertura, no reaparece
+  como candidata y su telemetría no se enruta a la contabilidad de ese usuario.
+  La cuenta sigue disponible para que su verdadero titular la confirme en su
+  propio espacio NODAL.
+- **Trazabilidad:** confirmaciones y descartes se resuelven mediante RPC
+  autenticadas, quedan auditados y no modifican registros del otro titular.

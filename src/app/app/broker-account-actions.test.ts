@@ -7,7 +7,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc }),
 }));
 
-import { claimBrokerAccount } from "./broker-account-actions";
+import { claimBrokerAccount, discardBrokerAccount } from "./broker-account-actions";
 
 describe("broker account confirmation", () => {
   beforeEach(() => {
@@ -27,6 +27,15 @@ describe("broker account confirmation", () => {
       target_account_name: "2149906",
       target_connection_name: "Live",
       target_physical_connector_id: "69b6c516-c0d8-4691-862b-2b15af76bd10",
+    });
+  });
+
+  it("discards an account by economic account number", async () => {
+    mocks.rpc.mockResolvedValue({ data: true, error: null });
+    const result = await discardBrokerAccount({ accountName: "2177299" });
+    expect(result).toEqual({ message: "Cuenta broker 2177299 descartada de tu espacio NODAL.", ok: true });
+    expect(mocks.rpc).toHaveBeenCalledWith("discard_ninja_broker_account", {
+      target_account_name: "2177299",
     });
   });
 });

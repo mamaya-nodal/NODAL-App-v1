@@ -130,7 +130,8 @@ async function routingState(physicalConnectorId: string) {
     .eq("id", physicalConnectorId)
     .maybeSingle();
   if (physicalConnectorError || !physicalConnector) return null;
-  const [epochsResult, ownershipResult, destinationsResult, sharedBrokerResult, personalConnectorResult] = await Promise.all([
+  const [epochsResult, ownershipResult, destinationsResult, sharedBrokerResult, personalConnectorResult,
+    brokerExclusionsResult] = await Promise.all([
     supabase.from("ninja_connector_route_epochs")
       .select("destination_connector_id,effective_from,effective_until")
       .eq("physical_connector_id", physicalConnectorId)
@@ -153,9 +154,12 @@ async function routingState(physicalConnectorId: string) {
       .order("paired_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase.from("ninja_broker_account_exclusions")
+      .select("account_name")
+      .eq("owner_user_id", physicalConnector.owner_user_id),
   ]);
   if (epochsResult.error || ownershipResult.error || destinationsResult.error
-    || sharedBrokerResult.error || personalConnectorResult.error) return null;
+    || sharedBrokerResult.error || personalConnectorResult.error || brokerExclusionsResult.error) return null;
   const destinationIds = destinationsResult.data.map((row) => row.destination_connector_id);
   const transitionStatesResult = destinationIds.length === 0
     ? { data: [], error: null }
@@ -163,6 +167,7 @@ async function routingState(physicalConnectorId: string) {
   if (transitionStatesResult.error) return null;
   return {
     destinationOwners: new Map(destinationsResult.data.map((row) => [row.destination_connector_id, row.destination_owner_user_id])),
+    excludedBrokerAccountNames: new Set(brokerExclusionsResult.data.map((row) => brokerAccountKey(row.account_name))),
     knownBrokerAccountNames: new Set(sharedBrokerResult.data.map((row) => brokerAccountKey(row.account_name))),
     ownerUserId: physicalConnector.owner_user_id,
     ownership: new Map((ownershipResult.data as OwnershipRow[]).map((row) => [accountKey(row.connection_name, row.account_name), row])),
@@ -272,6 +277,8 @@ export async function routeNinjaInventory(
   for (const account of snapshot.accounts) {
     const classified = classifyNinjaAccount(account, snapshot.observedAt);
     if (classified.type === "simulator") continue;
+    if (classified.type === "broker"
+      && state.excludedBrokerAccountNames.has(brokerAccountKey(account.accountName))) continue;
     const ownership = state.ownership.get(accountKey(account.connectionName, account.accountName));
     const accountType = classified.type === "broker" ? "broker" : "prop";
     const decision = decideNinjaIntake({
@@ -332,6 +339,8 @@ export async function routeNinjaTelemetry(
     const account = telemetryAccount(event);
     const classified = classifyNinjaAccount(account, event.occurredAt);
     if (classified.type === "simulator") continue;
+    if (classified.type === "broker"
+      && state.excludedBrokerAccountNames.has(brokerAccountKey(event.accountName))) continue;
     const ownership = state.ownership.get(accountKey(event.connectionName, event.accountName));
     const epochs = epochsAt(state.rows, state.destinationOwners, event.occurredAt);
     const decision = decideNinjaIntake({

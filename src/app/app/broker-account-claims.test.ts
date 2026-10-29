@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("./broker-account-actions", () => ({ claimBrokerAccount: vi.fn() }));
+vi.mock("./broker-account-actions", () => ({ claimBrokerAccount: vi.fn(), discardBrokerAccount: vi.fn() }));
 
 import { BrokerAccountClaims } from "./broker-account-claims";
 
@@ -17,6 +17,7 @@ describe("broker account claims", () => {
     }] }));
     expect(markup).toContain("CUENTA BROKER DEL USUARIO");
     expect(markup).toContain("Confirmar cuenta broker");
+    expect(markup).toContain("Descartar");
     expect(markup).toContain("2149906");
     expect(markup).not.toContain("Es mía");
   });

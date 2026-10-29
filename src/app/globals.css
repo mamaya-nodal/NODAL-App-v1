@@ -715,6 +715,8 @@ h1 {
 .broker-account-claim small { color: var(--app-subtle); font-size: 9px; }
 .broker-account-claim strong { overflow: hidden; color: var(--app-title); font-size: 11px; text-overflow: ellipsis; }
 .broker-account-claim .primary-action { width: auto; min-height: 38px; padding: 8px 13px; border-radius: 9px; font-size: 10px; white-space: nowrap; }
+.broker-account-claim-actions { display: flex; align-items: center; gap: 8px; }
+.broker-account-claim-actions .secondary-action { width: auto; min-height: 38px; margin: 0; padding: 8px 13px; border-radius: 9px; font-size: 10px; white-space: nowrap; }
 .ninja-detections-heading h3, .manual-purchase-heading h3 { margin: 4px 0 0; }
 .ninja-live-badge, .ninja-phase { padding: 8px 12px; border-radius: 999px; background: color-mix(in srgb, var(--brand) 22%, transparent); color: var(--brand); font-weight: 800; }
 .ninja-live-badge.is-offline { background: color-mix(in srgb, var(--muted) 20%, transparent); color: var(--muted); }
@@ -4404,6 +4406,8 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   .identity-account-facts { grid-template-columns: 1fr; }
   .broker-account-claim { grid-template-columns: 1fr; }
   .broker-account-claim .primary-action { width: 100%; }
+  .broker-account-claim-actions { width: 100%; }
+  .broker-account-claim-actions :is(.primary-action, .secondary-action) { flex: 1; }
 }
 
 @keyframes identity-power-fill {

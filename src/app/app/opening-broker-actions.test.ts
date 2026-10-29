@@ -4,7 +4,7 @@ const { client, state, revalidate } = vi.hoisted(() => ({ client: vi.fn(), state
 vi.mock("@/lib/supabase/server", () => ({ createClient: client }));
 vi.mock("@/modules/ninja/server/opening-broker-state", () => ({ readOpeningBrokerState: state }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidate }));
-import { claimOpeningBrokerAccount } from "./opening-broker-actions";
+import { claimOpeningBrokerAccount, discardOpeningBrokerAccount } from "./opening-broker-actions";
 
 const candidate = { physicalConnectorId: "00000000-0000-4000-8000-000000000001", accountName: "1850465", connectionName: "Live" };
 describe("opening broker confirmation authorization", () => {
@@ -30,6 +30,20 @@ describe("opening broker confirmation authorization", () => {
     expect(rpc).toHaveBeenCalledWith("claim_ninja_broker_account", {
       target_account_name: candidate.accountName, target_connection_name: candidate.connectionName,
       target_physical_connector_id: candidate.physicalConnectorId,
+    });
+    expect(revalidate).toHaveBeenCalledWith("/app");
+  });
+  it("discards either an included or pending broker account and rereads the opening", async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    client.mockResolvedValue({ auth: { getUser: async () => ({ data: { user: { id: "user" } } }) }, rpc });
+    state.mockResolvedValueOnce({ liveBrokerBalance: { balanceInCents: 549844, sourceAccounts: [{
+      accountName: "2177299", balanceInCents: 549844, connectionName: "En Vivo",
+    }] }, pendingAccounts: [candidate] })
+      .mockResolvedValueOnce({ liveBrokerBalance: null, pendingAccounts: [candidate] });
+    const result = await discardOpeningBrokerAccount({ accountName: "2177299" });
+    expect(result).toMatchObject({ ok: true, liveBrokerBalance: null, pendingAccounts: [candidate] });
+    expect(rpc).toHaveBeenCalledWith("discard_ninja_broker_account", {
+      target_account_name: "2177299",
     });
     expect(revalidate).toHaveBeenCalledWith("/app");
   });

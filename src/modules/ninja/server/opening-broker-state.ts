@@ -17,18 +17,26 @@ function requireBrokerRead(scope: string, result: { data?: unknown; error: { cod
  * to exact owned or proposed broker rows, never to caller-supplied connector IDs. */
 export async function readOpeningBrokerState(userClient: SupabaseClient, userId: string,
   suppliedInventories?: readonly (NinjaInventoryView & { connector_id: string })[]) {
-  const [inventoryResult, connectorResult, ownershipResult] = await Promise.all([
+  const [inventoryResult, connectorResult, ownershipResult, exclusionResult] = await Promise.all([
     suppliedInventories ? Promise.resolve({ data: suppliedInventories, error: null })
       : userClient.rpc("get_current_user_ninja_inventory"),
     userClient.rpc("get_current_user_ninja_connector_status_v2"),
     userClient.from("ninja_account_ownership")
       .select("physical_connector_id,connection_name,account_name,destination_connector_id,claimed_at")
       .eq("owner_user_id", userId).eq("account_type", "broker"),
+    userClient.from("ninja_broker_account_exclusions")
+      .select("account_name")
+      .eq("owner_user_id", userId),
   ]);
   requireBrokerRead("opening-inventory", inventoryResult);
   requireBrokerRead("opening-connectors", connectorResult);
   requireBrokerRead("opening-ownership", ownershipResult);
-  const inventories = (inventoryResult.data ?? []) as (NinjaInventoryView & { connector_id: string })[];
+  requireBrokerRead("opening-broker-exclusions", exclusionResult);
+  const excludedAccountNumbers = new Set((exclusionResult.data ?? [])
+    .map((row) => row.account_name.trim().toUpperCase()));
+  const inventories = ((inventoryResult.data ?? []) as (NinjaInventoryView & { connector_id: string })[])
+    .map((inventory) => ({ ...inventory, accounts: inventory.accounts.filter((account) =>
+      !excludedAccountNumbers.has(account.accountName.trim().toUpperCase())) }));
   const personalIds = new Set<string>((connectorResult.data ?? [])
     .filter((row: { identity_id: string | null; status: string }) => row.identity_id === null && row.status === "active")
     .map((row: { connector_id: string }) => row.connector_id));
@@ -65,6 +73,7 @@ export async function readOpeningBrokerState(userClient: SupabaseClient, userId:
   for (const row of pendingResult.data ?? []) {
     if (!personalIds.has(row.proposed_destination_connector_id)
       || isolated.has(`${row.proposed_destination_connector_id}\u0000${row.connection_name}`)
+      || excludedAccountNumbers.has(row.account_name.trim().toUpperCase())
       || ownedKeys.has(`${row.physical_connector_id}\u0000${row.connection_name}\u0000${row.account_name}`)
       || ownedAccountNumbers.has(row.account_name.trim().toUpperCase())) continue;
     // Older pending receipt retries could rewind the pending row. The lossless

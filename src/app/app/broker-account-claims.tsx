@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { claimBrokerAccount } from "./broker-account-actions";
+import { claimBrokerAccount, discardBrokerAccount } from "./broker-account-actions";
 
 export type PendingBrokerAccountView = Readonly<{
   accountName: string;
@@ -41,6 +41,19 @@ export function BrokerAccountClaims({ accounts }: Props) {
     });
   }
 
+  function discard(account: PendingBrokerAccountView) {
+    setMessage(null);
+    startTransition(async () => {
+      try {
+        const result = await discardBrokerAccount({ accountName: account.accountName });
+        setMessage(result.message);
+        if (result.ok) router.refresh();
+      } catch {
+        setMessage("No se pudo descartar la cuenta broker. Volvé a intentarlo.");
+      }
+    });
+  }
+
   return <section className="broker-account-claims" aria-labelledby="broker-account-claims-title">
     <div>
       <span>CUENTA BROKER DEL USUARIO</span>
@@ -53,9 +66,12 @@ export function BrokerAccountClaims({ accounts }: Props) {
         <span><small>Número de cuenta</small><strong>{account.accountName}</strong></span>
         <span><small>Detectada en</small><strong>{account.connectionName}</strong></span>
         <span><small>Saldo detectado</small><strong>{account.balanceInCents === null ? "Sin lectura" : money(account.balanceInCents)}</strong></span>
-        <button className="primary-action" disabled={pending} onClick={() => claim(account)} type="button">
-          {pending ? "Confirmando…" : "Confirmar cuenta broker"}
-        </button>
+        <div className="broker-account-claim-actions">
+          <button className="secondary-action" disabled={pending} onClick={() => discard(account)} type="button">Descartar</button>
+          <button className="primary-action" disabled={pending} onClick={() => claim(account)} type="button">
+            {pending ? "Procesando…" : "Confirmar cuenta broker"}
+          </button>
+        </div>
       </article>)}
     </div>
   </section>;

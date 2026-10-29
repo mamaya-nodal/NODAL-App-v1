@@ -73,6 +73,21 @@ describe("opening broker read authorization and recovery", () => {
       observedAt: "2026-10-27T15:20:39Z", physicalConnectorId: "identity-physical",
     }]);
   });
+  it("excludes a discarded broker partition from both the balance and pending choices", async () => {
+    const user = database({
+      ninja_account_ownership: [owned()],
+      ninja_broker_account_exclusions: [{ owner_user_id: "user", account_name: "1850465" }],
+    }, { get_current_user_ninja_connector_status_v2: connectors });
+    serviceClient.mockReturnValue(database({ ninja_unclaimed_broker_accounts: [pending()] }));
+    const result = await readOpeningBrokerState(user as unknown as SupabaseClient, "user", [{
+      connector_id: "own", observed_at: "2026-10-08T12:29:48Z", accounts: [{
+        accountName: "1850465", cashValue: 6982.04, connectionName: "Live",
+        connectionStatus: "Connected", netLiquidation: 6982.04, providerName: "Provider31",
+        realizedProfitLoss: 0, totalCashBalance: 6982.04, unrealizedProfitLoss: 0,
+      }],
+    }]);
+    expect(result).toEqual({ liveBrokerBalance: null, pendingAccounts: [] });
+  });
   it("recovers only the receipt matching authenticated ownership and preserves its observation time", async () => {
     const user = userDatabase([owned()]);
     const service = database({ ninja_event_receipts: [{ physical_connector_id: "physical", payload, status: "pending" }] });
