@@ -57,6 +57,7 @@ import {
 } from "@/modules/operations/domain/account-progress";
 import type { AccountPhase } from "@/modules/operations/domain/account-progress";
 import { resolveOpenInvestmentInCents } from "@/modules/operations/domain/open-investment";
+import { resolveDetectedAccountAccumulatedInCents } from "@/modules/operations/domain/detected-account-investment";
 import {
   buildOperationalSummary,
   type OperationalSummary,
@@ -911,6 +912,17 @@ async function renderPrivateAppPage({
           }];
         })
         .sort((left, right) => left.date.localeCompare(right.date));
+      const technicalDailyControlIds = new Set(controlByBatchId.values());
+      const manualRecoveryRows = (historicalOperationEntryRows ?? [])
+        .filter((entry) => entry.account_id === account.id && !technicalDailyControlIds.has(entry.daily_control_id))
+        .map((entry) => ({
+          broker: entry.destination === "NETO BROKER +"
+            ? Number(entry.magnitude_cents)
+            : entry.destination === "NETO BROKER -" ? -Number(entry.magnitude_cents) : 0,
+          dailyControlId: entry.daily_control_id,
+          date: `${entry.operated_on}T12:00:00.000-03:00`,
+          prop: null,
+        }));
       const economicHistory: NonNullable<AccountOverviewAccount["economicHistory"]> = [{
         accumulatedInCents: accumulated, brokerResultInCents: null, concept: "Examen",
         phase: "—", propResultInCents: null, tradeNumber: null,
@@ -921,7 +933,7 @@ async function renderPrivateAppPage({
         accountingEntries: (historicalOperationEntryRows ?? [])
           .filter((entry) => entry.account_id === account.id)
           .map((entry) => ({ dailyControlId: entry.daily_control_id, phase: entry.phase })),
-        trades: technicalRows.map((row) => ({
+        trades: [...technicalRows, ...manualRecoveryRows].map((row) => ({
           brokerResultInCents: row.broker,
           dailyControlId: row.dailyControlId,
           openedAt: row.date,
@@ -930,7 +942,7 @@ async function renderPrivateAppPage({
       });
       detectedHistory.forEach((row) => economicHistory.push({ ...row, concept: "Cobertura" }));
       accumulated = detectedHistory.at(-1)?.accumulatedInCents ?? accumulated;
-      if (technicalRows.length === 0) {
+      if (technicalRows.length === 0 && manualRecoveryRows.length === 0) {
         const manualBalances = [...(historicalManualAccountBalanceRows ?? [])]
           .filter((row) => row.account_id === account.id)
           .sort((left, right) => left.trade_number - right.trade_number || left.observed_at.localeCompare(right.observed_at))
@@ -965,13 +977,23 @@ async function renderPrivateAppPage({
         economicHistory.push({ accumulatedInCents: accumulated, brokerResultInCents: null, concept: "Payout",
           phase: row.phase ?? "Funded", propResultInCents: null, tradeNumber: null });
       });
-      const observedNinjaAccumulated = -purchaseCost
-        + technicalMemberRows
-          .filter((member) => member.account_id === account.id)
-          .reduce((total, member) => total + Number(member.allocated_broker_result_cents ?? 0), 0)
-        + (historicalFundingWithdrawalRows ?? [])
+      const observedNinjaAccumulated = resolveDetectedAccountAccumulatedInCents({
+        collectedPayoutsInCents: (historicalFundingWithdrawalRows ?? [])
           .filter((row) => row.account_id === account.id && row.collected_on)
-          .reduce((total, row) => total + Number(row.amount_cents) - Number(row.collection_fee_cents ?? 0), 0);
+          .map((row) => Number(row.amount_cents) - Number(row.collection_fee_cents ?? 0)),
+        manualAndAutomaticEntries: (historicalOperationEntryRows ?? [])
+          .filter((entry) => entry.account_id === account.id)
+          .map((entry) => ({
+            dailyControlId: entry.daily_control_id,
+            destination: entry.destination as "NETO BROKER +" | "NETO BROKER -" | "NONE",
+            magnitudeInCents: Number(entry.magnitude_cents),
+          })),
+        purchaseCostInCents: purchaseCost,
+        technicalAllocationsInCents: technicalMemberRows
+          .filter((member) => member.account_id === account.id)
+          .map((member) => Number(member.allocated_broker_result_cents ?? 0)),
+        technicalDailyControlIds,
+      });
       const investmentAccumulated = ninjaNamesByAccountId.has(account.id)
         ? observedNinjaAccumulated
         : accumulated;

@@ -3469,3 +3469,20 @@ vigente sin aprobacion y evidencia suficiente.
   independiente y no altera el canal de entrega.
 - **Seguridad:** el enlace conserva el alcance de la identidad y el vencimiento
   administrado por `identity_connector_installations`.
+
+### APP-240 — Una recuperación manual no inventa telemetría Ninja
+
+- **Fecha:** 2026-10-29. Si un conector antiguo dejó de transmitir cuentas prop,
+  las operaciones confirmadas por el administrador se recuperan como controles
+  manuales auditados. No se crean sesiones, ejecuciones ni eventos técnicos que
+  NinjaTrader nunca entregó.
+- **Contabilidad:** el saldo broker real permanece como fuente del resultado
+  total. El reparto por cuenta conserva los importes confirmados y documenta por
+  separado cualquier diferencia de redondeo, sin cargarla arbitrariamente a una
+  cuenta.
+- **Continuidad:** los controles manuales recuperados integran el flotante de una
+  cuenta detectada junto con los lotes automáticos posteriores. Si una operación
+  automática ya produjo el mismo control, su resultado no se suma dos veces.
+- **Caso David:** cinco operaciones de Segunda vuelta del 24, 26, 27, 28 y 29 de
+  octubre reconstruyen un saldo broker de US$ 9.869,52 y un costo abierto total
+  de US$ 2.422,58. Las cinco cuentas continúan en el próximo trade como Día 6.
