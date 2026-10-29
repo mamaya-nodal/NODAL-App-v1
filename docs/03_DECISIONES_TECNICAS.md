@@ -3375,3 +3375,10 @@ vigente sin aprobacion y evidencia suficiente.
 - **Regresión:** el caso real de Franco Seco conserva US$ 1.763,55 como apertura,
   US$ 1.637,81 como cierre y -US$ 125,74 como resultado, incluyendo US$ 2,87 de
   costos informados antes de la posición.
+
+### APP-233 - Una cuenta prop participa una sola vez aunque llegue por dos conectores
+
+- **Fecha:** 2026-10-29
+- **Decisión:** La correlación automática agrupa las sesiones prop por `account_id` antes de distribuir el resultado broker. Las sesiones técnicas duplicadas se conservan como evidencia, pero no crean participantes contables repetidos.
+- **Motivo:** La misma cuenta económica puede ser observada simultáneamente desde el Ninja del titular y desde el de una identidad. Contarla dos veces divide el resultado, rompe la unicidad del control diario y bloquea la conciliación.
+- **Prueba:** El caso de Franco reproduce dos transmisiones de la misma cuenta lógica y exige un único miembro por el total del resultado broker.

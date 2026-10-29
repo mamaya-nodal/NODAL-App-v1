@@ -157,6 +157,43 @@ describe("automatic operation batches", () => {
     });
   });
 
+  it("counts the same logical prop account only once when two connectors report it", () => {
+    const primary = operation({
+      accountId: "franco-lucid",
+      accountName: "LFF05091986490004",
+      connectionName: "Franco",
+      direction: "Long",
+      openingEventId: 865083,
+      quantity: 1,
+      role: "prop",
+    });
+    const duplicate = operation({
+      ...primary,
+      connectionName: "Franco identidad",
+      openingEventId: 865084,
+    });
+    const broker = operation({
+      accountName: "2196146",
+      direction: "Short",
+      openingEventId: 865082,
+      quantity: 1,
+      result: -125.74,
+      role: "broker",
+    });
+
+    expect(countBrokerContextProps([primary, duplicate, broker], broker)).toBe(1);
+    expect(correlateAutomaticOperationBatches([primary, duplicate, broker])[0]).toMatchObject({
+      brokerResultInCents: -12_574,
+      distributedInCents: -12_574,
+      props: [expect.objectContaining({
+        accountId: "franco-lucid",
+        allocatedBrokerResultInCents: -12_574,
+      })],
+      roundingDifferenceInCents: 0,
+      status: "ready",
+    });
+  });
+
   it("does not match NQ and MNQ when the contract differs", () => {
     const prop = operation({
       accountName: "LUCID1",

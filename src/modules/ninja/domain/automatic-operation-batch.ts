@@ -37,17 +37,23 @@ function compatibleSingleInstrument(left: NinjaTechnicalOperation, right: NinjaT
       normalizedInstrumentForCoverage(right.instruments[0]);
 }
 
+function logicalPropKey(operation: ClassifiedTechnicalOperation, index: number) {
+  return operation.accountId === null ? `technical:${index}` : `account:${operation.accountId}`;
+}
+
 export function countBrokerContextProps(
   operations: readonly ClassifiedTechnicalOperation[],
   broker: ClassifiedTechnicalOperation,
   openingToleranceMs = defaultOpeningToleranceMs,
 ): number {
-  return operations.filter((operation) =>
+  return new Set(operations.flatMap((operation, index) =>
     operation.role === "prop" &&
-    operation.status === "closed" &&
-    Math.abs(Date.parse(operation.openedAt) - Date.parse(broker.openedAt)) <= openingToleranceMs &&
-    opposite(operation.direction, broker.direction),
-  ).length;
+      operation.status === "closed" &&
+      Math.abs(Date.parse(operation.openedAt) - Date.parse(broker.openedAt)) <= openingToleranceMs &&
+      opposite(operation.direction, broker.direction)
+      ? [logicalPropKey(operation, index)]
+      : [],
+  )).size;
 }
 
 export function correlateAutomaticOperationBatches(
@@ -59,7 +65,7 @@ export function correlateAutomaticOperationBatches(
   const usedProps = new Set<number>();
 
   return brokers.map((broker) => {
-    const candidates = closed
+    const technicalCandidates = closed
       .map((operation, index) => ({ index, operation }))
       .filter(({ index, operation }) =>
         operation.role === "prop" &&
@@ -68,6 +74,13 @@ export function correlateAutomaticOperationBatches(
         opposite(operation.direction, broker.direction) &&
         compatibleSingleInstrument(operation, broker),
       );
+    const logicalAccounts = new Set<string>();
+    const candidates = technicalCandidates.filter(({ index, operation }) => {
+      const key = logicalPropKey(operation, index);
+      if (logicalAccounts.has(key)) return false;
+      logicalAccounts.add(key);
+      return true;
+    });
     const result = broker.result === null ? null : roundLikeSheets(broker.result * 100);
     const conflict = broker.instruments.length !== 1 || broker.direction === null || broker.quantity <= 0;
     if (candidates.length === 0 || result === null || conflict) {
@@ -81,7 +94,9 @@ export function correlateAutomaticOperationBatches(
       };
     }
 
-    candidates.forEach((candidate) => usedProps.add(candidate.index));
+    // Dos conectores pueden observar la misma cuenta prop. Conservamos todas las
+    // sesiones técnicas, pero la cuenta económica participa una sola vez.
+    technicalCandidates.forEach((candidate) => usedProps.add(candidate.index));
     const perProp = roundLikeSheets(result / candidates.length);
     const props = candidates.map(({ operation }) => ({
       ...operation,

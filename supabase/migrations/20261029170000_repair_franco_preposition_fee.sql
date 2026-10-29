@@ -65,10 +65,19 @@ begin
       and batches.status = 'ready'
       and batches.accounting_status = 'blocked'
       and batches.broker_result_cents = -12287
-      and batches.distributed_cents = -12287
       and batches.daily_control_id is null
   ) then
     raise exception 'Franco automatic batch changed; aborting controlled repair';
+  end if;
+
+  if (
+    select count(*) from public.ninja_operation_batch_members members
+    where members.batch_id = target_batch_id
+      and members.role = 'prop'
+      and members.account_id = 'afe777a2-e4e1-4f9c-b452-3b6362d42eaa'
+      and members.allocated_broker_result_cents = -6144
+  ) <> 2 then
+    raise exception 'Franco prop allocations changed; aborting controlled repair';
   end if;
 
   update public.ninja_operation_probe_sessions
@@ -93,10 +102,22 @@ begin
 
   update public.ninja_operation_batch_members
   set allocated_broker_result_cents = -12574
-  where batch_id = target_batch_id and role = 'prop';
+  where batch_id = target_batch_id
+    and role = 'prop'
+    and session_id = 2621451;
   get diagnostics changed_count = row_count;
   if changed_count <> 1 then
-    raise exception 'Expected one Franco prop allocation, found %', changed_count;
+    raise exception 'Expected the canonical Franco prop allocation, found %', changed_count;
+  end if;
+
+
+  delete from public.ninja_operation_batch_members
+  where batch_id = target_batch_id
+    and role = 'prop'
+    and session_id = 2637840;
+  get diagnostics changed_count = row_count;
+  if changed_count <> 1 then
+    raise exception 'Expected the duplicated Franco prop allocation, found %', changed_count;
   end if;
 
   update public.ninja_broker_balance_events
@@ -128,6 +149,7 @@ begin
       'closing_balance_cents', 163781,
       'operating_result_cents', -12574,
       'preposition_fee_cents', 287,
+      'deduplicated_prop_session_id', 2637840,
       'opening_event_id', corrected_opening_event_id
     ),
     'Comisión anterior a la posición incorporada al resultado real de la operación'
