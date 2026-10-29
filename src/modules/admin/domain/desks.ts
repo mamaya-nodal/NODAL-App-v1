@@ -141,10 +141,14 @@ export function calculateDeskOverview(
   };
   const resolvedShares = new Map<string, UserDistributionAdminShare[]>();
   const people = users.map((user) => {
+    // Facturacion es ingreso realizado positivo. Una perdida cerrada se
+    // conserva en la contabilidad del usuario, pero no puede reducir la
+    // facturacion positiva generada por otra persona del sistema.
+    const billableGross = Math.max(0, user.gross);
     const terms = settings.get(user.id);
     const explicit = explicitDistributions.get(user.id);
     const fallbackCommissionBps = terms?.commission_bps
-      ?? (user.gross > 0 ? Math.round((user.legacyCommission * 10_000) / user.gross) : 0);
+      ?? (billableGross > 0 ? Math.round((user.legacyCommission * 10_000) / billableGross) : 0);
     const legacy = legacyDistribution(user.id, terms?.desk_id ?? ROOT_DESK, fallbackCommissionBps);
     const distribution = explicit ?? legacy.terms;
     const shares = explicit
@@ -155,12 +159,13 @@ export function calculateDeskOverview(
     const commission = portion(Math.max(0, user.gross), 10_000 - distribution.user_bps);
     return {
       ...user,
+      gross: billableGross,
       terms,
       deskId: terms?.desk_id ?? ROOT_DESK,
       distribution,
       adminShares: shares,
       commission,
-      ownIncome: Math.max(0, user.gross) - commission,
+      ownIncome: billableGross - commission,
       mesaIncome: 0,
       totalIncome: 0,
     };

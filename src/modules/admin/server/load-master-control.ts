@@ -9,6 +9,7 @@ import {
 } from "@/modules/operations/domain/account-progress";
 import { transmittedWithinLast24Hours } from "../domain/connector-activity";
 import { calculateDeskOverview } from "../domain/desks";
+import { happenedAfterOpening, openingCutoffTimestamp } from "@/modules/ninja/domain/opening-cutoff";
 import { requireNodalAdmin } from "./admin-access";
 import { loadDesks } from "./load-desks";
 
@@ -231,7 +232,7 @@ export async function loadMasterControl(
     .map((period) => ({ ...period, owner_user_id: workspace.owner_user_id })));
   const currentPeriodIds = currentPeriodRows.map((period) => period.id);
   const connectorIds = connectorRows.map((connector) => connector.id);
-  const [accountsResult, batchesResult, companiesResult] = await Promise.all([
+  const [accountsResult, batchesResult, companiesResult, openingsResult] = await Promise.all([
     currentPeriodIds.length
       ? db.from("accounts")
         .select("id,period_id,company_id,reference_number,state,state_origin")
@@ -245,8 +246,14 @@ export async function loadMasterControl(
         .limit(500)
       : Promise.resolve({ data: [], error: null }),
     db.from("companies").select("id,display_name"),
+    currentPeriodIds.length
+      ? db.from("period_opening_snapshots")
+        .select("period_id,created_at,updated_at,revision_number")
+        .in("period_id", currentPeriodIds)
+        .order("revision_number", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
   ]);
-  if (accountsResult.error || batchesResult.error || companiesResult.error) {
+  if (accountsResult.error || batchesResult.error || companiesResult.error || openingsResult.error) {
     throw new Error("No se pudo cargar la supervisión operativa del panel Admin Master.");
   }
 
@@ -282,6 +289,14 @@ export async function loadMasterControl(
     ownerId: workspaceOwner.get(identity.workspace_id),
   }]));
   const connectorById = new Map(connectorRows.map((connector) => [connector.id, connector]));
+  const openingByPeriod = new Map<string, (typeof openingsResult.data)[number]>();
+  for (const opening of openingsResult.data ?? []) {
+    if (!openingByPeriod.has(opening.period_id)) openingByPeriod.set(opening.period_id, opening);
+  }
+  const currentOpeningByOwner = new Map(currentPeriodRows.flatMap((period) => {
+    const opening = openingByPeriod.get(period.id);
+    return opening ? [[period.owner_user_id, opening] as const] : [];
+  }));
   const activeLinkByAccount = new Map<string, (typeof linksResult.data)[number]>();
   for (const link of linksResult.data ?? []) {
     if (!link.closed_at && !activeLinkByAccount.has(link.account_id)) activeLinkByAccount.set(link.account_id, link);
@@ -308,7 +323,14 @@ export async function loadMasterControl(
     const belongsToCurrentPeriod = batch.accounting_period_id
       ? currentPeriodIds.includes(batch.accounting_period_id)
       : batch.opened_at.slice(0, 7) === deskData.month.slice(0, 7);
-    if (ownerId && belongsToCurrentPeriod) {
+    const applicableOpening = batch.accounting_period_id
+      ? openingByPeriod.get(batch.accounting_period_id)
+      : ownerId ? currentOpeningByOwner.get(ownerId) : null;
+    const belongsToCurrentOpening = happenedAfterOpening(
+      [batch],
+      openingCutoffTimestamp(applicableOpening),
+    ).length === 1;
+    if (ownerId && belongsToCurrentPeriod && belongsToCurrentOpening) {
       batchesByOwner.set(ownerId, [...(batchesByOwner.get(ownerId) ?? []), batch]);
     }
   }

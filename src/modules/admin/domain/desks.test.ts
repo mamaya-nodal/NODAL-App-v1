@@ -134,4 +134,25 @@ describe("desk accounting", () => {
     expect(result.nodalIncome).toBe(20_000);
     expect(result.people.reduce((sum, person) => sum + person.totalIncome, 0) + result.nodalIncome).toBe(100_000);
   });
+
+  it("does not subtract a user's loss from another user's billing", () => {
+    const desks = [{ id: ROOT_DESK, name: "NODAL", parent_id: null, created_at: "" }];
+    const deskTerms = [{
+      active: true,
+      desk_id: ROOT_DESK,
+      effective_month: "2026-10-01",
+      manager_id: null,
+      nodal_bps: 10_000,
+    }];
+    const people: Person[] = [
+      { access: "active", email: "franco@test", gross: 99_926, id: "franco", legacyCommission: 0, master: false, name: "Franco" },
+      { access: "active", email: "baltazar@test", gross: 30_325, id: "baltazar", legacyCommission: 0, master: false, name: "Baltazar" },
+      { access: "active", email: "felipe@test", gross: -68_810, id: "felipe", legacyCommission: 0, master: false, name: "Felipe" },
+    ];
+
+    const result = calculateDeskOverview(desks, deskTerms, people, [], "2026-10-01");
+
+    expect(result.people.find((person) => person.id === "felipe")?.gross).toBe(0);
+    expect(result.gross).toBe(130_251);
+  });
 });

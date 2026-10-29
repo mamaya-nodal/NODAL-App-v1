@@ -3486,3 +3486,14 @@ vigente sin aprobacion y evidencia suficiente.
 - **Caso David:** cinco operaciones de Segunda vuelta del 24, 26, 27, 28 y 29 de
   octubre reconstruyen un saldo broker de US$ 9.869,52 y un costo abierto total
   de US$ 2.422,58. Las cinco cuentas continúan en el próximo trade como Día 6.
+
+### APP-241 — Facturación no negativa y alertas posteriores a la apertura
+
+- **Fecha:** 2026-10-29. La facturación individual y consolidada suma únicamente
+  resultados realizados positivos. Una pérdida cerrada sigue formando parte de
+  la contabilidad del usuario, pero aporta cero a facturación y no descuenta la
+  facturación positiva de otros usuarios.
+- **Admin Master:** las alertas de conciliación aplican el mismo corte de apertura
+  confirmado que la vista del usuario. Los lotes anteriores al último inicio se
+  preservan como evidencia técnica, pero no se presentan como pendientes del
+  ciclo actual.
