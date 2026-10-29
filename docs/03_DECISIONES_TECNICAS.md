@@ -3322,3 +3322,15 @@ vigente sin aprobacion y evidencia suficiente.
   propio espacio NODAL.
 - **Trazabilidad:** confirmaciones y descartes se resuelven mediante RPC
   autenticadas, quedan auditados y no modifican registros del otro titular.
+
+### APP-229 — Una cuenta broker pendiente no se presenta como ausencia de Ninja
+
+- **Fecha:** 2026-10-29. La apertura distingue entre una cuenta broker detectada
+  que todavía requiere confirmación de titularidad y la ausencia real de cuentas.
+- **Presentación:** si existen candidatos pendientes, la cabecera muestra
+  `Pendiente de confirmar` y conserva debajo las acciones `Es mía` y `Descartar`.
+  `Sin cuenta broker detectada` se reserva para el caso en que Ninja no informa
+  ninguna cuenta incluida ni pendiente.
+- **Regla económica:** el cambio no selecciona otro campo de Ninja ni incorpora
+  automáticamente una partición. El saldo vivo continúa usando `Cash Value` y sólo
+  integra números que el titular ya confirmó.

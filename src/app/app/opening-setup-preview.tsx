@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { confirmOpeningSetup } from "./opening-setup-actions";
 import { claimOpeningBrokerAccount, discardOpeningBrokerAccount, getOpeningBrokerState } from "./opening-broker-actions";
+import { openingBrokerPresentation } from "./opening-broker-presentation";
 import type { PendingOpeningBrokerAccount } from "@/modules/ninja/domain/broker-claim-balance";
 import type { NinjaLiveBrokerBalance } from "@/modules/ninja/domain/live-broker-balance";
 import type { PeriodOpeningRecord } from "@/modules/summary/domain/opening-snapshot";
@@ -262,6 +263,11 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
   }
 
   const brokerActionBusy = claimingAccount !== null || discardingAccount !== null;
+  const brokerPresentation = openingBrokerPresentation(
+    liveBrokerBalance,
+    pendingBrokerAccounts.length,
+    money,
+  );
 
   const includedBrokerAccounts = liveBrokerBalance?.sourceAccounts.length ? (
     <div className={styles.brokerClaims}>
@@ -421,7 +427,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                     <p className={styles.eyebrow}>DINERO DISPONIBLE</p>
                     <h3>¿Con qué fondos comenzás?</h3>
                     <p className={styles.description}>El saldo broker se tomará del conector. Informá solamente el dinero disponible fuera del broker.</p>
-                    <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{liveBrokerBalance ? money(liveBrokerBalance.balanceInCents / 100) : "Sin datos de Ninja"}</strong><small>Se toma automáticamente del conector y no se edita aquí.</small></div>
+                    <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{brokerPresentation.value}</strong><small>{brokerPresentation.detail}</small></div>
                     {includedBrokerAccounts}
                     {brokerClaims}
                     <WalletEditor onChange={setWallets} wallets={wallets} />
@@ -488,7 +494,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
                     <p className={styles.eyebrow}>POSICIÓN ACTUAL</p>
                     <h3>¿Qué dinero existe hoy dentro del circuito?</h3>
                     <p className={styles.description}>Los movimientos entre broker y billetera o cuenta bancaria no son aportes nuevos. Registramos cada ubicación una sola vez.</p>
-                    <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{liveBrokerBalance ? money(liveBrokerBalance.balanceInCents / 100) : "Sin datos de Ninja"}</strong><small>Se toma automáticamente del conector y no se edita aquí.</small></div>
+                    <div className={styles.autoValue}><span>Saldo broker detectado</span><strong>{brokerPresentation.value}</strong><small>{brokerPresentation.detail}</small></div>
                     {includedBrokerAccounts}
                     {brokerClaims}
                     <WalletEditor onChange={setWallets} wallets={wallets} />
