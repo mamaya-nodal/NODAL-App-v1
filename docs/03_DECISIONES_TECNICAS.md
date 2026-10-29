@@ -3288,3 +3288,21 @@ vigente sin aprobacion y evidencia suficiente.
 - **Seguridad:** los controles desaparecen de `Mi mesa` y las mutaciones quedan
   bloqueadas también en acciones de servidor y RPC. Ocultar botones no se considera
   una restricción de autorización suficiente.
+
+### APP-227 — La ficha Admin Master separa supervisión y administración
+
+- **Fecha:** 2026-10-28. La ficha de cada usuario se divide en `Resumen`,
+  `Operación` y `Administración` para evitar una ventana interminable sin perder
+  capacidad de control.
+- **Resumen:** muestra ganancia, facturación, historial, cuentas en curso,
+  conciliaciones pendientes, Identidades, última operación y conexión Ninja.
+- **Operación:** enumera las cuentas activas con empresa, nombre Ninja, estado,
+  vuelta/día, origen personal o Identidad y última actividad. Las alertas provienen
+  de lotes Ninja no confirmados del período oficial; la vista no inventa estados ni
+  recalcula la contabilidad.
+- **Administración:** concentra exclusivamente las mutaciones de Admin Master:
+  nombre visible, acceso, rol, distribución, estructura y capacidades. El correo de
+  acceso no se modifica. Los cambios de nombre se validan y auditan en el servidor.
+- **Fuente:** la supervisión usa períodos, cuentas, vínculos Ninja, asignaciones de
+  Identidad, operaciones y conciliaciones existentes en Supabase después de validar
+  la sesión Admin Master.

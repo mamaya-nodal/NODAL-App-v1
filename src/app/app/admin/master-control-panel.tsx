@@ -7,7 +7,12 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import type { MasterControlData } from "@/modules/admin/server/load-master-control";
 import { peopleHierarchy } from "@/modules/admin/domain/people-hierarchy";
 import { saveNodalUnit } from "./unit-actions";
-import { deactivateMasterUser, saveMasterUserRole, type MasterUserRole } from "./user-role-actions";
+import {
+  deactivateMasterUser,
+  saveMasterUserDisplayName,
+  saveMasterUserRole,
+  type MasterUserRole,
+} from "./user-role-actions";
 import { saveMasterAssignments } from "./assignment-actions";
 import { saveMasterDistribution } from "./distribution-actions";
 
@@ -84,6 +89,32 @@ function SystemChart({ history }: Readonly<{ history: MasterControlData["perform
       })}
     </svg>
   </div>;
+}
+
+function UserPerformanceChart({ data }: Readonly<{
+  data: MasterControlData["operationalDetailByUser"][string]["performance"];
+}>) {
+  if (!data.length) return <p className="desk-empty">Sin historial de desempeño.</p>;
+  const width = 620;
+  const height = 150;
+  const padding = 24;
+  const values = data.map((point) => point.amount);
+  const maximum = Math.max(1, ...values);
+  const minimum = Math.min(0, ...values);
+  const range = Math.max(1, maximum - minimum);
+  const position = (amount: number) => height - 34 - ((amount - minimum) / range) * (height - 58);
+  const points = data.map((point, index) => {
+    const x = data.length === 1 ? width / 2 : padding + (index * (width - padding * 2)) / (data.length - 1);
+    return `${x},${position(point.amount)}`;
+  }).join(" ");
+  return <svg aria-label="Desempeño del usuario" className="desk-user-chart master-user-performance" role="img" viewBox={`0 0 ${width} ${height}`}>
+    {[34, 72, 110].map((y) => <line key={y} x1={padding} x2={width - padding} y1={y} y2={y} />)}
+    <polyline points={points} />
+    {data.map((point, index) => {
+      const x = data.length === 1 ? width / 2 : padding + (index * (width - padding * 2)) / (data.length - 1);
+      return <g key={`${point.label}-${index}`}><circle cx={x} cy={position(point.amount)} r="4" /><text textAnchor="middle" x={x} y={height - 9}>{point.label}</text></g>;
+    })}
+  </svg>;
 }
 
 function Ranking({ people }: Readonly<{ people: Person[] }>) {
@@ -243,11 +274,16 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   const profile = data.profilesByUser[person.id];
   const identities = data.identitiesByUser[person.id] ?? [];
   const connector = data.connectorByUser[person.id];
+  const operationalDetail = data.operationalDetailByUser[person.id] ?? {
+    accounts: [], alerts: [], lastOperatedOn: null, performance: [],
+  };
   const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id);
   const identifier = data.identifiersByUser[person.id] ?? "ID pendiente";
   const initialRole: MasterUserRole = profile?.access_role === "admin" ? "admin_master" : managedDesk ? "admin" : "user";
   const [role, setRole] = useState<MasterUserRole>(initialRole);
+  const [activeSection, setActiveSection] = useState<"administration" | "operation" | "summary">("summary");
   const [accessState, setAccessState] = useState(person.access);
+  const [displayName, setDisplayName] = useState(profile?.display_name || person.name);
   const [userPercent, setUserPercent] = useState(String(person.distribution.user_bps / 100));
   const [nodalPercent, setNodalPercent] = useState(String(person.distribution.nodal_bps / 100));
   const [adminPoolPercent, setAdminPoolPercent] = useState(String(person.distribution.admin_pool_bps / 100));
@@ -328,6 +364,19 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
     router.refresh();
     setResult("Rol y permisos guardados. Ya podés gestionar los usuarios a cargo.");
   };
+  const saveDisplayName = async () => {
+    setSaving(true);
+    setResult("");
+    try {
+      const response = await saveMasterUserDisplayName({ displayName, userId: person.id });
+      setResult(response.message);
+      if (response.ok) router.refresh();
+    } catch {
+      setResult("No se pudo actualizar el nombre. Actualizá la página antes de reintentar.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const saveDistribution = async () => {
     const toBps = (value: string) => Math.round(Number(value.replace(",", ".")) * 100);
     const userBps = toBps(userPercent);
@@ -357,6 +406,37 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   };
   return <div aria-modal="true" className="desk-modal-backdrop" role="dialog" onMouseDown={onClose}><section className="desk-user-modal master-user-modal" onMouseDown={(event) => event.stopPropagation()}>
     <header><div><span>USUARIO NODAL</span><h2>{identifier} / {person.name}</h2></div><button className="desk-modal-close" onClick={onClose} type="button">×</button></header>
+    <nav aria-label="Secciones de la ficha" className="master-user-tabs">
+      <button aria-current={activeSection === "summary" ? "page" : undefined} onClick={() => setActiveSection("summary")} type="button">Resumen</button>
+      <button aria-current={activeSection === "operation" ? "page" : undefined} onClick={() => setActiveSection("operation")} type="button">Operación{operationalDetail.alerts.length ? <b>{operationalDetail.alerts.length}</b> : null}</button>
+      <button aria-current={activeSection === "administration" ? "page" : undefined} onClick={() => setActiveSection("administration")} type="button">Administración</button>
+    </nav>
+    {activeSection === "summary" ? <div className="master-user-section">
+      <div className="master-user-metrics master-user-summary-metrics">
+        <Metric label="Ganancia período" value={money(person.totalIncome)} />
+        <Metric label="Facturación período" value={money(person.gross)} />
+        <Metric label="Facturación histórica" value={money(data.historicalGrossByUser[person.id] ?? 0)} />
+        <Metric label="Cuentas en curso" value={String(operationalDetail.accounts.length)} />
+        <Metric label="Alertas de conciliación" value={String(operationalDetail.alerts.length)} />
+        <Metric label="Identidades" value={String(identities.length)} />
+      </div>
+      <section className="master-user-overview-card"><div className="master-user-section-heading"><div><span>DESEMPEÑO</span><h3>Evolución de facturación</h3></div><strong>{monthLabel(data.month)}</strong></div><UserPerformanceChart data={operationalDetail.performance} /></section>
+      <div className="master-user-status-grid">
+        <article><span>Última operación</span><strong>{dateLabel(operationalDetail.lastOperatedOn)}</strong></article>
+        <article><span>Conexión Ninja</span><strong className={connector?.active ? "active" : "inactive"}>{connector?.active ? "Activo" : "Sin señal"}</strong><small>{dateTimeLabel(connector?.lastSeenAt)}</small></article>
+        <article><span>Rol actual</span><strong>{initialRole === "admin_master" ? "Admin Master" : initialRole === "admin" ? "Admin" : "Usuario"}</strong></article>
+      </div>
+    </div> : null}
+    {activeSection === "operation" ? <div className="master-user-section master-user-operation">
+      <section className="master-user-overview-card"><div className="master-user-section-heading"><div><span>CUENTAS EN CURSO</span><h3>Operación actual</h3></div><strong>{operationalDetail.accounts.length}</strong></div>
+        {operationalDetail.accounts.length ? <div className="master-operation-table"><table><thead><tr><th>Cuenta</th><th>Estado</th><th>Vuelta y día</th><th>Origen</th><th>Última operación</th></tr></thead><tbody>{operationalDetail.accounts.map((account) => <tr key={account.id}><td><strong>{account.company}</strong><small>{account.externalName}</small></td><td><strong>{account.operationalState}</strong><small>{account.accountingState}</small></td><td>{account.progress}</td><td>{account.operatingFrom}</td><td>{dateLabel(account.lastOperatedOn)}</td></tr>)}</tbody></table></div> : <p className="desk-empty">No hay cuentas en curso para este período.</p>}
+      </section>
+      <section className={`master-user-overview-card master-alerts-card ${operationalDetail.alerts.length ? "has-alerts" : ""}`}><div className="master-user-section-heading"><div><span>CONCILIACIÓN</span><h3>Alertas pendientes</h3></div><strong>{operationalDetail.alerts.length}</strong></div>
+        {operationalDetail.alerts.length ? <div className="master-alert-list">{operationalDetail.alerts.map((alert) => <article key={alert.id}><div><strong>{alert.reason}</strong><small>{dateTimeLabel(alert.occurredAt)}</small></div><b>{money(alert.amount)}</b></article>)}</div> : <p className="master-operation-ok">Sin alertas de conciliación pendientes.</p>}
+      </section>
+    </div> : null}
+    {activeSection === "administration" ? <>
+    <section className="master-display-name-editor"><label>Nombre visible<input disabled={data.demo || saving} maxLength={120} onChange={(event) => { setDisplayName(event.target.value); setResult(""); }} value={displayName} /></label>{!data.demo ? <button className="secondary-action" disabled={saving || displayName.trim() === (profile?.display_name || person.name)} onClick={saveDisplayName} type="button">Guardar nombre</button> : null}</section>
     <div className="master-user-metrics"><Metric label="Ganancia período" value={money(person.totalIncome)} /><Metric label="Facturación histórica" value={money(data.historicalGrossByUser[person.id] ?? 0)} /><Metric label="Identidades" value={String(identities.length)} /></div>
     <div className="desk-user-fields"><label>Estado<select disabled={data.demo || editingSelf || saving || !currentPeriod || initialRole === "admin_master"} onChange={(event) => { setAccessState(event.target.value); setResult(""); }} value={accessState}><option value="active">Activo</option><option value="revoked">Desactivado</option></select></label><label>Email de acceso<input disabled value={profile?.email ?? person.email} /></label><label>Email de contacto<input disabled value={profile?.contact_email ?? profile?.email ?? person.email} /></label><label>Rol<select disabled={data.demo || editingSelf || saving} onChange={(event) => { setRole(event.target.value as MasterUserRole); setResult(""); }} value={role}><option value="user">Usuario</option><option value="admin">Admin</option><option value="admin_master">Admin Master</option></select></label></div>
     <section className="desk-agreement-block master-distribution-editor"><h3>Distribución de ganancias</h3><div className="master-distribution-main"><label>Usuario / trader<div><input disabled={data.demo || saving || !currentPeriod} max="100" min="0" onChange={(event) => { setUserPercent(event.target.value); setResult(""); }} step="0.01" type="number" value={userPercent} /><span>%</span></div></label><label>NODAL<div><input disabled={data.demo || saving || !currentPeriod} max="100" min="0" onChange={(event) => { setNodalPercent(event.target.value); setResult(""); }} step="0.01" type="number" value={nodalPercent} /><span>%</span></div></label><label>Bolsa administrativa<div><input disabled={data.demo || saving || !currentPeriod} max="100" min="0" onChange={(event) => { setAdminPoolPercent(event.target.value); setResult(""); }} step="0.01" type="number" value={adminPoolPercent} /><span>%</span></div></label></div><strong className="master-distribution-total">Total: {(Number(userPercent || 0) + Number(nodalPercent || 0) + Number(adminPoolPercent || 0)).toLocaleString("es-AR")}%</strong><div className="master-distribution-breakdown"><h4>Desglose de la bolsa administrativa</h4>{eligibleAdministrators.map((admin) => <label key={admin.id}>{admin.name}<div><input disabled={data.demo || saving || !currentPeriod} max="100" min="0" onChange={(event) => setAdminSharePercents((current) => ({ ...current, [admin.id]: event.target.value }))} step="0.01" type="number" value={adminSharePercents[admin.id] ?? "0"} /><span>%</span></div></label>)}{eligibleAdministrators.length === 0 ? <p>Este usuario no tiene administradores superiores. La bolsa debe ser 0%.</p> : null}<strong>Total asignado: {eligibleAdministrators.reduce((sum, admin) => sum + Number(adminSharePercents[admin.id] || 0), 0).toLocaleString("es-AR")}% de {adminPoolPercent || "0"}%</strong></div><label className="master-distribution-reason">Motivo<input disabled={data.demo || saving || !currentPeriod} onChange={(event) => setDistributionReason(event.target.value)} value={distributionReason} /></label><small>Solo Admin Master puede modificar este acuerdo. Los porcentajes son finales sobre la ganancia original y quedan auditados por período.</small>{!data.demo ? <button className="secondary-action" disabled={saving || !currentPeriod} onClick={saveDistribution} type="button">{saving ? "Guardando…" : "Guardar distribución"}</button> : null}</section>
@@ -373,7 +453,8 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
     {result ? <p className="master-user-role-result" role="alert">{result}</p> : null}
     <div className="desk-user-switches"><article className="desk-ninja-state"><span>Conexión Ninja<small>Última transmisión: {dateTimeLabel(connector?.lastSeenAt)}</small></span><div><strong className={connector?.active ? "active" : "inactive"}>{connector?.active ? "Activo" : "Desactivado"}</strong><small>{connector?.version ? `Conector v${connector.version}` : "Sin versión registrada"}</small></div></article><label><span>Identidades<small>Habilitación administrada</small></span><select disabled={data.demo || saving} onChange={(event) => { setIdentitiesEnabled(event.target.value === "enabled"); setResult(""); }} value={identitiesEnabled ? "enabled" : "disabled"}><option value="disabled">No habilitadas</option><option value="enabled">Habilitadas</option></select></label><label><span>Configuración<small>Complementos administrados</small></span><select disabled={data.demo || saving} onChange={(event) => { setConfigurationEnabled(event.target.value === "enabled"); setResult(""); }} value={configurationEnabled ? "enabled" : "disabled"}><option value="disabled">No habilitada</option><option value="enabled">Habilitada</option></select></label></div>
     {identities.length ? <div className="desk-identities-table"><table><thead><tr><th>ID</th><th>Nombre</th><th>Estado</th></tr></thead><tbody>{identities.map((identity) => <tr key={identity.id}><td>{identity.id.slice(0, 8)}</td><td>{identity.name}</td><td>{identity.state}</td></tr>)}</tbody></table></div> : null}
-    <footer><button className="secondary-action" onClick={onClose} type="button">Cerrar</button>{!data.demo ? <button className="primary-action" disabled={saving} onClick={saveRole} type="button">{saving ? "Guardando…" : "Guardar cambios"}</button> : null}{data.demo ? <button className="primary-action" disabled type="button">Registros simulados</button> : <Link className="primary-action" href={`/app/admin/${person.id}`}>Ver registros del usuario</Link>}</footer>
+    </> : null}
+    <footer><button className="secondary-action" onClick={onClose} type="button">Cerrar</button>{activeSection === "administration" && !data.demo ? <button className="primary-action" disabled={saving} onClick={saveRole} type="button">{saving ? "Guardando…" : "Guardar cambios"}</button> : null}{data.demo ? <button className="primary-action" disabled type="button">Registros simulados</button> : <Link className="primary-action" href={`/app/admin/${person.id}`}>Ver registros del usuario</Link>}</footer>
   </section></div>;
 }
 

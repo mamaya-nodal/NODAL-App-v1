@@ -35,6 +35,27 @@ export async function deactivateMasterUser(userId: string): Promise<SaveMasterUs
   return { ok: true, message: "Acceso desactivado. Los registros se conservan." };
 }
 
+export async function saveMasterUserDisplayName(input: Readonly<{
+  displayName: string;
+  userId: string;
+}>): Promise<SaveMasterUserRoleResult> {
+  const userId = String(input.userId ?? "").trim();
+  const displayName = String(input.displayName ?? "").trim();
+  if (!UUID_PATTERN.test(userId) || displayName.length < 2 || displayName.length > 120) {
+    return { message: "Ingresá un nombre válido de hasta 120 caracteres.", ok: false };
+  }
+  const db = await requireNodalAdmin();
+  const { error } = await db.rpc("admin_update_nodal_user_display_name", {
+    management_reason: "Corrección de nombre desde la ficha de Admin Master.",
+    target_display_name: displayName,
+    target_user_id: userId,
+  });
+  if (error) return { message: "No se pudo actualizar el nombre. El cambio no fue aplicado.", ok: false };
+  revalidatePath("/app/admin");
+  revalidatePath("/app/mi-mesa");
+  return { message: "Nombre visible actualizado con trazabilidad.", ok: true };
+}
+
 export async function saveMasterUserRole(
   input: SaveMasterUserRoleInput,
 ): Promise<SaveMasterUserRoleResult> {

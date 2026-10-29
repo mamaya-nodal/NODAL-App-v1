@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), rpc: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/modules/admin/server/admin-access", () => ({ requireNodalAdmin: mocks.auth }));
-import { deactivateMasterUser } from "./user-role-actions";
+import { deactivateMasterUser, saveMasterUserDisplayName } from "./user-role-actions";
 const id = "00000000-0000-4000-8000-000000000099";
 describe("Master deactivation", () => {
   beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockResolvedValue({ rpc: mocks.rpc }); mocks.rpc.mockResolvedValue({ error: null }); });
@@ -22,5 +22,25 @@ describe("Master deactivation", () => {
   it("rejects invalid IDs", async () => {
     expect((await deactivateMasterUser("bad")).ok).toBe(false);
     expect(mocks.auth).not.toHaveBeenCalled();
+  });
+});
+
+describe("Master display name editing", () => {
+  beforeEach(() => { vi.clearAllMocks(); mocks.auth.mockResolvedValue({ rpc: mocks.rpc }); mocks.rpc.mockResolvedValue({ error: null }); });
+  it("uses the audited Admin Master RPC", async () => {
+    expect((await saveMasterUserDisplayName({ displayName: "  Nombre Corregido  ", userId: id })).ok).toBe(true);
+    expect(mocks.rpc).toHaveBeenCalledWith("admin_update_nodal_user_display_name", {
+      management_reason: expect.any(String),
+      target_display_name: "Nombre Corregido",
+      target_user_id: id,
+    });
+  });
+  it("does not call the server for an invalid name", async () => {
+    expect((await saveMasterUserDisplayName({ displayName: " ", userId: id })).ok).toBe(false);
+    expect(mocks.auth).not.toHaveBeenCalled();
+  });
+  it("does not claim success when the database rejects the change", async () => {
+    mocks.rpc.mockResolvedValue({ error: { message: "ADMIN_MASTER_REQUIRED" } });
+    expect((await saveMasterUserDisplayName({ displayName: "Nombre Válido", userId: id })).ok).toBe(false);
   });
 });

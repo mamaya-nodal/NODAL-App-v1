@@ -165,6 +165,29 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
       userCount: people.length,
     };
   });
+  const operationalDetailByUser = Object.fromEntries(personSpecs.map(([id, name], index) => [id, {
+    accounts: Array.from({ length: (index % 3) + 1 }, (_, accountIndex) => ({
+      accountingState: "live",
+      company: accountIndex % 2 ? "TRADEFY" : "LUCID",
+      externalName: `DEMO-${id.replace("demo-", "").toUpperCase()}-${accountIndex + 1}`,
+      id: `${id}-account-${accountIndex + 1}`,
+      lastOperatedOn: `2026-10-${String(20 + (index % 7)).padStart(2, "0")}`,
+      operatingFrom: accountIndex === 0 ? "Ninja personal" : `${name.split(" ")[0]} Trading`,
+      operationalState: "Funded",
+      progress: `Primera vuelta Día ${accountIndex + 1}`,
+    })),
+    alerts: index % 5 === 2 ? [{
+      amount: -12_500,
+      id: `${id}-alert`,
+      occurredAt: "2026-10-27T15:00:00Z",
+      reason: "Requiere revisión de conciliación",
+    }] : [],
+    lastOperatedOn: `2026-10-${String(20 + (index % 7)).padStart(2, "0")}`,
+    performance: availableSnapshots.map((snapshot) => ({
+      amount: snapshot.overview.people.find((person) => person.id === id)?.gross ?? 0,
+      label: snapshot.month.slice(0, 7),
+    })),
+  }]));
 
   return {
     actorUserId: "demo-mauricio",
@@ -195,6 +218,7 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     identitiesByUser,
     mode: "real",
     month: current.month,
+    operationalDetailByUser,
     overview: current.overview,
     pendingAccessCount: 6,
     pendingAccessRequests: [],
