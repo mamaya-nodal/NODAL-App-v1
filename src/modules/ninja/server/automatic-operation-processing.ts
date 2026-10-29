@@ -332,6 +332,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       : null;
     const brokerOpeningBalanceInCents = batch.broker.openingBalance === null ? null : roundLikeSheets(batch.broker.openingBalance * 100);
     const brokerClosingBalanceInCents = batch.broker.closingBalance === null ? null : roundLikeSheets(batch.broker.closingBalance * 100);
+    const contextPropCount = countBrokerContextProps(classified, batch.broker);
     const baseProjection = projectAutomaticAccounting({
       batchStatus: batch.status,
       brokerBalanceScope: aggregateBrokerBalance ? "aggregate" : "single",
@@ -340,7 +341,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       brokerResultInCents: batch.brokerResultInCents,
       expectedOpeningBalanceInCents,
       members: projectionMembers,
-      technicalMemberCount: batch.props.length,
+      technicalMemberCount: contextPropCount,
     });
     const operatedOn = dateInBuenosAires(batch.broker.settledAt ?? batch.broker.openedAt);
     // La cuenta viva ya fue trasladada de forma atómica al período abierto.
@@ -361,7 +362,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       target_broker_result_cents: batch.brokerResultInCents,
       target_broker_session_id: brokerSession.id,
       target_connector_id: connectorId,
-      target_context_prop_count: countBrokerContextProps(classified, batch.broker),
+      target_context_prop_count: contextPropCount,
       target_distributed_cents: batch.distributedInCents,
       target_opened_at: batch.broker.openedAt,
       target_operated_on: operatedOn,

@@ -3418,3 +3418,18 @@ vigente sin aprobacion y evidencia suficiente.
 - **Registro avanzado:** declarar que una cuenta está en `Día 1` significa cero
   días completados. Tres operaciones posteriores compartidas por cinco cuentas las
   dejan a todas en `Día 4`, sin diferencias causadas por telemetría duplicada.
+
+### APP-236 — La conciliación espera todas las réplicas ya observadas
+
+- **Fecha:** 2026-10-29. Un cierre técnico puede llegar en varios mensajes casi
+  simultáneos. Recibir primero una cuenta prop no autoriza a confirmar la cobertura
+  si el mismo contexto ya muestra otras réplicas abiertas o terminando su cierre.
+- **Regla:** el contexto esperado incluye cuentas `open`, `settling` y `closed`,
+  deduplicadas por cuenta económica. La proyección contable sólo queda lista cuando
+  la cantidad de miembros cerrados y vinculados coincide con ese total esperado.
+- **Efecto:** las réplicas que cierran milisegundos después amplían el mismo lote
+  pendiente. El control diario se confirma una sola vez con todas las cuentas y no
+  puede inmovilizarse prematuramente con un subconjunto.
+- **Caso validado:** el trade de Baltazar del 29/10 a las 11:32:55 se conserva como
+  un único movimiento broker de `-US$ 535,74` y cinco participaciones Lucid, con
+  diferencia de redondeo total de un centavo.

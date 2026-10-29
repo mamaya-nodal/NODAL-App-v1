@@ -48,9 +48,9 @@ export function countBrokerContextProps(
 ): number {
   return new Set(operations.flatMap((operation, index) =>
     operation.role === "prop" &&
-      operation.status === "closed" &&
       Math.abs(Date.parse(operation.openedAt) - Date.parse(broker.openedAt)) <= openingToleranceMs &&
-      opposite(operation.direction, broker.direction)
+      opposite(operation.direction, broker.direction) &&
+      compatibleSingleInstrument(operation, broker)
       ? [logicalPropKey(operation, index)]
       : [],
   )).size;

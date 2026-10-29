@@ -52,6 +52,58 @@ describe("automatic operation batches", () => {
     expect(batch.roundingDifferenceInCents).toBe(0);
   });
 
+  it("conserva el total esperado mientras algunas replicas siguen cerrando", () => {
+    const broker = operation({
+      accountName: "Broker principal",
+      direction: "Short",
+      quantity: 1,
+      result: 500,
+      role: "broker",
+    });
+    const firstClosed = operation({
+      accountName: "LUCID-1",
+      direction: "Long",
+      quantity: 3,
+      role: "prop",
+    });
+    const remaining = Array.from({ length: 4 }, (_, index) => operation({
+      accountName: `LUCID-${index + 2}`,
+      direction: "Long",
+      quantity: 3,
+      role: "prop",
+      status: "settling",
+    }));
+
+    expect(countBrokerContextProps([broker, firstClosed, ...remaining], broker)).toBe(5);
+    expect(correlateAutomaticOperationBatches([broker, firstClosed, ...remaining])[0].props).toHaveLength(1);
+  });
+
+  it("no bloquea el lote por una cuenta de otro instrumento", () => {
+    const broker = operation({
+      accountName: "Broker principal",
+      direction: "Short",
+      quantity: 1,
+      result: 500,
+      role: "broker",
+    });
+    const expected = operation({
+      accountName: "LUCID-1",
+      direction: "Long",
+      quantity: 3,
+      role: "prop",
+    });
+    const unrelated = operation({
+      accountName: "LUCID-CL",
+      direction: "Long",
+      instruments: ["CL DEC26"],
+      quantity: 3,
+      role: "prop",
+      status: "settling",
+    });
+
+    expect(countBrokerContextProps([broker, expected, unrelated], broker)).toBe(1);
+  });
+
   it("uses the same two-decimal rounding as Sheets", () => {
     const props = Array.from({ length: 3 }, (_, index) => operation({
       accountName: `LUCID${index + 23}`,
