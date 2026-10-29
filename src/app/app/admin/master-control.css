@@ -379,7 +379,10 @@
   font-weight: 850;
   cursor: pointer;
 }
-.master-user-tabs button[aria-current="page"] { background: var(--brand); color: #10200b; }
+.master-user-tabs button[aria-current="page"] {
+  background: var(--app-action, #93ff3b);
+  color: var(--app-action-text, #10200b);
+}
 .master-user-tabs b { min-width: 19px; padding: 2px 5px; border-radius: 999px; background: #ef6868; color: #fff; font-size: .58rem; }
 .master-user-section { display: grid; gap: 16px; }
 .master-user-summary-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
