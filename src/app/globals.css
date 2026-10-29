@@ -4330,10 +4330,10 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-connector-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; margin: 12px 0; padding: 12px; border: 1px solid var(--app-border); border-radius: 11px; }
 .identity-connector-row > span { display: grid; gap: 4px; }
 .identity-connector-row small { color: var(--app-subtle); font-size: 10px; }
-.identity-connector-actions { display: grid; justify-items: end; gap: 5px; }
+.identity-connector-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
 .identity-connector-actions > .primary-action { width: auto; min-height: 34px; padding: 7px 11px; border-radius: 9px; font-size: 10px; }
-.identity-installation-resend { border: 0; background: transparent; color: var(--app-subtle); cursor: pointer; font: inherit; font-size: 9px; font-weight: 750; padding: 2px 4px; }
-.identity-installation-resend:hover { color: var(--app-title); }
+.identity-installation-resend { min-height: 34px; padding: 7px 11px; border: 1px solid #a3dc78; border-radius: 9px; background: #83e936; box-shadow: 0 8px 20px rgb(131 233 54 / 16%); color: #102008; cursor: pointer; font: inherit; font-size: 10px; font-weight: 850; }
+.identity-installation-resend:hover { filter: saturate(108%) brightness(1.02); transform: translateY(-1px); }
 .identity-installation-resend:disabled { cursor: wait; opacity: .55; }
 .identity-connector-row .ninja-pairing-panel.is-compact { display: grid; grid-template-columns: auto auto; gap: 7px; margin: 0; padding: 0; background: transparent; box-shadow: none; }
 .identity-connector-row .ninja-pairing-panel.is-compact :is(.primary-action, .secondary-action) { width: auto; min-height: 34px; padding: 7px 11px; border-radius: 9px; font-size: 10px; }
@@ -4400,7 +4400,8 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   .identity-status-selector select { width: 100%; }
   .identity-operational-banner { align-items: flex-start; flex-direction: column; }
   .identity-connector-row { grid-template-columns: 1fr; }
-  .identity-connector-actions { justify-items: stretch; }
+  .identity-connector-actions { align-items: stretch; flex-direction: column; }
+  .identity-installation-resend { width: 100%; }
   .identity-connector-row .ninja-pairing-panel.is-compact { grid-template-columns: 1fr; }
   .identity-account-card > summary { grid-template-columns: minmax(0, 1fr) auto auto; }
   .identity-account-card > summary > span:nth-child(2) { display: none; }

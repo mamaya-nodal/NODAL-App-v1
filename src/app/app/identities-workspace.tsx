@@ -277,12 +277,6 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
                           : "Sin vincular"}</strong>
                 </span>
                 <div className="identity-connector-actions">
-                  {identity.onboardingStatus === "approved" && connector ? <NinjaConnectorPanel
-                    compact
-                    connector={connector}
-                    downloadEnabled={false}
-                    targetIdentityId={identity.id}
-                  /> : null}
                   {identity.onboardingStatus === "approved" ? (
                     <button
                       className="identity-installation-resend"
@@ -293,6 +287,12 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
                       {pending ? "Enviando…" : connector ? "Enviar actualización" : installationAvailable ? "Reenviar instalación" : "Enviar instalación"}
                     </button>
                   ) : null}
+                  {identity.onboardingStatus === "approved" && connector ? <NinjaConnectorPanel
+                    compact
+                    connector={connector}
+                    downloadEnabled={false}
+                    targetIdentityId={identity.id}
+                  /> : null}
                 </div>
               </div>
 
