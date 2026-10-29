@@ -306,7 +306,7 @@ export async function loadMasterControl(
     const ownerId = connectorById.get(batch.connector_id)?.owner_user_id;
     const belongsToCurrentPeriod = batch.accounting_period_id
       ? currentPeriodIds.includes(batch.accounting_period_id)
-      : batch.opened_at.slice(0, 7) === deskData.month;
+      : batch.opened_at.slice(0, 7) === deskData.month.slice(0, 7);
     if (ownerId && belongsToCurrentPeriod) {
       batchesByOwner.set(ownerId, [...(batchesByOwner.get(ownerId) ?? []), batch]);
     }
