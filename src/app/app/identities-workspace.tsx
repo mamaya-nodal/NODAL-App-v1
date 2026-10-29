@@ -277,20 +277,22 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
                           : "Sin vincular"}</strong>
                 </span>
                 <div className="identity-connector-actions">
-                  {identity.onboardingStatus === "approved" && <NinjaConnectorPanel
+                  {identity.onboardingStatus === "approved" && connector ? <NinjaConnectorPanel
                     compact
                     connector={connector}
-                    downloadLabel={connector ? "Actualizar conector" : "Descargar instalador"}
+                    downloadEnabled={false}
                     targetIdentityId={identity.id}
-                  />}
+                  /> : null}
+                  {identity.onboardingStatus === "approved" ? (
                     <button
                       className="identity-installation-resend"
                       disabled={pending}
                       onClick={() => run(() => sendIdentityConnectorInstallation(identity.id))}
                       type="button"
                     >
-                      {pending ? "Enviando…" : installationAvailable ? "Reenviar instalación" : "Enviar instalación"}
+                      {pending ? "Enviando…" : connector ? "Enviar actualización" : installationAvailable ? "Reenviar instalación" : "Enviar instalación"}
                     </button>
+                  ) : null}
                 </div>
               </div>
 

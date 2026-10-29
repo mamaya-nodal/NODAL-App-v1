@@ -3455,3 +3455,17 @@ vigente sin aprobacion y evidencia suficiente.
   únicamente para recibos `balance` pendientes o persistidos.
 - **Corrección de despliegue:** los manejadores de rueda pertenecen a un componente
   cliente dedicado. Ningún componente servidor recibe eventos de navegador.
+
+### APP-239 — El conector de una identidad se entrega únicamente por correo
+
+- **Fecha:** 2026-10-29. La aplicación NODAL se utiliza en la PC del titular y el
+  NinjaTrader de la identidad se opera en otra PC. Descargar allí el instalador
+  desde la tarjeta del titular deja el archivo en el equipo equivocado.
+- **Entrega:** tanto la primera instalación como las actualizaciones generan un
+  enlace temporal y lo envían al correo registrado de la identidad. La tarjeta no
+  ofrece una descarga local paralela.
+- **Interfaz:** una identidad sin conector muestra `Enviar instalación`; una ya
+  vinculada muestra `Enviar actualización`. `Desvincular` permanece como acción
+  independiente y no altera el canal de entrega.
+- **Seguridad:** el enlace conserva el alcance de la identidad y el vencimiento
+  administrado por `identity_connector_installations`.

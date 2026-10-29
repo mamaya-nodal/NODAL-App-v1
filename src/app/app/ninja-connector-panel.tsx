@@ -20,6 +20,7 @@ type Props = Readonly<{
   allowRevoke?: boolean;
   compact?: boolean;
   connector: NinjaConnectorStatus | null;
+  downloadEnabled?: boolean;
   downloadLabel?: string;
   monitor?: boolean;
   targetIdentityId?: string | null;
@@ -29,7 +30,7 @@ function isOnline(connector: NinjaConnectorStatus | null) {
   return Boolean(connector?.isOnline && connector.status === "active");
 }
 
-export function NinjaConnectorPanel({ allowRevoke = true, compact = false, connector, downloadLabel, monitor = false, targetIdentityId = null }: Props) {
+export function NinjaConnectorPanel({ allowRevoke = true, compact = false, connector, downloadEnabled = true, downloadLabel, monitor = false, targetIdentityId = null }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const online = isOnline(connector);
@@ -87,14 +88,16 @@ export function NinjaConnectorPanel({ allowRevoke = true, compact = false, conne
         </p>
       ) : null}
 
-      <button
-        className={compact && connector ? "secondary-action" : "primary-action"}
-        disabled={downloading}
-        onClick={downloadInstaller}
-        type="button"
-      >
-        {downloading ? "Preparando…" : downloadLabel ?? (connector ? "Actualizar conector" : "Descargar instalador")}
-      </button>
+      {downloadEnabled ? (
+        <button
+          className={compact && connector ? "secondary-action" : "primary-action"}
+          disabled={downloading}
+          onClick={downloadInstaller}
+          type="button"
+        >
+          {downloading ? "Preparando…" : downloadLabel ?? (connector ? "Actualizar conector" : "Descargar instalador")}
+        </button>
+      ) : null}
 
       {error ? <p className="purchase-message error" role="alert">{error}</p> : null}
       {connector && allowRevoke ? (

@@ -2,12 +2,13 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { IdentitySummary } from "@/modules/identities/domain/identity-summary";
+import type { NinjaConnectorStatus } from "./ninja-connector-panel";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("./identity-actions", () => ({ assignIdentityAccount: vi.fn(), createIdentityDirectly: vi.fn(),
   retireIdentity: vi.fn(), sendIdentityConnectorInstallation: vi.fn(), unassignIdentityAccount: vi.fn(), setIdentitySignal: vi.fn(), updateIdentityOperationalStatus: vi.fn() }));
-vi.mock("./ninja-connector-panel", () => ({ NinjaConnectorPanel: ({ downloadLabel }: { downloadLabel: string }) =>
-  createElement("button", {}, downloadLabel) }));
+vi.mock("./ninja-connector-panel", () => ({ NinjaConnectorPanel: ({ downloadEnabled = true }: { downloadEnabled?: boolean }) =>
+  createElement("div", {}, downloadEnabled ? "Descarga local" : "Sólo desvincular") }));
 import { IdentitiesWorkspace } from "./identities-workspace";
 
 const identity: IdentitySummary = { id: "identity", firstName: "Test", lastName: "Identity", contactEmail: "test@example.com",
@@ -16,20 +17,31 @@ const identity: IdentitySummary = { id: "identity", firstName: "Test", lastName:
     { burned: true, code: "LUCID", id: "lucid", name: "Lucid", payoutCount: 4, progress: 1 },
   ], connectorInstallation: null, deteriorationLevel: 1, resultTotalInCents: 0, payoutTotalInCents: 0,
   wallets: [{ balanceInCents: 125_000, id: "wallet", identityId: "identity", name: "ARQ · Test" }] };
-function render(value = identity, configurationEnabled = true) {
-  return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], configurationEnabled, connectors: [], identities: [value], ownerName: "Titular", signalStates: {}, workspaceId: "workspace" }));
+function render(value = identity, configurationEnabled = true, connectors: NinjaConnectorStatus[] = []) {
+  return renderToStaticMarkup(createElement(IdentitiesWorkspace, { accounts: [], configurationEnabled, connectors, identities: [value], ownerName: "Titular", signalStates: {}, workspaceId: "workspace" }));
 }
-describe("identity installation is independent of email delivery", () => {
-  it("offers the automatic installer after unlinking without requiring another email", () => {
-    expect(render()).toContain("Descargar instalador");
+describe("identity connector delivery", () => {
+  it("sends the identity installer by email without offering a local download", () => {
+    expect(render()).not.toContain("Descarga local");
     expect(render()).toContain("Enviar instalación");
   });
-  it.each(["sending", "sent", "downloaded", "failed"] as const)("keeps direct installation for status %s", (status) => {
-    expect(render({ ...identity, connectorInstallation: { identityId: identity.id, status,
-      createdAt: "2026-09-24T00:00:00Z", expiresAt: "2026-09-25T00:00:00Z", sentAt: null } })).toContain("Descargar instalador");
+  it.each(["sending", "sent", "downloaded", "failed"] as const)("keeps email delivery for status %s", (status) => {
+    const markup = render({ ...identity, connectorInstallation: { identityId: identity.id, status,
+      createdAt: "2026-09-24T00:00:00Z", expiresAt: "2026-09-25T00:00:00Z", sentAt: null } });
+    expect(markup).not.toContain("Descarga local");
+    expect(markup).toContain(status === "failed" ? "Enviar instalación" : "Reenviar instalación");
   });
-  it("does not offer an installer for an unapproved identity", () => {
-    expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Descargar instalador");
+  it("sends connector updates by email and keeps unlinking separate", () => {
+    const connector: NinjaConnectorStatus = { connectorId: "connector", connectorVersion: "0.15",
+      identityId: identity.id, installedSourceVersion: "0.15", isOnline: true,
+      lastSeenAt: "2026-10-29T19:05:31Z", pairedAt: "2026-10-15T17:23:11Z", status: "active" };
+    const markup = render(identity, true, [connector]);
+    expect(markup).toContain("Enviar actualización");
+    expect(markup).toContain("Sólo desvincular");
+    expect(markup).not.toContain("Descarga local");
+  });
+  it("does not offer installation delivery for an unapproved identity", () => {
+    expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Enviar instalación");
   });
   it("shows identity configuration only when the capability and identity are enabled", () => {
     expect(render()).toContain("Configuración");
