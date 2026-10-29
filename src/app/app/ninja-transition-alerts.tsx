@@ -1,4 +1,5 @@
 import { registerNinjaReset, resolveNinjaTransition } from "./ninja-transition-actions";
+import { preventNumberWheelChange } from "./prevent-number-wheel-change";
 
 export type NinjaTransitionAlert = Readonly<{
   automatic: boolean;
@@ -46,7 +47,7 @@ export function NinjaTransitionAlerts({ alerts, mode, period, periodId, result }
       {alert.resolutionStatus === "pending" && ["reset", "reset_after_burn"].includes(alert.eventType) ? <form action={registerNinjaReset} className="ninja-reset-form">
         <Context alert={alert} mode={mode} period={period} /><input name="period_id" type="hidden" value={periodId} />
         <label>Fecha<input defaultValue={alert.occurredAt.slice(0, 10)} name="purchased_on" required type="date" /></label>
-        <label>Precio (USD)<input min="0" name="price" required step="0.01" type="number" /></label>
+        <label>Precio (USD)<input min="0" name="price" onWheel={preventNumberWheelChange} required step="0.01" type="number" /></label>
         <label>Origen<select defaultValue="Aporte trader" name="funds_origin"><option>Aporte trader</option><option>Saldo generado</option></select></label>
         <button className="primary-action">Registrar reset</button>
       </form> : null}

@@ -109,6 +109,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { AppWorkspace } from "./app-workspace";
 import { AccountsOverview, type AccountOverviewAccount, type AccountOverviewPayout } from "./accounts-overview";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
+import { preventNumberWheelChange } from "./prevent-number-wheel-change";
 import { OpeningAccountReferences, OpeningOperationReference, OpeningSnapshotCompact } from "./opening-snapshot-panels";
 import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary";
 import { IdentitiesWorkspace } from "./identities-workspace";
@@ -1514,6 +1515,7 @@ async function renderPrivateAppPage({
                   inputMode="decimal"
                   min="0"
                   name="price"
+                  onWheel={preventNumberWheelChange}
                   placeholder="Ejemplo: 89,00"
                   required
                   step="0.01"

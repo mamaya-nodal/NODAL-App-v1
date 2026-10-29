@@ -3433,3 +3433,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **Caso validado:** el trade de Baltazar del 29/10 a las 11:32:55 se conserva como
   un único movimiento broker de `-US$ 535,74` y cinco participaciones Lucid, con
   diferencia de redondeo total de un centavo.
+
+### APP-237 — Los importes no se editan con la rueda y MIMICAL usa acciones parejas
+
+- **Fecha:** 2026-10-29.
+- **Importes de cuentas:** la rueda del mouse sobre un precio de compra libera el
+  foco y conserva el valor. El gesto continúa reservado para desplazarse entre
+  cuentas, evitando cambios accidentales de centavos.
+- **MIMICAL:** las dos acciones principales de la tarjeta ocupan columnas iguales,
+  comparten alto, alineación y espaciado; en pantallas angostas se apilan con el
+  mismo ancho. La regla se aplica al complemento del titular y al de identidades.

@@ -4222,7 +4222,8 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .addon-pilot-badge { padding: 7px 11px; border-radius: 999px; background: var(--app-soft); color: var(--app-subtle); font-size: 10px; font-weight: 850; white-space: nowrap; }
 .addon-pilot-badge.is-enabled { background: color-mix(in srgb, var(--app-accent) 18%, var(--app-panel)); color: var(--app-accent); }
 .addon-steps { display: grid; gap: 7px; margin: 0; padding-left: 22px; color: var(--app-title); font-size: 12px; }
-.addon-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.nodal-workspace .addon-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 12px; }
+.nodal-workspace .addon-actions > :is(.primary-action, .secondary-action) { display: inline-flex; width: 100%; min-height: 44px; align-items: center; justify-content: center; margin: 0; padding: 10px 16px; text-align: center; }
 .addon-pairing-code { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 16px; padding: 16px; border: 1px solid color-mix(in srgb, var(--app-accent) 55%, var(--app-border)); border-radius: 14px; background: color-mix(in srgb, var(--app-accent) 8%, var(--app-panel)); }
 .addon-pairing-code > span { color: var(--app-subtle); font-size: 10px; font-weight: 800; text-transform: uppercase; }
 .addon-pairing-code > strong { grid-column: 1; color: var(--app-accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 27px; letter-spacing: .14em; }
@@ -4234,7 +4235,7 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
   .configuration-view .workspace-section-heading,
   .addon-card-heading { align-items: flex-start; flex-direction: column; }
   .configuration-view .workspace-section-heading > p { text-align: left; }
-  .addon-actions > button { width: 100%; }
+  .nodal-workspace .addon-actions { grid-template-columns: 1fr; }
   .addon-pairing-code > strong { font-size: 21px; }
 }
 

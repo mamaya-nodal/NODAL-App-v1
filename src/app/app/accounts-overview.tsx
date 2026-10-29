@@ -22,6 +22,7 @@ import {
 } from "@/modules/operations/domain/account-progress";
 
 import type { RegisterAccount } from "./operation-register";
+import { preventNumberWheelChange } from "./prevent-number-wheel-change";
 import { deleteRegisteredAccount, updateRegisteredAccountPurchase } from "./purchase-actions";
 
 type AccountFilter = "active" | "virgin" | "all" | "closed" | "evaluation" | "funded" | "operational-live";
@@ -304,7 +305,7 @@ function AccountCard({ item, wallets }: Readonly<{
               }
             }}>
               <label>Costo (USD)
-                <input min="0" onChange={(event) => setPrice(event.target.value)} required step="0.01" type="number" value={price} />
+                <input min="0" onChange={(event) => setPrice(event.target.value)} onWheel={preventNumberWheelChange} required step="0.01" type="number" value={price} />
               </label>
               <label>Origen de fondos
                 <select onChange={(event) => setFundsOrigin(event.target.value as typeof fundsOrigin)} value={fundsOrigin}>

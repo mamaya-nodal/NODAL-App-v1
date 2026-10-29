@@ -7,6 +7,7 @@ import type { DetectedNinjaAccount } from "@/modules/ninja/domain/account-classi
 import { ninjaAccountRegistrationKey } from "@/modules/ninja/domain/account-registration-key";
 import { createDetectedPurchase } from "./purchase-actions";
 import { PurchasePaymentFields } from "./purchase-payment-fields";
+import { preventNumberWheelChange } from "./prevent-number-wheel-change";
 
 type Props = {
   companyIds: Readonly<Record<string, string>>;
@@ -139,7 +140,7 @@ export function DetectedNinjaAccounts({ companyIds, excludedAccountKeys, registe
             <div className="ninja-account-title"><div><strong>{account.company}{account.product ? ` · ${account.product}` : ""}</strong><span>{account.accountName}</span><small>{account.connectionName}</small></div><span className={`ninja-phase ninja-phase-${account.phase?.toLowerCase()}`}>{account.phase}</span></div>
             <div className="ninja-registration-fields">
               <label>Fecha de compra sugerida<input defaultValue={account.suggestedPurchaseDate} name="purchased_on" required type="date" /></label>
-              <label>Precio de compra (USD)<input inputMode="decimal" min="0" name="price" placeholder="Completar" required step="0.01" type="number" /></label>
+              <label>Precio de compra (USD)<input inputMode="decimal" min="0" name="price" onWheel={preventNumberWheelChange} placeholder="Completar" required step="0.01" type="number" /></label>
               <label>{account.phase === "Evaluation" ? "Etapa actual" : "Vuelta actual"}
                 <select defaultValue={account.phase === "Evaluation" ? "Evaluacion" : "Primera vuelta"} name="accounting_phase" required>
                   {account.phase === "Evaluation"
