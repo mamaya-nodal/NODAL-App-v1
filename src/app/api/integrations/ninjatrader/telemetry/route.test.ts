@@ -3,13 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   requireNinjaConnector: vi.fn(), routeNinjaTelemetry: vi.fn(),
   persistNinjaTradeTelemetry: vi.fn(), refreshNinjaTechnicalOperations: vi.fn(),
-  getUser: vi.fn(), rpc: vi.fn(),
+  getUser: vi.fn(), rpc: vi.fn(), readOpeningBrokerState: vi.fn(), exclusions: [] as Array<{ account_name: string }>,
 }));
 vi.mock("@/modules/ninja/server/connector-auth", () => ({ requireNinjaConnector: mocks.requireNinjaConnector }));
 vi.mock("@/modules/ninja/server/intake-routing", () => ({ routeNinjaTelemetry: mocks.routeNinjaTelemetry }));
 vi.mock("@/modules/ninja/server/telemetry-persistence", () => ({ persistNinjaTradeTelemetry: mocks.persistNinjaTradeTelemetry }));
 vi.mock("@/modules/ninja/server/technical-operation-processing", () => ({ refreshNinjaTechnicalOperations: mocks.refreshNinjaTechnicalOperations }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc }) }));
+vi.mock("@/modules/ninja/server/opening-broker-state", () => ({ readOpeningBrokerState: mocks.readOpeningBrokerState }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: async () => {
+  const query = {
+    select: () => query,
+    eq: async () => ({ data: mocks.exclusions, error: null }),
+  };
+  return { auth: { getUser: mocks.getUser }, from: vi.fn(() => query), rpc: mocks.rpc };
+} }));
 import { GET, POST } from "./route";
 
 const event = {
@@ -29,6 +36,8 @@ beforeEach(() => {
   mocks.requireNinjaConnector.mockResolvedValue({ connectorId: "paired", ownerUserId: "owner" });
   mocks.routeNinjaTelemetry.mockResolvedValue([{ batch: payload, destinationConnectorId: "authorized-destination" }]);
   mocks.persistNinjaTradeTelemetry.mockResolvedValue({ persisted: true, acceptedEvents: 1 });
+  mocks.readOpeningBrokerState.mockResolvedValue({ liveBrokerBalance: null, pendingAccounts: [] });
+  mocks.exclusions = [];
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -101,5 +110,34 @@ describe("Ninja telemetry transport and permissions", () => {
       ["get_current_user_ninja_operation_probe_sessions", { target_limit: 20 }],
       ["get_current_user_ninja_reconciliation_details", { target_limit: 500 }],
     ]);
+  });
+
+  it("does not expose operations from pending or discarded broker partitions", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: { id: "owner" } } });
+    mocks.readOpeningBrokerState.mockResolvedValue({
+      liveBrokerBalance: null,
+      pendingAccounts: [{ accountName: "2177299" }],
+    });
+    mocks.exclusions = [{ account_name: "3000000" }];
+    mocks.rpc.mockImplementation(async (name: string) => {
+      if (name === "get_current_user_ninja_trade_telemetry") return { data: [
+        { id: 1, account_name: "2177299" }, { id: 2, account_name: "2292943" },
+      ], error: null };
+      if (name === "get_current_user_ninja_operation_probe_sessions") return { data: [
+        { id: 10, account_name: "2177299" }, { id: 11, account_name: "2292943" },
+      ], error: null };
+      return { data: [
+        { id: "pending", broker: { account_name: "2177299" } },
+        { id: "discarded", broker: { account_name: "3000000" } },
+        { id: "own", broker: { account_name: "2292943" } },
+      ], error: null };
+    });
+    const result = await GET();
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual({
+      batches: [{ id: "own", broker: { account_name: "2292943" } }],
+      events: [{ id: 2, account_name: "2292943" }],
+      operations: [{ id: 11, account_name: "2292943" }],
+    });
   });
 });

@@ -3347,3 +3347,16 @@ vigente sin aprobacion y evidencia suficiente.
   desde varias PC se deduplica automáticamente por número.
 - **Regresión:** la lectura de apertura prueba expresamente dos particiones con
   números diferentes y exige que ambas permanezcan visibles hasta una decisión.
+
+### APP-231 — Operaciones exige titularidad broker confirmada
+
+- **Fecha:** 2026-10-29. Una cuenta broker pendiente puede verse en la pantalla
+  de selección, pero su telemetría no pertenece todavía a la contabilidad del
+  usuario y no se muestra en `Operaciones`.
+- **Aislamiento:** eventos, sesiones y lotes cuyo número broker está pendiente o
+  descartado se filtran antes de responder a la sesión web. El dato técnico crudo
+  permanece auditable y no se borra.
+- **Alcance general:** la regla se aplica por usuario y número confirmado. No usa
+  excepciones por nombre, correo, conexión física ni saldo.
+- **Caso de regresión:** Javier conserva `2292943` como cuenta propia; la posición
+  abierta de `2177299` no aparece ni alimenta cobertura, resultado o conciliación.

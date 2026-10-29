@@ -5,6 +5,8 @@ import { refreshNinjaTechnicalOperations } from "@/modules/ninja/server/technica
 import { createClient } from "@/lib/supabase/server";
 import { routeNinjaTelemetry } from "@/modules/ninja/server/intake-routing";
 import { ninjaIntakeResponse as response, readNinjaJson } from "@/modules/ninja/server/intake-http";
+import { readOpeningBrokerState } from "@/modules/ninja/server/opening-broker-state";
+import { filterNinjaTelemetryReadScope } from "@/modules/ninja/domain/telemetry-read-scope";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,14 +17,30 @@ export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return response({ error: "La sesión no está autorizada." }, 401);
-  const [eventsResult, operationsResult, batchesResult] = await Promise.all([
-    supabase.rpc("get_current_user_ninja_trade_telemetry", { target_limit: 200 }),
-    supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 20 }),
-    supabase.rpc("get_current_user_ninja_reconciliation_details", { target_limit: 500 }),
-  ]);
-  return eventsResult.error || operationsResult.error || batchesResult.error
-    ? response({ error: "No se pudo consultar la prueba." }, 503)
-    : response({ batches: batchesResult.data ?? [], events: eventsResult.data ?? [], operations: operationsResult.data ?? [] }, 200);
+  try {
+    const [eventsResult, operationsResult, batchesResult, brokerState, exclusionsResult] = await Promise.all([
+      supabase.rpc("get_current_user_ninja_trade_telemetry", { target_limit: 200 }),
+      supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 20 }),
+      supabase.rpc("get_current_user_ninja_reconciliation_details", { target_limit: 500 }),
+      readOpeningBrokerState(supabase, user.id),
+      supabase.from("ninja_broker_account_exclusions").select("account_name").eq("owner_user_id", user.id),
+    ]);
+    if (eventsResult.error || operationsResult.error || batchesResult.error || exclusionsResult.error) {
+      return response({ error: "No se pudo consultar la prueba." }, 503);
+    }
+    const scoped = filterNinjaTelemetryReadScope({
+      batches: batchesResult.data ?? [],
+      events: eventsResult.data ?? [],
+      hiddenBrokerAccountNames: [
+        ...brokerState.pendingAccounts.map((account) => account.accountName),
+        ...(exclusionsResult.data ?? []).map((account) => account.account_name),
+      ],
+      operations: operationsResult.data ?? [],
+    });
+    return response(scoped, 200);
+  } catch {
+    return response({ error: "No se pudo consultar la prueba." }, 503);
+  }
 }
 
 export async function POST(request: Request) {
