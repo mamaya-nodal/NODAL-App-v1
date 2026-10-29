@@ -73,6 +73,18 @@ describe("opening broker read authorization and recovery", () => {
       observedAt: "2026-10-27T15:20:39Z", physicalConnectorId: "identity-physical",
     }]);
   });
+  it("offers every different broker partition until the user confirms or discards it", async () => {
+    const user = userDatabase();
+    serviceClient.mockReturnValue(database({ ninja_unclaimed_broker_accounts: [
+      pending("own", "2177299", "2026-10-29T14:22:51Z"),
+      pending("own", "2292943", "2026-10-29T14:22:52Z"),
+    ] }));
+    const result = await readOpeningBrokerState(user as unknown as SupabaseClient, "user", [{
+      connector_id: "own", observed_at: "2026-10-29T14:22:53Z", accounts: [],
+    }]);
+    expect(result.pendingAccounts.map((account) => account.accountName).sort())
+      .toEqual(["2177299", "2292943"]);
+  });
   it("excludes a discarded broker partition from both the balance and pending choices", async () => {
     const user = database({
       ninja_account_ownership: [owned()],

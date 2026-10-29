@@ -3334,3 +3334,16 @@ vigente sin aprobacion y evidencia suficiente.
 - **Regla económica:** el cambio no selecciona otro campo de Ninja ni incorpora
   automáticamente una partición. El saldo vivo continúa usando `Cash Value` y sólo
   integra números que el titular ya confirmó.
+
+### APP-230 — Las particiones broker no se preseleccionan por usuario
+
+- **Fecha:** 2026-10-29. Se retira la exclusión administrativa que había ocultado
+  anticipadamente una partición en el caso de Javier Torales.
+- **Regla general:** cada número broker distinto observado por un Ninja aparece
+  como candidato para su titular NODAL. La aplicación no confirma ni descarta una
+  cuenta basándose en conocimiento previo del administrador.
+- **Decisión humana:** el usuario elige `Es mía` para cada cuenta propia y
+  `Descartar` para cada cuenta ajena. Sólo la misma cuenta económica observada
+  desde varias PC se deduplica automáticamente por número.
+- **Regresión:** la lectura de apertura prueba expresamente dos particiones con
+  números diferentes y exige que ambas permanezcan visibles hasta una decisión.
