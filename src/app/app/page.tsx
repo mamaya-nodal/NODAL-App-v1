@@ -51,7 +51,10 @@ import type {
   AccountPhaseWithdrawal,
 } from "@/modules/operations/domain/account-phase-results";
 import type { OperationRegisterEntry } from "@/modules/operations/domain/operation-register";
-import { isPayoutEligibleAccount } from "@/modules/operations/domain/account-progress";
+import {
+  countLogicalTradeBatchesByAccount,
+  isPayoutEligibleAccount,
+} from "@/modules/operations/domain/account-progress";
 import type { AccountPhase } from "@/modules/operations/domain/account-progress";
 import { resolveOpenInvestmentInCents } from "@/modules/operations/domain/open-investment";
 import {
@@ -595,9 +598,17 @@ async function renderPrivateAppPage({
       : [];
     const technicalBatchRows = privileged && technicalBatchIds.length
       ? requireReadData(await privileged.from("ninja_operation_batches")
-          .select("id,daily_control_id")
-          .in("id", technicalBatchIds).not("daily_control_id", "is", null))
+          .select("id,daily_control_id,status")
+          .in("id", technicalBatchIds))
       : [];
+    const countableTechnicalBatchIds = new Set(technicalBatchRows
+      .filter((batch) => batch.status === "ready")
+      .map((batch) => batch.id));
+    const logicalTradeCountByAccountId = countLogicalTradeBatchesByAccount(
+      technicalMemberRows.flatMap((member) => countableTechnicalBatchIds.has(member.batch_id)
+        ? [{ accountId: member.account_id, batchId: member.batch_id }]
+        : []),
+    );
 
     companies = (companyRows ?? []).map((company) => ({
       code: company.code,
@@ -694,7 +705,7 @@ async function renderPrivateAppPage({
           : lastClosedBalance === null ? null : Math.round(Number(lastClosedBalance) * 100),
         initialInCents: classification.type === "prop" ? classification.accountSizeInCents : null,
         minimumNetLiquidationInCents: lastMinimumNetLiquidation === null ? null : Math.round(Number(lastMinimumNetLiquidation) * 100),
-        technicalTradeCount: sessions.length,
+        technicalTradeCount: logicalTradeCountByAccountId.get(link.account_id) ?? 0,
       }] as const];
     }));
     ninjaInventoryRevision = buildNinjaInventoryRevision(ninjaInventories);

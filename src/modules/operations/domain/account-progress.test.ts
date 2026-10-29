@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   accountPowerLevel,
   accountProgressLabel,
+  countLogicalTradeBatchesByAccount,
   isPayoutEligibleAccount,
   resolveCurrentAccountProgress,
   type AccountPhase,
@@ -14,6 +15,19 @@ const entry = (dailyControlId: string, phase: AccountPhase) => ({
 });
 
 describe("progreso operativo de una cuenta", () => {
+  it("cuenta lotes economicos y no sesiones tecnicas duplicadas", () => {
+    const counts = countLogicalTradeBatchesByAccount([
+      { accountId: "tradeify-1", batchId: "trade-1" },
+      { accountId: "tradeify-1", batchId: "trade-1" },
+      { accountId: "tradeify-1", batchId: "trade-2" },
+      { accountId: "tradeify-2", batchId: "trade-1" },
+      { accountId: "tradeify-2", batchId: "trade-2" },
+    ]);
+
+    expect(counts.get("tradeify-1")).toBe(2);
+    expect(counts.get("tradeify-2")).toBe(2);
+  });
+
   it("traduce Evaluación y las cinco vueltas a una escala de poder de 0 a 5", () => {
     expect(accountPowerLevel("Evaluacion")).toBe(0);
     expect(accountPowerLevel("Primera vuelta")).toBe(1);

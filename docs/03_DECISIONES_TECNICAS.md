@@ -3402,3 +3402,19 @@ vigente sin aprobacion y evidencia suficiente.
 - **Trazabilidad:** transferencia, comisión, evento Ninja, controles diarios y
   operaciones posteriores quedan vinculados y auditados. Un segundo lote no crea
   otra transferencia si ya existe una anterior pendiente para ese conector.
+
+### APP-235 — Quinta vuelta no cierra la cuenta y el día sigue lotes económicos
+
+- **Fecha:** 2026-10-29. Una cuenta Funded sigue contablemente viva mientras
+  conserve un vínculo operativo activo. Alcanzar la quinta vuelta o acumular un
+  resultado positivo no demuestra cierre, quema ni baja.
+- **Cierre:** sólo una quema observada sin vínculo activo posterior o una decisión
+  manual explícita pueden cerrar la cuenta. La quinta vuelta completa la barra
+  vigente; si la operatoria continúa, la visualización debe continuar en una nueva
+  barra sin cambiar el estado contable de la cuenta.
+- **Días:** el avance se calcula por lote económico lógico que contiene a la cuenta,
+  no por cantidad de sesiones técnicas recibidas. Una misma operación replicada o
+  transmitida por más de un conector cuenta una sola vez.
+- **Registro avanzado:** declarar que una cuenta está en `Día 1` significa cero
+  días completados. Tres operaciones posteriores compartidas por cinco cuentas las
+  dejan a todas en `Día 4`, sin diferencias causadas por telemetría duplicada.

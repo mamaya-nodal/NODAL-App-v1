@@ -18,6 +18,23 @@ export type AccountProgress = Readonly<{
   tradeDay: number;
 }>;
 
+export type LogicalTradeBatchMember = Readonly<{
+  accountId: string;
+  batchId: string;
+}>;
+
+export function countLogicalTradeBatchesByAccount(
+  members: readonly LogicalTradeBatchMember[],
+): Map<string, number> {
+  const batchesByAccount = new Map<string, Set<string>>();
+  for (const member of members) {
+    const batches = batchesByAccount.get(member.accountId) ?? new Set<string>();
+    batches.add(member.batchId);
+    batchesByAccount.set(member.accountId, batches);
+  }
+  return new Map([...batchesByAccount].map(([accountId, batches]) => [accountId, batches.size]));
+}
+
 export function isPayoutEligibleAccount(
   accountingState: AccountAccountingState,
   operationalState: AccountOperationalState,
