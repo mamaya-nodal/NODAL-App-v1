@@ -28,6 +28,7 @@ type Props = Readonly<{
   embedded?: boolean;
   economicTrace?: EconomicTraceItem[];
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
+  pendingBrokerTransfer?: PendingBrokerTransfer | null;
   hasPendingNinjaOperation?: boolean;
   movementHistory?: OperationalSummary["walletMovements"];
   periodLabel?: string;
@@ -40,6 +41,12 @@ type Props = Readonly<{
   summary: OperationalSummary;
   walletHistoryNames?: Record<string, string>;
   wallets: WalletView[];
+}>;
+
+export type PendingBrokerTransfer = Readonly<{
+  balanceInCents: number;
+  eventId: string;
+  observedAt: string;
 }>;
 
 export type WalletView = Readonly<{
@@ -105,7 +112,7 @@ const labels = {
 
 const MOVEMENT_HISTORY_PAGE_SIZE = 10;
 
-export function ProgressSummary({ accounts, economicTrace = [], embedded = false, hasPendingNinjaOperation = false, identities = [], liveBrokerBalance = null, movementHistory, payouts, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, walletHistoryNames = {}, wallets }: Props) {
+export function ProgressSummary({ accounts, economicTrace = [], embedded = false, hasPendingNinjaOperation = false, identities = [], liveBrokerBalance = null, movementHistory, payouts, pendingBrokerTransfer = null, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, walletHistoryNames = {}, wallets }: Props) {
   const router = useRouter();
   const payoutAccounts = accounts.filter((account) => account.eligibleForPayout);
   const [message, setMessage] = useState<string | null>(null);
@@ -137,11 +144,11 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const visibleWalletMovements = orderedWalletMovements.slice(0, visibleMovementCount);
   const remainingMovementCount = Math.max(0, orderedWalletMovements.length - visibleWalletMovements.length);
   const displayedPayouts = payouts ?? summary.fundingWithdrawals;
-  const brokerDifferenceInCents = liveBalance && summary.brokerBalanceInCents !== null
-    ? liveBalance.balanceInCents - summary.brokerBalanceInCents
+  const brokerDifferenceInCents = summary.brokerBalanceInCents !== null && (pendingBrokerTransfer || liveBalance)
+    ? (pendingBrokerTransfer?.balanceInCents ?? liveBalance!.balanceInCents) - summary.brokerBalanceInCents
     : 0;
   const brokerTransferKind = brokerDifferenceInCents > 0 ? "wallet_to_broker" : "broker_to_wallet";
-  const hasBrokerTransferToReconcile = brokerDifferenceInCents !== 0 && !hasPendingNinjaOperation;
+  const hasBrokerTransferToReconcile = brokerDifferenceInCents !== 0 && (pendingBrokerTransfer !== null || !hasPendingNinjaOperation);
   const walletBalances = presentWalletBalances(wallets.map((wallet) => ({
     accountingInCents: wallet.balanceInCents,
     automatic: wallet.automatic,
@@ -225,6 +232,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
       fee: String(form.get("fee") ?? ""),
       kind: brokerTransferKind,
       observation: String(form.get("observation") ?? ""),
+      eventId: pendingBrokerTransfer?.eventId ?? null,
       periodId,
       walletId: String(form.get("wallet") ?? ""),
     });

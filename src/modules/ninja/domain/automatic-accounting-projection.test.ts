@@ -27,7 +27,24 @@ describe("automatic accounting projection", () => {
       periodId: "period-1",
       phase: "Evaluacion",
       reason: null,
+      reasonCode: null,
       status: "shadow_ready",
+    });
+  });
+
+  it("distingue una transferencia previa de otros bloqueos contables", () => {
+    expect(projectAutomaticAccounting({
+      batchStatus: "ready",
+      brokerClosingBalanceInCents: 329_653,
+      brokerOpeningBalanceInCents: 340_727,
+      brokerResultInCents: -11_074,
+      expectedOpeningBalanceInCents: 163_781,
+      members: [member("account-1", -11_074)],
+      technicalMemberCount: 1,
+    })).toMatchObject({
+      reason: "El saldo inicial no coincide con el último saldo contable",
+      reasonCode: "broker_balance_mismatch",
+      status: "blocked",
     });
   });
 

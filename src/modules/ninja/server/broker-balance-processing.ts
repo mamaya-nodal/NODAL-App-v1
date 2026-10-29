@@ -141,6 +141,54 @@ export async function recordNinjaBrokerOperationBalance(args: Readonly<{
     : { created: data === true, processed: true };
 }
 
+export async function recordNinjaBrokerPreOperationBalance(args: Readonly<{
+  accountName: string;
+  balanceInCents: number;
+  connectionName: string;
+  connectorId: string;
+  expectedBalanceInCents: number;
+  observedAt: string;
+  openingEventId: number;
+}>): Promise<BrokerBalanceProcessingResult> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRoleKey) {
+    return { created: false, processed: false, reason: "not_configured" };
+  }
+  const supabase = createClient(url, serviceRoleKey, {
+    global: { fetch: observedNinjaFetch },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: pending, error: pendingError } = await supabase
+    .from("ninja_broker_balance_events")
+    .select("id")
+    .eq("connector_id", args.connectorId)
+    .eq("status", "pending")
+    .like("source_event_id", "ninja-preoperation:%")
+    .order("observed_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (pendingError) return { created: false, processed: false, reason: "storage_error" };
+  if (pending) return { created: false, processed: true };
+
+  const { error } = await supabase.from("ninja_broker_balance_events").insert({
+    balance_cents: args.balanceInCents,
+    connector_id: args.connectorId,
+    observed_at: args.observedAt,
+    source_accounts: [{
+      accountName: args.accountName,
+      balanceInCents: args.balanceInCents,
+      connectionName: args.connectionName,
+      expectedBalanceInCents: args.expectedBalanceInCents,
+    }],
+    source_event_id: `ninja-preoperation:${args.openingEventId}`,
+  });
+  if (error?.code === "23505") return { created: false, processed: true };
+  return error
+    ? { created: false, processed: false, reason: "storage_error" }
+    : { created: true, processed: true };
+}
+
 export async function bootstrapNinjaBrokerBalance(
   connectorId: string,
 ): Promise<BrokerBalanceProcessingResult> {

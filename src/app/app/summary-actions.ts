@@ -51,6 +51,7 @@ export async function createWalletTransfer(input: Readonly<{ amount: string; dat
 
 export async function reconcileBrokerWalletTransfer(input: Readonly<{
   date: string;
+  eventId: string | null;
   fee: string;
   kind: string;
   observation: string;
@@ -64,6 +65,25 @@ export async function reconcileBrokerWalletTransfer(input: Readonly<{
   }
   const { supabase, user } = await client();
   if (!user) return { ok: false, message: "La sesión venció." };
+  if (input.eventId !== null) {
+    if (!uuid(input.eventId)) return { ok: false, message: "La transferencia pendiente ya no está disponible." };
+    const { error } = await supabase.rpc("reconcile_nodal_preoperation_broker_transfer", {
+      target_event_id: input.eventId,
+      target_fee_cents: fee,
+      target_kind: input.kind,
+      target_observation: input.observation,
+      target_occurred_on: input.date,
+      target_period_id: input.periodId,
+      target_wallet_id: input.walletId,
+    });
+    if (error) {
+      if (error.message.includes("insufficient")) return { ok: false, message: "La billetera o cuenta bancaria no tiene saldo suficiente para el importe detectado y su fee." };
+      if (error.message.includes("DIRECTION_MISMATCH")) return { ok: false, message: "El movimiento no coincide con la dirección de la transferencia detectada." };
+      return { ok: false, message: "No se pudo conciliar la transferencia histórica con el broker." };
+    }
+    revalidatePath("/app");
+    return { ok: true, message: "Transferencia conciliada y operaciones posteriores actualizadas." };
+  }
   const [inventoryResult, probeResult, reconciliationResult, openingResult] = await Promise.all([
     supabase.rpc("get_current_user_ninja_inventory"),
     supabase.rpc("get_current_user_ninja_operation_probe_sessions", { target_limit: 100 }),

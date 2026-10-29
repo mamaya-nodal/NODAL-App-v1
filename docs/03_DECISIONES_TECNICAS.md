@@ -3382,3 +3382,23 @@ vigente sin aprobacion y evidencia suficiente.
 - **Decisión:** La correlación automática agrupa las sesiones prop por `account_id` antes de distribuir el resultado broker. Las sesiones técnicas duplicadas se conservan como evidencia, pero no crean participantes contables repetidos.
 - **Motivo:** La misma cuenta económica puede ser observada simultáneamente desde el Ninja del titular y desde el de una identidad. Contarla dos veces divide el resultado, rompe la unicidad del control diario y bloquea la conciliación.
 - **Prueba:** El caso de Franco reproduce dos transmisiones de la misma cuenta lógica y exige un único miembro por el total del resultado broker.
+
+### APP-234 — Una transferencia acreditada antes de un trade conserva su instante económico
+
+- **Fecha:** 2026-10-29.
+- **Problema:** si el saldo broker cambiaba entre el último control y la apertura
+  de un trade, el lote quedaba bloqueado. Los trades posteriores podían ocultar
+  la diferencia original porque la interfaz terminaba comparando contra el saldo
+  vivo más reciente.
+- **Decisión:** cuando el único bloqueo es la diferencia entre el último saldo
+  contable y el saldo de apertura broker, se conserva un evento pendiente
+  `ninja-preoperation` con el importe y el instante previos a la operación. No se
+  reescribe el saldo técnico vivo ni se deduce la transferencia desde cierres
+  posteriores.
+- **Conciliación:** el usuario selecciona la billetera/cuenta bancaria y el fee
+  contra ese evento histórico. Confirmada la transferencia, el servidor libera
+  en orden únicamente los lotes cuya apertura coincide exactamente con el último
+  saldo contable resultante.
+- **Trazabilidad:** transferencia, comisión, evento Ninja, controles diarios y
+  operaciones posteriores quedan vinculados y auditados. Un segundo lote no crea
+  otra transferencia si ya existe una anterior pendiente para ese conector.

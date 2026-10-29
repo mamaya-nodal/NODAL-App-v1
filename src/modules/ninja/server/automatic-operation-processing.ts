@@ -7,7 +7,10 @@ import { projectAutomaticAccounting, type AutomaticAccountingMember } from "../d
 import { classifyNinjaAccount } from "../domain/account-classification";
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
 import { resolveNinjaAccountingPhase } from "../domain/accounting-phase";
-import { recordNinjaBrokerOperationBalance } from "./broker-balance-processing";
+import {
+  recordNinjaBrokerOperationBalance,
+  recordNinjaBrokerPreOperationBalance,
+} from "./broker-balance-processing";
 import { resolveSessionAccountLink } from "../domain/session-account-link";
 
 type AccountingPhase = AutomaticAccountingMember["phase"];
@@ -373,6 +376,21 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
     await supabase.from("ninja_operation_batches").update({
       broker_balance_scope: aggregateBrokerBalance ? "aggregate" : "single",
     }).eq("id", storedBatchId).neq("accounting_status", "committed");
+    if (
+      projection.reasonCode === "broker_balance_mismatch" &&
+      brokerOpeningBalanceInCents !== null &&
+      expectedOpeningBalanceInCents !== null
+    ) {
+      await recordNinjaBrokerPreOperationBalance({
+        accountName: batch.broker.accountName,
+        balanceInCents: brokerOpeningBalanceInCents,
+        connectionName: batch.broker.connectionName,
+        connectorId,
+        expectedBalanceInCents: expectedOpeningBalanceInCents,
+        observedAt: batch.broker.openedAt,
+        openingEventId: batch.broker.openingEventId,
+      });
+    }
     if (batch.broker.closingBalance !== null) {
       await recordNinjaBrokerOperationBalance({
         accountName: batch.broker.accountName,
