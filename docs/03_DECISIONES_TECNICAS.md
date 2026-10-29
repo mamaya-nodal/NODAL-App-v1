@@ -3453,3 +3453,5 @@ vigente sin aprobacion y evidencia suficiente.
   pero no impide abrir la aplicación.
 - **Rendimiento:** un índice parcial cubre conector físico, conexión, cuenta y fecha
   únicamente para recibos `balance` pendientes o persistidos.
+- **Corrección de despliegue:** los manejadores de rueda pertenecen a un componente
+  cliente dedicado. Ningún componente servidor recibe eventos de navegador.
