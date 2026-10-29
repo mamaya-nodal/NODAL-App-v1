@@ -182,6 +182,7 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
       occurredAt: "2026-10-27T15:00:00Z",
       reason: "Requiere revisión de conciliación",
     }] : [],
+    floatingInCents: ((index % 4) + 1) * 37_500,
     lastOperatedOn: `2026-10-${String(20 + (index % 7)).padStart(2, "0")}`,
     performance: availableSnapshots.map((snapshot) => ({
       amount: snapshot.overview.people.find((person) => person.id === id)?.gross ?? 0,
@@ -203,6 +204,7 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     distributionAdminShares: [],
     distributionSettings: [],
     excludedFromMasterReportingUserIds: [],
+    floatingByUser: Object.fromEntries(personSpecs.map(([id], index) => [id, ((index % 4) + 1) * 37_500])),
     historicalGrossByUser,
     historicCommission: Object.fromEntries(current.overview.people.map((person) => [person.id, person.commission])),
     history: [],

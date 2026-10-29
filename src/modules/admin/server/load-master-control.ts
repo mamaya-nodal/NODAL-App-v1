@@ -53,6 +53,7 @@ export type MasterUserReconciliationAlert = Readonly<{
 export type MasterUserOperationalDetail = Readonly<{
   accounts: readonly MasterUserOperationalAccount[];
   alerts: readonly MasterUserReconciliationAlert[];
+  floatingInCents: number;
   lastOperatedOn: string | null;
   performance: readonly Readonly<{ amount: number; label: string }>[];
 }>;
@@ -367,6 +368,7 @@ export async function loadMasterControl(
     operationalDetailByUser[person.id] = {
       accounts,
       alerts,
+      floatingInCents: deskData.floatingByUser[person.id] ?? 0,
       lastOperatedOn,
       performance: reportingPeriodOverviews.map((snapshot) => ({
         amount: snapshot.overview.people.find((candidate) => candidate.id === person.id)?.gross ?? 0,

@@ -3295,7 +3295,9 @@ vigente sin aprobacion y evidencia suficiente.
   `Operación` y `Administración` para evitar una ventana interminable sin perder
   capacidad de control.
 - **Resumen:** muestra ganancia, facturación, historial, cuentas en curso,
-  conciliaciones pendientes, Identidades, última operación y conexión Ninja.
+  flotante comprometido de cuentas vivas, conciliaciones pendientes, Identidades,
+  última operación y conexión Ninja. El flotante reutiliza el resumen operativo
+  vigente del usuario y no se infiere desde el saldo broker ni desde la interfaz.
 - **Operación:** enumera las cuentas activas con empresa, nombre Ninja, estado,
   vuelta/día, origen personal o Identidad y última actividad. Las alertas provienen
   de lotes Ninja no confirmados del período oficial; la vista no inventa estados ni

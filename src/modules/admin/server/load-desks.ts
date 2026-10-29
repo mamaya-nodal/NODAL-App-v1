@@ -148,6 +148,12 @@ export async function loadDesks(
       ),
     ]),
   );
+  const floatingByUser = Object.fromEntries(allPeriods
+    .filter((period) => period.period_month === month)
+    .map((period) => [
+      period.user,
+      summaries.get(period.id)?.summary.floatingInCents ?? 0,
+    ]));
   return {
     overview,
     distributionSettings,
@@ -168,6 +174,7 @@ export async function loadDesks(
     ready: !missing,
     historicCommission,
     historicalGrossByUser,
+    floatingByUser,
     performanceHistory: historical
       .slice()
       .reverse()

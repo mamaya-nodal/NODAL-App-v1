@@ -275,7 +275,7 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   const identities = data.identitiesByUser[person.id] ?? [];
   const connector = data.connectorByUser[person.id];
   const operationalDetail = data.operationalDetailByUser[person.id] ?? {
-    accounts: [], alerts: [], lastOperatedOn: null, performance: [],
+    accounts: [], alerts: [], floatingInCents: 0, lastOperatedOn: null, performance: [],
   };
   const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id);
   const identifier = data.identifiersByUser[person.id] ?? "ID pendiente";
@@ -416,6 +416,7 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
         <Metric label="Ganancia período" value={money(person.totalIncome)} />
         <Metric label="Facturación período" value={money(person.gross)} />
         <Metric label="Facturación histórica" value={money(data.historicalGrossByUser[person.id] ?? 0)} />
+        <Metric label="Flotante comprometido" note={`${operationalDetail.accounts.length} cuentas en curso`} value={money(operationalDetail.floatingInCents)} />
         <Metric label="Cuentas en curso" value={String(operationalDetail.accounts.length)} />
         <Metric label="Alertas de conciliación" value={String(operationalDetail.alerts.length)} />
         <Metric label="Identidades" value={String(identities.length)} />
