@@ -108,6 +108,50 @@ describe("Ninja technical operations", () => {
     }));
   });
 
+  it("incluye la comisión aunque Ninja demore más de dos segundos en informar la posición", () => {
+    const operations = buildNinjaTechnicalOperations([
+      row(865082, "execution", "2026-10-29T14:23:04.506Z", {
+        orderAction: "BuyToCover", price: 29_581.25, quantity: 1,
+      }, "NQ DEC26", "2196146"),
+      row(865083, "balance", "2026-10-29T14:23:06.326Z", {
+        cashValue: 1_762.17,
+        netLiquidation: 1_763.55,
+        realizedProfitLoss: 0,
+        unrealizedProfitLoss: 0,
+      }, null, "2196146"),
+      row(865093, "balance", "2026-10-29T14:23:07.608Z", {
+        cashValue: 1_760.68,
+        netLiquidation: 1_760.68,
+        realizedProfitLoss: -2.87,
+        unrealizedProfitLoss: 0,
+      }, null, "2196146"),
+      row(865096, "position", "2026-10-29T14:23:07.866Z", {
+        marketPosition: "Long", quantity: 1,
+      }, "NQ DEC26", "2196146"),
+      row(865102, "execution", "2026-10-29T14:23:11.333Z", {
+        orderAction: "Sell", price: 29_575.25, quantity: 1,
+      }, "NQ DEC26", "2196146"),
+      row(865118, "position", "2026-10-29T14:23:14.805Z", {
+        marketPosition: "Flat", quantity: 0,
+      }, "NQ DEC26", "2196146"),
+      row(865124, "balance", "2026-10-29T14:23:16.812Z", {
+        cashValue: 1_637.81,
+        netLiquidation: 1_637.81,
+        realizedProfitLoss: -125.74,
+        unrealizedProfitLoss: 0,
+      }, null, "2196146"),
+    ], new Date("2026-10-29T14:23:27.000Z"), 1_763.55);
+
+    expect(operations).toEqual([expect.objectContaining({
+      closingBalance: 1_637.81,
+      executionCount: 2,
+      openingBalance: 1_763.55,
+      openingEventId: 865082,
+      result: -125.74,
+      status: "closed",
+    })]);
+  });
+
   it("mantiene un mismo ciclo si vuelve a abrir antes de diez segundos", () => {
     const operations = buildNinjaTechnicalOperations([
       row(1, "balance", "2026-09-07T18:00:00.000Z", { cashValue: 100_000 }),

@@ -3360,3 +3360,18 @@ vigente sin aprobacion y evidencia suficiente.
   excepciones por nombre, correo, conexión física ni saldo.
 - **Caso de regresión:** Javier conserva `2292943` como cuenta propia; la posición
   abierta de `2177299` no aparece ni alimenta cobertura, resultado o conciliación.
+
+### APP-232 — Las comisiones previas a la posición integran la operación
+
+- **Fecha:** 2026-10-29. Ninja puede informar la primera ejecución y descontar sus
+  costos antes de publicar la posición abierta. Esa latencia no constituye una
+  discontinuidad del saldo broker.
+- **Delimitación:** una ejecución de cierre seguida por una posición abierta de la
+  misma cuenta e instrumento se correlaciona durante la ventana técnica completa
+  de estabilización, no mediante el límite anterior de dos segundos.
+- **Contabilidad:** el saldo anterior al costo es la apertura de la operación. Los
+  cargos observados antes de la posición forman parte de su resultado y no bloquean
+  la conciliación como retiro, depósito o diferencia previa.
+- **Regresión:** el caso real de Franco Seco conserva US$ 1.763,55 como apertura,
+  US$ 1.637,81 como cierre y -US$ 125,74 como resultado, incluyendo US$ 2,87 de
+  costos informados antes de la posición.

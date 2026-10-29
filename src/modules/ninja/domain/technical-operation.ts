@@ -21,6 +21,7 @@ export type NinjaTechnicalOperation = Readonly<{
 }>;
 
 const settlementWindowMs = 10_000;
+const openingCorrelationWindowMs = settlementWindowMs;
 
 function numeric(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -64,7 +65,10 @@ function closingActionStartsPosition(
   const occurredAt = Date.parse(row.occurred_at);
   return ordered.slice(rowIndex + 1).some((candidate) => {
     const delay = Date.parse(candidate.occurred_at) - occurredAt;
-    if (delay > 2_000) return false;
+    // Ninja puede informar ejecución, comisiones, saldos y recién después la
+    // posición. Usamos la misma ventana de estabilización del ciclo para no
+    // perder los costos previos a la posición por latencia del proveedor.
+    if (delay > openingCorrelationWindowMs) return false;
     return delay >= 0 && candidate.instrument === row.instrument && isOpenPosition(candidate);
   });
 }
