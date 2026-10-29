@@ -126,6 +126,36 @@ describe("opening broker read authorization and recovery", () => {
     expect(result.pendingAccounts[0]?.observedAt).toBe(payload.occurredAt);
     expect(result.pendingAccounts[0]?.balanceInCents).toBe(698204);
   });
+  it("keeps the private app available when the auxiliary receipt lookup times out", async () => {
+    const user = userDatabase();
+    const service = database({ ninja_unclaimed_broker_accounts: [pending()] });
+    const originalFrom = service.from;
+    service.from = ((table: string) => {
+      if (table !== "ninja_event_receipts") return originalFrom(table);
+      const query = {
+        eq: () => query,
+        in: () => query,
+        limit: () => query,
+        order: () => query,
+        select: () => query,
+        maybeSingle: async () => ({ data: null, error: { code: "57014" } }),
+      };
+      return query;
+    }) as typeof service.from;
+    serviceClient.mockReturnValue(service);
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await readOpeningBrokerState(user as unknown as SupabaseClient, "user", inventories);
+
+    expect(result.pendingAccounts).toEqual([{
+      accountName: "1850465", balanceInCents: 698204, connectionName: "Live",
+      observedAt: "2026-10-08T12:29:47Z", physicalConnectorId: "physical",
+    }]);
+    expect(log).toHaveBeenCalledWith("NODAL_READ_FAILED", {
+      scope: "opening-broker-observation", code: "57014", status: undefined,
+    });
+    log.mockRestore();
+  });
   it("never makes an unscoped privileged read when no active personal destination is authorized", async () => {
     const user = database({ ninja_account_ownership: [] }, {
       get_current_user_ninja_connector_status_v2: [connectors[1], { connector_id: "revoked", status: "revoked", identity_id: null }],

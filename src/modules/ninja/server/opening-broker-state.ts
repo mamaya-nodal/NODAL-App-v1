@@ -62,7 +62,13 @@ export async function readOpeningBrokerState(userClient: SupabaseClient, userId:
       .eq("physical_connector_id", physicalId).eq("payload->>kind", "balance")
       .eq("payload->>connectionName", connectionName).eq("payload->>accountName", accountName)
       .in("status", ["pending", "persisted"]).order("payload->>occurredAt", { ascending: false }).limit(1).maybeSingle();
-    requireBrokerRead("opening-broker-observation", { error });
+    // El recibo es una fuente de recuperación auxiliar. Si su historial crece o
+    // la lectura se interrumpe, la apertura conserva el dato materializado y la
+    // aplicación debe seguir disponible en lugar de bloquear todo el panel.
+    if (error) {
+      reportReadFailure("opening-broker-observation", error);
+      return null;
+    }
     if (!data) return null;
     const batch = { kind: "trade_telemetry_batch", batchId: "claim-read", observedAt: new Date().toISOString(), events: [data.payload] };
     return isNinjaTradeTelemetryBatch(batch) && batch.events[0].kind === "balance" ? batch.events[0] as NinjaBalanceTelemetryEvent : null;

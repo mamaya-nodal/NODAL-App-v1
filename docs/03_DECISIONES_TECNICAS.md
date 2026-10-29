@@ -3443,3 +3443,13 @@ vigente sin aprobacion y evidencia suficiente.
 - **MIMICAL:** las dos acciones principales de la tarjeta ocupan columnas iguales,
   comparten alto, alineación y espaciado; en pantallas angostas se apilan con el
   mismo ancho. La regla se aplica al complemento del titular y al de identidades.
+
+### APP-238 — Una lectura auxiliar broker no puede derribar el panel privado
+
+- **Fecha:** 2026-10-29. El historial `ninja_event_receipts` superó el costo de una
+  búsqueda JSON sin índice y PostgreSQL canceló la consulta con `57014`.
+- **Disponibilidad:** la observación cruda es recuperación auxiliar. Si falla, la
+  apertura usa el saldo materializado de la cuenta pendiente y registra el error,
+  pero no impide abrir la aplicación.
+- **Rendimiento:** un índice parcial cubre conector físico, conexión, cuenta y fecha
+  únicamente para recibos `balance` pendientes o persistidos.
