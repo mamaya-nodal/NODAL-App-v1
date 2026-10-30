@@ -2098,6 +2098,9 @@ vigente sin aprobacion y evidencia suficiente.
 - **Fecha:** 2026-10-01. Decisión funcional confirmada e implementada en la app.
   La migración conserva la trazabilidad del sistema de referencia y no autoriza
   reemplazarlo antes de la conciliación paralela aprobada.
+- **Calendario sustituido:** la regla del primer lunes documentada a continuación
+  quedó reemplazada el 30/10/2026 por APP-243. Se conserva aquí únicamente como
+  antecedente histórico; no rige para cierres posteriores a esa decisión.
 - **Calendario:** el período identificado con un mes comienza el primer lunes de
   ese mes, aunque sea feriado. El período anterior termina el viernes inmediato
   anterior a las 19:00, hora de Buenos Aires. En ese momento la aplicación
@@ -3515,3 +3518,19 @@ vigente sin aprobacion y evidencia suficiente.
 - **Caso Nico:** el trade del 15/10 fue reconstruido el 26/10 y había vuelto a
   enlazar cinco cuentas cerradas, pese al corte general del 24/10. Se retira ese
   enlace residual para permitir el nuevo punto de partida.
+
+### APP-243 — El calendario mensual se ancla en el día 15 y cierra un viernes
+
+- **Fecha:** 2026-10-30. El día 15 es el ancla mensual. Si cae sábado,
+  domingo, lunes o martes, el cierre se realiza el viernes anterior. Si cae
+  miércoles o jueves, se realiza el viernes inmediato posterior; si cae
+  viernes, se utiliza ese mismo día. El período siguiente abre el lunes.
+- **Ejemplos confirmados:** octubre–noviembre cierra el viernes 13/11 y el
+  siguiente abre el lunes 16/11. Noviembre–diciembre cierra el viernes 11/12 y
+  el siguiente abre el lunes 14/12. Diciembre–enero cierra el viernes 15/01 y
+  el siguiente abre el lunes 18/01.
+- **Reversión excepcional:** el cierre automático ejecutado el 30/10 se revierte
+  porque los períodos nuevos no recibieron actividad, no fueron aprobados y no
+  se enviaron informes. Las cuentas vuelven al período anterior; cierres,
+  arrastres e informes fallidos se respaldan en un esquema privado y cada
+  reversión queda registrada en auditoría.

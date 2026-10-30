@@ -20,6 +20,23 @@ export function firstMondayOfMonth(year: number, monthIndex: number): string {
   return isoDate(addUtcDays(first, daysUntilMonday));
 }
 
+export function cutoffFridayForMonth(year: number, monthIndex: number): string {
+  const anchor = new Date(Date.UTC(year, monthIndex, 15));
+  const day = anchor.getUTCDay();
+  const offset = day === 0 ? -2
+    : day === 1 ? -3
+      : day === 2 ? -4
+        : day === 3 ? 2
+          : day === 4 ? 1
+            : day === 5 ? 0
+              : -1;
+  return isoDate(addUtcDays(anchor, offset));
+}
+
+export function openingMondayForMonth(year: number, monthIndex: number): string {
+  return isoDate(addUtcDays(new Date(`${cutoffFridayForMonth(year, monthIndex)}T00:00:00Z`), 3));
+}
+
 export function accountingPeriodMonthAt(instant = new Date()): string {
   const buenosAires = new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
@@ -34,20 +51,11 @@ export function accountingPeriodMonthAt(instant = new Date()): string {
   const monthIndex = Number(parts.month) - 1;
   const localDate = `${parts.year}-${parts.month}-${parts.day}`;
   const localHour = Number(parts.hour) % 24;
-  const openingCutoff = isoDate(addUtcDays(
-    new Date(`${firstMondayOfMonth(year, monthIndex)}T00:00:00Z`),
-    -3,
-  ));
-  const nextCutoff = isoDate(addUtcDays(
-    new Date(`${firstMondayOfMonth(year, monthIndex + 1)}T00:00:00Z`),
-    -3,
-  ));
+  const openingCutoff = cutoffFridayForMonth(year, monthIndex);
   const isAtOrAfter = (date: string) => localDate > date || (localDate === date && localHour >= 19);
-  const label = !isAtOrAfter(openingCutoff)
-    ? monthStart(year, monthIndex - 1)
-    : isAtOrAfter(nextCutoff)
-      ? monthStart(year, monthIndex + 1)
-      : monthStart(year, monthIndex);
+  const label = isAtOrAfter(openingCutoff)
+    ? monthStart(year, monthIndex)
+    : monthStart(year, monthIndex - 1);
   return `${isoDate(label).slice(0, 7)}-01`;
 }
 
@@ -59,9 +67,8 @@ export function periodSchedule(periodMonth: string): Readonly<{
   if (!match) throw new Error("El período debe tener formato YYYY-MM-01.");
   const year = Number(match[1]);
   const monthIndex = Number(match[2]) - 1;
-  const operationalStartOn = firstMondayOfMonth(year, monthIndex);
-  const nextFirstMonday = firstMondayOfMonth(year, monthIndex + 1);
-  const closeDate = isoDate(addUtcDays(new Date(`${nextFirstMonday}T00:00:00Z`), -3));
+  const operationalStartOn = openingMondayForMonth(year, monthIndex);
+  const closeDate = cutoffFridayForMonth(year, monthIndex + 1);
   return {
     operationalStartOn,
     scheduledCloseAt: `${closeDate}T19:00:00${BUENOS_AIRES_OFFSET}`,
