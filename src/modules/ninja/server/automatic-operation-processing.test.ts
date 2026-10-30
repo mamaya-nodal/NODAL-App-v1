@@ -13,6 +13,7 @@ const { rows, rpc, state } = vi.hoisted(() => ({
       sync_issue_reason: string | null;
     },
     previousCommitted: true,
+    openingCutoffAt: null as string | null,
   },
 }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc, from: (table: string) => {
@@ -53,6 +54,7 @@ beforeEach(() => {
   state.currentOpeningBalance = null;
   state.manualControl = null;
   state.previousCommitted = true;
+  state.openingCutoffAt = null;
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-only");
   rows.mockImplementation((table, filters, single) => {
@@ -76,6 +78,11 @@ beforeEach(() => {
       purchases: [{ account_id: "account", purchased_on: "2026-09-30" }],
       ninja_account_change_events: [],
       accounts: [{ id: "account", period_id: "period", company_id: "company" }],
+      period_opening_snapshots: state.openingCutoffAt ? [{
+        period_id: "period",
+        created_at: "2026-09-01T00:00:00Z",
+        updated_at: state.openingCutoffAt,
+      }] : [],
       periods: single
         ? { id: "period", workspace_id: "workspace", period_month: "2026-09-01" }
         : [],
@@ -157,5 +164,18 @@ it("uses a manual withdrawal recorded after the preceding committed trade", asyn
   expect(result.previews?.find((preview) => preview.brokerSessionId === 20)?.projection).toMatchObject({
     reason: null,
     status: "shadow_ready",
+  });
+});
+
+it("does not relink an operation from before the latest opening", async () => {
+  state.openingCutoffAt = "2026-10-24T22:04:15Z";
+
+  const result = await persistAutomaticOperationBatches("connector", 20, true);
+
+  expect(result.previews?.find((preview) => preview.brokerSessionId === 20)).toMatchObject({
+    members: [],
+    projection: {
+      status: "blocked",
+    },
   });
 });

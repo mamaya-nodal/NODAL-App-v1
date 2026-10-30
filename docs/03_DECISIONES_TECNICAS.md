@@ -3497,3 +3497,21 @@ vigente sin aprobacion y evidencia suficiente.
   confirmado que la vista del usuario. Los lotes anteriores al último inicio se
   preservan como evidencia técnica, pero no se presentan como pendientes del
   ciclo actual.
+
+### APP-242 — La telemetría anterior al corte no vuelve a enlazar cuentas archivadas
+
+- **Fecha:** 2026-10-30. Una operación ocurrida antes del último punto de partida
+  puede reconstruirse técnicamente después del reinicio. Su fecha económica sigue
+  siendo la fecha real de la operación; la reconstrucción tardía no la convierte
+  en actividad del ciclo vigente.
+- **Procesamiento:** antes de proyectar o reemplazar miembros de un lote, el
+  servidor compara la apertura de cada sesión con la última apertura confirmada
+  del período de su cuenta. Las sesiones anteriores al corte no vuelven a enlazar
+  esas cuentas ni pueden bloquear una revisión posterior.
+- **Auditoría:** el lote técnico anterior se conserva, pero sin participación
+  contable vigente. La desvinculación registra el lote, sus miembros originales,
+  el corte aplicado y el motivo; no inventa ni elimina una operación económica
+  posterior al nuevo inicio.
+- **Caso Nico:** el trade del 15/10 fue reconstruido el 26/10 y había vuelto a
+  enlazar cinco cuentas cerradas, pese al corte general del 24/10. Se retira ese
+  enlace residual para permitir el nuevo punto de partida.

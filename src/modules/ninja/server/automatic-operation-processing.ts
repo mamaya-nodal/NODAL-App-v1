@@ -7,6 +7,7 @@ import { projectAutomaticAccounting, type AutomaticAccountingMember } from "../d
 import { classifyNinjaAccount } from "../domain/account-classification";
 import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
 import { resolveNinjaAccountingPhase } from "../domain/accounting-phase";
+import { openingCutoffTimestamp } from "../domain/opening-cutoff";
 import {
   recordNinjaBrokerOperationBalance,
   recordNinjaBrokerPreOperationBalance,
@@ -179,6 +180,26 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
   ]);
   if (accountError || entryError || payoutError) return { persistedBatches: 0 };
   const accountsById = new Map((accountRows ?? []).map((account) => [account.id, account]));
+  const periodIds = [...new Set((accountRows ?? []).map((account) => account.period_id))];
+  const { data: openingRows, error: openingError } = periodIds.length
+    ? await supabase.from("period_opening_snapshots")
+      .select("period_id,created_at,updated_at")
+      .in("period_id", periodIds)
+    : { data: [], error: null };
+  if (openingError) return { persistedBatches: 0 };
+  const openingCutoffByPeriod = new Map((openingRows ?? []).map((opening) => [
+    opening.period_id,
+    openingCutoffTimestamp(opening),
+  ]));
+  const accountBelongsToCurrentOpening = (accountId: string, openedAt: string) => {
+    const account = accountsById.get(accountId);
+    if (!account) return false;
+    const cutoffAt = openingCutoffByPeriod.get(account.period_id);
+    if (!cutoffAt) return true;
+    const cutoff = Date.parse(cutoffAt);
+    const operation = Date.parse(openedAt);
+    return !Number.isFinite(cutoff) || !Number.isFinite(operation) || operation >= cutoff;
+  };
   const controlIds = [...new Set((entryRows ?? []).map((entry) => entry.daily_control_id))];
   const { data: timedBatches, error: timingError } = controlIds.length
     ? await supabase.from("ninja_operation_batches").select("daily_control_id,opened_at").in("daily_control_id", controlIds)
@@ -276,7 +297,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       if (!prop.accountId) return [];
       const account = accountsById.get(prop.accountId);
       const session = sessions.find((candidate) => Number(candidate.opening_event_id) === prop.openingEventId);
-      if (!account || !session) return [];
+      if (!account || !session || !accountBelongsToCurrentOpening(prop.accountId, session.opened_at)) return [];
       const key = `${session.connection_name}\u0000${session.account_name}`;
       const detectedPhase = inventoryClassifications.get(key)?.phase
         ?? classifyNinjaAccount({
@@ -410,7 +431,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       session_id: brokerSession.id,
     }, ...batch.props.flatMap((prop) => {
       const session = sessions.find((candidate) => Number(candidate.opening_event_id) === prop.openingEventId);
-      return session ? [{
+      return session && prop.accountId && accountBelongsToCurrentOpening(prop.accountId, session.opened_at) ? [{
         account_id: prop.accountId,
         allocated_broker_result_cents: prop.allocatedBrokerResultInCents,
         batch_id: storedBatchId,
