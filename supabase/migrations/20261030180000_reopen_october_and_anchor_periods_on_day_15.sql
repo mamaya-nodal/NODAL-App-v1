@@ -227,6 +227,23 @@ from reversed_periods prior
 join reversed_closures closure on closure.period_id = prior.id
 join reopened_next_periods next_period on next_period.workspace_id = prior.workspace_id;
 
+-- Primero se retira el período nuevo del índice único de períodos abiertos.
+-- Luego se vuelve a abrir el anterior para que la protección contable permita
+-- devolver allí las cuentas dentro de esta misma transacción.
+update public.periods periods
+set lifecycle_status = 'scheduled',
+    operational_start_on = public.nodal_period_start_on(periods.period_month),
+    scheduled_close_at = public.nodal_period_close_at(periods.period_month),
+    opened_at = null,
+    closed_at = null
+where periods.id in (select id from reopened_next_periods);
+
+update public.periods periods
+set lifecycle_status = 'open',
+    scheduled_close_at = public.nodal_period_close_at(periods.period_month),
+    closed_at = null
+where periods.id in (select id from reversed_periods);
+
 delete from public.period_closure_reports reports
 where reports.closure_version_id in (select id from reversed_closures);
 
@@ -242,22 +259,6 @@ where carryovers.id in (select id from reversed_carryovers);
 
 delete from public.period_closure_versions closures
 where closures.id in (select id from reversed_closures);
-
--- Primero se retira el período nuevo del índice único de períodos abiertos.
--- Recién después se vuelve a abrir el anterior dentro de la misma transacción.
-update public.periods periods
-set lifecycle_status = 'scheduled',
-    operational_start_on = public.nodal_period_start_on(periods.period_month),
-    scheduled_close_at = public.nodal_period_close_at(periods.period_month),
-    opened_at = null,
-    closed_at = null
-where periods.id in (select id from reopened_next_periods);
-
-update public.periods periods
-set lifecycle_status = 'open',
-    scheduled_close_at = public.nodal_period_close_at(periods.period_month),
-    closed_at = null
-where periods.id in (select id from reversed_periods);
 
 update public.periods periods
 set scheduled_close_at = public.nodal_period_close_at(periods.period_month)
