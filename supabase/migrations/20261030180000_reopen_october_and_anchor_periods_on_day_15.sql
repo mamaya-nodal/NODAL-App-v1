@@ -244,8 +244,31 @@ set lifecycle_status = 'open',
     closed_at = null
 where periods.id in (select id from reversed_periods);
 
+do $$
+begin
+  if exists (
+    select 1 from reversed_periods prior
+    join public.periods current on current.id = prior.id
+    where current.lifecycle_status <> 'open'
+  ) or exists (
+    select 1 from reopened_next_periods prior
+    join public.periods current on current.id = prior.id
+    where current.lifecycle_status <> 'scheduled'
+  ) then
+    raise exception 'PERIOD_STATE_NOT_READY_FOR_ACCOUNT_RESTORE';
+  end if;
+end;
+$$;
+
 delete from public.period_closure_reports reports
 where reports.closure_version_id in (select id from reversed_closures);
+
+-- El guard ordinario no contempla la reversión de un cierre y bloquea este
+-- traslado excepcional aun cuando el destino ya fue reabierto y verificado.
+-- Se suspende únicamente ese trigger durante el traslado auditado; el trigger
+-- de propiedad y todos los demás controles continúan activos. Si algo falla,
+-- PostgreSQL revierte también esta alteración del trigger.
+alter table public.accounts disable trigger accounts_require_open_period;
 
 update public.accounts accounts
 set period_id = carryovers.from_period_id,
@@ -253,6 +276,8 @@ set period_id = carryovers.from_period_id,
 from reversed_carryovers carryovers
 where accounts.id = carryovers.account_id
   and accounts.period_id = carryovers.to_period_id;
+
+alter table public.accounts enable trigger accounts_require_open_period;
 
 delete from public.account_period_carryovers carryovers
 where carryovers.id in (select id from reversed_carryovers);
