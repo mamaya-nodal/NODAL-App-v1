@@ -156,24 +156,56 @@ export function buildOperationalSummary(input: Readonly<{
     fundingPendingInCents: 0,
     walletBalanceInCents: 0,
   };
-  const accountTotals = input.accounts.map((account) => ({
-    account,
-    total: [...calculateAccountResult(
+  const recognizedPayouts = input.fundingWithdrawals.filter((withdrawal) =>
+    withdrawal.phase && withdrawal.approvalBelongsToPeriod !== false);
+  const recognizedPayoutByAccountAndPhase = new Map<string, number>();
+  for (const withdrawal of recognizedPayouts) {
+    const key = `${withdrawal.accountId}:${withdrawal.phase}`;
+    recognizedPayoutByAccountAndPhase.set(
+      key,
+      (recognizedPayoutByAccountAndPhase.get(key) ?? 0) + withdrawal.amountInCents,
+    );
+  }
+  const accountTotals = input.accounts.map((account) => {
+    const calculation = calculateAccountResult(
       input.entries.filter((entry) => entry.accountId === account.id),
       input.phaseWithdrawals.filter((withdrawal) => withdrawal.accountId === account.id),
       account.stateOrigin,
       account.priceInCents,
-    ).phaseResults].reverse().find((phase) => phase.totalGainInCents !== 0)?.totalGainInCents ?? 0,
-  }));
+    );
+    const currentPhase = [...calculation.phaseResults].reverse()
+      .find((phase) => phase.totalGainInCents !== 0);
+    return {
+      account,
+      total: currentPhase?.totalGainInCents ?? 0,
+      // A payout is recognized separately when approved. Removing the payout
+      // embedded in the current phase prevents double counting and leaves only
+      // the still-open operational result of that phase.
+      operatingTotal: (currentPhase?.totalGainInCents ?? 0)
+        - Math.min(
+          currentPhase?.totalWithdrawalInCents ?? 0,
+          recognizedPayoutByAccountAndPhase.get(`${account.id}:${currentPhase?.phase}`) ?? 0,
+        ),
+    };
+  });
   const states = {
     closed: (opening.accountStates?.closed ?? 0) + input.accounts.filter((account) => account.state === "closed").length,
     live: (opening.accountStates?.live ?? 0) + input.accounts.filter((account) => account.state === "live").length,
     virgin: (opening.accountStates?.virgin ?? 0) + input.accounts.filter((account) => account.state === "virgin").length,
   };
   const manualAccountStateCount = input.accounts.filter((account) => account.stateOrigin !== "automatic").length;
-  const realizedGainInCents = sum(accountTotals.filter(({ account }) => account.state === "closed").map(({ total }) => total));
+  const approvedPayoutsInCents = sum(input.fundingWithdrawals
+    .filter((withdrawal) => withdrawal.approvalBelongsToPeriod !== false)
+    .map((withdrawal) => withdrawal.amountInCents));
+  const recognizedPayoutsInCents = sum(recognizedPayouts.map((withdrawal) => withdrawal.amountInCents));
+  const realizedGainInCents = recognizedPayoutsInCents
+    + sum(accountTotals
+      .filter(({ account }) => account.state === "closed")
+      .map(({ operatingTotal }) => operatingTotal));
   const liveResultInCents = -(opening.floatingInCents ?? 0)
-    + sum(accountTotals.filter(({ account }) => account.state === "live").map(({ total }) => total));
+    + sum(accountTotals
+      .filter(({ account }) => account.state === "live")
+      .map(({ operatingTotal }) => operatingTotal));
   // Legacy snapshots store the magnitude; new displays use the signed result.
   const floatingInCents = Math.abs(liveResultInCents);
   const virginPriceInCents = sum(input.accounts.filter((account) => account.state === "virgin").map((account) => account.priceInCents));
@@ -183,19 +215,20 @@ export function buildOperationalSummary(input: Readonly<{
   const uncoveredBrokerResultInCents = sum(orderedControls.filter((control) => control.isUncovered).map((control) => control.operatingResultInCents ?? 0));
   const purchasesForPeriod = input.accounts.filter((account) => account.purchaseBelongsToPeriod !== false);
   const totalPurchases = sum(purchasesForPeriod.map((account) => account.priceInCents));
-  const approved = sum(input.fundingWithdrawals
-    .filter((withdrawal) => withdrawal.approvalBelongsToPeriod !== false)
-    .map((withdrawal) => withdrawal.amountInCents));
+  const approved = approvedPayoutsInCents;
   const collectedForPeriod = input.fundingWithdrawals.filter((withdrawal) =>
     withdrawal.collectedOn && withdrawal.collectionBelongsToPeriod !== false);
   const collected = sum(collectedForPeriod.map((withdrawal) => withdrawal.amountInCents));
   const collectedNet = sum(collectedForPeriod.map((withdrawal) =>
     withdrawal.amountInCents - (withdrawal.feeInCents ?? 0)));
+  const recognizedPayoutIds = new Set(recognizedPayouts.map((withdrawal) => withdrawal.id));
   const explicitlyApprovedForTiming = sum(input.fundingWithdrawals
-    .filter((withdrawal) => withdrawal.approvalBelongsToPeriod === true)
+    .filter((withdrawal) => !recognizedPayoutIds.has(withdrawal.id)
+      && withdrawal.approvalBelongsToPeriod === true)
     .map((withdrawal) => withdrawal.amountInCents));
   const explicitlyAppliedToAccountResult = sum(input.fundingWithdrawals
-    .filter((withdrawal) => withdrawal.accountResultAppliedInPeriod === true)
+    .filter((withdrawal) => !recognizedPayoutIds.has(withdrawal.id)
+      && withdrawal.accountResultAppliedInPeriod === true)
     .map((withdrawal) => withdrawal.amountInCents));
   const generatedPurchases = sum(purchasesForPeriod.filter((account) => account.fundsOrigin === "Saldo generado").map((account) => account.priceInCents));
   const brokerContribution = sum(orderedControls.filter((control) => control.kind === "deposit" && control.originDestination === "Aporte trader").map((control) => control.movementInCents ?? 0));

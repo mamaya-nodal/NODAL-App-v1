@@ -3623,3 +3623,18 @@ vigente sin aprobacion y evidencia suficiente.
   posteriores al cierre y de períodos no accesibles. La validación fue probada
   con la apertura simplificada de Gastón dentro de una transacción revertida,
   sin guardar datos de prueba.
+### APP-250 - Payout realizado visible y facturable aunque la cuenta continúe viva
+
+- **Fecha:** 2026-11-02.
+- **Decisión:** un payout aprobado forma parte del resultado realizado desde su
+  aprobación aunque la cuenta continúe viva. La facturación no espera al cierre
+  técnico de la cuenta.
+- **Continuidad:** el payout se reconoce una sola vez y permanece acumulado al
+  avanzar de vuelta. El resultado operativo todavía abierto de la vuelta actual
+  permanece separado como flotante.
+- **Integridad:** al cerrar la cuenta se suma su resultado operativo terminal,
+  pero no se vuelve a sumar el payout que ya fue reconocido. La conciliación
+  mantiene separados payout realizado, flotante, broker sin cobertura y fees.
+- **Motivo:** se detectó que un payout correctamente registrado podía quedar
+  fuera de la facturación por pertenecer a una cuenta viva y podía desaparecer
+  del total al comenzar la vuelta siguiente.

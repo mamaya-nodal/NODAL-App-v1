@@ -108,7 +108,7 @@ formulas ni reglas vigentes.
 
 ### Resultado por cuentas y conciliacion de ganancias
 
-La ganancia realizada de cuentas cerradas es la suma del resultado bruto de las
+La ganancia realizada suma los payouts aprobados y el resultado terminal de las
 cuentas cuyo estado es `Cuenta cerrada`.
 
 La conciliacion vigente compara esa ganancia con:
@@ -128,7 +128,9 @@ estado de la revision.
 
 ### Comision de mesa y ganancia trader
 
-La base actual es la ganancia realizada de cuentas cerradas.
+La base actual reconoce los payouts aprobados aunque la cuenta continúe viva y
+agrega el resultado operativo terminal de las cuentas cerradas, sin duplicar
+los payouts al cerrar ni perderlos al avanzar de vuelta.
 
 | Base de ganancia realizada | Comision estimada |
 |---|---|

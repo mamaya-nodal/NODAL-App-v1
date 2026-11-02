@@ -31,6 +31,37 @@ describe("operational summary", () => {
     expect(calculateDeskCommission(3_500_000).amountInCents).toBe(875_000);
   });
 
+  it("reconoce el payout de una cuenta viva sin dejarlo dentro del flotante", () => {
+    const summary = buildOperationalSummary({
+      accounts: [{ id: "live", state: "live", stateOrigin: "automatic", priceInCents: 0, fundsOrigin: "Aporte trader" }],
+      controls: [{ controlNumber: 1, kind: "balance_update", balanceAfterInCents: 80_000, operatingResultInCents: -20_000, movementInCents: null, originDestination: null }],
+      entries: [{ id: "trade", accountId: "live", accountReference: 1, companyId: "x", companyName: "X", dailyControlId: "d", destination: "NETO BROKER -", magnitudeInCents: 20_000, operatedOn: "2026-10-30", participantRole: "leader", phase: "Primera vuelta" }],
+      phaseWithdrawals: [{ accountId: "live", phase: "Primera vuelta", totalWithdrawalInCents: 100_000 }],
+      fundingWithdrawals: [{ id: "payout", accountId: "live", phase: "Primera vuelta", amountInCents: 100_000, approvedOn: "2026-10-30", collectedOn: null }],
+      walletMovements: [],
+    });
+
+    expect(summary.realizedGainInCents).toBe(100_000);
+    expect(summary.resultDetails?.liveResultInCents).toBe(-20_000);
+    expect(summary.realizedReconciliationDifferenceInCents).toBe(0);
+  });
+
+  it("conserva el payout realizado cuando la cuenta avanza de vuelta y luego cierra", () => {
+    const summary = buildOperationalSummary({
+      accounts: [{ id: "closed", state: "closed", stateOrigin: "automatic", priceInCents: 0, fundsOrigin: "Aporte trader" }],
+      controls: [],
+      entries: [
+        { id: "before", accountId: "closed", accountReference: 1, companyId: "x", companyName: "X", dailyControlId: "d1", destination: "NETO BROKER -", magnitudeInCents: 8_754, operatedOn: "2026-10-28", participantRole: "leader", phase: "Cuarta vuelta" },
+        { id: "after", accountId: "closed", accountReference: 1, companyId: "x", companyName: "X", dailyControlId: "d2", destination: "NETO BROKER +", magnitudeInCents: 99_926, operatedOn: "2026-10-29", participantRole: "leader", phase: "Quinta vuelta" },
+      ],
+      phaseWithdrawals: [{ accountId: "closed", phase: "Cuarta vuelta", totalWithdrawalInCents: 178_455 }],
+      fundingWithdrawals: [{ id: "payout", accountId: "closed", phase: "Cuarta vuelta", amountInCents: 178_455, approvedOn: "2026-10-29", collectedOn: "2026-10-29" }],
+      walletMovements: [],
+    });
+
+    expect(summary.realizedGainInCents).toBe(278_381);
+  });
+
   it("arrastra el cierre anterior sin convertirlo en depósito ni ganancia nueva", () => {
     const summary = buildOperationalSummary({
       accounts: [],

@@ -113,7 +113,7 @@ El panel deberia mostrar:
 - flotante asociado a cuentas vivas;
 - cantidad de cuentas virgenes, vivas y cerradas;
 - resultado semanal, del periodo e historico;
-- ganancia realizada de cuentas cerradas;
+- ganancia realizada por cierres y payouts aprobados;
 - comision estimada y ganancia estimada del trader;
 - estado de las conciliaciones;
 - alertas y acciones que requieren atencion.
@@ -235,7 +235,10 @@ Una diferencia entre NODAL App y Sheets se registra como hallazgo de conciliacio
 
 ### 13. Comision y ganancia estimada
 
-**Vigente:** la base actual es la ganancia realizada de cuentas cerradas. Si el resultado es menor o igual a cero, la comision es cero.
+**Vigente:** la base actual suma los payouts aprobados, aunque la cuenta siga
+viva, y el resultado operativo terminal de las cuentas cerradas. Un payout se
+reconoce una sola vez y no desaparece al avanzar de vuelta. Si el resultado es
+menor o igual a cero, la comisión es cero.
 
 - menos de USD 10.000: 50%, con techo de USD 4.400;
 - desde USD 10.000 y menos de USD 15.000: 40%, con techo de USD 5.500;

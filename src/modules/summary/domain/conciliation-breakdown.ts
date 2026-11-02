@@ -22,7 +22,7 @@ export function buildConciliationBreakdown(summary: OperationalSummary) {
     line("Gastos de transferencias y cobros", detail ? -detail.feesInCents : null),
   ];
   const reconstructed = [
-    line("Resultado de cuentas cerradas", summary.realizedGainInCents, "#cuentas"),
+    line("Resultado realizado (cierres y payouts)", summary.realizedGainInCents, "#cuentas"),
     line("Variación del resultado de cuentas vivas", detail ? detail.liveResultInCents - detail.openingLiveResultInCents : null, "#cuentas"),
     line("Variación del costo de cuentas vírgenes", detail ? detail.openingVirginPriceInCents - summary.virginPriceInCents : null, "#cuentas"),
     line("Resultado broker sin cobertura", summary.uncoveredBrokerResultInCents ?? 0, "#operaciones"),

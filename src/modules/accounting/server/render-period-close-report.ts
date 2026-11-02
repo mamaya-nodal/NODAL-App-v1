@@ -129,7 +129,7 @@ function drawCover(doc: PDFKit.PDFDocument, snapshot: PeriodCloseReportSnapshot)
   const gap = 10;
   const cardWidth = (doc.page.width - MARGIN * 2 - gap * 2) / 3;
   const metrics = [
-    ["RESULTADO REALIZADO", money(summary.realizedGainInCents, true), "Solo cuentas cerradas", INK],
+    ["RESULTADO REALIZADO", money(summary.realizedGainInCents, true), "Cierres y payouts aprobados", INK],
     ["COMISIÓN NODAL", money(-summary.commissionInCents, true), `${summary.commissionRateLabel} - congelada al cierre`, RED],
     ["GANANCIA USUARIO", money(summary.traderGainInCents, true), "Neto del período", INK],
   ] as const;

@@ -44,7 +44,8 @@ política nueva de cierre mensual.
 
 ### Comisión
 
-La base vigente es la ganancia realizada de cuentas cerradas. La comisión es
+La base vigente reconoce los payouts aprobados y el resultado operativo
+terminal de cuentas cerradas, sin duplicación entre vueltas. La comisión es
 estimada durante el período, se muestra con su tramo aplicado y no aplica a
 administradores. La regla exacta y sus tramos ya están documentados en
 `docs/10_MAPA_DE_MIGRACION_RESUMEN_Y_CONCILIACIONES.md`; este documento no la
