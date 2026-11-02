@@ -1,8 +1,8 @@
 # MIMICAL 1.1.0.3 — conciliación durante ejecuciones parciales
 
-Estado: candidato probado de forma aislada; pendiente de importación y prueba
-interactiva en SIM. No se sustituyó la DLL cargada en NinjaTrader ni se enviaron
-órdenes durante esta corrección.
+Estado: candidato probado de forma aislada y aprobado por Mauricio para su
+publicación en NODAL App el 2 de noviembre de 2026. La publicación no sustituye
+automáticamente la DLL que cada persona ya tenga cargada en NinjaTrader.
 
 ## Evidencia y causa
 
@@ -74,5 +74,6 @@ cuentas. Verificar trailing activado/desactivado en una prueba separada.
 
 Respaldo previo: `outputs/mimical_reconcile_20261102/` contiene fuentes y ZIPs
 anteriores. Para rollback, reimportar el paquete previo del mismo alcance y
-reiniciar con el grupo sin exposición. No se publicaron estos candidatos en el
-canal general de descargas de la App ni en Drive.
+reiniciar con el grupo sin exposición. El 2 de noviembre de 2026 ambos paquetes
+sustituyeron los canales personal e identidad de la App. No se modificó el
+archivo de Drive mediante este cambio.

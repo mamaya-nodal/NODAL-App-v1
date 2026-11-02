@@ -17,6 +17,7 @@ import {
   WorkspaceUserMenu,
   type WorkspaceVersionInfo,
 } from "./workspace-user-menu";
+import { MimicalUpdateNotice } from "./mimical-update-notice";
 
 export type WorkspaceView = "home" | "accounts" | "operations" | "accounting" | "identities" | "configuration";
 
@@ -173,7 +174,10 @@ export function AppWorkspace({
           </div>
         </header>
 
-        <div className="app-page-shell workspace-content">{children}</div>
+        <div className="app-page-shell workspace-content">
+          <MimicalUpdateNotice configurationEnabled={configurationEnabled} />
+          {children}
+        </div>
 
         <nav className="workspace-mobile-navigation" aria-label="Navegación móvil">
           {visibleViews.map((view) => (

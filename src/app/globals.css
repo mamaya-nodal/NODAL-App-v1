@@ -4197,8 +4197,68 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 
 .nodal-workspace .workspace-content > .app-header { display: none; }
 
+.mimical-update-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 48%, var(--app-border));
+  border-radius: 15px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--app-accent) 13%, var(--app-panel)), var(--app-panel) 68%);
+  color: var(--app-title);
+  box-shadow: 0 15px 38px rgb(0 0 0 / 14%);
+}
+
+.mimical-update-notice > div:first-child { display: grid; gap: 3px; }
+.mimical-update-notice span {
+  color: var(--app-accent);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+.mimical-update-notice strong { font-size: 18px; letter-spacing: -.02em; }
+.mimical-update-notice p { margin: 0; color: var(--app-subtle); font-size: 11px; line-height: 1.5; }
+.mimical-update-notice-actions { display: flex; align-items: center; gap: 10px; }
+.mimical-update-notice-actions a {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 15px;
+  border-radius: 10px;
+  background: var(--app-accent);
+  color: #102008;
+  font-size: 11px;
+  font-weight: 850;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.mimical-update-notice-actions small { max-width: 210px; color: var(--app-subtle); font-size: 10px; line-height: 1.4; }
+.mimical-update-notice-actions button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--app-title);
+  font: inherit;
+  font-size: 19px;
+  cursor: pointer;
+}
+.mimical-update-notice-actions button:hover { border-color: var(--app-accent); color: var(--app-accent); }
+
 .nodal-workspace .workspace-content > :not(.app-header):not(.context-panel):not(.notice) {
   display: none;
+}
+
+@media (max-width: 720px) {
+  .mimical-update-notice { align-items: flex-start; gap: 14px; padding: 14px; }
+  .mimical-update-notice-actions { align-items: flex-end; flex-direction: column-reverse; }
+  .mimical-update-notice-actions a { min-height: 36px; padding: 8px 11px; }
 }
 
 .nodal-workspace[data-active-view="home"] .workspace-content > #inicio,

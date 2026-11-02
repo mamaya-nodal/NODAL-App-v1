@@ -3549,3 +3549,18 @@ vigente sin aprobacion y evidencia suficiente.
   de la App e instalación abierta sin reemplazar. Pendiente la prueba interactiva
   SIM. Evidencia, pruebas y rollback en
   `docs/MIMICAL_POSITION_SETTLEMENT_2026-11-02.md`.
+
+### APP-245 — Publicar MIMICAL 1.1.0.3 y avisar la actualización dentro de la App
+
+- **Fecha:** 2026-11-02. Mauricio aprobó sustituir los dos canales de descarga
+  por MIMICAL 1.1.0.3, conservando paquetes distintos para el Ninja del titular
+  y el Ninja de cada identidad.
+- **Aviso:** toda persona autorizada que ingresa a la aplicación ve la nueva
+  versión disponible. Si tiene Configuración habilitada, la acción abre esa
+  sección para descargarla; si Admin Master la deshabilitó, el aviso informa
+  esa condición sin conceder permisos ni exponer la descarga.
+- **Persistencia:** cerrar el aviso afecta sólo la vista actual. En un nuevo
+  ingreso vuelve a mostrarse, para no dar por instalada una versión que la App
+  todavía no puede verificar directamente dentro de NinjaTrader.
+- **Trazabilidad:** el servidor nombra ambas descargas con `1.1.0.3`, sin caché,
+  y mantiene el alcance personal/identidad en la entrega y la activación.
