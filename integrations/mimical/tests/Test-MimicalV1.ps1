@@ -46,8 +46,10 @@ $cases = @(
 )
 
 $text = Get-Content -LiteralPath $source -Raw
+$displayVersion = $assembly.GetType('NinjaTrader.NinjaScript.AddOns.MimicalWindow', $true).GetProperty('DisplayVersion').GetValue($null, $null)
+$fileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($output).FileVersion
 $checks = @(
-    @{ Name = 'Producto visible como MIMICAL 1.1'; Pass = $text.Contains('MIMICAL · NodalBots 1.1') },
+    @{ Name = 'La ventana muestra la versión exacta del DLL'; Pass = $displayVersion -eq $fileVersion -and $displayVersion -eq '1.1.0.3' -and $text.Contains('Caption = "MIMICAL · NodalBots " + DisplayVersion') -and $text.Contains('Text = "NodalBots  ·  " + DisplayVersion') },
     @{ Name = 'Menú agrupado bajo NodalBots'; Pass = $text.Contains('Header = "NodalBots"') -and $text.Contains('Header = "MIMICAL"') },
     @{ Name = 'Muestra sólo cuentas conectadas'; Pass = $text.Contains('a.Connection.Status == ConnectionStatus.Connected') -and $text.Contains('ConnectedAccounts()') },
     @{ Name = 'Actualiza la lista cuando cambia una conexión'; Pass = $text.Contains('followerRows.Children.Clear()') -and $text.Contains('leaderBox.Items.Clear()') -and $text.Contains('CONEXIÓN CAMBIÓ') },

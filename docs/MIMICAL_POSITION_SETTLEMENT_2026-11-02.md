@@ -57,6 +57,8 @@ trailing, Cross Order, licencias o la transformación de tipos de orden.
 FileVersion: 1.1.0.3. AssemblyVersion sigue 1.1.0.0; licencia conserva su protocolo.
 CONFIG identifica `build=1.1.0.3-position-settlement`.
 Se preserva la separación personal/identidad agregada en 1.1.0.2.
+La barra de título y el encabezado muestran el FileVersion completo leído del
+DLL (`1.1.0.3` en este candidato), en lugar del rótulo ambiguo `1.1`.
 
 ## Entrega y recuperación
 

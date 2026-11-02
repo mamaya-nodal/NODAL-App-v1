@@ -31,6 +31,8 @@ repositorio para evidencia, alcance y recuperación.
 El candidato 1.1.0.3 incorpora conciliación de ejecuciones parciales y posiciones
 demoradas. Ver `docs/MIMICAL_POSITION_SETTLEMENT_2026-11-02.md`. La prueba
 `tests/Test-PositionSettlement.ps1` usa la DLL compilada del alcance personal.
+La ventana obtiene el FileVersion del DLL y muestra la versión completa en la
+barra de título y el encabezado, para distinguir con claridad cada instalación.
 Los paquetes generales continúan en la versión previa hasta validar el candidato
 en SIM; no confundir fuente candidata con DLL instalada o publicada.
 

@@ -131,7 +131,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             if (State == State.SetDefaults)
             {
                 Name = "MIMICAL";
-                Description = "MIMICAL 1.0 · Copiador de órdenes y trailing de cobertura de NodalBots";
+                Description = "MIMICAL " + MimicalWindow.DisplayVersion + " · Copiador de órdenes y trailing de cobertura de NodalBots";
             }
         }
 
@@ -216,6 +216,21 @@ namespace NinjaTrader.NinjaScript.AddOns
 
     public sealed class MimicalWindow : NTWindow
     {
+        public static string DisplayVersion
+        {
+            get
+            {
+                System.Reflection.Assembly assembly = typeof(MimicalWindow).Assembly;
+                System.Reflection.AssemblyFileVersionAttribute attribute = assembly
+                    .GetCustomAttributes(typeof(System.Reflection.AssemblyFileVersionAttribute), false)
+                    .OfType<System.Reflection.AssemblyFileVersionAttribute>()
+                    .FirstOrDefault();
+                return attribute == null || String.IsNullOrWhiteSpace(attribute.Version)
+                    ? assembly.GetName().Version.ToString()
+                    : attribute.Version;
+            }
+        }
+
         private sealed class FollowerChoice
         {
             public Account Account;
@@ -369,7 +384,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 Child = trailingCheck,
                 ToolTip = "Trailing desactivado"
             };
-            Caption = "MIMICAL · NodalBots 1.1";
+            Caption = "MIMICAL · NodalBots " + DisplayVersion;
             Width = 1040;
             Height = 650;
             MinWidth = 840;
@@ -403,7 +418,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             };
             DockPanel brandContent = new DockPanel();
             brandContent.Children.Add(new TextBlock { Text = "MIMICAL", FontSize = 18, FontWeight = FontWeights.Bold, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center });
-            TextBlock brandMeta = new TextBlock { Text = "NodalBots  ·  1.1", Foreground = ColorBrush(179, 181, 187), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
+            TextBlock brandMeta = new TextBlock { Text = "NodalBots  ·  " + DisplayVersion, Foreground = ColorBrush(179, 181, 187), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right };
             DockPanel.SetDock(brandMeta, Dock.Right);
             brandContent.Children.Add(brandMeta);
             brand.Child = brandContent;
@@ -990,7 +1005,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 configurationPending = false;
                 SaveSettings();
                 SetStatus("ACTIVO · " + leader.Name + " → " + String.Join(", ", followers.Select(f => f.Account.Name + " " + f.Ratio.ToString(CultureInfo.InvariantCulture))), ColorBrush(90, 211, 134));
-                Log("CONFIG", leader.Name, leaderInstrument.FullName, "", "", "", "", 0, 0, 0, 0, "log=" + logPath + ";build=1.1.0.3-position-settlement");
+                Log("CONFIG", leader.Name, leaderInstrument.FullName, "", "", "", "", 0, 0, 0, 0, "log=" + logPath + ";build=" + DisplayVersion + "-position-settlement");
                 foreach (FollowerConfig follower in followers)
                     Log("FOLLOWER_CONFIG", follower.Account.Name, follower.Instrument.FullName, "", "", "", "", 0, 0, 0, 0, "ratio=" + follower.Ratio.ToString(CultureInfo.InvariantCulture) + ";crossOrder=" + follower.CrossOrder.ToString());
             }
