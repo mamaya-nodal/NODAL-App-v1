@@ -3534,3 +3534,18 @@ vigente sin aprobacion y evidencia suficiente.
   se enviaron informes. Las cuentas vuelven al período anterior; cierres,
   arrastres e informes fallidos se respaldan en un esquema privado y cada
   reversión queda registrada en auditoría.
+
+### APP-244 — Conciliar posiciones después del progreso de ejecución
+
+- **Fecha:** 2026-11-02. MIMICAL 1.1.0.3 candidato corrige el bloqueo por fills
+  parciales con actualización tardía de posición. Conserva la lógica C# existente
+  del complemento NinjaTrader y separa la decisión temporal para probarla sin
+  ejecutar órdenes.
+- **Control:** dos segundos de diferencia estable después del último progreso;
+  Market/PartFilled pendientes reciben hasta quince segundos sin progreso. Los
+  snapshots atravesados por eventos se descartan. Una diferencia genuina sigue
+  provocando bloqueo, sin compensaciones automáticas.
+- **Entrega:** ZIPs personal e identidad candidatos en Downloads; canal general
+  de la App e instalación abierta sin reemplazar. Pendiente la prueba interactiva
+  SIM. Evidencia, pruebas y rollback en
+  `docs/MIMICAL_POSITION_SETTLEMENT_2026-11-02.md`.

@@ -18,6 +18,36 @@ using NinjaTrader.Gui.Tools;
 
 namespace NinjaTrader.NinjaScript.AddOns
 {
+    // A mismatch is actionable only after the same pair has settled. A bounded
+    // wait also catches a stalled market order rather than hiding it indefinitely.
+    public sealed class MimicalPositionCheck
+    {
+        private bool observing;
+        private int expected;
+        private int actual;
+        private DateTime stableSince;
+
+        public bool ShouldBlock(int target, int position, bool pendingFill, DateTime progress, DateTime now)
+        {
+            if (target == position) { observing = false; return false; }
+            if (!observing)
+            {
+                observing = true;
+                stableSince = now;
+                expected = target;
+                actual = position;
+            }
+            if (expected != target || actual != position)
+            {
+                expected = target;
+                actual = position;
+                stableSince = now;
+            }
+            if (progress > stableSince) stableSince = progress;
+            return (now - stableSince).TotalSeconds >= (pendingFill ? 15 : 2);
+        }
+    }
+
     // Reservation ledger for a crossed inverse entry. All calls are serialized by gate.
     // CancelPending is deliberately NOT terminal; the original may still execute.
     public sealed class MimicalEntryRecovery
@@ -271,6 +301,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             public int Expected;
             public int Actual;
             public string Key;
+            public bool PendingFill;
         }
 
         private readonly ComboBox leaderBox = new ComboBox { MinWidth = 190, MaxDropDownHeight = 300 };
@@ -297,7 +328,11 @@ namespace NinjaTrader.NinjaScript.AddOns
         private readonly Dictionary<Order, List<Link>> links = new Dictionary<Order, List<Link>>();
         private readonly Dictionary<Order, Link> followerLinks = new Dictionary<Order, Link>();
         private readonly Dictionary<string, string> ocoByFollower = new Dictionary<string, string>(StringComparer.Ordinal);
-        private readonly Dictionary<string, DateTime> mismatchSince = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        private readonly Dictionary<string, MimicalPositionCheck> mismatchSince = new Dictionary<string, MimicalPositionCheck>(StringComparer.Ordinal);
+        private readonly Dictionary<string, DateTime> positionProgress = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+        private readonly Dictionary<Order, int> observedFills = new Dictionary<Order, int>();
+        private readonly Dictionary<Order, OrderState> observedMarketStates = new Dictionary<Order, OrderState>();
+        private long positionRevision;
         private readonly object gate = new object();
         private readonly DispatcherTimer reconciliationTimer;
         private readonly DispatcherTimer configurationTimer;
@@ -943,6 +978,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 followerLinks.Clear();
                 ocoByFollower.Clear();
                 mismatchSince.Clear();
+                ResetPositionObservations();
                 ResetTrailing(false);
                 detachedCoverageFollower = null;
                 flattening = false;
@@ -954,7 +990,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 configurationPending = false;
                 SaveSettings();
                 SetStatus("ACTIVO · " + leader.Name + " → " + String.Join(", ", followers.Select(f => f.Account.Name + " " + f.Ratio.ToString(CultureInfo.InvariantCulture))), ColorBrush(90, 211, 134));
-                Log("CONFIG", leader.Name, leaderInstrument.FullName, "", "", "", "", 0, 0, 0, 0, "log=" + logPath + ";build=1.1.0.1-stoplimit");
+                Log("CONFIG", leader.Name, leaderInstrument.FullName, "", "", "", "", 0, 0, 0, 0, "log=" + logPath + ";build=1.1.0.3-position-settlement");
                 foreach (FollowerConfig follower in followers)
                     Log("FOLLOWER_CONFIG", follower.Account.Name, follower.Instrument.FullName, "", "", "", "", 0, 0, 0, 0, "ratio=" + follower.Ratio.ToString(CultureInfo.InvariantCulture) + ";crossOrder=" + follower.CrossOrder.ToString());
             }
@@ -990,6 +1026,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             followerLinks.Clear();
             ocoByFollower.Clear();
             mismatchSince.Clear();
+            ResetPositionObservations();
             if (writer != null)
             {
                 writer.Flush();
@@ -1797,6 +1834,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             {
                 if ((!armed && !flattening) || e.Order == null) return;
                 Order order = e.Order;
+                ObservePositionOrder(order, e.OrderState, e.Filled);
                 Log("ORDER", order.Account.Name, order.Instrument.FullName, order.OrderId, e.OrderState.ToString(), order.OrderAction.ToString(), order.OrderType.ToString(), e.Quantity, e.Filled, e.LimitPrice, e.StopPrice, e.Error + " " + e.Comment);
                 if (flattening) return;
                 if (trailing != null && order == trailing.StopOrder)
@@ -2200,6 +2238,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             {
                 if ((!armed && !flattening) || e.Execution == null) return;
                 Execution x = e.Execution;
+                ObservePositionProgress(x.Account, x.Instrument);
                 Log("EXECUTION", x.Account.Name, x.Instrument.FullName, x.Order == null ? "" : x.Order.OrderId, "", x.Order == null ? "" : x.Order.OrderAction.ToString(), x.Order == null ? "" : x.Order.OrderType.ToString(), e.Quantity, 0, e.Price, 0, "execution=" + x.ExecutionId);
             }
         }
@@ -2209,6 +2248,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             lock (gate)
             {
                 if ((!armed && !flattening) || e.Position == null) return;
+                ObservePositionProgress(e.Position.Account, e.Position.Instrument);
                 Log("POSITION", e.Position.Account.Name, e.Position.Instrument.FullName, "", e.MarketPosition.ToString(), "", "", e.Quantity, 0, e.AveragePrice, 0, "");
                 if (armed && trailing != null && e.Position.Account == trailing.Follower.Account
                     && e.Position.Instrument.FullName == trailing.Follower.Instrument.FullName)
@@ -2249,6 +2289,50 @@ namespace NinjaTrader.NinjaScript.AddOns
                 trailing.StopOrder.Filled, 0, trailing.LastStopPrice, "posición de cobertura actualizada");
         }
 
+        private bool IsPositionScope(Account account, Instrument instrument)
+        {
+            if (account == null || instrument == null) return false;
+            return (account == leader && leaderInstrument != null && instrument.FullName == leaderInstrument.FullName)
+                || followers.Any(f => f.Account == account && f.Instrument.FullName == instrument.FullName);
+        }
+
+        private void ResetPositionObservations()
+        {
+            positionRevision++;
+            positionProgress.Clear();
+            observedFills.Clear();
+            observedMarketStates.Clear();
+        }
+
+        private void ObservePositionProgress(Account account, Instrument instrument)
+        {
+            if (!IsPositionScope(account, instrument)) return;
+            positionRevision++;
+            positionProgress[account.Name + "|" + instrument.FullName] = DateTime.UtcNow;
+        }
+
+        private void ObservePositionOrder(Order order, OrderState state, int filled)
+        {
+            if (!IsPositionScope(order.Account, order.Instrument)) return;
+            positionRevision++;
+            int previous;
+            observedFills.TryGetValue(order, out previous);
+            bool progressed = filled > previous;
+            observedFills[order] = Math.Max(previous, filled);
+            OrderState previousState;
+            if (order.OrderType == OrderType.Market)
+            {
+                progressed |= !observedMarketStates.TryGetValue(order, out previousState) || previousState != state;
+                observedMarketStates[order] = state;
+            }
+            if (progressed) ObservePositionProgress(order.Account, order.Instrument);
+        }
+
+        private static bool HasPendingFill(Account account, Instrument instrument)
+        {
+            return ActiveOrders(account, instrument).Any(o => o.OrderType == OrderType.Market || o.OrderState == OrderState.PartFilled);
+        }
+
         private void QueueReconcile()
         {
             // Account.Positions and Account.Orders are maintained by NinjaTrader's
@@ -2279,6 +2363,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             FollowerConfig[] followerSnapshot;
             TrailingCoverage trailingSnapshot;
             FollowerConfig detachedCoverageSnapshot;
+            long revisionSnapshot;
 
             // Copy only references/state while holding the copier lock. Account
             // collections are read below, after the lock has been released, so an
@@ -2292,6 +2377,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 followerSnapshot = followers.ToArray();
                 trailingSnapshot = trailing;
                 detachedCoverageSnapshot = detachedCoverageFollower;
+                revisionSnapshot = positionRevision;
                 if (!wasFlattening && !wasArmed && !configurationPending) return;
             }
 
@@ -2355,7 +2441,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 Dispatcher.BeginInvoke(new Action(RearmForConfiguration));
                 return;
             }
-            DateTime now = DateTime.UtcNow;
+            bool leaderPendingFill = HasPendingFill(leaderSnapshot, leaderInstrumentSnapshot);
             List<ReconcileCheck> checks = new List<ReconcileCheck>();
             foreach (FollowerConfig follower in followerSnapshot)
             {
@@ -2376,13 +2462,19 @@ namespace NinjaTrader.NinjaScript.AddOns
                     Follower = follower,
                     Expected = checked((int)decimal.Truncate(leaderSigned * follower.Ratio)),
                     Actual = SignedPosition(follower.Account, follower.Instrument),
+                    PendingFill = leaderPendingFill || HasPendingFill(follower.Account, follower.Instrument),
                     Key = follower.Account.Name + "|" + follower.Instrument.FullName
                 });
             }
 
             lock (gate)
             {
-                if (!armed || leader != leaderSnapshot || leaderInstrument != leaderInstrumentSnapshot) return;
+                // Account collections cannot be locked together with gate. Discard
+                // a mixed-time snapshot if an order/execution/position changed.
+                if (!armed || positionRevision != revisionSnapshot || leader != leaderSnapshot
+                    || leaderInstrument != leaderInstrumentSnapshot || !followers.SequenceEqual(followerSnapshot)
+                    || trailing != trailingSnapshot || detachedCoverageFollower != detachedCoverageSnapshot) return;
+                DateTime now = DateTime.UtcNow;
                 foreach (ReconcileCheck check in checks)
                 {
                     if (check.Expected == Int32.MinValue || check.Expected == check.Actual)
@@ -2390,13 +2482,19 @@ namespace NinjaTrader.NinjaScript.AddOns
                         mismatchSince.Remove(check.Key);
                         continue;
                     }
-                    DateTime since;
-                    if (!mismatchSince.TryGetValue(check.Key, out since))
+                    MimicalPositionCheck observation;
+                    if (!mismatchSince.TryGetValue(check.Key, out observation))
                     {
-                        mismatchSince[check.Key] = now;
+                        observation = new MimicalPositionCheck();
+                        mismatchSince[check.Key] = observation;
                         Log("MISMATCH_GRACE", check.Follower.Account.Name, check.Follower.Instrument.FullName, "", "", "", "", 0, 0, 0, 0, "expected=" + check.Expected + ";actual=" + check.Actual);
                     }
-                    else if ((now - since).TotalSeconds >= 2)
+                    DateTime leaderProgress;
+                    DateTime followerProgress;
+                    positionProgress.TryGetValue(leaderSnapshot.Name + "|" + leaderInstrumentSnapshot.FullName, out leaderProgress);
+                    positionProgress.TryGetValue(check.Key, out followerProgress);
+                    DateTime lastProgress = leaderProgress > followerProgress ? leaderProgress : followerProgress;
+                    if (observation.ShouldBlock(check.Expected, check.Actual, check.PendingFill, lastProgress, now))
                     {
                         Trip("DESINCRONIZACIÓN: " + check.Follower.Account.Name + " " + check.Follower.Instrument.FullName + " esperado " + check.Expected + ", real " + check.Actual);
                         return;
