@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
 
 import { sendIdentityMimicalInstallation } from "./identity-actions";
-import { markCurrentMimicalDownloaded } from "./mimical-update-status";
+import { markCurrentIdentityMimicalSent, markCurrentMimicalDownloaded } from "./mimical-update-status";
 
 type PairingCode = Readonly<{ code: string; expiresAt: string }>;
 
@@ -60,8 +60,10 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId }: Mimical
     setError(null);
     setMessage(null);
     const result = await sendIdentityMimicalInstallation(identityId);
-    if (result.ok) setMessage(result.message);
-    else setError(result.message);
+    if (result.ok) {
+      setMessage(result.message);
+      markCurrentIdentityMimicalSent(identityId);
+    } else setError(result.message);
     setBusy(null);
   }
 

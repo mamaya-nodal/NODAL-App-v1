@@ -45,6 +45,7 @@ describe("identity connector delivery", () => {
   });
   it("shows identity configuration only when the capability and identity are enabled", () => {
     expect(render()).toContain("Configuración");
+    expect(render()).toContain("Actualización disponible");
     expect(render(identity, false)).not.toContain("Complementos");
     expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Complementos");
   });

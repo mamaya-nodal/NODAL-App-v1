@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   useTransition,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
@@ -28,6 +29,7 @@ import {
   updateIdentityOperationalStatus,
 } from "./identity-actions";
 import { IdentityMimicalConfiguration } from "./mimical-configuration";
+import { hasSentCurrentIdentityMimical, subscribeToIdentityMimicalSend } from "./mimical-update-status";
 import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
 
 type Props = Readonly<{
@@ -167,6 +169,30 @@ function accountState(account: IdentityAccount) {
   return "Activa";
 }
 
+function IdentityAddonConfigurationRow({
+  identity,
+  onOpen,
+}: Readonly<{
+  identity: IdentitySummary;
+  onOpen: (identity: IdentitySummary) => void;
+}>) {
+  const updateSent = useSyncExternalStore(
+    (callback) => subscribeToIdentityMimicalSend(identity.id, callback),
+    () => hasSentCurrentIdentityMimical(identity.id),
+    () => false,
+  );
+
+  return (
+    <div className="identity-addon-configuration-row">
+      <span><strong>Complementos</strong></span>
+      <div className="identity-addon-configuration-actions">
+        {!updateSent ? <small className="identity-addon-update-badge">Actualización disponible</small> : null}
+        <button onClick={() => onOpen(identity)} type="button">Configuración</button>
+      </div>
+    </div>
+  );
+}
+
 export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors, identities, ownerName, signalStates, workspaceId }: Props) {
   const router = useRouter();
   const createFormRef = useRef<HTMLFormElement>(null);
@@ -304,10 +330,7 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
               </div>
 
               {configurationEnabled && identity.onboardingStatus === "approved" ? (
-                <div className="identity-addon-configuration-row">
-                  <span><strong>Complementos</strong></span>
-                  <button onClick={() => setConfigurationIdentity(identity)} type="button">Configuración</button>
-                </div>
+                <IdentityAddonConfigurationRow identity={identity} onOpen={setConfigurationIdentity} />
               ) : null}
 
               <div className="identity-subsection-title"><strong>Billeteras o cuentas bancarias</strong><span>{identity.wallets.length}</span></div>

@@ -2,6 +2,7 @@ import { MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
 
 export const MIMICAL_UPDATE_DOWNLOADED_EVENT = "nodal:mimical-update-downloaded";
 export const MIMICAL_UPDATE_STORAGE_KEY = `nodal:mimical-update-downloaded:${MIMICAL_VERSION}`;
+export const MIMICAL_IDENTITY_UPDATE_SENT_EVENT = "nodal:mimical-identity-update-sent";
 
 type DownloadStorage = Pick<Storage, "getItem" | "setItem">;
 type DownloadEventTarget = Pick<Window, "dispatchEvent">;
@@ -34,6 +35,47 @@ export function subscribeToMimicalDownload(callback: () => void) {
   window.addEventListener("storage", onStorage);
   return () => {
     window.removeEventListener(MIMICAL_UPDATE_DOWNLOADED_EVENT, callback);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+export function identityMimicalUpdateStorageKey(identityId: string) {
+  return `nodal:mimical-identity-update-sent:${MIMICAL_VERSION}:${identityId}`;
+}
+
+export function hasSentCurrentIdentityMimical(
+  identityId: string,
+  storage: DownloadStorage = window.localStorage,
+) {
+  try {
+    return storage.getItem(identityMimicalUpdateStorageKey(identityId)) === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function markCurrentIdentityMimicalSent(
+  identityId: string,
+  storage: DownloadStorage = window.localStorage,
+  eventTarget: DownloadEventTarget = window,
+) {
+  try {
+    storage.setItem(identityMimicalUpdateStorageKey(identityId), "true");
+  } catch {
+    // El correo ya se envió; un almacenamiento bloqueado no debe convertirlo en error.
+  }
+  eventTarget.dispatchEvent(new Event(MIMICAL_IDENTITY_UPDATE_SENT_EVENT));
+}
+
+export function subscribeToIdentityMimicalSend(identityId: string, callback: () => void) {
+  const storageKey = identityMimicalUpdateStorageKey(identityId);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === storageKey) callback();
+  };
+  window.addEventListener(MIMICAL_IDENTITY_UPDATE_SENT_EVENT, callback);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(MIMICAL_IDENTITY_UPDATE_SENT_EVENT, callback);
     window.removeEventListener("storage", onStorage);
   };
 }

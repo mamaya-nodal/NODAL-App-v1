@@ -4407,8 +4407,12 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-signal-toggle:disabled { cursor: wait; opacity: .6; }
 .identity-addon-configuration-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 10px 12px; border: 1px solid var(--app-border); border-radius: 11px; }
 .identity-addon-configuration-row strong { font-size: 11px; }
+.identity-addon-configuration-actions { display: flex; align-items: center; gap: 10px; }
+.identity-addon-update-badge { color: var(--app-action); font-size: 9px; font-weight: 850; white-space: nowrap; }
+.identity-addon-update-badge::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent); vertical-align: 1px; }
 .identity-addon-configuration-row button { min-height: 34px; padding: 7px 12px; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-input); color: var(--app-title); cursor: pointer; font: inherit; font-size: 10px; font-weight: 800; }
 .identity-addon-configuration-row button:hover { border-color: var(--app-accent); color: var(--app-accent); }
+html[data-theme="day"] .identity-addon-update-badge { color: #187943; }
 .identity-addon-modal-backdrop { display: grid; position: fixed; z-index: 1200; inset: 0; place-items: center; padding: 22px; background: rgb(0 0 0 / 72%); backdrop-filter: blur(7px); }
 .identity-addon-modal { width: min(720px, 100%); max-height: calc(100vh - 44px); overflow: auto; padding: 22px; border: 1px solid var(--app-border-strong); border-radius: 20px; background: var(--app-bg); box-shadow: 0 26px 80px rgb(0 0 0 / 45%); color: var(--app-title); }
 .identity-addon-modal > header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 16px; }

@@ -3565,3 +3565,6 @@ vigente sin aprobacion y evidencia suficiente.
   avisarse. La descarga no se confunde con una verificación de instalación.
 - **Trazabilidad:** el servidor nombra ambas descargas con `1.1.0.3`, sin caché,
   y mantiene el alcance personal/identidad en la entrega y la activación.
+- **Identidades:** cada tarjeta habilitada muestra un aviso compacto junto a
+  Configuración. El aviso se retira únicamente para esa identidad después de
+  que el envío del paquete actualizado por correo termina correctamente.
