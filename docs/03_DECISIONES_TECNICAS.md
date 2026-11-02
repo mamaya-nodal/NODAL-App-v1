@@ -3568,3 +3568,45 @@ vigente sin aprobacion y evidencia suficiente.
 - **Identidades:** cada tarjeta habilitada muestra un aviso compacto junto a
   Configuración. El aviso se retira únicamente para esa identidad después de
   que el envío del paquete actualizado por correo termina correctamente.
+
+### APP-246 — Recuperación histórica conserva saldo broker e invertido confirmado
+
+- **Fecha:** 2026-11-02. Las cinco cuentas Tradeify de Lorena fueron registradas
+  antes de que vuelta y día fueran obligatorios. El conector conservó inventario
+  y saldos, pero no produjo operaciones contables utilizables.
+- **Apertura:** el corte vuelve al saldo confirmado de US$ 10.546,60 anterior a
+  la primera operación del 26/10. Los cinco cierres diarios reconstruyen el
+  saldo broker final de US$ 6.372,60 sin alterar billeteras ni payouts.
+- **Asignación:** cada cuenta termina con US$ 728,64 invertidos, incluidos los
+  US$ 219,81 de su alta. La diferencia entre el resultado broker total y la
+  porción atribuible a esas cuentas se conserva como broker sin cobertura; no
+  se distribuye artificialmente entre ellas.
+- **Progreso:** las cinco quedan en Segunda vuelta con cinco días completados.
+  Lore registra después el payout desde el flujo normal, que abrirá Tercera
+  vuelta Día 1 y conservará su importe y fecha reales.
+
+### APP-247 — Una quema inventariada sin ejecuciones se recupera como asiento manual auditado
+
+- **Fecha:** 2026-11-02. Si el conector conserva evidencia inequívoca de las
+  cuentas y su quema, pero no transmitió órdenes, posiciones ni ejecuciones, la
+  corrección no fabrica telemetría Ninja. Registra las cuentas históricas,
+  conserva su identidad y vida observada, las cierra por quema y crea un control
+  manual únicamente contra la continuidad broker confirmada.
+- **Caso Lore:** cinco cuentas Lucid omitidas el 30/10 llevan el saldo contable
+  de US$ 6.372,60 a US$ 7.391,40 y distribuyen US$ 1.018,80 en partes iguales
+  de US$ 203,76.
+- **Límite:** el costo de compra no sobrevivió al reinicio. Se registra en cero,
+  con auditoría explícita, para no inventar una salida de fondos no confirmada.
+
+### APP-248 — El corte de apertura sigue el calendario operativo, no el mes de etiqueta
+
+- **Fecha:** 2026-11-02. La apertura y el reinicio simplificado son válidos
+  desde `operational_start_on` hasta la fecha de cierre programada del período,
+  inclusive. `period_month` conserva sólo su función de etiqueta y agrupación.
+- **Motivo:** el período octubre–noviembre 2026 continúa hasta el 13/11. Una
+  apertura confirmada el 02/11 debe quedar dentro de ese período y no ser
+  rechazada por pertenecer al mes calendario siguiente.
+- **Control:** se mantiene el rechazo de fechas previas al inicio operativo,
+  posteriores al cierre y de períodos no accesibles. La validación fue probada
+  con la apertura simplificada de Gastón dentro de una transacción revertida,
+  sin guardar datos de prueba.
