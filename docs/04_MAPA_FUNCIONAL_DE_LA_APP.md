@@ -235,10 +235,12 @@ Una diferencia entre NODAL App y Sheets se registra como hallazgo de conciliacio
 
 ### 13. Comision y ganancia estimada
 
-**Vigente:** la base actual suma los payouts aprobados, aunque la cuenta siga
-viva, y el resultado operativo terminal de las cuentas cerradas. Un payout se
-reconoce una sola vez y no desaparece al avanzar de vuelta. Si el resultado es
-menor o igual a cero, la comisión es cero.
+**Vigente:** un payout aprobado primero recupera el flotante acumulado de la
+cuenta. Sólo el `TOTAL GANANCIA` positivo que queda después de esa recuperación
+se reconoce como ganancia realizada, aunque la cuenta siga viva. Ese excedente
+se reconoce una sola vez y no desaparece al avanzar de vuelta. Al cierre se
+suma además el resultado terminal todavía no realizado. Si el resultado total
+es menor o igual a cero, la comisión es cero.
 
 - menos de USD 10.000: 50%, con techo de USD 4.400;
 - desde USD 10.000 y menos de USD 15.000: 40%, con techo de USD 5.500;

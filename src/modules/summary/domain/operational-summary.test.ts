@@ -41,8 +41,8 @@ describe("operational summary", () => {
       walletMovements: [],
     });
 
-    expect(summary.realizedGainInCents).toBe(100_000);
-    expect(summary.resultDetails?.liveResultInCents).toBe(-20_000);
+    expect(summary.realizedGainInCents).toBe(80_000);
+    expect(summary.resultDetails?.liveResultInCents).toBe(0);
     expect(summary.realizedReconciliationDifferenceInCents).toBe(0);
   });
 
@@ -59,7 +59,22 @@ describe("operational summary", () => {
       walletMovements: [],
     });
 
-    expect(summary.realizedGainInCents).toBe(278_381);
+    expect(summary.realizedGainInCents).toBe(269_627);
+  });
+
+  it("arrastra el flotante que un payout todavía no alcanzó a recuperar", () => {
+    const summary = buildOperationalSummary({
+      accounts: [{ id: "live", state: "live", stateOrigin: "automatic", priceInCents: 0, fundsOrigin: "Aporte trader" }],
+      controls: [{ controlNumber: 1, kind: "balance_update", balanceAfterInCents: 30_000, operatingResultInCents: -70_000, movementInCents: null, originDestination: null }],
+      entries: [{ id: "trade", accountId: "live", accountReference: 1, companyId: "x", companyName: "X", dailyControlId: "d", destination: "NETO BROKER -", magnitudeInCents: 70_000, operatedOn: "2026-10-30", participantRole: "leader", phase: "Primera vuelta" }],
+      phaseWithdrawals: [{ accountId: "live", phase: "Primera vuelta", totalWithdrawalInCents: 50_000 }],
+      fundingWithdrawals: [{ id: "payout", accountId: "live", phase: "Primera vuelta", amountInCents: 50_000, approvedOn: "2026-10-30", collectedOn: null }],
+      walletMovements: [],
+    });
+
+    expect(summary.realizedGainInCents).toBe(0);
+    expect(summary.resultDetails?.liveResultInCents).toBe(-20_000);
+    expect(summary.realizedReconciliationDifferenceInCents).toBe(0);
   });
 
   it("arrastra el cierre anterior sin convertirlo en depósito ni ganancia nueva", () => {

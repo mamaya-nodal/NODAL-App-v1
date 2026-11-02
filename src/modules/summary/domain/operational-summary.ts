@@ -157,14 +157,12 @@ export function buildOperationalSummary(input: Readonly<{
     walletBalanceInCents: 0,
   };
   const recognizedPayouts = input.fundingWithdrawals.filter((withdrawal) =>
-    withdrawal.phase && withdrawal.approvalBelongsToPeriod !== false);
-  const recognizedPayoutByAccountAndPhase = new Map<string, number>();
+    withdrawal.phase
+    && withdrawal.approvalBelongsToPeriod !== false
+    && withdrawal.accountResultAppliedInPeriod !== false);
+  const recognizedPayoutPhases = new Set<string>();
   for (const withdrawal of recognizedPayouts) {
-    const key = `${withdrawal.accountId}:${withdrawal.phase}`;
-    recognizedPayoutByAccountAndPhase.set(
-      key,
-      (recognizedPayoutByAccountAndPhase.get(key) ?? 0) + withdrawal.amountInCents,
-    );
+    recognizedPayoutPhases.add(`${withdrawal.accountId}:${withdrawal.phase}`);
   }
   const accountTotals = input.accounts.map((account) => {
     const calculation = calculateAccountResult(
@@ -173,19 +171,27 @@ export function buildOperationalSummary(input: Readonly<{
       account.stateOrigin,
       account.priceInCents,
     );
-    const currentPhase = [...calculation.phaseResults].reverse()
-      .find((phase) => phase.totalGainInCents !== 0);
+    const phasesWithActivity = calculation.phaseResults.filter((phase) =>
+      phase.broker.entryCount > 0 || phase.totalWithdrawalInCents > 0);
+    const currentPhase = phasesWithActivity.at(-1);
+    const realizedAtPayouts = sum(calculation.phaseResults
+      .filter((phase) => recognizedPayoutPhases.has(`${account.id}:${phase.phase}`))
+      // TOTAL GANANCIA ya incluye el payout y el arrastre negativo. Sólo el
+      // excedente luego de recuperar el flotante queda realizado.
+      .map((phase) => Math.max(phase.totalGainInCents, 0)));
+    const currentPhaseHasRecognizedPayout = currentPhase
+      ? recognizedPayoutPhases.has(`${account.id}:${currentPhase.phase}`)
+      : false;
+    const currentOpenResult = currentPhase
+      ? currentPhaseHasRecognizedPayout
+        ? Math.min(currentPhase.totalGainInCents, 0)
+        : currentPhase.totalGainInCents
+      : 0;
     return {
       account,
-      total: currentPhase?.totalGainInCents ?? 0,
-      // A payout is recognized separately when approved. Removing the payout
-      // embedded in the current phase prevents double counting and leaves only
-      // the still-open operational result of that phase.
-      operatingTotal: (currentPhase?.totalGainInCents ?? 0)
-        - Math.min(
-          currentPhase?.totalWithdrawalInCents ?? 0,
-          recognizedPayoutByAccountAndPhase.get(`${account.id}:${currentPhase?.phase}`) ?? 0,
-        ),
+      liveResult: currentOpenResult,
+      realizedResult: realizedAtPayouts
+        + (account.state === "closed" ? currentOpenResult : 0),
     };
   });
   const states = {
@@ -197,15 +203,11 @@ export function buildOperationalSummary(input: Readonly<{
   const approvedPayoutsInCents = sum(input.fundingWithdrawals
     .filter((withdrawal) => withdrawal.approvalBelongsToPeriod !== false)
     .map((withdrawal) => withdrawal.amountInCents));
-  const recognizedPayoutsInCents = sum(recognizedPayouts.map((withdrawal) => withdrawal.amountInCents));
-  const realizedGainInCents = recognizedPayoutsInCents
-    + sum(accountTotals
-      .filter(({ account }) => account.state === "closed")
-      .map(({ operatingTotal }) => operatingTotal));
+  const realizedGainInCents = sum(accountTotals.map(({ realizedResult }) => realizedResult));
   const liveResultInCents = -(opening.floatingInCents ?? 0)
     + sum(accountTotals
       .filter(({ account }) => account.state === "live")
-      .map(({ operatingTotal }) => operatingTotal));
+      .map(({ liveResult }) => liveResult));
   // Legacy snapshots store the magnitude; new displays use the signed result.
   const floatingInCents = Math.abs(liveResultInCents);
   const virginPriceInCents = sum(input.accounts.filter((account) => account.state === "virgin").map((account) => account.priceInCents));
