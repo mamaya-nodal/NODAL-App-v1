@@ -24,5 +24,6 @@ describe("summary alerts", () => {
       "missing_broker_balance", "capital_reconciliation_difference", "gain_reconciliation_difference",
       "pending_funding_withdrawal", "manual_account_state",
     ]);
+    expect(alerts.find((alert) => alert.code === "pending_funding_withdrawal")?.href).toBe("#payouts");
   });
 });

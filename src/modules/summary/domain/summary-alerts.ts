@@ -9,7 +9,7 @@ export type SummaryAlert = Readonly<{
     | "pending_funding_withdrawal"
     | "manual_account_state";
   detail: string;
-  href: "#operaciones" | "#contabilidad";
+  href: "#operaciones" | "#contabilidad" | "#payouts";
   severity: "attention" | "information";
   title: string;
 }>;
@@ -31,7 +31,7 @@ export function buildSummaryAlerts(summary: OperationalSummary): SummaryAlert[] 
   }
   const pending = summary.fundingWithdrawals.filter((withdrawal) => !withdrawal.collectedOn);
   if (pending.length > 0) {
-    alerts.push({ code: "pending_funding_withdrawal", detail: `${pending.length} payout${pending.length === 1 ? "" : "s"} ${pending.length === 1 ? "sigue" : "siguen"} aprobado${pending.length === 1 ? "" : "s"} y sin cobro confirmado.`, href: "#contabilidad", severity: "information", title: "Payouts pendientes de cobro" });
+    alerts.push({ code: "pending_funding_withdrawal", detail: `${pending.length} payout${pending.length === 1 ? "" : "s"} ${pending.length === 1 ? "sigue" : "siguen"} aprobado${pending.length === 1 ? "" : "s"} y sin cobro confirmado.`, href: "#payouts", severity: "information", title: "Payouts pendientes de cobro" });
   }
   if (summary.manualAccountStateCount > 0) {
     alerts.push({ code: "manual_account_state", detail: `${summary.manualAccountStateCount} cuenta${summary.manualAccountStateCount === 1 ? "" : "s"} tiene${summary.manualAccountStateCount === 1 ? "" : "n"} un estado contable forzado. Es una excepción guardada y conviene revisarla antes del cierre.`, href: "#operaciones", severity: "information", title: "Hay estados contables forzados" });

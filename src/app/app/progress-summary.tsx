@@ -683,7 +683,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           )}
         </details>
 
-        <details className="accounting-action-card demo-operation-disclosure">
+        <details className="accounting-action-card demo-operation-disclosure" id="payouts">
           <summary>
             <span>Payouts</span>
             <strong>{displayedPayouts.length}</strong>

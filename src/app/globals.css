@@ -7346,6 +7346,7 @@ html[data-theme="day"] .nodal-workspace .accounting-exception {
 .accounting-view .accounting-action-card > .broker-transfer-reconciliation { margin: 0 16px 14px; }
 .accounting-view .accounting-action-card > .summary-list { margin-bottom: 16px; }
 .accounting-view .accounting-action-card > .payout-registration-form { align-items: end; margin-bottom: 16px; }
+#payouts { scroll-margin-top: 24px; }
 .payout-registration-form > label { min-width: 0; display: grid; gap: 5px; color: var(--app-subtle); font-size: 9px; font-weight: 750; }
 .payout-registration-form > label > :is(input, select) { width: 100%; }
 .payout-registration-form > button { align-self: end; }

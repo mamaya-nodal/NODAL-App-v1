@@ -36,6 +36,7 @@ const legacyViews: Readonly<Record<string, WorkspaceView>> = {
   actividad: "accounting",
   compras: "accounts",
   "control-diario": "operations",
+  payouts: "accounting",
   registro: "operations",
   resumen: "accounting",
 };
@@ -115,7 +116,16 @@ export function AppWorkspace({
     event.preventDefault();
     window.history.replaceState(null, "", `#${hash}`);
     window.dispatchEvent(new Event("hashchange"));
-    window.scrollTo({ behavior: "smooth", top: 0 });
+    const directView = visibleViews.some((view) => view.hash === hash);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      const target = !directView && hash ? document.getElementById(hash) : null;
+      if (target instanceof HTMLDetailsElement) target.open = true;
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      window.scrollTo({ behavior: "smooth", top: 0 });
+    }));
   }
 
   const administration = [
