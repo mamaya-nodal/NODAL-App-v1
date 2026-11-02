@@ -221,6 +221,10 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     mode: "real",
     month: current.month,
     operationalDetailByUser,
+    traderLiveStatusByUser: Object.fromEntries(personSpecs.map(([id], index) => [id, {
+      light: (["green", "blue", "yellow", "gray", "orange", "red"] as const)[index % 6],
+      message: "Estado simulado para comprobar el diseño.",
+    }])),
     overview: current.overview,
     pendingAccessCount: 6,
     pendingAccessRequests: [],

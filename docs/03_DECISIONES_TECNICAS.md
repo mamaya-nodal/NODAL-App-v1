@@ -1,5 +1,18 @@
 # Decisiones tecnicas de NODAL App
 
+### APP-249 - Señal operativa mínima en la tabla Admin Master
+
+- La lista de usuarios no suma etiquetas ni texto persistente para describir
+  jerarquías o salud técnica: usa un acento de fila para la rama y una luz
+  circular junto al nombre.
+- La luz se calcula en servidor con seis estados: rojo (sin conector actual),
+  gris (sin señal y sin operación), azul (transmite sin operación), amarillo
+  (opera con Ninja pero la app web no está visible), verde (opera y app visible)
+  y naranja (se perdió señal durante una operación abierta).
+- `nodal_users.last_app_seen_at` sólo conserva el último pulso de una sesión web
+  visible; no registra navegación ni datos económicos. La app lo actualiza como
+  máximo una vez por minuto mientras la pestaña está visible.
+
 ### APP-174 - Lista inicial cerrada para Identidades
 
 - **Fecha:** 2026-10-08. Alcance corregido por Mauricio.

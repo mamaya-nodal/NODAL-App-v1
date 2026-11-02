@@ -18,6 +18,7 @@ import {
   type WorkspaceVersionInfo,
 } from "./workspace-user-menu";
 import { MimicalUpdateNotice } from "./mimical-update-notice";
+import { AppPresenceMonitor } from "./app-presence-monitor";
 
 export type WorkspaceView = "home" | "accounts" | "operations" | "accounting" | "identities" | "configuration";
 
@@ -139,6 +140,7 @@ export function AppWorkspace({
 
   return (
     <main className="nodal-workspace" data-active-view={activeView} onClick={navigateWithinWorkspace}>
+      <AppPresenceMonitor />
       <aside className="workspace-sidebar">
         <a className="workspace-logo" href="#inicio" aria-label="Ir al inicio">
           <Image alt="NODAL Trading" height={32} priority src="/nodal-trading-lime.png" width={178} />

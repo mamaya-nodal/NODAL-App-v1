@@ -8,6 +8,7 @@ import {
   type AccountPhase,
 } from "@/modules/operations/domain/account-progress";
 import { transmittedWithinLast24Hours } from "../domain/connector-activity";
+import { resolveTraderLiveStatus, type TraderLiveStatus } from "../domain/trader-live-status";
 import { calculateDeskOverview } from "../domain/desks";
 import { happenedAfterOpening, openingCutoffTimestamp } from "@/modules/ninja/domain/opening-cutoff";
 import { requireNodalAdmin } from "./admin-access";
@@ -72,7 +73,7 @@ export async function loadMasterControl(
   const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult, openingRevisionRequestsResult] = await Promise.all([
     db.from("nodal_units").select("id,ordinal,name,code,root_desk_id,responsible_name,responsible_email,agreement_bps,included_in_master_reporting").order("ordinal"),
     db.from("nodal_users")
-      .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled,configuration_enabled")
+      .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled,configuration_enabled,last_app_seen_at")
       .in("id", userIds),
     db.from("nodal_user_identifiers")
       .select("user_id,desk_id,display_id,valid_from,valid_to,reason")
@@ -232,7 +233,7 @@ export async function loadMasterControl(
     .map((period) => ({ ...period, owner_user_id: workspace.owner_user_id })));
   const currentPeriodIds = currentPeriodRows.map((period) => period.id);
   const connectorIds = connectorRows.map((connector) => connector.id);
-  const [accountsResult, batchesResult, companiesResult, openingsResult] = await Promise.all([
+  const [accountsResult, batchesResult, companiesResult, openingsResult, probeSessionsResult] = await Promise.all([
     currentPeriodIds.length
       ? db.from("accounts")
         .select("id,period_id,company_id,reference_number,state,state_origin")
@@ -252,8 +253,14 @@ export async function loadMasterControl(
         .in("period_id", currentPeriodIds)
         .order("revision_number", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
+    connectorIds.length
+      ? db.from("ninja_operation_probe_sessions")
+        .select("connector_id,status,last_event_at")
+        .in("connector_id", connectorIds)
+        .in("status", ["open", "settling"])
+      : Promise.resolve({ data: [], error: null }),
   ]);
-  if (accountsResult.error || batchesResult.error || companiesResult.error || openingsResult.error) {
+  if (accountsResult.error || batchesResult.error || companiesResult.error || openingsResult.error || probeSessionsResult.error) {
     throw new Error("No se pudo cargar la supervisión operativa del panel Admin Master.");
   }
 
@@ -289,6 +296,9 @@ export async function loadMasterControl(
     ownerId: workspaceOwner.get(identity.workspace_id),
   }]));
   const connectorById = new Map(connectorRows.map((connector) => [connector.id, connector]));
+  const openOperationConnectorIds = new Set((probeSessionsResult.data ?? [])
+    .filter((session) => session.status === "open")
+    .map((session) => session.connector_id));
   const openingByPeriod = new Map<string, (typeof openingsResult.data)[number]>();
   for (const opening of openingsResult.data ?? []) {
     if (!openingByPeriod.has(opening.period_id)) openingByPeriod.set(opening.period_id, opening);
@@ -336,6 +346,7 @@ export async function loadMasterControl(
   }
 
   const operationalDetailByUser: Record<string, MasterUserOperationalDetail> = {};
+  const traderLiveStatusByUser: Record<string, TraderLiveStatus> = {};
   for (const person of overview.people) {
     const userAccounts = accountsByOwner.get(person.id) ?? [];
     const accounts = userAccounts.filter((account) => account.state !== "closed").map((account) => {
@@ -397,6 +408,17 @@ export async function loadMasterControl(
         label: snapshot.month.slice(0, 7),
       })),
     };
+    const profile = (profilesResult.data ?? []).find((candidate) => candidate.id === person.id);
+    const ownerConnectors = connectorRows.filter((connector) => connector.owner_user_id === person.id);
+    traderLiveStatusByUser[person.id] = resolveTraderLiveStatus({
+      appLastSeenAt: profile?.last_app_seen_at ?? null,
+      connectors: ownerConnectors.map((connector) => ({
+        connectorVersion: connector.connector_version || null,
+        lastSeenAt: connector.last_seen_at,
+        status: connector.status,
+      })),
+      hasOpenOperation: ownerConnectors.some((connector) => openOperationConnectorIds.has(connector.id)),
+    });
   }
 
   return {
@@ -405,6 +427,7 @@ export async function loadMasterControl(
     historicCommission,
     historicalGrossByUser,
     operationalDetailByUser,
+    traderLiveStatusByUser,
     performanceHistory: reportingPeriodOverviews
       .slice()
       .reverse()

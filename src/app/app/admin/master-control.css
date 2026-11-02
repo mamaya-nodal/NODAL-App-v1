@@ -607,6 +607,53 @@
 }
 .master-person-branch { position: relative; padding-block: 4px; }
 .master-branch-mark { position: absolute; inset-inline-start: -17px; color: var(--muted, #8c9b91); }
+.master-user-row > td:first-child { border-inline-start: 3px solid transparent; }
+.master-user-row-main > td:first-child { border-inline-start-color: color-mix(in srgb, var(--app-accent, var(--brand)) 76%, transparent); }
+.master-user-row-first-line > td:first-child { border-inline-start-color: color-mix(in srgb, #6d9dc4 72%, transparent); }
+.master-person-branch { display: flex; align-items: center; gap: 8px; }
+.master-live-light {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  border: 1px solid color-mix(in srgb, #000 20%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 8%, transparent);
+  cursor: help;
+  outline: none;
+}
+.master-live-light.gray { background: #8a9892; color: #8a9892; }
+.master-live-light.red { background: #ee655f; color: #ee655f; }
+.master-live-light.blue { background: #5594dc; color: #5594dc; }
+.master-live-light.yellow { background: #e3ae3f; color: #e3ae3f; }
+.master-live-light.green { background: #69c85d; color: #69c85d; }
+.master-live-light.orange { background: #ed8d45; color: #ed8d45; }
+.master-live-light::after {
+  position: absolute;
+  z-index: 20;
+  inset-inline-start: -8px;
+  inset-block-end: calc(100% + 10px);
+  width: max-content;
+  max-width: 250px;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border, var(--line));
+  border-radius: 8px;
+  background: var(--app-panel, var(--surface));
+  box-shadow: 0 9px 24px rgb(0 0 0 / 18%);
+  color: var(--app-title, var(--ink));
+  content: attr(data-tooltip);
+  font-size: .68rem;
+  font-weight: 650;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(3px);
+  transition: opacity .14s ease, transform .14s ease;
+  white-space: normal;
+}
+.master-live-light:hover::after,
+.master-live-light:focus-visible::after { opacity: 1; transform: translateY(0); }
 .master-distribution-editor { display: grid; gap: 14px; }
 .master-distribution-main {
   display: grid;
