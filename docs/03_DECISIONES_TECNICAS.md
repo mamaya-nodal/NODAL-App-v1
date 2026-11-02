@@ -3642,3 +3642,23 @@ vigente sin aprobacion y evidencia suficiente.
   fuera de la facturación por pertenecer a una cuenta viva; la primera
   corrección sumó erróneamente el bruto completo. Esta revisión conserva el
   excedente real sin convertir la recuperación de flotante en ganancia.
+
+### APP-251 — Una apertura desde cero conserva el costo de las cuentas operadas después del corte
+
+- **Fecha:** 2026-11-02. Una cuenta registrada y operada después de una apertura
+  vacía pertenece al ciclo vigente aunque su fecha comercial de compra sea
+  anterior al día de confirmación. La fecha comercial describe la compra; no
+  reemplaza el momento en que la cuenta ingresó a la nueva contabilidad.
+- **Recuperaciones:** si una operación posterior al corte se reconstruye de
+  forma auditada, también se incorpora el precio de la cuenta participante,
+  aunque ese registro haya sido creado antes de la revisión técnica de la
+  apertura. El control reconstruido y sus asientos se leen como una unidad: la
+  fecha histórica de la operación no puede separar los asientos de un control
+  aceptado después del reinicio. No se admite una operación sin sus resultados
+  ni sin su costo asociado.
+- **Límite:** esta regla aplica únicamente a aperturas `zero` sin cuentas ni
+  flotante inicial. Las reconstrucciones que sí absorbieron cuentas anteriores
+  mantienen la exclusión histórica para evitar doble cómputo.
+- **Casos comprobados:** las cinco compras de David registradas después de su
+  nuevo inicio y las cinco Tradeify de Lore incluidas en su recuperación
+  histórica dejan de quedar fuera del resumen.

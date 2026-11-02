@@ -58,7 +58,7 @@ export async function loadPeriodSummaries(
 
   const [accountsResult, controlsResult, walletResult, fundingResult, openingResult, carryoversResult, closuresResult, rectificationsResult] = await Promise.all([
     readAll(supabase.from("accounts").select("id, period_id, state, state_origin").in("period_id", periodIds).order("id")),
-    readAll(supabase.from("daily_controls").select("period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, transfer_fee_cents, created_at").in("period_id", periodIds).order("id")),
+    readAll(supabase.from("daily_controls").select("id, period_id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, transfer_fee_cents, created_at").in("period_id", periodIds).order("id")),
     readAll(supabase.from("wallet_movements").select("id, period_id, wallet_id, destination_wallet_id, daily_control_id, occurred_on, kind, amount_cents, fee_cents, observation, created_at").in("period_id", periodIds).order("id")),
     readAll(supabase.from("funding_withdrawals").select("id, period_id, collected_period_id, account_result_applied_period_id, receipt_timing_v2, account_id, phase, approved_on, amount_cents, collected_on, wallet_id, collection_fee_cents, created_at").eq("is_active", true).in("period_id", periodIds).order("id")),
     readAll(supabase.from("period_opening_snapshots").select("id,period_id,start_mode,cutover_date,broker_balance_cents,wallet_balance_cents,funding_pending_cents,contributed_capital_cents,personal_withdrawals_cents,prior_realized_result_cents,floating_cents,virgin_accounts,live_evaluation_accounts,funded_accounts,closed_accounts_reference,revision_number,created_at,updated_at").in("period_id", periodIds).order("id")),
@@ -81,7 +81,7 @@ export async function loadPeriodSummaries(
   const [purchasesResult, entriesResult, withdrawalsResult] = accountIds.length > 0
     ? await Promise.all([
         readAll(supabase.from("purchases").select("account_id,period_id,purchased_on,price_cents,funds_origin,created_at").in("account_id", accountIds).order("id")),
-        readAll(supabase.from("operation_entries").select("id,period_id,account_id,operated_on,phase,participant_role,destination,magnitude_cents,created_at").in("account_id", accountIds).order("id")),
+        readAll(supabase.from("operation_entries").select("id,period_id,daily_control_id,account_id,operated_on,phase,participant_role,destination,magnitude_cents,created_at").in("account_id", accountIds).order("id")),
         readAll(supabase.from("account_phase_withdrawals").select("period_id,account_id,phase,total_withdrawal_cents,created_at").in("account_id", accountIds).order("id")),
       ])
     : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
@@ -128,27 +128,40 @@ export async function loadPeriodSummaries(
         && new Date(createdAt!).getTime() >= officialCutoff;
     const controlsForPeriod = controls.filter((control) => control.period_id === periodId
       && belongsToOfficialCycle(control.created_at));
+    const officialControlIds = new Set(controlsForPeriod.map((control) => control.id));
     const operatingDates = controlsForPeriod
       .filter((control) => control.kind === "balance_update")
       .map((control) => control.operated_on)
       .sort();
     const accountsForPeriod = accounts.filter((account) => account.period_id === periodId);
     const accountIdsForPeriod = new Set(accountsForPeriod.map((account) => account.id));
+    const accountIdsWithOfficialEntries = new Set(entries
+      .filter((entry) => accountIdsForPeriod.has(entry.account_id)
+        && (belongsToOfficialCycle(entry.created_at)
+          || officialControlIds.has(entry.daily_control_id)))
+      .map((entry) => entry.account_id));
+    const isEmptyZeroOpening = openingRow?.start_mode === "zero"
+      && Number(openingRow.floating_cents) === 0
+      && Number(openingRow.virgin_accounts) === 0
+      && Number(openingRow.live_evaluation_accounts) === 0
+      && Number(openingRow.funded_accounts) === 0;
     const purchasesByAccount = new Map(
       purchases
         .filter((purchase) => accountIdsForPeriod.has(purchase.account_id)
-          && belongsToOfficialCycle(purchase.created_at))
+          && (belongsToOfficialCycle(purchase.created_at)
+            || (isEmptyZeroOpening && accountIdsWithOfficialEntries.has(purchase.account_id))))
         .map((purchase) => [purchase.account_id, purchase]),
     );
     const entriesForPeriod: OperationRegisterEntry[] = entries
       .filter((entry) => accountIdsForPeriod.has(entry.account_id)
-        && belongsToOfficialCycle(entry.created_at))
+        && (belongsToOfficialCycle(entry.created_at)
+          || officialControlIds.has(entry.daily_control_id)))
       .map((entry) => ({
         accountId: entry.account_id,
         accountReference: 0,
         companyId: "",
         companyName: "",
-        dailyControlId: "",
+        dailyControlId: entry.daily_control_id,
         destination: entry.destination,
         id: entry.id,
         magnitudeInCents: Number(entry.magnitude_cents),
@@ -264,7 +277,9 @@ export async function loadPeriodSummaries(
           id: account.id,
           priceInCents: Number(purchase?.price_cents ?? 0),
           purchaseBelongsToPeriod: purchase ? purchase.period_id === periodId
-            && !(Number(openingRow?.revision_number ?? 1) > 1 && purchase.purchased_on <= openingRow!.cutover_date) : false,
+            && (isEmptyZeroOpening
+              || !(Number(openingRow?.revision_number ?? 1) > 1
+                && purchase.purchased_on <= openingRow!.cutover_date)) : false,
           state: account.state,
           stateOrigin: account.state_origin,
         };

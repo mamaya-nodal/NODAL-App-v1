@@ -115,6 +115,70 @@ describe("shared period summaries", () => {
     expect(summary.capitalNetInCents).toBe(2_300_000);
   });
 
+  it("keeps purchases registered after an empty zero opening even when their commercial date is older", async () => {
+    const data: Record<string, Row[]> = {
+      periods: [{ id: "oct", workspace_id: "w", period_month: "2026-10-01", lifecycle_status: "open", workspaces: { owner_user_id: "u" } }],
+      accounts: [{ id: "a", period_id: "oct", state: "live", state_origin: "automatic" }],
+      purchases: [{
+        account_id: "a", period_id: "oct", purchased_on: "2026-10-16", price_cents: 27_230,
+        funds_origin: "Aporte trader", created_at: "2026-10-24T22:16:11Z",
+      }],
+      operation_entries: [{
+        id: "entry", account_id: "a", period_id: "oct", operated_on: "2026-10-24",
+        phase: "Segunda vuelta", participant_role: "leader", destination: "NETO BROKER -",
+        magnitude_cents: 11_608, created_at: "2026-10-24T22:20:00Z",
+      }],
+      period_opening_snapshots: [{
+        id: "opening", period_id: "oct", start_mode: "zero", cutover_date: "2026-10-24",
+        broker_balance_cents: 1_093_062, wallet_balance_cents: 0, funding_pending_cents: 0,
+        contributed_capital_cents: 1_093_062, personal_withdrawals_cents: 0,
+        prior_realized_result_cents: 0, floating_cents: 0, virgin_accounts: 0,
+        live_evaluation_accounts: 0, funded_accounts: 0, closed_accounts_reference: 0,
+        revision_number: 2, created_at: "2026-10-15T15:13:03Z", updated_at: "2026-10-24T22:13:36Z",
+      }],
+    };
+    const summary = (await loadPeriodSummaries(client(data), ["oct"], {
+      officialReportingStartMonth: "2026-10-01",
+    })).get("oct")!.summary;
+    expect(summary.floatingInCents).toBe(38_838);
+    expect(summary.periodResultInCents).toBe(-27_230);
+  });
+
+  it("keeps the purchase behind a recovered post-opening operation", async () => {
+    const data: Record<string, Row[]> = {
+      periods: [{ id: "oct", workspace_id: "w", period_month: "2026-10-01", lifecycle_status: "open", workspaces: { owner_user_id: "u" } }],
+      accounts: [{ id: "a", period_id: "oct", state: "live", state_origin: "automatic" }],
+      purchases: [{
+        account_id: "a", period_id: "oct", purchased_on: "2026-10-14", price_cents: 21_981,
+        funds_origin: "Aporte trader", created_at: "2026-10-27T14:33:49Z",
+      }],
+      daily_controls: [{
+        id: "control", period_id: "oct", control_number: 1, operated_on: "2026-10-30",
+        kind: "balance_update", movement_cents: null, origin_destination: null,
+        balance_after_cents: 1_034_040, operating_result_cents: -20_620,
+        is_uncovered: false, transfer_fee_cents: 0, created_at: "2026-11-02T13:25:37.814777Z",
+      }],
+      operation_entries: [{
+        id: "entry", daily_control_id: "control", account_id: "a", period_id: "oct", operated_on: "2026-10-26",
+        phase: "Segunda vuelta", participant_role: "leader", destination: "NETO BROKER -",
+        magnitude_cents: 20_620, created_at: "2026-10-30T15:00:00Z",
+      }],
+      period_opening_snapshots: [{
+        id: "opening", period_id: "oct", start_mode: "zero", cutover_date: "2026-10-26",
+        broker_balance_cents: 1_054_660, wallet_balance_cents: 0, funding_pending_cents: 0,
+        contributed_capital_cents: 1_054_660, personal_withdrawals_cents: 0,
+        prior_realized_result_cents: 0, floating_cents: 0, virgin_accounts: 0,
+        live_evaluation_accounts: 0, funded_accounts: 0, closed_accounts_reference: 0,
+        revision_number: 3, created_at: "2026-10-09T12:57:52Z", updated_at: "2026-11-02T13:25:37.814777Z",
+      }],
+    };
+    const summary = (await loadPeriodSummaries(client(data), ["oct"], {
+      officialReportingStartMonth: "2026-10-01",
+    })).get("oct")!.summary;
+    expect(summary.floatingInCents).toBe(42_601);
+    expect(summary.periodResultInCents).toBe(-42_601);
+  });
+
   it("starts Admin Master billing at the official reset timestamp", async () => {
     const data: Record<string, Row[]> = {
       periods: [{ id: "oct", workspace_id: "w", period_month: "2026-10-01", lifecycle_status: "open", workspaces: { owner_user_id: "u" } }],
