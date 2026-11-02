@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
 
 import { sendIdentityMimicalInstallation } from "./identity-actions";
+import { markCurrentMimicalDownloaded } from "./mimical-update-status";
 
 type PairingCode = Readonly<{ code: string; expiresAt: string }>;
 
@@ -45,6 +46,7 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId }: Mimical
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(href);
+      markCurrentMimicalDownloaded();
     } catch {
       setError("No se pudo descargar MIMICAL. Intentá nuevamente.");
     } finally {

@@ -3559,8 +3559,9 @@ vigente sin aprobacion y evidencia suficiente.
   versión disponible. Si tiene Configuración habilitada, la acción abre esa
   sección para descargarla; si Admin Master la deshabilitó, el aviso informa
   esa condición sin conceder permisos ni exponer la descarga.
-- **Persistencia:** cerrar el aviso afecta sólo la vista actual. En un nuevo
-  ingreso vuelve a mostrarse, para no dar por instalada una versión que la App
-  todavía no puede verificar directamente dentro de NinjaTrader.
+- **Persistencia:** cerrar manualmente el aviso afecta sólo la vista actual. Una
+  descarga personal completada correctamente oculta el aviso y guarda una marca
+  local asociada a `1.1.0.3`; una versión futura usa otra marca y vuelve a
+  avisarse. La descarga no se confunde con una verificación de instalación.
 - **Trazabilidad:** el servidor nombra ambas descargas con `1.1.0.3`, sin caché,
   y mantiene el alcance personal/identidad en la entrega y la activación.
