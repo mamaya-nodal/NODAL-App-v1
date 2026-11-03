@@ -349,17 +349,52 @@ export function TradeTelemetryProbe({
 
   useEffect(() => {
     let active = true;
+    let running = false;
+    let timer: number | undefined;
+
+    const operationsViewIsVisible = () => (
+      document.visibilityState === "visible"
+      && ["#operaciones", "#control-diario", "#registro"].includes(window.location.hash)
+    );
+
+    const schedule = () => {
+      if (!active || !operationsViewIsVisible()) return;
+      timer = window.setTimeout(refresh, 5_000);
+    };
+
     async function refresh() {
+      if (!active || running || !operationsViewIsVisible()) return;
+      running = true;
       try {
-        const result = await fetch("/api/integrations/ninjatrader/telemetry", { cache: "no-store" });
+        const result = await fetch("/api/integrations/ninjatrader/telemetry", {
+          cache: "no-store",
+          signal: AbortSignal.timeout(8_000),
+        });
         const body = await result.json() as { batches?: AutomaticBatchRow[]; events?: NinjaTelemetryRow[]; operations?: TechnicalOperationRow[] };
         if (active && result.ok) { setBatches(body.batches ?? []); setEvents(body.events ?? []); setOperations(body.operations ?? []); setAvailable(true); }
         else if (active) setAvailable(false);
       } catch { if (active) setAvailable(false); }
+      finally {
+        running = false;
+        schedule();
+      }
     }
-    void refresh();
-    const interval = window.setInterval(refresh, 2_500);
-    return () => { active = false; window.clearInterval(interval); };
+
+    const wake = () => {
+      if (!active || running || !operationsViewIsVisible()) return;
+      if (timer !== undefined) window.clearTimeout(timer);
+      void refresh();
+    };
+
+    wake();
+    window.addEventListener("hashchange", wake);
+    document.addEventListener("visibilitychange", wake);
+    return () => {
+      active = false;
+      if (timer !== undefined) window.clearTimeout(timer);
+      window.removeEventListener("hashchange", wake);
+      document.removeEventListener("visibilitychange", wake);
+    };
   }, []);
 
   return (

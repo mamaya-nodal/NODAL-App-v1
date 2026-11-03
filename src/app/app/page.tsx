@@ -1677,7 +1677,7 @@ export default function PrivateAppPage(props: PrivateAppPageProps) {
       if (error instanceof DataReadError) return <ConnectionRecovery subject="data" reference={error.reference} />;
       throw error;
     }),
-    90_000,
+    20_000,
     () => <ConnectionRecovery subject="data" />,
   );
 }

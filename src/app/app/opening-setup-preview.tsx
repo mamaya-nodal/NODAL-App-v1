@@ -222,6 +222,7 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
   useEffect(() => {
     if (!open) return;
     let active = true;
+    let timer: number | undefined;
     const check = async () => {
       try {
         const result = await getOpeningBrokerState();
@@ -230,10 +231,15 @@ export function OpeningSetupPreview({ autoOpen = false, initialOpening = null, l
           setPendingBrokerAccounts(result.pendingAccounts);
         }
       } catch { /* Preserve the current draft and last data during transient failures. */ }
+      finally {
+        if (active) timer = window.setTimeout(check, 10_000);
+      }
     };
     void check();
-    const timer = window.setInterval(check, 5_000);
-    return () => { active = false; window.clearInterval(timer); };
+    return () => {
+      active = false;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, [open]);
 
   async function claimBroker(account: PendingOpeningBrokerAccount) {

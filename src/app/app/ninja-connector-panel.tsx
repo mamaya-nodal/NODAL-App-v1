@@ -80,7 +80,7 @@ export function NinjaConnectorPanel({ allowRevoke = true, compact = false, conne
       {!compact && connector ? (
         <p className="notice">
           Vinculado con NODAL. Cerrar sesión en esta web no interrumpe el envío desde NinjaTrader.
-          {connector.lastSeenAt ? ` Última señal: ${new Date(connector.lastSeenAt).toLocaleString("es-AR")}.` : " Todavía no se recibió la primera señal."}
+          {connector.lastSeenAt ? ` Última señal: ${new Date(connector.lastSeenAt).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}.` : " Todavía no se recibió la primera señal."}
         </p>
       ) : !compact ? (
         <p className="notice">

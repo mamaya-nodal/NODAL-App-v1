@@ -3662,3 +3662,24 @@ vigente sin aprobacion y evidencia suficiente.
 - **Casos comprobados:** las cinco compras de David registradas después de su
   nuevo inicio y las cinco Tradeify de Lore incluidas en su recuperación
   histórica dejan de quedar fuera del resumen.
+
+### APP-252 — Las consultas periódicas no se superponen ni cargan pantallas inactivas
+
+- **Fecha:** 2026-11-03. Una degradación intermitente de Supabase dejó lecturas
+  simples esperando hasta agotar su plazo. Los intervalos fijos de la App
+  iniciaban nuevas consultas antes de que las anteriores terminaran y
+  multiplicaban la presión sobre la base.
+- **Decisión:** cada monitor agenda su próxima lectura únicamente después de
+  finalizar la actual. La supervisión de operaciones se consulta sólo cuando
+  esa sección está visible; las pestañas ocultas y el navegador en segundo
+  plano no generan telemetría de lectura.
+- **Frecuencia:** el estado general del conector se comprueba cada 15 segundos,
+  las operaciones visibles cada 5 segundos y la apertura cada 10 segundos. Las
+  solicitudes de navegador vencen a los 8 segundos para impedir acumulaciones.
+- **Apertura:** el límite de espera de la página privada baja de 90 a 20
+  segundos. Ante una lectura que no concluye se presenta la recuperación
+  explícita, en vez de dejar a todos los usuarios en una carga aparentemente
+  infinita.
+- **Presentación:** la hora de la última señal se renderiza siempre con la zona
+  `America/Argentina/Buenos_Aires` para evitar diferencias de hidratación entre
+  servidor y navegador.
