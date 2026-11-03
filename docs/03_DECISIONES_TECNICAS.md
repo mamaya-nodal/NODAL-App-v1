@@ -3683,3 +3683,17 @@ vigente sin aprobacion y evidencia suficiente.
 - **Presentación:** la hora de la última señal se renderiza siempre con la zona
   `America/Argentina/Buenos_Aires` para evitar diferencias de hidratación entre
   servidor y navegador.
+
+### APP-253 — Una cuenta cerrada conserva su identificación Ninja
+
+- **Fecha:** 2026-11-03. El cierre o la quema desactiva el vínculo operativo,
+  pero no convierte el número real de la cuenta en información descartable.
+- **Presentación:** las cuentas cerradas muestran `external_account_name` desde
+  su vínculo histórico. Sólo la fase, el inventario actual y las detecciones
+  pendientes se calculan usando vínculos activos.
+- **Corrección Lore:** se retiraron únicamente dos cuentas residuales de Gino
+  sin operaciones ni asientos. Las cinco cuentas históricas de David se
+  conservaron porque respaldan el control auditado de US$ 1.018,80.
+- **Conciliación:** la quema de cinco cuentas Gino incorpora US$ 654,26 al saldo
+  broker y libera, en continuidad, el lote posterior de cinco Lucid Lore por
+  -US$ 394,90. La cadena termina en US$ 7.110,02.

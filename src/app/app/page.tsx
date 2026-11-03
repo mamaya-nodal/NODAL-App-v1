@@ -649,7 +649,9 @@ async function renderPrivateAppPage({
     const excludedNinjaAccountNames = new Set(
       (ninjaAccountRegistrationExclusionRows ?? []).map((exclusion) => exclusion.external_account_name),
     );
-    ninjaNamesByAccountId = new Map(activeNinjaLinks.map((link) => [link.account_id, link.external_account_name]));
+    // El nombre externo sigue siendo la identificación auditable de la cuenta
+    // después de su cierre; sólo el estado operativo depende de un vínculo activo.
+    ninjaNamesByAccountId = new Map((ninjaLinkRows ?? []).map((link) => [link.account_id, link.external_account_name]));
     ninjaConnectionNamesByAccountId = new Map(
       (ninjaLinkRows ?? []).map((link) => [link.account_id, link.connection_name]),
     );
