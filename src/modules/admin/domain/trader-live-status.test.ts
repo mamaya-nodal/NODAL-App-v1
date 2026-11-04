@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveTraderLiveStatus } from "./trader-live-status";
 
 const now = new Date("2026-11-02T15:00:00.000Z");
-const currentConnector = { connectorVersion: "0.16", lastSeenAt: "2026-11-02T14:58:30.000Z", status: "active" };
+const currentConnector = { connectorVersion: "0.17", lastSeenAt: "2026-11-02T14:58:30.000Z", status: "active" };
 
 describe("resolveTraderLiveStatus", () => {
   it("identifica los seis estados operativos sin depender de texto visual", () => {

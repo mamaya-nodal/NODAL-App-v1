@@ -80,6 +80,13 @@ Una excepción transitoria de NinjaTrader al cambiar conexiones o cuentas queda
 registrada y se reintenta en el ciclo siguiente, sin bloquear nuevos latidos ni
 obligar a recompilar el complemento para recuperar la señal.
 
+La versión 0.17 corrige la selección del objeto de cuenta cuando NinjaTrader
+publica el mismo número tanto en `Account.All` como en `connection.Accounts`.
+El inventario continúa deduplicado, pero se prioriza la instancia perteneciente
+a la conexión activa, que es la que emite `ExecutionUpdate` y `PositionUpdate`.
+Esto evita que el saldo siga actualizándose mientras las ejecuciones quedan sin
+capturar.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.

@@ -18,7 +18,7 @@ namespace Nodal.NinjaInstaller
 {
     internal static class Program
     {
-        private const string ConnectorVersion = "0.16";
+        private const string ConnectorVersion = "0.17";
         private const string LegacyConfigName = "nodal-ninja-connector.config";
         private const string RuntimeConfigName = "nodal-ninja-connector-v2.config";
         private const string RuntimeDllName = "Nodal.NinjaConnector.dll";
@@ -414,7 +414,7 @@ namespace Nodal.NinjaInstaller
             internal InstallerForm(string pairingCode)
             {
                 this.pairingCode = pairingCode;
-                Text = "NODAL Connector 0.16";
+                Text = "NODAL Connector 0.17";
                 ClientSize = new Size(640, 390);
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
@@ -433,7 +433,7 @@ namespace Nodal.NinjaInstaller
                 card.Controls.Add(NewLabel("NinjaTrader 8 instalado y completamente cerrado.", 18, 38, 530, 22, Color.Silver, 9F, FontStyle.Regular));
 
                 openNinja = new CheckBox { Left = 30, Top = 288, Width = 400, Height = 24, Text = "Abrir NinjaTrader al terminar", Checked = true, ForeColor = Color.WhiteSmoke };
-                install = new Button { Left = 350, Top = 325, Width = 260, Height = 42, Text = "Instalar conector 0.16", BackColor = Color.FromArgb(139, 247, 43), ForeColor = Color.Black, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
+                install = new Button { Left = 350, Top = 325, Width = 260, Height = 42, Text = "Instalar conector 0.17", BackColor = Color.FromArgb(139, 247, 43), ForeColor = Color.Black, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI", 10F, FontStyle.Bold) };
                 install.FlatAppearance.BorderSize = 0;
                 install.Click += InstallClicked;
                 status = NewLabel("Todavia no se modifico ningun archivo.", 30, 330, 300, 34, Color.Silver, 9F, FontStyle.Regular);

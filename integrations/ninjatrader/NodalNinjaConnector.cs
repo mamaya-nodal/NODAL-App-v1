@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.16 (server v2 required)
+// NODAL Ninja Connector v0.17 (server v2 required)
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -231,7 +231,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			}
 		}
 
-		private const string ConnectorVersion = "0.16";
+		private const string ConnectorVersion = "0.17";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10), MaxResponseContentBufferSize = 1024 * 1024 };
@@ -845,13 +845,11 @@ namespace NinjaTrader.NinjaScript.AddOns
 		{
 			// Providers do not expose their inventory consistently: some accounts only
 			// appear in Account.All while others only appear in connection.Accounts.
-			// Merge both read-only views and keep only accounts whose own connection is
-			// currently active. This prevents either provider behaviour from hiding a
-			// connected broker account.
+			// Prefer the instance owned by the active connection because that is the
+			// object that emits ExecutionUpdate and PositionUpdate. Account.All can
+			// expose a second object with the same account name whose balances update
+			// but whose execution callbacks never fire.
 			List<Account> accounts = new List<Account>();
-			lock (Account.All)
-				accounts.AddRange(Account.All.Where(IsConnectedAccount));
-
 			List<Connection> connections;
 			lock (Connection.Connections)
 				connections = Connection.Connections
@@ -864,6 +862,11 @@ namespace NinjaTrader.NinjaScript.AddOns
 				lock (connection.Accounts)
 					accounts.AddRange(connection.Accounts.Where(IsConnectedAccount));
 			}
+
+			// Keep the global collection only as a fallback for providers that do not
+			// publish every connected account through connection.Accounts.
+			lock (Account.All)
+				accounts.AddRange(Account.All.Where(IsConnectedAccount));
 
 			return accounts
 				.GroupBy(

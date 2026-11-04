@@ -3697,3 +3697,20 @@ vigente sin aprobacion y evidencia suficiente.
 - **Conciliación:** la quema de cinco cuentas Gino incorpora US$ 654,26 al saldo
   broker y libera, en continuidad, el lote posterior de cinco Lucid Lore por
   -US$ 394,90. La cadena termina en US$ 7.110,02.
+
+### APP-254 — El conector prioriza la instancia activa de cada cuenta Ninja
+
+- **Fecha:** 2026-11-04.
+- **Hallazgo:** algunos proveedores publican el mismo número de cuenta mediante
+  `Account.All` y `connection.Accounts` usando objetos diferentes. El conector
+  0.16 deduplicaba antes de suscribirse y elegía primero el objeto global. Ese
+  objeto podía actualizar saldos sin emitir `ExecutionUpdate` ni
+  `PositionUpdate`, dejando operaciones sin telemetría aunque inventario y
+  heartbeat continuaran activos.
+- **Decisión:** la versión 0.17 conserva ambas fuentes para no ocultar cuentas,
+  pero al deduplicar prioriza la instancia perteneciente a la conexión activa.
+  `Account.All` queda como respaldo únicamente cuando el proveedor no expone la
+  cuenta en `connection.Accounts`.
+- **Alcance:** se publica una única versión 0.17 para instalaciones personales y
+  de identidades. El protocolo del servidor no cambia y mantiene compatibilidad
+  con conectores anteriores durante la actualización.

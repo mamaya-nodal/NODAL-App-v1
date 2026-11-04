@@ -21,12 +21,12 @@ foreach ($required in @($sourcePath, $installerPath, $csc, (Join-Path $ninjaBin 
 New-Item -ItemType Directory -Force -Path $buildRoot, $outputRoot, $downloadRoot | Out-Null
 $runtimeSourcePath = Join-Path $buildRoot "NodalNinjaConnector.Runtime.cs"
 $runtimeDllPath = Join-Path $buildRoot "Nodal.NinjaConnector.dll"
-$outputExePath = Join-Path $outputRoot "NODAL-Conector-0.16.exe"
+$outputExePath = Join-Path $outputRoot "NODAL-Conector-0.17.exe"
 $downloadExePath = Join-Path $downloadRoot "NODAL-Conector.exe"
 
 $runtimeSource = Get-Content -LiteralPath $sourcePath -Raw
 $classBefore = 'public class NodalNinjaConnector : AddOnBase'
-$classAfter = 'public class NodalNinjaConnectorV016 : AddOnBase'
+$classAfter = 'public class NodalNinjaConnectorV017 : AddOnBase'
 $configBefore = 'private const string ConfigFileName = "nodal-ninja-connector.config";'
 $configAfter = 'private const string ConfigFileName = "nodal-ninja-connector-v2.config";'
 if ([regex]::Matches($runtimeSource, [regex]::Escape($classBefore)).Count -ne 1) { throw "No se encontro exactamente una clase del conector para transformar." }
