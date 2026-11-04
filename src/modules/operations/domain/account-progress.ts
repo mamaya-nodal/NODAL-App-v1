@@ -101,7 +101,10 @@ export function resolveCurrentAccountProgress(input: Readonly<{
     : recordedTrades;
   const baselineCompletedTrades = input.baseline?.phase === phase ? input.baseline.completedTradeDays : 0;
   const completedTrades = baselineCompletedTrades + observedTrades;
-  return { phase, tradeDay: completedTrades + 1 };
+  // La tarjeta expresa el último día efectivamente operado. Una cuenta todavía
+  // virgen se conserva en Día 1; después, no se adelanta visualmente al día
+  // siguiente hasta que ese trade exista.
+  return { phase, tradeDay: Math.max(1, completedTrades) };
 }
 
 export function accountProgressLabel(progress: AccountProgress): string {

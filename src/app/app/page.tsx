@@ -462,7 +462,7 @@ async function renderPrivateAppPage({
         supabase
           .from("daily_controls")
           .select(
-            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, allocation_reason, source, source_event_key, created_at, wallet_id, transfer_fee_cents",
+            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, allocation_reason, source, source_event_key, created_at, wallet_id, transfer_fee_cents, phase",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
@@ -863,6 +863,7 @@ async function renderPrivateAppPage({
         left.role === right.role ? left.accountReference - right.accountReference : left.role === "leader" ? -1 : 1,
       ),
       operatedOn: control.operated_on,
+      phase: control.phase,
     }));
     const historicalPeriodsById = new Map(
       selection.workspace.periods.map((period) => [period.id, period] as const),

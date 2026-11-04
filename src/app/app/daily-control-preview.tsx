@@ -60,6 +60,7 @@ type PreviewRow = {
     amountInCents: number;
     role: "leader" | "replica";
   }>;
+  phase?: string | null;
   valueInCents: number;
 };
 
@@ -687,6 +688,21 @@ export function DailyControlPreview({
         manualAccounts={manualCoverageAccounts}
         openingCutoffAt={openingCutoffAt}
         propAccountNames={propAccountNames}
+        recoveredReconciliations={rows
+          .filter((row) => row.kind === "balance_update" && row.participants.length > 0)
+          .map((row) => ({
+            controlId: row.controlId,
+            operatedOn: row.operatedOn ?? currentOperationalDay(),
+            participants: row.participants.map((participant) => {
+              const account = accounts.find((candidate) => candidate.id === participant.accountId);
+              return {
+                accountName: account?.externalName ?? `Cuenta ${participant.accountReference}`,
+                allocatedResultInCents: participant.amountInCents,
+              };
+            }),
+            phase: row.phase ?? null,
+            resultInCents: row.operatingResultInCents ?? 0,
+          }))}
         todayOperationCount={rows.filter((row) => row.kind === "balance_update" && row.operatedOn === currentOperationalDay()).length}
         todayResultInCents={rows
           .filter((row) => row.kind === "balance_update" && row.operatedOn === currentOperationalDay())

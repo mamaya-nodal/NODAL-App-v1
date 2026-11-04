@@ -3726,3 +3726,20 @@ vigente sin aprobacion y evidencia suficiente.
   vigente; enviar el instalador por sí solo no la oculta.
 - **Titular:** conserva el popup obligatorio existente al abrir la App. No se
   duplica ese aviso dentro de Configuración.
+
+### APP-256 — El día visible es el último día operado y las recuperaciones son conciliaciones
+
+- **Fecha:** 2026-11-04.
+- **Numeración:** `completed_trade_days` representa únicamente los días
+  completados antes del primer asiento disponible. Los controles contables del
+  período se suman una sola vez. La tarjeta muestra el último día efectivamente
+  operado y conserva `Día 1` como mínimo para una cuenta aún sin trades.
+- **Corrección Lore:** las cinco cuentas de David poseen dos controles y se
+  muestran en Evaluación Día 2; las cinco de Gino poseen un control y se
+  muestran en Evaluación Día 1. Se elimina el doble cómputo que producía Día 5
+  y Día 3 respectivamente.
+- **Historial:** una conciliación recuperada desde inventarios y saldos, aunque
+  no tenga un lote técnico porque el conector no emitió ejecuciones, aparece en
+  el historial junto con sus cuentas y la cobertura distribuida. La interfaz la
+  identifica como recuperada y no inventa instrumentos, posiciones ni tiempos
+  técnicos inexistentes.

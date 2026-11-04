@@ -56,7 +56,7 @@ describe("progreso operativo de una cuenta", () => {
       operationalState: "Evaluation",
       payouts: [],
     });
-    expect(progress).toEqual({ phase: "Evaluacion", tradeDay: 3 });
+    expect(progress).toEqual({ phase: "Evaluacion", tradeDay: 2 });
   });
 
   it("refleja un trade técnico cerrado aunque su conciliación siga pendiente", () => {
@@ -65,7 +65,7 @@ describe("progreso operativo de una cuenta", () => {
       observedClosedTradeCount: 1,
       operationalState: "Evaluation",
       payouts: [],
-    })).toEqual({ phase: "Evaluacion", tradeDay: 2 });
+    })).toEqual({ phase: "Evaluacion", tradeDay: 1 });
   });
 
   it("cuenta una cobertura con varias entradas como un solo trade", () => {
@@ -74,7 +74,7 @@ describe("progreso operativo de una cuenta", () => {
       operationalState: "Evaluation",
       payouts: [],
     });
-    expect(progress.tradeDay).toBe(2);
+    expect(progress.tradeDay).toBe(1);
   });
 
   it("no limita Evaluación a cuatro trades ni una vuelta a seis", () => {
@@ -88,8 +88,8 @@ describe("progreso operativo de una cuenta", () => {
       operationalState: "Funded",
       payouts: [],
     });
-    expect(evaluation.tradeDay).toBe(21);
-    expect(funded.tradeDay).toBe(9);
+    expect(evaluation.tradeDay).toBe(20);
+    expect(funded.tradeDay).toBe(8);
   });
 
   it("inicia Primera vuelta Día 1 al pasar a Funded", () => {
@@ -121,7 +121,7 @@ describe("progreso operativo de una cuenta", () => {
       entries: [entry("second-1", "Segunda vuelta")],
       operationalState: "Live",
       payouts: [],
-    })).toEqual({ phase: "Segunda vuelta", tradeDay: 2 });
+    })).toEqual({ phase: "Segunda vuelta", tradeDay: 1 });
   });
 
   it("continúa desde el día declarado al registrar una cuenta avanzada", () => {
@@ -130,7 +130,7 @@ describe("progreso operativo de una cuenta", () => {
       entries: [entry("trade-4", "Cuarta vuelta")],
       operationalState: "Funded",
       payouts: [],
-    })).toEqual({ phase: "Cuarta vuelta", tradeDay: 5 });
+    })).toEqual({ phase: "Cuarta vuelta", tradeDay: 4 });
   });
 
   it("refleja como día siguiente una operación técnica aún pendiente de conciliación", () => {
@@ -140,6 +140,6 @@ describe("progreso operativo de una cuenta", () => {
       observedClosedTradeCount: 1,
       operationalState: "Funded",
       payouts: [],
-    })).toEqual({ phase: "Cuarta vuelta", tradeDay: 5 });
+    })).toEqual({ phase: "Cuarta vuelta", tradeDay: 4 });
   });
 });

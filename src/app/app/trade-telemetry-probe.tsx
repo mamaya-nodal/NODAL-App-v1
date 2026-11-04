@@ -67,8 +67,20 @@ type Props = Readonly<{
   manualAccounts?: readonly ManualCoverageAccount[];
   openingCutoffAt?: string | null;
   propAccountNames?: readonly string[];
+  recoveredReconciliations?: readonly RecoveredReconciliationRow[];
   todayOperationCount?: number;
   todayResultInCents?: number;
+}>;
+
+export type RecoveredReconciliationRow = Readonly<{
+  controlId: string;
+  operatedOn: string;
+  participants: readonly Readonly<{
+    accountName: string;
+    allocatedResultInCents: number;
+  }>[];
+  phase: string | null;
+  resultInCents: number;
 }>;
 
 export type ManualCoverageAccount = Readonly<{
@@ -308,6 +320,7 @@ export function TradeTelemetryProbe({
   manualAccounts = [],
   openingCutoffAt = null,
   propAccountNames = [],
+  recoveredReconciliations = [],
   todayOperationCount = 0,
   todayResultInCents = 0,
 }: Props) {
@@ -318,6 +331,8 @@ export function TradeTelemetryProbe({
   const currentEvents = useMemo(() => observedAfterOpening(events, openingCutoffAt), [events, openingCutoffAt]);
   const currentOperations = useMemo(() => happenedAfterOpening(operations, openingCutoffAt), [operations, openingCutoffAt]);
   const currentBatches = useMemo(() => happenedAfterOpening(batches, openingCutoffAt), [batches, openingCutoffAt]);
+  const technicalControlIds = new Set(currentBatches.flatMap((batch) => batch.daily_control_id ? [batch.daily_control_id] : []));
+  const visibleRecoveredReconciliations = recoveredReconciliations.filter((row) => !technicalControlIds.has(row.controlId));
   const probes = useMemo(() => buildNinjaOperationProbe(currentEvents, new Date()), [currentEvents]);
   const visibleProbes = probes.filter((probe) =>
     probe.status !== "waiting" || currentOperations.some((operation) =>
@@ -340,6 +355,16 @@ export function TradeTelemetryProbe({
     const key = batch.opened_at.slice(0, 7);
     reconciliationMonths.set(key, [...(reconciliationMonths.get(key) ?? []), batch]);
   }
+  const recoveredReconciliationMonths = new Map<string, RecoveredReconciliationRow[]>();
+  for (const row of visibleRecoveredReconciliations) {
+    const key = row.operatedOn.slice(0, 7);
+    if (!historyMonthKeys.has(key)) continue;
+    recoveredReconciliationMonths.set(key, [...(recoveredReconciliationMonths.get(key) ?? []), row]);
+  }
+  const reconciliationMonthKeys = [...new Set([
+    ...reconciliationMonths.keys(),
+    ...recoveredReconciliationMonths.keys(),
+  ])].sort((left, right) => right.localeCompare(left));
   const automationBatches = currentBatches.filter((batch) => batch.accounting_status !== "committed").slice(0, 30);
   const activeGroups = [
     activeProps.length > 0 ? { label: "Cuentas prop", probes: activeProps } : null,
@@ -554,15 +579,18 @@ export function TradeTelemetryProbe({
         </>
       )}
 
-      {reconciliationMonths.size > 0 && (
+      {reconciliationMonthKeys.length > 0 && (
         <div className="demo-history real-operation-history">
-          <div className="demo-group-title"><h3>Historial</h3><span>{[...reconciliationMonths.values()].reduce((total, month) => total + month.length, 0)}</span></div>
-          {[...reconciliationMonths.entries()].sort(([left], [right]) => right.localeCompare(left)).map(([month, monthBatches], monthIndex) => (
+          <div className="demo-group-title"><h3>Historial</h3><span>{reconciliationMonthKeys.reduce((total, month) => total + (reconciliationMonths.get(month)?.length ?? 0) + (recoveredReconciliationMonths.get(month)?.length ?? 0), 0)}</span></div>
+          {reconciliationMonthKeys.map((month, monthIndex) => {
+            const monthBatches = reconciliationMonths.get(month) ?? [];
+            const monthRecovered = recoveredReconciliationMonths.get(month) ?? [];
+            return (
             <details className="demo-period-history operations-disclosure-card" key={month} open={monthIndex === 0}>
               <summary>
                 <span>{monthLabel(`${month}-01T12:00:00Z`)}</span>
-                <small>{monthBatches.length} conciliaciones</small>
-                <strong>{formatMoney(monthBatches.reduce((total, batch) => total + (moneyNumber(batch.broker_result_cents) ?? 0), 0) / 100)}</strong>
+                <small>{monthBatches.length + monthRecovered.length} conciliaciones</small>
+                <strong>{formatMoney((monthBatches.reduce((total, batch) => total + (moneyNumber(batch.broker_result_cents) ?? 0), 0) + monthRecovered.reduce((total, row) => total + row.resultInCents, 0)) / 100)}</strong>
                 <i aria-hidden="true" />
               </summary>
               <div>
@@ -582,9 +610,26 @@ export function TradeTelemetryProbe({
                     </div>
                   </details>
                 ))}
+                {monthRecovered.map((row, index) => (
+                  <details className="demo-history-day" key={row.controlId} open={monthIndex === 0 && monthBatches.length === 0 && index === 0}>
+                    <summary>
+                      <span>{formatHistoryMoment(`${row.operatedOn}T12:00:00-03:00`, row.operatedOn)}</span>
+                      <small>{row.participants.map((participant) => participant.accountName).join(" + ")}</small>
+                      <strong className={row.resultInCents < 0 ? "negative" : ""}>{formatMoney(row.resultInCents / 100)}</strong>
+                      <i aria-hidden="true" />
+                    </summary>
+                    <div>
+                      <p><span>Conciliación recuperada · {phaseLabel(row.phase)}</span><small>Sin telemetría de ejecución disponible</small><strong>{row.participants.length} cuentas</strong></p>
+                      {row.participants.map((participant) => (
+                        <p key={`${row.controlId}-${participant.accountName}`}><span>{participant.accountName}</span><small>Cobertura asignada</small><strong>{formatMoney(participant.allocatedResultInCents / 100)}</strong></p>
+                      ))}
+                    </div>
+                  </details>
+                ))}
               </div>
             </details>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
