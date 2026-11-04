@@ -3714,3 +3714,15 @@ vigente sin aprobacion y evidencia suficiente.
 - **Alcance:** se publica una única versión 0.17 para instalaciones personales y
   de identidades. El protocolo del servidor no cambia y mantiene compatibilidad
   con conectores anteriores durante la actualización.
+
+### APP-255 — Las identidades muestran la actualización en su propia tarjeta
+
+- **Fecha:** 2026-11-04.
+- **Presentación:** cada tarjeta de identidad muestra una marca compacta
+  `NUEVA` únicamente cuando su propio conector está por debajo de la versión
+  publicada. No se agrega un banner general para las identidades.
+- **Acción:** la actualización de una identidad conserva el envío por correo
+  desde su tarjeta. La marca desaparece cuando NinjaTrader transmite la versión
+  vigente; enviar el instalador por sí solo no la oculta.
+- **Titular:** conserva el popup obligatorio existente al abrir la App. No se
+  duplica ese aviso dentro de Configuración.

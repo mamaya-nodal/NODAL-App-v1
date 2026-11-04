@@ -18,6 +18,7 @@ import type {
   IdentityOperationalStatus,
   IdentitySummary,
 } from "@/modules/identities/domain/identity-summary";
+import { connectorVersionState, LATEST_NINJA_CONNECTOR_VERSION } from "@/modules/ninja/domain/connector-version";
 
 import {
   assignIdentityAccount,
@@ -265,6 +266,10 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
           const installationAvailable = installation !== null && installation.status !== "failed";
           const signalEnabled = signalStates[identity.id] ?? true;
           const signalAvailable = connector !== null;
+          const connectorUpdateAvailable = connector !== null && connectorVersionState({
+            installedSourceVersion: connector.installedSourceVersion,
+            runningVersion: connector.connectorVersion,
+          }) !== "current";
           const liveAccounts = identity.accounts.filter((account) => account.state !== "closed").length;
           const closedAccounts = identity.accounts.filter((account) => account.state === "closed").length;
           const degradation = deteriorationLabel(identity);
@@ -291,7 +296,12 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
 
               <div className="identity-connector-row">
                 <span>
-                  <small>NinjaTrader</small>
+                  <small className="identity-connector-product">
+                    NinjaTrader
+                    {connectorUpdateAvailable ? (
+                      <b className="new-update-badge" title={`Actualización ${LATEST_NINJA_CONNECTOR_VERSION} disponible`}>NUEVA</b>
+                    ) : null}
+                  </small>
                   <strong>{connector?.isOnline
                     ? "Conectado"
                     : connector

@@ -4274,6 +4274,7 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .configuration-view { min-width: 0; color: var(--app-title); }
 .configuration-view .workspace-section-heading { justify-content: space-between; gap: 24px; }
 .configuration-view .workspace-section-heading > p { max-width: 440px; margin: 0; color: var(--app-subtle); font-size: 12px; text-align: right; }
+.new-update-badge { display: inline-flex; min-height: 18px; align-items: center; padding: 2px 7px; border-radius: 5px; background: #b9ff20; color: #142006; font-size: 9px; font-style: italic; font-weight: 950; letter-spacing: .02em; line-height: 1; white-space: nowrap; }
 .addon-card { display: grid; gap: 18px; padding: 24px; border: 1px solid var(--app-border); border-radius: 18px; background: var(--app-panel); }
 .addon-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
 .addon-card-heading h3 { margin: 2px 0 5px; font-size: 25px; letter-spacing: -1px; }
@@ -4390,6 +4391,7 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-connector-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; margin: 12px 0; padding: 12px; border: 1px solid var(--app-border); border-radius: 11px; }
 .identity-connector-row > span { display: grid; gap: 4px; }
 .identity-connector-row small { color: var(--app-subtle); font-size: 10px; }
+.identity-connector-product { display: flex; align-items: center; gap: 7px; }
 .identity-connector-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
 .identity-connector-actions > .primary-action { width: auto; min-height: 34px; padding: 7px 11px; border-radius: 9px; font-size: 10px; }
 .identity-installation-resend { min-height: 34px; padding: 7px 11px; border: 1px solid #a3dc78; border-radius: 9px; background: #83e936; box-shadow: 0 8px 20px rgb(131 233 54 / 16%); color: #102008; cursor: pointer; font: inherit; font-size: 10px; font-weight: 850; }

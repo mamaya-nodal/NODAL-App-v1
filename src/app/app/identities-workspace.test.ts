@@ -37,8 +37,16 @@ describe("identity connector delivery", () => {
       lastSeenAt: "2026-10-29T19:05:31Z", pairedAt: "2026-10-15T17:23:11Z", status: "active" };
     const markup = render(identity, true, [connector]);
     expect(markup).toContain("Enviar actualización");
+    expect(markup).toContain("NUEVA");
+    expect(markup).toContain("Actualización 0.17 disponible");
     expect(markup).toContain("Sólo desvincular");
     expect(markup).not.toContain("Descarga local");
+  });
+  it("does not show the connector update badge for the current identity version", () => {
+    const connector: NinjaConnectorStatus = { connectorId: "connector", connectorVersion: "0.17",
+      identityId: identity.id, installedSourceVersion: "0.17", isOnline: true,
+      lastSeenAt: "2026-11-04T19:05:31Z", pairedAt: "2026-10-15T17:23:11Z", status: "active" };
+    expect(render(identity, true, [connector])).not.toContain("Actualización 0.17 disponible");
   });
   it("does not offer installation delivery for an unapproved identity", () => {
     expect(render({ ...identity, onboardingStatus: "inactive" })).not.toContain("Enviar instalación");
