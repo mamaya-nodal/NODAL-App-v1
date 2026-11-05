@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { currentAppRelease } from "@/lib/app-release";
 import { requireNodalAdmin } from "@/modules/admin/server/admin-access";
+import { canUseNodalAgentPilot } from "@/modules/agent/domain/pilot-access";
 import { AdminWorkspace } from "./admin-workspace";
 
 export default async function AdminLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -20,6 +21,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
 
   return (
     <AdminWorkspace
+      agentPilotEnabled={canUseNodalAgentPilot(profile?.email ?? user?.email)}
       avatarUrl={typeof user?.user_metadata?.avatar_url === "string"
         ? user.user_metadata.avatar_url
         : typeof user?.user_metadata?.picture === "string"

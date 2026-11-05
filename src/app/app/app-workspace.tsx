@@ -19,6 +19,7 @@ import {
 } from "./workspace-user-menu";
 import { MimicalUpdateNotice } from "./mimical-update-notice";
 import { AppPresenceMonitor } from "./app-presence-monitor";
+import { NodalAgentPilot } from "./nodal-agent-pilot";
 
 export type WorkspaceView = "home" | "accounts" | "operations" | "accounting" | "identities" | "configuration";
 
@@ -44,6 +45,7 @@ const legacyViews: Readonly<Record<string, WorkspaceView>> = {
 
 type Props = Readonly<{
   administrationScope: AdministrationScope;
+  agentPilotEnabled?: boolean;
   authorized: boolean;
   avatarUrl?: string | null;
   children: ReactNode;
@@ -80,6 +82,7 @@ function subscribe(callback: () => void) {
 
 export function AppWorkspace({
   administrationScope,
+  agentPilotEnabled = false,
   authorized,
   avatarUrl,
   children,
@@ -207,6 +210,7 @@ export function AppWorkspace({
           ))}
         </nav>
       </div>
+      {agentPilotEnabled ? <NodalAgentPilot /> : null}
     </main>
   );
 }

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { resolveWithDeadline } from "@/lib/async/resolve-with-deadline";
 import { currentAppRelease } from "@/lib/app-release";
 import { createClient } from "@/lib/supabase/server";
+import { canUseNodalAgentPilot } from "@/modules/agent/domain/pilot-access";
 import { readWithRetry, reportReadFailure } from "@/lib/supabase/read-with-retry";
 import { DataReadError, requireReadData, requireSuccessfulReads } from "@/lib/supabase/require-read";
 import { ConnectionRecovery } from "./connection-recovery";
@@ -1339,6 +1340,7 @@ async function renderPrivateAppPage({
   return (
     <AppWorkspace
       administrationScope={administrationScope}
+      agentPilotEnabled={canUseNodalAgentPilot(userEmail)}
       authorized={allowed}
       avatarUrl={typeof claimsData?.claims.user_metadata?.avatar_url === "string" ? claimsData.claims.user_metadata.avatar_url : null}
       configurationEnabled={nodalUser?.configuration_enabled === true}

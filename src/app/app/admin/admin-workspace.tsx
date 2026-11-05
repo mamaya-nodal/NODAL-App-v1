@@ -11,8 +11,10 @@ import {
   WorkspaceUserMenu,
   type WorkspaceVersionInfo,
 } from "../workspace-user-menu";
+import { NodalAgentPilot } from "../nodal-agent-pilot";
 
 type Props = Readonly<{
+  agentPilotEnabled?: boolean;
   avatarUrl?: string | null;
   children: ReactNode;
   configurationEnabled: boolean;
@@ -21,7 +23,7 @@ type Props = Readonly<{
   versionInfo: WorkspaceVersionInfo;
 }>;
 
-export function AdminWorkspace({ avatarUrl, children, configurationEnabled, scope = "master", userLabel, versionInfo }: Props) {
+export function AdminWorkspace({ agentPilotEnabled = false, avatarUrl, children, configurationEnabled, scope = "master", userLabel, versionInfo }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const demo = scope === "master" && searchParams.get("demo") === "1";
@@ -71,6 +73,7 @@ export function AdminWorkspace({ avatarUrl, children, configurationEnabled, scop
           <Link href="/app#inicio"><WorkspaceIcon name="home" />Mi espacio</Link>
         </nav>
       </div>
+      {agentPilotEnabled ? <NodalAgentPilot /> : null}
     </main>
   );
 }
