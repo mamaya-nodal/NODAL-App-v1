@@ -6,12 +6,10 @@ import { inspectNodalAdminAccess } from "@/modules/admin/server/admin-access";
 
 export async function POST(request: Request) {
   const access = await inspectNodalAdminAccess();
-  if (access.status !== "allowed") {
-    return NextResponse.json({ message: "La auditoría requiere una sesión de Admin Master con MFA." }, { status: 403 });
-  }
-
-  const { data: { user } } = await access.supabase.auth.getUser();
-  if (!canUseNodalAgentPilot(user?.email)) {
+  const { data: claimsData } = await access.supabase.auth.getClaims();
+  const userId = claimsData?.claims.sub;
+  const userEmail = typeof claimsData?.claims.email === "string" ? claimsData.claims.email : null;
+  if (!userId || !canUseNodalAgentPilot(userEmail)) {
     return NextResponse.json({ message: "Nodalito todavía está habilitado únicamente en el piloto privado." }, { status: 403 });
   }
 
@@ -27,7 +25,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await askNodalito({ question, role: "master", safetyUserId: access.userId });
+    // Las guías se pueden consultar desde la app personal. Los datos reales del
+    // Master Control sólo se habilitan después de verificar MFA.
+    const role = access.status === "allowed" ? "master" : "trader";
+    const result = await askNodalito({ question, role, safetyUserId: userId });
     return NextResponse.json({
       answer: {
         findings: result.mode === "audit" ? result.findings : [],
