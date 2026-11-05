@@ -18,6 +18,12 @@ const commonDocuments: readonly NodalitoKnowledgeDocument[] = NODALITO_GUIDES.ma
 
 const protectedDocuments: readonly NodalitoKnowledgeDocument[] = [
   {
+    audience: ["trader", "admin", "master"],
+    content: "El correo de entrega de una identidad es sólo un destino logístico para recibir el instalador o actualización del conector y MIMICAL. No es una cuenta de acceso ni identifica a la identidad. El mismo correo puede usarse en varias identidades del mismo titular. Cada identidad conserva de todos modos su propia tarjeta, código de vinculación y conector.",
+    id: "policy:identity-delivery-email",
+    title: "Correo de entrega de identidades",
+  },
+  {
     audience: ["master"],
     content: "La auditoría global puede consultar facturación agregada, conectores, conciliaciones y payouts de todos los usuarios. Esta información nunca se incorpora al contexto de traders ni administradores de mesa.",
     id: "policy:master-audit",

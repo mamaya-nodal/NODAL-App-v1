@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { Fragment, type FormEvent, useEffect, useRef, useState } from "react";
 
 import type { NodalitoFinding } from "@/modules/agent/domain/deterministic-audit";
 import {
@@ -30,6 +30,19 @@ const suggestedQuestions = [
   "¿Cómo registro un payout?",
   "Revisá los problemas actuales",
 ] as const;
+
+function renderNodalitoText(text: string) {
+  return text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\(\/app[^)]*\))/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    const link = /^\[([^\]]+)\]\((\/app[^)]*)\)$/.exec(part);
+    if (link) {
+      return <a href={link[2]} key={index}>{link[1]}</a>;
+    }
+    return <Fragment key={index}>{part}</Fragment>;
+  });
+}
 
 export function NodalAgentPilot() {
   const [activeFunction, setActiveFunction] = useState<AgentFunction>("nodalito");
@@ -142,7 +155,7 @@ export function NodalAgentPilot() {
               <p className={styles.pilotNotice}>Guías y auditorías determinísticas · sin reparaciones automáticas</p>
               {messages.map((message) => (
                 <article className={message.role === "user" ? styles.userMessage : styles.agentMessage} key={message.id}>
-                  <p>{message.text}</p>
+                  <p>{renderNodalitoText(message.text)}</p>
                   {message.findings?.length ? (
                     <div className={styles.findings}>
                       {message.findings.slice(0, 8).map((finding) => (

@@ -226,6 +226,13 @@
   margin: 0;
 }
 
+.agentMessage a {
+  color: var(--brand);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .agentMessage {
   align-self: flex-start;
   border: 1px solid var(--line);
