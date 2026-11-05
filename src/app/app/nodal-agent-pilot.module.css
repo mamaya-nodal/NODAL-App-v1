@@ -14,6 +14,10 @@
   pointer-events: auto;
 }
 
+.root[data-open="true"] .launcher {
+  display: none;
+}
+
 .launcher {
   position: relative;
   width: 76px;
