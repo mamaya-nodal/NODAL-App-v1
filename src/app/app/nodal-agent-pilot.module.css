@@ -69,21 +69,9 @@
   transform: scale(1.72);
 }
 
-.statusDot {
-  position: absolute;
-  top: 4px;
-  right: 5px;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--surface);
-  border-radius: 50%;
-  background: var(--brand);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--brand) 70%, transparent);
-}
-
 .panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   width: min(370px, calc(100vw - 32px));
   height: min(540px, calc(100vh - 128px));
   overflow: hidden;
@@ -156,6 +144,50 @@
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
+}
+
+.functions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 42%, var(--surface));
+}
+
+.functions button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.functions button[aria-current="page"] {
+  border-color: color-mix(in srgb, var(--brand) 62%, var(--line));
+  background: color-mix(in srgb, var(--brand-soft) 72%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+
+.functions strong {
+  overflow: hidden;
+  font-size: .78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.functions span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .messages {
@@ -243,6 +275,50 @@
 .composer button:disabled {
   cursor: default;
   opacity: .38;
+}
+
+.rutyxPlaceholder {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 9px;
+  padding: 28px;
+  text-align: center;
+}
+
+.rutyxPlaceholder > span {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid color-mix(in srgb, var(--brand) 52%, var(--line));
+  border-radius: 16px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.rutyxPlaceholder p {
+  max-width: 280px;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.rutyxPlaceholder small {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-soft) 66%, transparent);
+  color: var(--muted);
+}
+
+.integrationFooter {
+  padding: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: .76rem;
+  text-align: center;
 }
 
 @keyframes nodalbot-float {
