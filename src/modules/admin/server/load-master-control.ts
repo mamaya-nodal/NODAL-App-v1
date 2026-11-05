@@ -57,6 +57,11 @@ export type MasterUserOperationalDetail = Readonly<{
   alerts: readonly MasterUserReconciliationAlert[];
   floatingInCents: number;
   lastOperatedOn: string | null;
+  pendingPayouts?: readonly Readonly<{
+    amountInCents: number;
+    approvedOn: string;
+    id: string;
+  }>[];
   performance: readonly Readonly<{ amount: number; label: string }>[];
 }>;
 
@@ -282,7 +287,7 @@ export async function loadMasterControl(
       : Promise.resolve({ data: [], error: null }),
     accountIds.length
       ? db.from("funding_withdrawals")
-        .select("account_id,phase,approved_on").eq("is_active", true).in("account_id", accountIds)
+        .select("id,account_id,phase,approved_on,amount_cents,collected_on").eq("is_active", true).in("account_id", accountIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (linksResult.error || assignmentsResult.error || entriesResult.error || payoutsResult.error) {
@@ -403,6 +408,13 @@ export async function loadMasterControl(
       alerts,
       floatingInCents: deskData.floatingByUser[person.id] ?? 0,
       lastOperatedOn,
+      pendingPayouts: userAccounts.flatMap((account) => (payoutsByAccount.get(account.id) ?? [])
+        .filter((payout) => !payout.collected_on)
+        .map((payout) => ({
+          amountInCents: Number(payout.amount_cents),
+          approvedOn: payout.approved_on,
+          id: payout.id,
+        }))),
       performance: reportingPeriodOverviews.map((snapshot) => ({
         amount: snapshot.overview.people.find((candidate) => candidate.id === person.id)?.gross ?? 0,
         label: snapshot.month.slice(0, 7),

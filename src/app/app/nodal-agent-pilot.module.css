@@ -221,6 +221,11 @@
   font-size: .86rem;
 }
 
+.agentMessage > p,
+.userMessage > p {
+  margin: 0;
+}
+
 .agentMessage {
   align-self: flex-start;
   border: 1px solid var(--line);
@@ -234,6 +239,100 @@
   background: var(--brand);
   color: var(--brand-contrast);
 }
+
+.quickQuestions,
+.guideDirectory {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+}
+
+.quickQuestions button,
+.guideDirectory button {
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--brand-soft));
+  color: var(--ink);
+  font: inherit;
+  font-size: .75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quickQuestions button:hover,
+.guideDirectory button:hover {
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
+}
+
+.quickQuestions .allGuidesButton {
+  border-style: dashed;
+  color: var(--brand);
+  text-align: center;
+}
+
+.guideDirectory {
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--paper) 56%, var(--surface));
+}
+
+.guideAnswer {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.guideAnswer ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: .76rem;
+}
+
+.guideAnswer a {
+  justify-self: start;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  font-size: .72rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.thinking {
+  align-self: flex-start;
+  color: var(--muted);
+  font-size: .74rem;
+}
+
+.findings {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.findings > div {
+  display: grid;
+  gap: 3px;
+  padding: 8px 9px;
+  border-left: 3px solid var(--muted);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper) 55%, var(--surface));
+}
+
+.findings > div[data-severity="critical"] { border-left-color: #ef7b68; }
+.findings > div[data-severity="attention"] { border-left-color: #e6b95c; }
+.findings > div[data-severity="info"] { border-left-color: var(--brand); }
+.findings strong { font-size: .72rem; }
+.findings span,
+.findings small { color: var(--muted); font-size: .68rem; line-height: 1.35; }
 
 .composer {
   display: grid;
