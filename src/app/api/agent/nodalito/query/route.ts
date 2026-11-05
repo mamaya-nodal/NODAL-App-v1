@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { canUseNodalAgentPilot } from "@/modules/agent/domain/pilot-access";
 import { askNodalito, NodalitoConfigurationError } from "@/modules/agent/server/openai-nodalito";
+import { runPersonalDiagnostic } from "@/modules/agent/server/run-personal-diagnostic";
 import { inspectNodalAdminAccess } from "@/modules/admin/server/admin-access";
 
 export async function POST(request: Request) {
@@ -14,9 +15,18 @@ export async function POST(request: Request) {
   }
 
   let question = "";
+  let history: Array<{ role: "assistant" | "user"; text: string }> = [];
   try {
-    const body = await request.json() as { question?: unknown };
+    const body = await request.json() as { history?: unknown; question?: unknown };
     question = typeof body.question === "string" ? body.question.trim() : "";
+    if (Array.isArray(body.history)) {
+      history = body.history.slice(-8).flatMap((item) => {
+        if (!item || typeof item !== "object") return [];
+        const candidate = item as { role?: unknown; text?: unknown };
+        if ((candidate.role !== "assistant" && candidate.role !== "user") || typeof candidate.text !== "string") return [];
+        return [{ role: candidate.role, text: candidate.text.trim().slice(0, 1200) }];
+      });
+    }
   } catch {
     return NextResponse.json({ message: "La consulta no tiene un formato válido." }, { status: 400 });
   }
@@ -28,10 +38,14 @@ export async function POST(request: Request) {
     // Las guías se pueden consultar desde la app personal. Los datos reales del
     // Master Control sólo se habilitan después de verificar MFA.
     const role = access.status === "allowed" ? "master" : "trader";
-    const result = await askNodalito({ question, role, safetyUserId: userId });
+    const result = await askNodalito({
+      history,
+      personalDiagnostic: () => runPersonalDiagnostic(access.supabase),
+      question, role, safetyUserId: userId,
+    });
     return NextResponse.json({
       answer: {
-        findings: result.mode === "audit" ? result.findings : [],
+        findings: result.mode === "audit" || result.mode === "diagnostic" ? result.findings : [],
         summary: result.text,
       },
       mode: result.mode,

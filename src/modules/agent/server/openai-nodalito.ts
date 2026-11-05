@@ -82,7 +82,22 @@ const adminAuditTool = {
   type: "function",
 } as const;
 
+const personalDiagnosticTool = {
+  description: "Revisa el estado real de la cuenta de la persona: conectores y operaciones pendientes de conciliación. Usala cuando pregunte si su cuenta está bien, si algo no se registró, si el conector funciona o si hay problemas actuales.",
+  name: "read_my_nodal_status",
+  parameters: {
+    additionalProperties: false,
+    properties: { question: { type: "string" } },
+    required: ["question"],
+    type: "object",
+  },
+  strict: true,
+  type: "function",
+} as const;
+
 export async function askNodalito(input: Readonly<{
+  history?: readonly Readonly<{ role: "assistant" | "user"; text: string }>[];
+  personalDiagnostic: () => Promise<Readonly<{ findings: readonly unknown[]; generatedAt: string; summary: string }>>;
   question: string;
   role: NodalitoKnowledgeRole;
   safetyUserId: string;
@@ -97,10 +112,15 @@ export async function askNodalito(input: Readonly<{
       vector_store_ids: [vectorStoreId],
     });
   }
+  tools.push(personalDiagnosticTool);
   if (input.role === "master") tools.push(adminAuditTool);
+  const history = (input.history ?? []).slice(-8).map((message) => ({
+    content: message.text.slice(0, 1200), role: message.role,
+  }));
   const triage = await createResponse({
     input: [
       { content: baseInstructions(input.role), role: "developer" },
+      ...history,
       { content: input.question, role: "user" },
     ],
     max_output_tokens: 700,
@@ -110,19 +130,22 @@ export async function askNodalito(input: Readonly<{
     store: false,
     tools,
   });
-  const auditCall = (triage.output ?? []).find((item) => item.type === "function_call" && item.name === adminAuditTool.name);
-  if (!auditCall) {
+  const functionCall = (triage.output ?? []).find((item) => item.type === "function_call");
+  if (!functionCall) {
     const text = responseText(triage);
     if (!text) throw new Error("Nodalito no devolvió una respuesta de texto.");
     return { mode: "knowledge" as const, text };
   }
 
-  const audit = await runDeterministicNodalitoQuery(input.question);
+  const isPersonal = functionCall.name === personalDiagnosticTool.name;
+  const audit = isPersonal
+    ? await input.personalDiagnostic()
+    : await runDeterministicNodalitoQuery(input.question);
   const analysis = await createResponse({
     input: [
       { content: baseInstructions(input.role), role: "developer" },
       {
-        content: `Pregunta del usuario:\n${input.question}\n\nResultado de la auditoría determinística autorizada:\n${JSON.stringify(audit)}\n\nExplicá el resultado sin alterar cifras. Separá hechos comprobados de recomendaciones.`,
+        content: `Pregunta del usuario:\n${input.question}\n\nResultado del diagnóstico autorizado:\n${JSON.stringify(audit)}\n\nExplicá el resultado sin alterar cifras. Separá hechos comprobados de recomendaciones. Si hay una alerta que requiera intervención, indicá que puede reportarla al Admin Master desde este mismo panel.`,
         role: "user",
       },
     ],
@@ -134,5 +157,5 @@ export async function askNodalito(input: Readonly<{
   });
   const text = responseText(analysis);
   if (!text) throw new Error("Nodalito no devolvió el análisis solicitado.");
-  return { findings: audit.findings, mode: "audit" as const, text };
+  return { findings: audit.findings, mode: isPersonal ? "diagnostic" as const : "audit" as const, text };
 }

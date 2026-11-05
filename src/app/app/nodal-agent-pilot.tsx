@@ -12,8 +12,21 @@ import styles from "./nodal-agent-pilot.module.css";
 type Message = Readonly<{
   id: number;
   findings?: readonly NodalitoFinding[];
+  question?: string;
+  reportedCaseId?: string;
   role: "agent" | "user";
   text: string;
+}>;
+
+type AgentCase = Readonly<{
+  created_at: string;
+  description: string;
+  id: string;
+  nodal_users?: { display_name?: string | null; email?: string | null } | null;
+  priority: string;
+  resolution_note: string | null;
+  status: "open" | "investigating" | "resolved" | "dismissed";
+  title: string;
 }>;
 
 type AgentFunction = "nodalito" | "rutyx";
@@ -49,6 +62,10 @@ export function NodalAgentPilot() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
+  const [caseLoading, setCaseLoading] = useState(false);
+  const [cases, setCases] = useState<readonly AgentCase[]>([]);
+  const [caseView, setCaseView] = useState(false);
+  const [masterCases, setMasterCases] = useState(false);
   const [messages, setMessages] = useState<ReadonlyArray<Message>>([openingMessage]);
   const [showGuides, setShowGuides] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -77,7 +94,10 @@ export function NodalAgentPilot() {
     setLoading(true);
     try {
       const response = await fetch("/api/agent/nodalito/query", {
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({
+          history: messages.slice(-8).map((message) => ({ role: message.role === "agent" ? "assistant" : "user", text: message.text })),
+          question,
+        }),
         headers: { "content-type": "application/json" },
         method: "POST",
       });
@@ -88,6 +108,7 @@ export function NodalAgentPilot() {
       setMessages((current) => [...current, payload.answer ? {
         findings: payload.answer.findings,
         id: nextId + 1,
+        question,
         role: "agent",
         text: payload.answer.summary,
       } : {
@@ -104,6 +125,53 @@ export function NodalAgentPilot() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadCases() {
+    setCaseLoading(true);
+    setCaseView(true);
+    try {
+      const response = await fetch("/api/agent/nodalito/cases", { cache: "no-store" });
+      const payload = await response.json() as { cases?: AgentCase[]; master?: boolean };
+      setCases(payload.cases ?? []);
+      setMasterCases(Boolean(payload.master));
+    } finally {
+      setCaseLoading(false);
+    }
+  }
+
+  async function reportMessage(message: Message) {
+    if (!message.question || message.reportedCaseId) return;
+    setCaseLoading(true);
+    try {
+      const primary = message.findings?.[0];
+      const response = await fetch("/api/agent/nodalito/cases", {
+        body: JSON.stringify({
+          category: primary?.category ?? "general",
+          description: message.text,
+          evidence: message.findings ?? [],
+          priority: message.findings?.some((finding) => finding.severity === "critical") ? "critical" : "normal",
+          sourceAnswer: message.text,
+          sourceQuestion: message.question,
+          title: primary?.title ?? `Consulta: ${message.question}`,
+        }),
+        headers: { "content-type": "application/json" }, method: "POST",
+      });
+      const payload = await response.json() as { case?: { id: string } };
+      if (payload.case?.id) {
+        setMessages((current) => current.map((item) => item.id === message.id ? { ...item, reportedCaseId: payload.case!.id } : item));
+      }
+    } finally {
+      setCaseLoading(false);
+    }
+  }
+
+  async function updateCase(agentCase: AgentCase, status: AgentCase["status"]) {
+    setCaseLoading(true);
+    await fetch("/api/agent/nodalito/cases", {
+      body: JSON.stringify({ id: agentCase.id, status }), headers: { "content-type": "application/json" }, method: "PATCH",
+    });
+    await loadCases();
   }
 
   function submitMessage(event: FormEvent<HTMLFormElement>) {
@@ -152,7 +220,12 @@ export function NodalAgentPilot() {
 
           {activeFunction === "nodalito" ? (
             <div aria-live="polite" className={styles.messages}>
-              <p className={styles.pilotNotice}>Guías y auditorías determinísticas · sin reparaciones automáticas</p>
+              <div className={styles.agentSubnav}>
+                <button aria-current={!caseView ? "page" : undefined} onClick={() => setCaseView(false)} type="button">Conversación</button>
+                <button aria-current={caseView ? "page" : undefined} onClick={() => void loadCases()} type="button">Casos</button>
+              </div>
+              {!caseView ? <p className={styles.pilotNotice}>Diagnóstico real y asistencia · reparaciones sujetas a revisión</p> : null}
+              {!caseView ? <>
               {messages.map((message) => (
                 <article className={message.role === "user" ? styles.userMessage : styles.agentMessage} key={message.id}>
                   <p>{renderNodalitoText(message.text)}</p>
@@ -166,6 +239,11 @@ export function NodalAgentPilot() {
                         </div>
                       ))}
                     </div>
+                  ) : null}
+                  {message.role === "agent" && message.question && (message.findings?.length ?? 0) > 0 ? (
+                    <button className={styles.reportButton} disabled={caseLoading || Boolean(message.reportedCaseId)} onClick={() => void reportMessage(message)} type="button">
+                      {message.reportedCaseId ? "Reportado al Admin Master" : "Reportar al Admin Master"}
+                    </button>
                   ) : null}
                 </article>
               ))}
@@ -187,6 +265,25 @@ export function NodalAgentPilot() {
                   ))}
                 </div>
               ) : null}
+              </> : (
+                <div className={styles.caseList}>
+                  <p className={styles.caseHeading}>{masterCases ? "Bandeja de Admin Master" : "Mis reportes"}</p>
+                  {caseLoading && !cases.length ? <p className={styles.thinking}>Cargando casos…</p> : null}
+                  {!caseLoading && !cases.length ? <p className={styles.emptyCases}>Todavía no hay casos reportados.</p> : null}
+                  {cases.map((agentCase) => (
+                    <article data-priority={agentCase.priority} key={agentCase.id}>
+                      <div><strong>{agentCase.title}</strong><span>{agentCase.status === "open" ? "Nuevo" : agentCase.status === "investigating" ? "En revisión" : agentCase.status === "resolved" ? "Resuelto" : "Descartado"}</span></div>
+                      {masterCases && agentCase.nodal_users ? <small>{agentCase.nodal_users.display_name || agentCase.nodal_users.email}</small> : null}
+                      <p>{agentCase.description}</p>
+                      <time>{new Date(agentCase.created_at).toLocaleString("es-AR")}</time>
+                      {masterCases && agentCase.status !== "resolved" ? <div className={styles.caseActions}>
+                        <button onClick={() => void updateCase(agentCase, "investigating")} type="button">Revisar</button>
+                        <button onClick={() => void updateCase(agentCase, "resolved")} type="button">Resolver</button>
+                      </div> : null}
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className={styles.rutyxPlaceholder}>
@@ -197,7 +294,7 @@ export function NodalAgentPilot() {
             </div>
           )}
 
-          {activeFunction === "nodalito" ? (
+          {activeFunction === "nodalito" && !caseView ? (
             <form className={styles.composer} onSubmit={submitMessage}>
               <input
                 aria-label="Mensaje para Nodalito"

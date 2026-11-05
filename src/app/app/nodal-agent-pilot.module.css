@@ -213,6 +213,28 @@
   text-align: center;
 }
 
+.agentSubnav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding: 3px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--paper) 68%, var(--surface));
+}
+
+.agentSubnav button {
+  padding: 7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: .72rem;
+  cursor: pointer;
+}
+
+.agentSubnav button[aria-current="page"] { background: var(--surface); color: var(--ink); font-weight: 800; }
+
 .agentMessage,
 .userMessage {
   max-width: 86%;
@@ -340,6 +362,34 @@
 .findings strong { font-size: .72rem; }
 .findings span,
 .findings small { color: var(--muted); font-size: .68rem; line-height: 1.35; }
+
+.reportButton {
+  width: 100%;
+  margin-top: 9px;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--brand) 45%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-soft) 70%, var(--surface));
+  color: var(--ink);
+  font: inherit;
+  font-size: .7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.reportButton:disabled { cursor: default; opacity: .7; }
+
+.caseList { display: grid; gap: 9px; }
+.caseHeading { color: var(--muted); font-size: .72rem; text-align: center; }
+.emptyCases { padding: 28px 10px; color: var(--muted); font-size: .78rem; text-align: center; }
+.caseList > article { display: grid; gap: 6px; padding: 11px; border: 1px solid var(--line); border-left: 3px solid var(--brand); border-radius: 11px; background: color-mix(in srgb, var(--paper) 55%, var(--surface)); }
+.caseList > article[data-priority="critical"] { border-left-color: #ef7b68; }
+.caseList article > div:first-child { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
+.caseList strong { font-size: .76rem; }
+.caseList span { padding: 3px 6px; border-radius: 999px; background: var(--brand-soft); color: var(--muted); font-size: .62rem; white-space: nowrap; }
+.caseList small, .caseList time { color: var(--muted); font-size: .64rem; }
+.caseList article p { font-size: .72rem; }
+.caseActions { display: flex; gap: 6px; }
+.caseActions button { flex: 1; padding: 6px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); font: inherit; font-size: .68rem; cursor: pointer; }
 
 .composer {
   display: grid;
