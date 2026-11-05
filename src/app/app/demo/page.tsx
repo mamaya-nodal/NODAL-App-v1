@@ -38,6 +38,7 @@ export default async function AccountingDemoPage() {
   return (
     <AppWorkspace
       administrationScope={administrationScope}
+      agentPilotEnabled={process.env.NODE_ENV === "development"}
       authorized
       avatarUrl={typeof user?.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null}
       configurationEnabled
