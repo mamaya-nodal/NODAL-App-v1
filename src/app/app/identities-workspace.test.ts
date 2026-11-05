@@ -6,7 +6,7 @@ import type { NinjaConnectorStatus } from "./ninja-connector-panel";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("./identity-actions", () => ({ assignIdentityAccount: vi.fn(), createIdentityDirectly: vi.fn(),
-  retireIdentity: vi.fn(), sendIdentityConnectorInstallation: vi.fn(), unassignIdentityAccount: vi.fn(), setIdentitySignal: vi.fn(), updateIdentityOperationalStatus: vi.fn() }));
+  retireIdentity: vi.fn(), sendIdentityConnectorInstallation: vi.fn(), unassignIdentityAccount: vi.fn(), setIdentitySignal: vi.fn(), updateIdentityDeliveryEmail: vi.fn(), updateIdentityOperationalStatus: vi.fn() }));
 vi.mock("./ninja-connector-panel", () => ({ NinjaConnectorPanel: ({ downloadEnabled = true }: { downloadEnabled?: boolean }) =>
   createElement("div", {}, downloadEnabled ? "Descarga local" : "Sólo desvincular") }));
 import { IdentitiesWorkspace } from "./identities-workspace";
@@ -61,6 +61,11 @@ describe("identity connector delivery", () => {
     expect(render()).toContain("Billeteras o cuentas bancarias");
     expect(render()).toContain("ARQ · Test");
     expect(render()).toContain("US$\u00a01.250");
+  });
+  it("shows a discreet editable delivery email on each identity card", () => {
+    const markup = render();
+    expect(markup).toContain("Correo de entrega");
+    expect(markup).toContain("Editar correo de entrega de Test Identity");
   });
   it("shows manual states, automatic deterioration and the identity board", () => {
     const markup = render();

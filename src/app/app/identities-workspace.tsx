@@ -27,6 +27,7 @@ import {
   sendIdentityConnectorInstallation,
   setIdentitySignal,
   unassignIdentityAccount,
+  updateIdentityDeliveryEmail,
   updateIdentityOperationalStatus,
 } from "./identity-actions";
 import { IdentityMimicalConfiguration } from "./mimical-configuration";
@@ -194,6 +195,35 @@ function IdentityAddonConfigurationRow({
   );
 }
 
+function IdentityDeliveryEmail({
+  disabled,
+  identity,
+  onSave,
+}: Readonly<{
+  disabled: boolean;
+  identity: IdentitySummary;
+  onSave: (email: string) => void;
+}>) {
+  const [editing, setEditing] = useState(false);
+  const [email, setEmail] = useState(identity.contactEmail ?? "");
+
+  if (editing) {
+    return <form className="identity-delivery-email is-editing" onSubmit={(event) => {
+      event.preventDefault();
+      onSave(email);
+      setEditing(false);
+    }}>
+      <label><small>Correo de entrega</small><input autoComplete="email" disabled={disabled} inputMode="email" maxLength={254} onChange={(event) => setEmail(event.target.value)} required type="email" value={email} /></label>
+      <div><button className="primary-action" disabled={disabled} type="submit">Guardar</button><button disabled={disabled} onClick={() => { setEmail(identity.contactEmail ?? ""); setEditing(false); }} type="button">Cancelar</button></div>
+    </form>;
+  }
+
+  return <div className="identity-delivery-email">
+    <span><small>Correo de entrega</small><strong>{identity.contactEmail ?? "Sin correo configurado"}</strong></span>
+    <button aria-label={`Editar correo de entrega de ${identity.firstName} ${identity.lastName}`} disabled={disabled} onClick={() => setEditing(true)} title="Editar correo de entrega" type="button">✎</button>
+  </div>;
+}
+
 export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors, identities, ownerName, signalStates, workspaceId }: Props) {
   const router = useRouter();
   const createFormRef = useRef<HTMLFormElement>(null);
@@ -251,7 +281,7 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
         return result;
       })} className="identity-create-form" ref={createFormRef}>
         <input aria-label="Nombre completo" autoComplete="name" maxLength={200} name="full_name" placeholder="Nombre completo" required />
-        <input aria-label="Correo de la identidad" autoComplete="email" inputMode="email" maxLength={254} name="email" placeholder="correo@gmail.com" required type="email" />
+        <input aria-label="Correo de entrega" autoComplete="email" inputMode="email" maxLength={254} name="email" placeholder="Correo de entrega" required type="email" />
         <button className="primary-action" disabled={pending} type="submit">{pending ? "Agregando…" : "Agregar"}</button>
       </form>
       {message && <p aria-live="polite" className="identity-message">{message}</p>}
@@ -285,6 +315,12 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
             </summary>
             <div className="identity-detail">
               <div className={`identity-operational-banner status-${identity.operationalStatus}`}><span><small>Estado operativo</small><strong>{operationalStatusLabel(identity.operationalStatus)}</strong></span>{identity.operationalStatus === "active" ? <b className={`deterioration-${identity.deteriorationLevel}`}>{degradation}</b> : <small>El deterioro se calcula únicamente cuando la identidad está activa.</small>}</div>
+              <IdentityDeliveryEmail
+                disabled={pending}
+                identity={identity}
+                key={`${identity.id}:${identity.contactEmail ?? ""}`}
+                onSave={(email) => run(() => updateIdentityDeliveryEmail(identity.id, email))}
+              />
               <div className="identity-account-summary">
                 <div><span>Resultado acumulado</span><strong className={identity.resultTotalInCents < 0 ? "negative" : undefined}>{money(identity.resultTotalInCents)}</strong></div>
                 <div><span>Payouts</span><strong>{money(identity.payoutTotalInCents)}</strong></div>

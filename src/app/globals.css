@@ -4364,6 +4364,19 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-operational-banner.status-active > b { background: color-mix(in srgb, #83e936 26%, var(--app-soft)); color: var(--app-title); }
 .identity-operational-banner.status-active > b.deterioration-2 { background: color-mix(in srgb, #ffc65c 30%, var(--app-soft)); }
 .identity-operational-banner.status-active > b.deterioration-3 { background: color-mix(in srgb, #ef6363 30%, var(--app-soft)); color: #ef8582; }
+.identity-delivery-email { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 10px 12px; border: 1px solid var(--app-border); border-radius: 11px; }
+.identity-delivery-email > span { display: grid; min-width: 0; gap: 3px; }
+.identity-delivery-email small { color: var(--app-subtle); font-size: 10px; }
+.identity-delivery-email strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.identity-delivery-email > button { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-input); color: var(--app-title); cursor: pointer; font: inherit; font-size: 15px; }
+.identity-delivery-email > button:hover { border-color: var(--app-accent); color: var(--app-accent); }
+.identity-delivery-email > button:disabled { cursor: wait; opacity: .55; }
+.identity-delivery-email.is-editing { align-items: end; }
+.identity-delivery-email.is-editing label { display: grid; min-width: 0; flex: 1; gap: 5px; }
+.identity-delivery-email.is-editing input { width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-input); color: var(--app-title); font: inherit; font-size: 11px; }
+.identity-delivery-email.is-editing > div { display: flex; gap: 7px; }
+.identity-delivery-email.is-editing button { min-height: 36px; padding: 7px 10px; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-input); color: var(--app-title); cursor: pointer; font: inherit; font-size: 10px; font-weight: 800; }
+.identity-delivery-email.is-editing .primary-action { border-color: #a3dc78; background: #83e936; color: #102008; }
 .identity-detail { padding: 15px; border-top: 1px solid var(--app-border); }
 .identity-account-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-bottom: 12px; }
 .identity-account-summary > div { display: grid; gap: 5px; padding: 12px; border: 1px solid var(--app-border); border-radius: 11px; }

@@ -175,6 +175,23 @@ export async function createIdentityDirectly(input: Readonly<{
       };
 }
 
+export async function updateIdentityDeliveryEmail(identityId: string, email: string): Promise<ActionResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!isUuid(identityId) || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return { ok: false, message: "Ingresá un correo de entrega válido." };
+  }
+  const { identitiesEnabled, supabase, user } = await authenticatedClient();
+  if (!user) return { ok: false, message: "La sesión venció. Volvé a ingresar." };
+  if (!identitiesEnabled) return identitiesDisabled();
+  const { error } = await supabase.rpc("update_nodal_identity_delivery_email", {
+    target_email: normalizedEmail,
+    target_identity_id: identityId,
+  });
+  if (error) return { ok: false, message: "No se pudo actualizar el correo de entrega." };
+  revalidatePath("/app");
+  return { ok: true, message: "Correo de entrega actualizado." };
+}
+
 export async function retireIdentity(identityId: string): Promise<ActionResult> {
   if (!isUuid(identityId)) return { ok: false, message: "La identidad no es válida." };
   const { identitiesEnabled, supabase, user } = await authenticatedClient();
