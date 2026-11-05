@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { canUseNodalAgentPilot } from "@/modules/agent/domain/pilot-access";
-import { runDeterministicNodalitoQuery } from "@/modules/agent/server/run-deterministic-query";
+import { askNodalito, NodalitoConfigurationError } from "@/modules/agent/server/openai-nodalito";
 import { inspectNodalAdminAccess } from "@/modules/admin/server/admin-access";
 
 export async function POST(request: Request) {
@@ -27,10 +27,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const answer = await runDeterministicNodalitoQuery(question);
-    return NextResponse.json({ answer, mode: "deterministic" });
+    const result = await askNodalito({ question, role: "master", safetyUserId: access.userId });
+    return NextResponse.json({
+      answer: {
+        findings: result.mode === "audit" ? result.findings : [],
+        summary: result.text,
+      },
+      mode: result.mode,
+    });
   } catch (error) {
+    if (error instanceof NodalitoConfigurationError) {
+      return NextResponse.json({ message: "Falta configurar la conexión segura con OpenAI para activar la comprensión libre de Nodalito." }, { status: 503 });
+    }
     console.error("nodalito_deterministic_query_failed", error);
-    return NextResponse.json({ message: "No pude completar la auditoría determinística." }, { status: 500 });
+    return NextResponse.json({ message: "No pude completar la consulta de Nodalito. No se modificó ningún dato." }, { status: 500 });
   }
 }

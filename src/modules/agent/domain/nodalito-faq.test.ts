@@ -19,6 +19,8 @@ describe("findNodalitoGuide", () => {
     ["no puedo eliminar una billetera", "delete-wallet"],
     ["el conector dice sin señal", "connector-no-signal"],
     ["cómo envío MIMICAL a una identidad", "identity-installer"],
+    ["como creo una identidad?", "create-identity"],
+    ["cómo creo una billetera nueva", "create-wallet"],
     ["dónde veo qué cuenta está operando ahora", "live-operations"],
     ["por qué no aparece la última operación", "stale-data"],
     ["cómo confirmo el punto de partida", "starting-point"],

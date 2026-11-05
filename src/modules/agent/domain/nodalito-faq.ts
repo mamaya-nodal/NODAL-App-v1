@@ -239,7 +239,7 @@ export function findNodalitoGuide(question: string): NodalitoGuide | null {
   const guide = (id: string) => NODALITO_GUIDES.find((item) => item.id === id) ?? null;
   if (/punto de partida|reconstruccion|apertura/.test(value)) return guide("starting-point");
   if (/identidad/.test(value) && /envi|instal|conector|codigo|vincul/.test(value)) return guide("identity-installer");
-  if (/identidad/.test(value) && /crear|registr|agregar|alta/.test(value)) return guide("create-identity");
+  if (/identidad/.test(value) && /creo|crear|crea |nueva|registr|agregar|alta/.test(value)) return guide("create-identity");
   if (/mimical/.test(value)) return guide("mimical-update");
   if (/conector/.test(value) && /actualiz|instal|version/.test(value)) return guide("connector-update");
   if (/sin senal|no conecta|desconect/.test(value)) return guide("connector-no-signal");
@@ -247,7 +247,7 @@ export function findNodalitoGuide(question: string): NodalitoGuide | null {
     return guide("payout-registration");
   }
   if (/no puedo eliminar|borrar.*billetera|eliminar.*billetera/.test(value)) return guide("delete-wallet");
-  if (/crear|registr|agregar|alta/.test(value) && /billetera|cuenta bancaria/.test(value)) return guide("create-wallet");
+  if (/creo|crear|crea |nueva|registr|agregar|alta/.test(value) && /billetera|cuenta bancaria/.test(value)) return guide("create-wallet");
   if (/transferencia|conciliar.*movimiento|movimiento.*broker/.test(value)) return guide("reconcile-transfer");
   if (/no concilia|conciliacion|conciliar/.test(value)) return guide("conciliation-error");
   if ((value.includes("movimiento") || value.includes("saldo")) && (value.includes("billetera") || value.includes("wallet"))) {
@@ -255,7 +255,7 @@ export function findNodalitoGuide(question: string): NodalitoGuide | null {
   }
   if (value.includes("billetera") || value.includes("wallet") || value.includes("cuenta bancaria")) return guide("wallets-location");
   if (/vuelta|flotante|que dia|etapa/.test(value) && /cuenta/.test(value)) return guide("account-progress");
-  if (/registr|crear|agregar|compr/.test(value) && /cuenta|fondeo/.test(value)) return guide("register-account");
+  if (/registro|registr|creo|crear|crea |nueva|agregar|compr/.test(value) && /cuenta|fondeo/.test(value)) return guide("register-account");
   if (/operando ahora|posicion abierta|cuenta.*operando/.test(value)) return guide("live-operations");
   if (/datos viejos|ultima operacion|no aparece|desactualizad/.test(value)) return guide("stale-data");
   return null;

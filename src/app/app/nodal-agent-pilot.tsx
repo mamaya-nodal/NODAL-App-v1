@@ -1,21 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import type { NodalitoFinding } from "@/modules/agent/domain/deterministic-audit";
 import {
-  findNodalitoGuide,
   NODALITO_GUIDES,
-  type NodalitoGuide,
 } from "@/modules/agent/domain/nodalito-faq";
 import styles from "./nodal-agent-pilot.module.css";
 
 type Message = Readonly<{
   id: number;
   findings?: readonly NodalitoFinding[];
-  guide?: NodalitoGuide;
   role: "agent" | "user";
   text: string;
 }>;
@@ -64,17 +60,6 @@ export function NodalAgentPilot() {
     nextMessageId.current += 2;
     setMessages((current) => [...current, { id: nextId, role: "user", text: question }]);
     setShowGuides(false);
-
-    const guide = findNodalitoGuide(question);
-    if (guide) {
-      setMessages((current) => [...current, {
-        guide,
-        id: nextId + 1,
-        role: "agent",
-        text: guide.summary,
-      }]);
-      return;
-    }
 
     setLoading(true);
     try {
@@ -158,12 +143,6 @@ export function NodalAgentPilot() {
               {messages.map((message) => (
                 <article className={message.role === "user" ? styles.userMessage : styles.agentMessage} key={message.id}>
                   <p>{message.text}</p>
-                  {message.guide ? (
-                    <div className={styles.guideAnswer}>
-                      <ol>{message.guide.steps.map((step) => <li key={step}>{step}</li>)}</ol>
-                      <Link href={message.guide.href}>{message.guide.actionLabel}</Link>
-                    </div>
-                  ) : null}
                   {message.findings?.length ? (
                     <div className={styles.findings}>
                       {message.findings.slice(0, 8).map((finding) => (
