@@ -7,6 +7,8 @@
     "node": ">=20.9.0"
   },
   "scripts": {
+    "agent:knowledge": "node scripts/build-nodalito-corpus.mjs",
+    "prebuild": "npm run agent:knowledge",
     "dev": "node --use-system-ca node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "node --use-system-ca node_modules/next/dist/bin/next start",
