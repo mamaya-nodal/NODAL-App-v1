@@ -203,16 +203,6 @@
   line-height: 1.45;
 }
 
-.pilotNotice {
-  align-self: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--brand-soft) 58%, transparent);
-  color: var(--muted);
-  font-size: .7rem;
-  text-align: center;
-}
-
 .agentSubnav {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -224,7 +224,6 @@ export function NodalAgentPilot() {
                 <button aria-current={!caseView ? "page" : undefined} onClick={() => setCaseView(false)} type="button">Conversación</button>
                 <button aria-current={caseView ? "page" : undefined} onClick={() => void loadCases()} type="button">Casos</button>
               </div>
-              {!caseView ? <p className={styles.pilotNotice}>Diagnóstico real y asistencia · reparaciones sujetas a revisión</p> : null}
               {!caseView ? <>
               {messages.map((message) => (
                 <article className={message.role === "user" ? styles.userMessage : styles.agentMessage} key={message.id}>
