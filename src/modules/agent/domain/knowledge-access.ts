@@ -30,6 +30,12 @@ const protectedDocuments: readonly NodalitoKnowledgeDocument[] = [
     title: "Correo de entrega de identidades",
   },
   {
+    audience: ["trader", "admin", "master"],
+    content: "Compra de cuentas y origen de fondos: una compra se registra como `Aporte nuevo del trader` sólo si en el momento de pagarla se usó dinero externo que todavía no estaba registrado en ninguna billetera o cuenta bancaria de NODAL. Si se pagó con saldo que ya estaba en Binance u otra billetera registrada, su origen correcto es `Desde una billetera o cuenta bancaria`; no es un nuevo aporte. Si la compra ya formaba parte del punto de partida o ya tiene actividad posterior, no se debe cambiar el punto de partida ni inventar un movimiento para corregirla: hay que pedir una revisión contable para corregir el origen de esa compra sin alterar el resto del historial.",
+    id: "policy:account-purchase-funds-origin",
+    title: "Compra de cuentas pagada desde una billetera",
+  },
+  {
     audience: ["master"],
     content: "La auditoría global puede consultar facturación agregada, conectores, conciliaciones y payouts de todos los usuarios. Esta información nunca se incorpora al contexto de traders ni administradores de mesa.",
     id: "policy:master-audit",
