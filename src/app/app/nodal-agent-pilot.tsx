@@ -14,6 +14,7 @@ type Message = Readonly<{
   id: number;
   findings?: readonly NodalitoFinding[];
   question?: string;
+  repairCaseId?: string;
   reportedCaseId?: string;
   role: "agent" | "user";
   text: string;
@@ -171,6 +172,31 @@ export function NodalAgentPilot() {
     }
   }
 
+  async function proposeRepair(message: Message) {
+    if (!message.question || message.repairCaseId) return;
+    setCaseLoading(true);
+    try {
+      const response = await fetch("/api/agent/nodalito/cases", {
+        body: JSON.stringify({
+          category: "repair_proposal",
+          description: `Solicitud del trader: ${message.question}\n\nDiagnóstico de Nodalito: ${message.text}\n\nEstado: propuesta pendiente de confirmación y validación contable. No se modificó ningún registro.`,
+          evidence: message.findings ?? [],
+          priority: message.findings?.some((finding) => finding.severity === "critical") ? "high" : "normal",
+          sourceAnswer: message.text,
+          sourceQuestion: message.question,
+          title: `Reparación propuesta: ${message.question}`,
+        }),
+        headers: { "content-type": "application/json" }, method: "POST",
+      });
+      const payload = await response.json() as { case?: { id: string } };
+      if (payload.case?.id) {
+        setMessages((current) => current.map((item) => item.id === message.id ? { ...item, repairCaseId: payload.case!.id } : item));
+      }
+    } finally {
+      setCaseLoading(false);
+    }
+  }
+
   async function updateCase(agentCase: AgentCase, status: AgentCase["status"]) {
     setCaseLoading(true);
     await fetch("/api/agent/nodalito/cases", {
@@ -248,10 +274,17 @@ export function NodalAgentPilot() {
                       ))}
                     </div>
                   ) : null}
-                  {message.role === "agent" && message.question && (message.findings?.length ?? 0) > 0 ? (
-                    <button className={styles.reportButton} disabled={caseLoading || Boolean(message.reportedCaseId)} onClick={() => void reportMessage(message)} type="button">
-                      {message.reportedCaseId ? "Reportado al Admin Master" : "Reportar al Admin Master"}
-                    </button>
+                  {message.role === "agent" && message.question ? (
+                    <div className={styles.messageActions}>
+                      <button className={styles.repairButton} disabled={caseLoading || Boolean(message.repairCaseId)} onClick={() => void proposeRepair(message)} type="button">
+                        {message.repairCaseId ? "Reparación propuesta" : "Proponer reparación"}
+                      </button>
+                      {(message.findings?.length ?? 0) > 0 ? (
+                        <button className={styles.reportButton} disabled={caseLoading || Boolean(message.reportedCaseId)} onClick={() => void reportMessage(message)} type="button">
+                          {message.reportedCaseId ? "Reportado" : "Reportar"}
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </article>
               ))}
@@ -275,12 +308,12 @@ export function NodalAgentPilot() {
               ) : null}
               </> : (
                 <div className={styles.caseList}>
-                  <p className={styles.caseHeading}>{masterCases ? "Bandeja de Admin Master" : "Mis reportes"}</p>
+                  <p className={styles.caseHeading}>{masterCases ? "Bandeja de revisiones" : "Mis casos y reparaciones"}</p>
                   {caseLoading && !cases.length ? <p className={styles.thinking}>Cargando casos…</p> : null}
                   {!caseLoading && !cases.length ? <p className={styles.emptyCases}>Todavía no hay casos reportados.</p> : null}
                   {cases.map((agentCase) => (
                     <article data-priority={agentCase.priority} key={agentCase.id}>
-                      <div><strong>{agentCase.title}</strong><span>{agentCase.status === "open" ? "Nuevo" : agentCase.status === "investigating" ? "En revisión" : agentCase.status === "resolved" ? "Resuelto" : "Descartado"}</span></div>
+                      <div><strong>{agentCase.title}</strong><span>{agentCase.status === "open" ? agentCase.title.startsWith("Reparación propuesta:") ? "Pendiente de validar" : "Nuevo" : agentCase.status === "investigating" ? "En revisión" : agentCase.status === "resolved" ? "Resuelto" : "Descartado"}</span></div>
                       {masterCases && agentCase.nodal_users ? <small>{agentCase.nodal_users.display_name || agentCase.nodal_users.email}</small> : null}
                       <p>{agentCase.description}</p>
                       <time>{new Date(agentCase.created_at).toLocaleString("es-AR")}</time>

@@ -404,6 +404,11 @@
 .caseList article p { font-size: .72rem; }
 .caseActions { display: flex; gap: 6px; }
 .caseActions button { flex: 1; padding: 6px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); font: inherit; font-size: .68rem; cursor: pointer; }
+.messageActions { display: flex; gap: 6px; margin-top: 8px; }
+.messageActions button { padding: 6px 8px; border-radius: 8px; font: inherit; font-size: .68rem; font-weight: 700; cursor: pointer; }
+.repairButton { border: 1px solid color-mix(in srgb, var(--brand) 68%, var(--line)); background: var(--brand-soft); color: var(--ink); }
+.reportButton { border: 1px solid var(--line); background: transparent; color: var(--muted); }
+.messageActions button:disabled { cursor: default; opacity: .62; }
 
 .composer {
   display: grid;
