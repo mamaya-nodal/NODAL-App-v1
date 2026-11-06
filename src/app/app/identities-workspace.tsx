@@ -9,6 +9,7 @@ import {
   useSyncExternalStore,
   useTransition,
   type CSSProperties,
+  type FormEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
@@ -33,6 +34,8 @@ import {
 import { IdentityMimicalConfiguration } from "./mimical-configuration";
 import { hasSentCurrentIdentityMimical, subscribeToIdentityMimicalSend } from "./mimical-update-status";
 import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
+
+type ActionResult = Readonly<{ message: string; ok: boolean }>;
 
 type Props = Readonly<{
   accounts: IdentityAccount[];
@@ -228,21 +231,36 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
   const router = useRouter();
   const createFormRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<ActionResult | null>(null);
   const [configurationIdentity, setConfigurationIdentity] = useState<IdentitySummary | null>(null);
   const assignedIds = new Set(accounts.filter((account) => account.currentIdentityId).map((account) => account.id));
   const unassigned = accounts.filter((account) => !assignedIds.has(account.id));
 
-  function run(action: () => Promise<{ message: string; ok: boolean }>) {
+  function run(action: () => Promise<ActionResult>) {
     setMessage(null);
     startTransition(async () => {
       try {
         const result = await action();
-        setMessage(result.message);
+        setMessage(result);
         if (result.ok) router.refresh();
       } catch {
-        setMessage("No se pudo completar la acción. Volvé a intentarlo.");
+        setMessage({ message: "No se pudo completar la acción. Volvé a intentarlo.", ok: false });
       }
+    });
+  }
+
+  function submitIdentityCreation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    run(async () => {
+      const result = await createIdentityDirectly({
+        email: String(formData.get("email") ?? ""),
+        fullName: String(formData.get("full_name") ?? ""),
+        workspaceId,
+      });
+      if (result.ok) form.reset();
+      return result;
     });
   }
 
@@ -255,12 +273,12 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
     startTransition(async () => {
       try {
         const result = await updateIdentityOperationalStatus(identity.id, status);
-        setMessage(result.message);
+        setMessage(result);
         if (result.ok) router.refresh();
         else select.value = identity.operationalStatus;
       } catch {
         select.value = identity.operationalStatus;
-        setMessage("No se pudo guardar el estado de la identidad.");
+        setMessage({ message: "No se pudo guardar el estado de la identidad.", ok: false });
       }
     });
   }
@@ -271,20 +289,12 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
         <h2 id="identities-title">Identidades</h2>
       </div>
 
-      <form action={(formData) => run(async () => {
-        const result = await createIdentityDirectly({
-          email: String(formData.get("email") ?? ""),
-          fullName: String(formData.get("full_name") ?? ""),
-          workspaceId,
-        });
-        if (result.ok) createFormRef.current?.reset();
-        return result;
-      })} className="identity-create-form" ref={createFormRef}>
+      <form className="identity-create-form" onSubmit={submitIdentityCreation} ref={createFormRef}>
         <input aria-label="Nombre completo" autoComplete="name" maxLength={200} name="full_name" placeholder="Nombre completo" required />
         <input aria-label="Correo de entrega" autoComplete="email" inputMode="email" maxLength={254} name="email" placeholder="Correo de entrega" required type="email" />
         <button className="primary-action" disabled={pending} type="submit">{pending ? "Agregando…" : "Agregar"}</button>
       </form>
-      {message && <p aria-live="polite" className="identity-message">{message}</p>}
+      {message && <p aria-live="polite" className={`identity-message${message.ok ? "" : " is-error"}`}>{message.message}</p>}
 
       <IdentityBoard identities={identities} ownerName={ownerName} />
 

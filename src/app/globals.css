@@ -4306,6 +4306,7 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-create-form input,
 .identity-assignment-form select { min-width: 0; min-height: 42px; padding: 9px 12px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-input); color: var(--app-title); }
 .identity-message { margin: -10px 0 18px; color: var(--app-accent); font-size: 12px; font-weight: 750; }
+.identity-message.is-error { color: #d65c55; }
 .identity-board-shell { overflow: hidden; margin: 4px 0 26px; border: 1px solid var(--app-border); border-radius: 18px; background: var(--app-panel); }
 .identity-board-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 18px 13px; }
 .identity-board-heading h3 { margin: 0 0 4px; font-size: 15px; }
