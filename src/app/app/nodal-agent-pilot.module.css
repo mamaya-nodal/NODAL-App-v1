@@ -24,18 +24,6 @@
   pointer-events: auto;
 }
 
-.rutyxWindow {
-  position: fixed;
-  z-index: 1;
-  top: 50%;
-  left: 50%;
-  width: min(880px, calc(100vw - 48px));
-  height: min(720px, calc(100vh - 48px));
-  grid-template-rows: auto minmax(0, 1fr);
-  transform: translate(-50%, -50%);
-  animation: rutyx-window-arrive 180ms ease-out both;
-}
-
 .root[data-open="true"] .launcher {
   display: none;
 }
@@ -104,6 +92,18 @@
   box-shadow: 0 28px 70px rgb(0 0 0 / 34%), inset 0 1px rgb(255 255 255 / 7%);
   backdrop-filter: blur(18px);
   animation: panel-arrive 180ms ease-out both;
+}
+
+.panel.rutyxWindow {
+  position: fixed;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: min(820px, calc(100vw - 96px));
+  height: min(680px, calc(100vh - 96px));
+  grid-template-rows: auto minmax(0, 1fr);
+  transform: translate(-50%, -50%);
+  animation: rutyx-window-arrive 180ms ease-out both;
 }
 
 .header {
@@ -523,7 +523,7 @@
     height: min(520px, calc(100vh - 96px));
   }
 
-  .rutyxWindow {
+  .panel.rutyxWindow {
     top: 12px;
     right: 10px;
     bottom: 12px;
@@ -531,6 +531,7 @@
     width: auto;
     height: auto;
     transform: none;
+    animation: none;
   }
 }
 
