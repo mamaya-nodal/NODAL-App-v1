@@ -50,7 +50,7 @@ export async function loadRutyxSnapshot(userId: string, db = createServiceClient
   const accounts: RutyxAccount[] = (accountRows ?? []).flatMap((account) => {
     const company = companyById.get(account.company_id);
     const latestLink = latestLinkByAccount.get(account.id);
-    if (company?.code !== "LUCID" || account.state === "closed" || latestLink?.closed_at) return [];
+    if (company?.code !== "LUCID" || account.state === "closed") return [];
     const externalName = latestLink?.external_account_name ?? `Cuenta ${account.reference_number}`;
     const identity = identityByAccount.get(account.id) ?? null;
     return [{
@@ -64,6 +64,10 @@ export async function loadRutyxSnapshot(userId: string, db = createServiceClient
     }];
   });
   const enabledStrategyIds = new Set((entitlementsResult.data ?? []).map((row) => row.strategy_id));
+  const identities = [
+    { id: "personal", name: "Titular" },
+    ...(identitiesResult.data ?? []).map((identity) => ({ id: identity.id, name: `${identity.first_name} ${identity.last_name}`.trim() })),
+  ];
   const strategies = listLucidStrategies(enabledStrategyIds);
   const states: RutyxRouteState[] = (statesResult.data ?? []).map((state) => ({
     accountId: state.account_id,
@@ -84,7 +88,7 @@ export async function loadRutyxSnapshot(userId: string, db = createServiceClient
     const operation = operationByNode(state.strategyId, state.nodeId);
     return operation ? [[state.accountId, operation]] : [];
   }));
-  return { accounts, companies: RUTYX_COMPANY_CATALOG, contexts, events: eventsResult.data ?? [], operations, states, strategies };
+  return { accounts, companies: RUTYX_COMPANY_CATALOG, contexts, events: eventsResult.data ?? [], identities, operations, states, strategies };
 }
 
 export async function userOwnsAccount(db: ReturnType<typeof createServiceClient>, userId: string, accountId: string) {

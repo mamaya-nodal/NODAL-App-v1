@@ -12,6 +12,7 @@ type Snapshot = Readonly<{
   companies: readonly Readonly<{ enabled: boolean; id: string; name: string }>[];
   contexts: readonly RutyxContext[];
   events: readonly Readonly<{ account_id: string; broker_ratio: number; created_at: string; event_type: string; id: string; outcome: string | null; to_node_id: string }>[];
+  identities: readonly Readonly<{ id: string; name: string }>[];
   operations: Readonly<Record<string, RutyxOperation>>;
   states: readonly RutyxRouteState[];
   strategies: readonly RutyxStrategy[];
@@ -38,7 +39,7 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
         setSnapshot(payload);
         const firstAccount = payload.accounts[0];
         setAccountId(firstAccount?.id || "");
-        setIdentityId(firstAccount?.identityId ?? "personal");
+        setIdentityId(firstAccount?.identityId ?? payload.identities[0]?.id ?? "personal");
         setSelectedAccountIds([]);
         setStrategyId(payload.strategies.find((strategy) => strategy.enabled)?.id || "");
       }
@@ -54,11 +55,6 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
   const contexts = useMemo(() => snapshot?.contexts.filter((context) => context.strategyId === strategyId) ?? [], [snapshot, strategyId]);
   const selectedContextId = contexts.some((context) => context.id === contextId) ? contextId : contexts[0]?.id ?? "";
   const events = snapshot?.events.filter((event) => event.account_id === accountId) ?? [];
-  const identities = useMemo(() => {
-    const entries = new Map<string, string>();
-    for (const account of snapshot?.accounts ?? []) entries.set(account.identityId ?? "personal", account.identityName ?? "Titular");
-    return [...entries].map(([id, name]) => ({ id, name }));
-  }, [snapshot]);
   const visibleAccounts = (snapshot?.accounts ?? []).filter((account) => (account.identityId ?? "personal") === identityId);
 
   async function mutate(body: Record<string, unknown>) {
@@ -95,7 +91,7 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
         setAccountId(activeAccount?.id ?? "");
         setSelectedAccountIds([]);
       }} value={identityId}>
-        {identities.map((identity) => <option key={identity.id} value={identity.id}>{identity.name}</option>)}
+        {snapshot.identities.map((identity) => <option key={identity.id} value={identity.id}>{identity.name}</option>)}
       </select>
     </label>
 
