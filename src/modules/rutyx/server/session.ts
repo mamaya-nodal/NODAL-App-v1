@@ -36,7 +36,7 @@ export async function loadRutyxSnapshot(userId: string, db = createServiceClient
     accountIds.length ? db.from("identity_account_assignments").select("account_id,identity_id").in("account_id", accountIds).is("unassigned_at", null) : Promise.resolve({ data: [] }),
     workspaceIds.length ? db.from("nodal_identities").select("id,first_name,last_name").in("workspace_id", workspaceIds) : Promise.resolve({ data: [] }),
     db.from("rutyx_route_entitlements").select("strategy_id").eq("user_id", userId).eq("enabled", true),
-    db.from("rutyx_route_states").select("id,account_id,strategy_id,context_id,phase,node_id,funding_account_count,coverage_contracts_per_account,route_contracts_per_account,broker_ratio,revision").eq("user_id", userId),
+    db.from("rutyx_route_states").select("id,account_id,group_id,strategy_id,context_id,phase,node_id,funding_account_count,coverage_contracts_per_account,route_contracts_per_account,broker_ratio,revision").eq("user_id", userId),
     db.from("rutyx_route_events").select("id,account_id,event_type,outcome,from_node_id,to_node_id,broker_ratio,created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(100),
   ]);
   const companyById = new Map((companiesResult.data ?? []).map((company) => [company.id, company]));
@@ -66,6 +66,7 @@ export async function loadRutyxSnapshot(userId: string, db = createServiceClient
     contextId: state.context_id,
     coverageContractsPerAccount: Number(state.coverage_contracts_per_account),
     fundingAccountCount: Number(state.funding_account_count),
+    groupId: state.group_id,
     id: state.id,
     nodeId: state.node_id,
     phase: state.phase === "funded" ? "funded" : "eval",

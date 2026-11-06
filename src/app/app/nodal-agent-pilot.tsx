@@ -69,6 +69,7 @@ export function NodalAgentPilot() {
   const [masterCases, setMasterCases] = useState(false);
   const [messages, setMessages] = useState<ReadonlyArray<Message>>([openingMessage]);
   const [showGuides, setShowGuides] = useState(false);
+  const [rutyxExpanded, setRutyxExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextMessageId = useRef(2);
 
@@ -78,11 +79,14 @@ export function NodalAgentPilot() {
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        if (rutyxExpanded) setRutyxExpanded(false);
+        else setOpen(false);
+      }
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, []);
+  }, [rutyxExpanded]);
 
   async function askQuestion(text: string) {
     const question = text.trim();
@@ -185,8 +189,9 @@ export function NodalAgentPilot() {
 
   return (
     <div className={styles.root} data-open={open ? "true" : "false"}>
+      {open && rutyxExpanded ? <button aria-label="Minimizar Rutyx" className={styles.backdrop} onClick={() => setRutyxExpanded(false)} type="button" /> : null}
       {open ? (
-        <section aria-label="Nodalito" className={styles.panel} role="dialog">
+        <section aria-label="Nodalito" className={`${styles.panel} ${rutyxExpanded ? styles.rutyxWindow : ""}`} role="dialog">
           <header className={styles.header}>
             <div className={styles.agentIdentity}>
               <span className={styles.headerMascot}>
@@ -197,10 +202,13 @@ export function NodalAgentPilot() {
                 <span><i /> Piloto · solo lectura</span>
               </div>
             </div>
-            <button aria-label="Cerrar agente" className={styles.closeButton} onClick={() => setOpen(false)} type="button">×</button>
+            <div className={styles.windowControls}>
+              {rutyxExpanded ? <button aria-label="Minimizar Rutyx" className={styles.closeButton} onClick={() => setRutyxExpanded(false)} type="button">−</button> : null}
+              <button aria-label="Cerrar agente" className={styles.closeButton} onClick={() => { setRutyxExpanded(false); setOpen(false); }} type="button">×</button>
+            </div>
           </header>
 
-          <nav aria-label="Funciones de Nodalito" className={styles.functions}>
+          {!rutyxExpanded ? <nav aria-label="Funciones de Nodalito" className={styles.functions}>
             <button
               aria-current={activeFunction === "nodalito" ? "page" : undefined}
               onClick={() => setActiveFunction("nodalito")}
@@ -217,7 +225,7 @@ export function NodalAgentPilot() {
               <strong>Usar Rutyx</strong>
               <span>Gestión de rutas</span>
             </button>
-          </nav>
+          </nav> : null}
 
           {activeFunction === "nodalito" ? (
             <div aria-live="polite" className={styles.messages}>
@@ -286,7 +294,7 @@ export function NodalAgentPilot() {
               )}
             </div>
           ) : (
-            <RutyxNavigator />
+            <RutyxNavigator expanded={rutyxExpanded} onExpand={() => setRutyxExpanded(true)} />
           )}
 
           {activeFunction === "nodalito" && !caseView ? (
@@ -308,7 +316,7 @@ export function NodalAgentPilot() {
         aria-expanded={open}
         aria-label={open ? "Cerrar Nodalito" : "Abrir Nodalito"}
         className={styles.launcher}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => { setRutyxExpanded(false); setOpen((current) => !current); }}
         type="button"
       >
         <span className={styles.launcherGlow} />

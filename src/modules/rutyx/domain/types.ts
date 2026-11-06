@@ -50,6 +50,7 @@ export type RutyxRouteState = Readonly<{
   contextId: string;
   coverageContractsPerAccount: number;
   fundingAccountCount: number;
+  groupId: string;
   id: string;
   nodeId: string;
   phase: "eval" | "funded";

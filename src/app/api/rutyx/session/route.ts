@@ -17,8 +17,8 @@ export async function GET() {
 }
 
 type StartBody = Readonly<{
-  accountId?: string;
-  action?: "start";
+  accountIds?: string[];
+  action: "start";
   contextId?: string;
   fundingAccountCount?: number;
   strategyId?: string;
@@ -26,7 +26,7 @@ type StartBody = Readonly<{
 
 type ResultBody = Readonly<{
   accountId?: string;
-  action?: "result";
+  action: "result";
   outcome?: "SL" | "TP";
   revision?: number;
 }>;
@@ -35,17 +35,18 @@ export async function POST(request: Request) {
   const access = await requireRutyxUser();
   if (!access) return NextResponse.json({ message: "No autorizado." }, { status: 403 });
   const body = await request.json().catch(() => null) as StartBody | ResultBody | null;
-  if (!body?.accountId || !await userOwnsAccount(access.db, access.userId, body.accountId)) {
-    return NextResponse.json({ message: "La cuenta no pertenece al usuario." }, { status: 400 });
-  }
 
-  if (body.action === "start") {
+  if (body?.action === "start") {
+    const accountIds = [...new Set(body.accountIds ?? [])];
     const strategyId = body.strategyId?.trim();
     const contextId = body.contextId?.trim();
     const fundingAccountCount = Number(body.fundingAccountCount);
-    if (!strategyId || !contextId || !Number.isInteger(fundingAccountCount) || fundingAccountCount < 1 || fundingAccountCount > 100) {
-      return NextResponse.json({ message: "Completá la ruta y la cantidad de cuentas." }, { status: 400 });
+    if (!strategyId || !contextId || !Number.isInteger(fundingAccountCount) || fundingAccountCount < 1 || fundingAccountCount > 100 || accountIds.length !== fundingAccountCount) {
+      return NextResponse.json({ message: `Elegí exactamente ${fundingAccountCount || 1} cuentas para enlazar.` }, { status: 400 });
     }
+    const snapshot = await loadRutyxSnapshot(access.userId, access.db);
+    const availableAccountIds = new Set(snapshot.accounts.map((account) => account.id));
+    if (accountIds.some((accountId) => !availableAccountIds.has(accountId))) return NextResponse.json({ message: "Una de las cuentas no está disponible para Rutyx." }, { status: 400 });
     const { data: entitlement } = await access.db.from("rutyx_route_entitlements").select("id").eq("user_id", access.userId).eq("strategy_id", strategyId).eq("enabled", true).maybeSingle();
     const context = contextById(strategyId, contextId);
     const operation = context ? operationByNode(strategyId, context.rootNodeId) : null;
@@ -55,35 +56,41 @@ export async function POST(request: Request) {
       fundingAccountCount,
       routeContractsPerAccount: operation.routeContractsPerAccount,
     });
-    const { data: previous } = await access.db.from("rutyx_route_states").select("id,revision").eq("user_id", access.userId).eq("account_id", body.accountId).maybeSingle();
-    const payload = {
-      account_id: body.accountId,
+    const { data: previousRows } = await access.db.from("rutyx_route_states").select("account_id,revision").eq("user_id", access.userId).in("account_id", accountIds);
+    const previousRevision = new Map((previousRows ?? []).map((row) => [row.account_id, row.revision]));
+    const groupId = crypto.randomUUID();
+    const payload = accountIds.map((accountId) => ({
+      account_id: accountId,
       broker_ratio: brokerRatio,
       context_id: context.id,
       coverage_contracts_per_account: operation.coverageContractsPerAccount,
       funding_account_count: fundingAccountCount,
+      group_id: groupId,
       node_id: operation.nodeId,
       phase: context.phase,
-      revision: (previous?.revision ?? 0) + 1,
+      revision: (previousRevision.get(accountId) ?? 0) + 1,
       route_contracts_per_account: operation.routeContractsPerAccount,
       strategy_id: strategyId,
       user_id: access.userId,
-    };
-    const { data: state, error } = await access.db.from("rutyx_route_states").upsert(payload, { onConflict: "user_id,account_id" }).select("id").single();
-    if (error || !state) return NextResponse.json({ message: "No se pudo iniciar la ruta." }, { status: 500 });
-    await access.db.from("rutyx_route_events").insert({
-      account_id: body.accountId,
+    }));
+    const { data: states, error } = await access.db.from("rutyx_route_states").upsert(payload, { onConflict: "user_id,account_id" }).select("id,account_id");
+    if (error || !states || states.length !== accountIds.length) return NextResponse.json({ message: "No se pudo iniciar la ruta." }, { status: 500 });
+    await access.db.from("rutyx_route_events").insert(states.map((state) => ({
+      account_id: state.account_id,
       broker_ratio: brokerRatio,
-      configuration: payload,
+      configuration: { ...payload.find((row) => row.account_id === state.account_id), linkedAccountIds: accountIds },
       event_type: "started",
       route_state_id: state.id,
       to_node_id: operation.nodeId,
       user_id: access.userId,
-    });
+    })));
     return NextResponse.json(await loadRutyxSnapshot(access.userId, access.db));
   }
 
-  if (body.action === "result" && (body.outcome === "TP" || body.outcome === "SL") && Number.isInteger(body.revision)) {
+  if (body?.action === "result" && (body.outcome === "TP" || body.outcome === "SL") && Number.isInteger(body.revision)) {
+    if (!body.accountId || !await userOwnsAccount(access.db, access.userId, body.accountId)) {
+      return NextResponse.json({ message: "La cuenta no pertenece al usuario." }, { status: 400 });
+    }
     const { data: state } = await access.db.from("rutyx_route_states").select("*").eq("user_id", access.userId).eq("account_id", body.accountId).maybeSingle();
     if (!state || state.revision !== body.revision) return NextResponse.json({ message: "La ruta cambió. Actualizá antes de registrar el resultado." }, { status: 409 });
     const transition = nextNodeForOutcome(state.strategy_id, state.node_id, body.outcome);
@@ -96,25 +103,26 @@ export async function POST(request: Request) {
       fundingAccountCount: Number(state.funding_account_count),
       routeContractsPerAccount: routeContracts,
     });
+    const { data: groupStates } = await access.db.from("rutyx_route_states").select("id,account_id,revision,node_id").eq("user_id", access.userId).eq("group_id", state.group_id);
+    if (!groupStates?.length || groupStates.some((member) => member.node_id !== state.node_id || member.revision !== state.revision)) {
+      return NextResponse.json({ message: "Las cuentas enlazadas no están sincronizadas." }, { status: 409 });
+    }
     const { data: updated, error } = await access.db.from("rutyx_route_states").update({
-      broker_ratio: brokerRatio,
-      coverage_contracts_per_account: coverageContracts,
-      node_id: transition.nextNodeId,
-      revision: state.revision + 1,
-      route_contracts_per_account: routeContracts,
-    }).eq("id", state.id).eq("revision", state.revision).select("id").maybeSingle();
-    if (error || !updated) return NextResponse.json({ message: "La ruta cambió mientras guardábamos el resultado." }, { status: 409 });
-    await access.db.from("rutyx_route_events").insert({
-      account_id: body.accountId,
+      broker_ratio: brokerRatio, coverage_contracts_per_account: coverageContracts, node_id: transition.nextNodeId,
+      revision: state.revision + 1, route_contracts_per_account: routeContracts,
+    }).eq("user_id", access.userId).eq("group_id", state.group_id).eq("revision", state.revision).select("id,account_id");
+    if (error || !updated || updated.length !== groupStates.length) return NextResponse.json({ message: "La ruta cambió mientras guardábamos el resultado." }, { status: 409 });
+    await access.db.from("rutyx_route_events").insert(updated.map((member) => ({
+      account_id: member.account_id,
       broker_ratio: brokerRatio,
       configuration: { coverageContractsPerAccount: coverageContracts, fundingAccountCount: state.funding_account_count, routeContractsPerAccount: routeContracts },
       event_type: "result",
       from_node_id: state.node_id,
       outcome: body.outcome,
-      route_state_id: state.id,
+      route_state_id: member.id,
       to_node_id: transition.nextNodeId,
       user_id: access.userId,
-    });
+    })));
     return NextResponse.json(await loadRutyxSnapshot(access.userId, access.db));
   }
 

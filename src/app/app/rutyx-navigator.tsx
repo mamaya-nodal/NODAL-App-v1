@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { formatBrokerRatio } from "@/modules/rutyx/domain/broker-ratio";
@@ -18,7 +17,7 @@ type Snapshot = Readonly<{
   strategies: readonly RutyxStrategy[];
 }>;
 
-export function RutyxNavigator({ expanded = false }: Readonly<{ expanded?: boolean }>) {
+export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expanded?: boolean; onExpand?: () => void }>) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -27,6 +26,7 @@ export function RutyxNavigator({ expanded = false }: Readonly<{ expanded?: boole
   const [strategyId, setStrategyId] = useState("");
   const [contextId, setContextId] = useState("");
   const [accountCount, setAccountCount] = useState("1");
+  const [selectedAccountIds, setSelectedAccountIds] = useState<readonly string[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -37,6 +37,7 @@ export function RutyxNavigator({ expanded = false }: Readonly<{ expanded?: boole
       else {
         setSnapshot(payload);
         setAccountId(payload.accounts[0]?.id || "");
+        setSelectedAccountIds(payload.accounts[0]?.id ? [payload.accounts[0].id] : []);
         setStrategyId(payload.strategies.find((strategy) => strategy.enabled)?.id || "");
       }
       setLoading(false);
@@ -46,6 +47,8 @@ export function RutyxNavigator({ expanded = false }: Readonly<{ expanded?: boole
 
   const state = snapshot?.states.find((candidate) => candidate.accountId === accountId) ?? null;
   const operation = accountId ? snapshot?.operations[accountId] ?? null : null;
+  const linkedStates = state ? snapshot?.states.filter((candidate) => candidate.groupId === state.groupId) ?? [] : [];
+  const linkedAccounts = linkedStates.flatMap((candidate) => snapshot?.accounts.find((account) => account.id === candidate.accountId) ?? []);
   const contexts = useMemo(() => snapshot?.contexts.filter((context) => context.strategyId === strategyId) ?? [], [snapshot, strategyId]);
   const selectedContextId = contexts.some((context) => context.id === contextId) ? contextId : contexts[0]?.id ?? "";
   const events = snapshot?.events.filter((event) => event.account_id === accountId) ?? [];
@@ -66,7 +69,7 @@ export function RutyxNavigator({ expanded = false }: Readonly<{ expanded?: boole
   return <section className={styles.root} data-expanded={expanded ? "true" : "false"}>
     <header className={styles.heading}>
       <div><span>RUTYX</span><strong>Gestión de rutas</strong></div>
-      {!expanded ? <Link href="/app/rutyx">Expandir ↗</Link> : <Link href="/app">Volver a NODAL</Link>}
+      {!expanded ? <button className={styles.expand} onClick={onExpand} type="button">Expandir ↗</button> : null}
     </header>
 
     <div className={styles.companies}>
@@ -86,6 +89,7 @@ export function RutyxNavigator({ expanded = false }: Readonly<{ expanded?: boole
         <span>{snapshot.strategies.find((strategy) => strategy.id === state.strategyId)?.name}</span>
         <strong>{state.phase === "funded" ? "Funded" : "Evaluación"}</strong>
       </div>
+      <div className={styles.linkedAccounts}><strong>{linkedAccounts.length} cuentas enlazadas</strong>{linkedAccounts.map((account) => <span key={account.id}>{account.externalName}{account.identityName ? ` · ${account.identityName}` : ""}</span>)}</div>
       {operation ? <>
         <article className={styles.operation}>
           <div className={styles.operationTitle}><span>Operación actual</span><strong>{operation.stage}</strong><small>Día {operation.session}</small></div>
@@ -119,9 +123,19 @@ export function RutyxNavigator({ expanded = false }: Readonly<{ expanded?: boole
         </select>
       </label>
       <label className={styles.field}>Cantidad de cuentas de fondeo
-        <input max="100" min="1" onChange={(event) => setAccountCount(event.target.value)} type="number" value={accountCount} />
+        <input max={snapshot.accounts.length} min="1" onChange={(event) => setAccountCount(event.target.value)} type="number" value={accountCount} />
       </label>
-      <button className={styles.primary} disabled={saving || !accountId || !selectedContextId} onClick={() => void mutate({ accountId, action: "start", contextId: selectedContextId, fundingAccountCount: Number(accountCount), strategyId })} type="button">Iniciar ruta</button>
+      <fieldset className={styles.accountPicker}>
+        <legend>Cuentas a enlazar <span>{selectedAccountIds.length} de {Number(accountCount) || 0}</span></legend>
+        {snapshot.accounts.map((account) => <label key={account.id}>
+          <input checked={selectedAccountIds.includes(account.id)} onChange={(event) => {
+            setSelectedAccountIds((current) => event.target.checked ? [...current, account.id] : current.filter((id) => id !== account.id));
+            if (event.target.checked) setAccountId(account.id);
+          }} type="checkbox" />
+          <span><strong>{account.externalName}</strong>{account.identityName ? <small>{account.identityName}</small> : null}</span>
+        </label>)}
+      </fieldset>
+      <button className={styles.primary} disabled={saving || !selectedContextId || selectedAccountIds.length !== Number(accountCount)} onClick={() => void mutate({ accountIds: selectedAccountIds, action: "start", contextId: selectedContextId, fundingAccountCount: Number(accountCount), strategyId })} type="button">Enlazar e iniciar ruta</button>
     </div>}
 
     {message ? <p className={styles.error} role="alert">{message}</p> : null}
