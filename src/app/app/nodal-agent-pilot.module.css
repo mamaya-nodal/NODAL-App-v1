@@ -459,14 +459,6 @@
   color: var(--muted);
 }
 
-.integrationFooter {
-  padding: 18px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: .76rem;
-  text-align: center;
-}
-
 @keyframes nodalbot-float {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-5px) scale(1.025, .985); }

@@ -304,7 +304,7 @@ export function NodalAgentPilot() {
               />
               <button aria-label="Enviar mensaje" disabled={!draft.trim() || loading} type="submit">↑</button>
             </form>
-          ) : <div className={styles.integrationFooter}>Rutyx se habilitará en este mismo panel.</div>}
+          ) : null}
         </section>
       ) : null}
 
