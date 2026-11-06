@@ -1,5 +1,9 @@
-export const NODAL_AGENT_PILOT_EMAIL = "mauriciosebastianamaya@gmail.com";
+export const NODAL_AGENT_PILOT_EMAILS = [
+  "mauriciosebastianamaya@gmail.com",
+  "loremalagreca@gmail.com",
+] as const;
 
 export function canUseNodalAgentPilot(email: string | null | undefined): boolean {
-  return email?.trim().toLowerCase() === NODAL_AGENT_PILOT_EMAIL;
+  const normalizedEmail = email?.trim().toLowerCase();
+  return normalizedEmail ? NODAL_AGENT_PILOT_EMAILS.includes(normalizedEmail as typeof NODAL_AGENT_PILOT_EMAILS[number]) : false;
 }
