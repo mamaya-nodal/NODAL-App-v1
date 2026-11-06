@@ -16,6 +16,7 @@ type Snapshot = Readonly<{
   operations: Readonly<Record<string, RutyxOperation>>;
   states: readonly RutyxRouteState[];
   strategies: readonly RutyxStrategy[];
+  demo?: boolean;
 }>;
 
 export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expanded?: boolean; onExpand?: () => void }>) {
@@ -48,6 +49,26 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
     return () => { active = false; };
   }, []);
 
+  function applySnapshot(payload: Snapshot) {
+    setSnapshot(payload);
+    const firstAccount = payload.accounts[0];
+    setAccountId(firstAccount?.id || "");
+    setIdentityId(firstAccount?.identityId ?? payload.identities[0]?.id ?? "personal");
+    setSelectedAccountIds([]);
+    setStrategyId(payload.strategies.find((strategy) => strategy.enabled)?.id || "");
+    setContextId("");
+  }
+
+  async function toggleDemo() {
+    setLoading(true);
+    setMessage("");
+    const response = await fetch(snapshot?.demo ? "/api/rutyx/session" : "/api/rutyx/session?demo=1", { cache: "no-store" });
+    const payload = await response.json() as Snapshot & { message?: string };
+    if (!response.ok) setMessage(payload.message ?? "No se pudo abrir el ejemplo.");
+    else applySnapshot(payload);
+    setLoading(false);
+  }
+
   const state = snapshot?.states.find((candidate) => candidate.accountId === accountId) ?? null;
   const operation = accountId ? snapshot?.operations[accountId] ?? null : null;
   const linkedStates = state ? snapshot?.states.filter((candidate) => candidate.groupId === state.groupId) ?? [] : [];
@@ -60,7 +81,8 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
   async function mutate(body: Record<string, unknown>) {
     setSaving(true);
     setMessage("");
-    const response = await fetch("/api/rutyx/session", { body: JSON.stringify(body), headers: { "content-type": "application/json" }, method: "POST" });
+    const demoFields = snapshot?.demo ? { demo: true, demoSession: { events: snapshot.events, states: snapshot.states } } : {};
+    const response = await fetch("/api/rutyx/session", { body: JSON.stringify({ ...body, ...demoFields }), headers: { "content-type": "application/json" }, method: "POST" });
     const payload = await response.json() as Snapshot & { message?: string };
     if (!response.ok) setMessage(payload.message ?? "No se pudo guardar el cambio.");
     else setSnapshot(payload);
@@ -72,9 +94,11 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
 
   return <section className={styles.root} data-expanded={expanded ? "true" : "false"}>
     <header className={styles.heading}>
-      <div><span>RUTYX</span><strong>Gestión de rutas</strong></div>
-      {!expanded ? <button className={styles.expand} onClick={onExpand} type="button">Expandir ↗</button> : null}
+      <div><span>RUTYX{snapshot.demo ? " · EJEMPLO" : ""}</span><strong>Gestión de rutas</strong></div>
+      <div className={styles.headingActions}><button className={styles.demoToggle} onClick={() => void toggleDemo()} type="button">{snapshot.demo ? "Salir del ejemplo" : "Probar ejemplo"}</button>{!expanded ? <button className={styles.expand} onClick={onExpand} type="button">Expandir ↗</button> : null}</div>
     </header>
+
+    {snapshot.demo ? <div className={styles.demoNotice}><strong>Ejemplo teórico</strong><span>Podés probar libremente. Nada de lo que hagas acá modifica cuentas o registros reales.</span></div> : null}
 
     <div className={styles.companies}>
       {snapshot.companies.map((company) => <button aria-pressed={company.id === "LUCID"} disabled={!company.enabled} key={company.id} type="button">

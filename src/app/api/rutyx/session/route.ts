@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 
 import { calculateBrokerRatio } from "@/modules/rutyx/domain/broker-ratio";
 import { contextById, nextNodeForOutcome, operationByNode } from "@/modules/rutyx/server/catalog";
+import { advanceRutyxDemo, loadRutyxDemoSnapshot, startRutyxDemo, type DemoSession } from "@/modules/rutyx/server/demo";
 import { loadRutyxSnapshot, requireRutyxUser, userOwnsAccount } from "@/modules/rutyx/server/session";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   const access = await requireRutyxUser();
   if (!access) return NextResponse.json({ message: "No autorizado." }, { status: 403 });
   try {
+    if (new URL(request.url).searchParams.get("demo") === "1") return NextResponse.json(loadRutyxDemoSnapshot());
     return NextResponse.json(await loadRutyxSnapshot(access.userId, access.db));
   } catch {
     return NextResponse.json({ message: "Rutyx todavía no está habilitado en esta versión." }, { status: 503 });
@@ -22,6 +24,7 @@ type StartBody = Readonly<{
   contextId?: string;
   fundingAccountCount?: number;
   strategyId?: string;
+  demo?: boolean;
 }>;
 
 type ResultBody = Readonly<{
@@ -29,12 +32,24 @@ type ResultBody = Readonly<{
   action: "result";
   outcome?: "SL" | "TP";
   revision?: number;
+  demo?: boolean;
+  demoSession?: DemoSession;
 }>;
 
 export async function POST(request: Request) {
   const access = await requireRutyxUser();
   if (!access) return NextResponse.json({ message: "No autorizado." }, { status: 403 });
   const body = await request.json().catch(() => null) as StartBody | ResultBody | null;
+
+  if (body?.demo && body.action === "start") {
+    const result = startRutyxDemo([...new Set(body.accountIds ?? [])], body.strategyId?.trim() ?? "", body.contextId?.trim() ?? "");
+    return result ? NextResponse.json(result) : NextResponse.json({ message: "No se pudo iniciar el ejemplo." }, { status: 400 });
+  }
+
+  if (body?.demo && body.action === "result" && body.accountId && (body.outcome === "TP" || body.outcome === "SL")) {
+    const result = advanceRutyxDemo(body.demoSession ?? {}, body.accountId, body.outcome);
+    return result ? NextResponse.json(result) : NextResponse.json({ message: "El ejemplo no pudo avanzar." }, { status: 400 });
+  }
 
   if (body?.action === "start") {
     const accountIds = [...new Set(body.accountIds ?? [])];
