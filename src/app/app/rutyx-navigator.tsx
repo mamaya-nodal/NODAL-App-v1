@@ -95,7 +95,7 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
       </select>
     </label>
 
-    {!snapshot.accounts.length ? <div className={styles.empty}>No hay cuentas LUCID registradas para usar con Rutyx.</div> : state ? <>
+    {!visibleAccounts.length ? <div className={styles.empty}>Esta identidad no tiene cuentas LUCID activas para enlazar.</div> : state ? <>
       <div className={styles.routeMeta}>
         <span>{snapshot.strategies.find((strategy) => strategy.id === state.strategyId)?.name}</span>
         <strong>{state.phase === "funded" ? "Funded" : "Evaluación"}</strong>
