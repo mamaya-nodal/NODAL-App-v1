@@ -63,7 +63,12 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
   for (const link of linksResult.data ?? []) add(link.connection_name, link.external_account_name);
   for (const account of (inventoryResult.data?.accounts ?? []) as NinjaAccountSnapshot[]) {
     const classification = classifyNinjaAccount(account, inventoryResult.data?.observed_at ?? new Date().toISOString());
-    if (classification.type === "broker") {
+    // A prop account that is still awaiting registration must also have its
+    // technical operation reconstructed. Otherwise a simultaneous group can
+    // be committed with only the first account the user happens to register.
+    // Automatic accounting will remain blocked until every detected prop has
+    // a linked NODAL account; it will never allocate the result partially.
+    if (classification.type === "broker" || classification.type === "prop") {
       add(account.connectionName, account.accountName);
     }
   }
