@@ -23,9 +23,9 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [accountId, setAccountId] = useState("");
+  const [identityId, setIdentityId] = useState("personal");
   const [strategyId, setStrategyId] = useState("");
   const [contextId, setContextId] = useState("");
-  const [accountCount, setAccountCount] = useState("1");
   const [selectedAccountIds, setSelectedAccountIds] = useState<readonly string[]>([]);
 
   useEffect(() => {
@@ -36,8 +36,10 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
       if (!response.ok) setMessage(payload.message ?? "No se pudo abrir Rutyx.");
       else {
         setSnapshot(payload);
-        setAccountId(payload.accounts[0]?.id || "");
-        setSelectedAccountIds(payload.accounts[0]?.id ? [payload.accounts[0].id] : []);
+        const firstAccount = payload.accounts[0];
+        setAccountId(firstAccount?.id || "");
+        setIdentityId(firstAccount?.identityId ?? "personal");
+        setSelectedAccountIds([]);
         setStrategyId(payload.strategies.find((strategy) => strategy.enabled)?.id || "");
       }
       setLoading(false);
@@ -52,6 +54,12 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
   const contexts = useMemo(() => snapshot?.contexts.filter((context) => context.strategyId === strategyId) ?? [], [snapshot, strategyId]);
   const selectedContextId = contexts.some((context) => context.id === contextId) ? contextId : contexts[0]?.id ?? "";
   const events = snapshot?.events.filter((event) => event.account_id === accountId) ?? [];
+  const identities = useMemo(() => {
+    const entries = new Map<string, string>();
+    for (const account of snapshot?.accounts ?? []) entries.set(account.identityId ?? "personal", account.identityName ?? "Titular");
+    return [...entries].map(([id, name]) => ({ id, name }));
+  }, [snapshot]);
+  const visibleAccounts = (snapshot?.accounts ?? []).filter((account) => (account.identityId ?? "personal") === identityId);
 
   async function mutate(body: Record<string, unknown>) {
     setSaving(true);
@@ -78,9 +86,16 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
       </button>)}
     </div>
 
-    <label className={styles.field}>Cuenta LUCID
-      <select onChange={(event) => setAccountId(event.target.value)} value={accountId}>
-        {snapshot.accounts.map((account) => <option key={account.id} value={account.id}>{account.label}{account.identityName ? ` · ${account.identityName}` : ""}</option>)}
+    <label className={styles.field}>Identidad
+      <select onChange={(event) => {
+        const nextIdentityId = event.target.value;
+        const identityAccounts = snapshot.accounts.filter((account) => (account.identityId ?? "personal") === nextIdentityId);
+        const activeAccount = identityAccounts.find((account) => snapshot.states.some((candidate) => candidate.accountId === account.id)) ?? identityAccounts[0];
+        setIdentityId(nextIdentityId);
+        setAccountId(activeAccount?.id ?? "");
+        setSelectedAccountIds([]);
+      }} value={identityId}>
+        {identities.map((identity) => <option key={identity.id} value={identity.id}>{identity.name}</option>)}
       </select>
     </label>
 
@@ -122,12 +137,9 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
           {contexts.map((context) => <option key={context.id} value={context.id}>{context.label}</option>)}
         </select>
       </label>
-      <label className={styles.field}>Cantidad de cuentas de fondeo
-        <input max={snapshot.accounts.length} min="1" onChange={(event) => setAccountCount(event.target.value)} type="number" value={accountCount} />
-      </label>
       <fieldset className={styles.accountPicker}>
-        <legend>Cuentas a enlazar <span>{selectedAccountIds.length} de {Number(accountCount) || 0}</span></legend>
-        {snapshot.accounts.map((account) => <label key={account.id}>
+        <legend>Cuentas a enlazar <span>{selectedAccountIds.length} seleccionadas</span></legend>
+        {visibleAccounts.map((account) => <label key={account.id}>
           <input checked={selectedAccountIds.includes(account.id)} onChange={(event) => {
             setSelectedAccountIds((current) => event.target.checked ? [...current, account.id] : current.filter((id) => id !== account.id));
             if (event.target.checked) setAccountId(account.id);
@@ -135,7 +147,7 @@ export function RutyxNavigator({ expanded = false, onExpand }: Readonly<{ expand
           <span><strong>{account.externalName}</strong>{account.identityName ? <small>{account.identityName}</small> : null}</span>
         </label>)}
       </fieldset>
-      <button className={styles.primary} disabled={saving || !selectedContextId || selectedAccountIds.length !== Number(accountCount)} onClick={() => void mutate({ accountIds: selectedAccountIds, action: "start", contextId: selectedContextId, fundingAccountCount: Number(accountCount), strategyId })} type="button">Enlazar e iniciar ruta</button>
+      <button className={styles.primary} disabled={saving || !selectedContextId || selectedAccountIds.length === 0} onClick={() => void mutate({ accountIds: selectedAccountIds, action: "start", contextId: selectedContextId, fundingAccountCount: selectedAccountIds.length, strategyId })} type="button">Enlazar e iniciar ruta</button>
     </div>}
 
     {message ? <p className={styles.error} role="alert">{message}</p> : null}

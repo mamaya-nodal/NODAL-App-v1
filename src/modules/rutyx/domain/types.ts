@@ -39,6 +39,7 @@ export type RutyxAccount = Readonly<{
   company: string;
   externalName: string;
   id: string;
+  identityId: string | null;
   identityName: string | null;
   label: string;
   state: string;

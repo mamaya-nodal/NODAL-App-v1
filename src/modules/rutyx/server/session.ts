@@ -41,19 +41,24 @@ export async function loadRutyxSnapshot(userId: string, db = createServiceClient
   ]);
   const companyById = new Map((companiesResult.data ?? []).map((company) => [company.id, company]));
   const identityById = new Map((identitiesResult.data ?? []).map((identity) => [identity.id, `${identity.first_name} ${identity.last_name}`.trim()]));
-  const identityByAccount = new Map((assignmentsResult.data ?? []).map((assignment) => [assignment.account_id, identityById.get(assignment.identity_id) ?? null]));
-  const externalByAccount = new Map<string, string>();
-  for (const link of linksResult.data ?? []) if (!externalByAccount.has(link.account_id)) externalByAccount.set(link.account_id, link.external_account_name);
+  const identityByAccount = new Map((assignmentsResult.data ?? []).map((assignment) => [assignment.account_id, {
+    id: assignment.identity_id,
+    name: identityById.get(assignment.identity_id) ?? "Identidad",
+  }]));
+  const latestLinkByAccount = new Map<string, { account_id: string; closed_at: string | null; external_account_name: string; linked_at: string }>();
+  for (const link of linksResult.data ?? []) if (!latestLinkByAccount.has(link.account_id)) latestLinkByAccount.set(link.account_id, link);
   const accounts: RutyxAccount[] = (accountRows ?? []).flatMap((account) => {
     const company = companyById.get(account.company_id);
-    if (company?.code !== "LUCID") return [];
-    const externalName = externalByAccount.get(account.id) ?? `Cuenta ${account.reference_number}`;
-    const identityName = identityByAccount.get(account.id) ?? null;
+    const latestLink = latestLinkByAccount.get(account.id);
+    if (company?.code !== "LUCID" || account.state === "closed" || latestLink?.closed_at) return [];
+    const externalName = latestLink?.external_account_name ?? `Cuenta ${account.reference_number}`;
+    const identity = identityByAccount.get(account.id) ?? null;
     return [{
       company: company.display_name,
       externalName,
       id: account.id,
-      identityName,
+      identityId: identity?.id ?? null,
+      identityName: identity?.name ?? null,
       label: `${company.display_name} · ${externalName}`,
       state: account.state,
     }];
