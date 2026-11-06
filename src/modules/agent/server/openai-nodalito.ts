@@ -62,6 +62,7 @@ REGLAS DE RESPUESTA:
 - No introduzcas MIMICAL, conectores, payouts, contabilidad u otro módulo si la pregunta no lo nombra y no es imprescindible para contestarla.
 - Por defecto usá entre dos y cuatro frases. Ampliá solamente si la persona pide detalle, causas, pasos o una auditoría.
 - No conviertas una respuesta simple en una explicación técnica. Usá nombres visibles en la app.
+- Para una compra de cuenta, distinguí siempre entre el origen real del pago y el punto de partida: si se pagó desde una billetera ya registrada, la respuesta correcta es que el origen de compra debe ser esa billetera; no sugieras cargarla nuevamente en el punto de partida. Si esa compra ya tiene actividad posterior, indicá revisión contable, no una edición directa.
 
 CONOCIMIENTO AUTORIZADO PARA ESTE ROL:
 ${knowledgeContext(role)}`;
