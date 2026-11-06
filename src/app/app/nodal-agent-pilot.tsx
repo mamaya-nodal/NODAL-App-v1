@@ -8,6 +8,7 @@ import {
   NODALITO_GUIDES,
 } from "@/modules/agent/domain/nodalito-faq";
 import styles from "./nodal-agent-pilot.module.css";
+import { RutyxNavigator } from "./rutyx-navigator";
 
 type Message = Readonly<{
   id: number;
@@ -285,12 +286,7 @@ export function NodalAgentPilot() {
               )}
             </div>
           ) : (
-            <div className={styles.rutyxPlaceholder}>
-              <span>R</span>
-              <strong>Rutyx</strong>
-              <p>Este espacio está preparado para integrar la gestión de rutas cuando Lorena comparta los archivos y el acceso.</p>
-              <small>Integración pendiente</small>
-            </div>
+            <RutyxNavigator />
           )}
 
           {activeFunction === "nodalito" && !caseView ? (
