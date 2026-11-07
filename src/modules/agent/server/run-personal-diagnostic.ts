@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { NodalitoFinding } from "../domain/deterministic-audit";
 import { connectorVersionState } from "@/modules/ninja/domain/connector-version";
+import { runAccountingDiagnostic } from "./run-accounting-diagnostic";
 
 type ConnectorRow = Readonly<{
   connector_id: string;
@@ -87,11 +88,16 @@ export async function runPersonalDiagnostic(supabase: SupabaseClient) {
     });
   }
 
+  try {
+    findings.push(...await runAccountingDiagnostic(supabase));
+  } catch {
+    findings.push({ category: "billing", id: "accounting:incomplete", severity: "attention", title: "Revisión contable incompleta", detail: "No pude revisar todas las compras, cuentas y payouts. No puedo confirmar que estén correctos.", evidence: "La lectura contable no se completó.", userId: null, userName: null });
+  }
   return {
     findings,
     generatedAt: new Date().toISOString(),
     summary: findings.length
       ? `Encontré ${findings.length} situación${findings.length === 1 ? "" : "es"} en tu cuenta que conviene revisar.`
-      : "Revisé tu conector y las conciliaciones visibles del ciclo actual. No encontré alertas pendientes.",
+      : "No encontré alertas en los controles disponibles de conectores, conciliaciones, compras, cuentas y payouts del período abierto. Esto no confirma movimientos que todavía no fueron informados.",
   };
 }

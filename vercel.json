@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
+      "path": "/api/cron/nodalito",
+      "schedule": "0 11 * * *"
+    },
+    {
       "path": "/api/cron/wallets",
       "schedule": "0 * * * *"
     },
