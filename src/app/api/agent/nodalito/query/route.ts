@@ -4,6 +4,7 @@ import { canUseNodalAgentPilot } from "@/modules/agent/domain/pilot-access";
 import { askNodalito, NodalitoConfigurationError } from "@/modules/agent/server/openai-nodalito";
 import { runPersonalDiagnostic } from "@/modules/agent/server/run-personal-diagnostic";
 import { inspectNodalAdminAccess } from "@/modules/admin/server/admin-access";
+import { readRepairContext, prepareRepair, openRepairIncident } from "@/modules/agent/server/repair-tools";
 
 export async function POST(request: Request) {
   const access = await inspectNodalAdminAccess();
@@ -42,11 +43,17 @@ export async function POST(request: Request) {
       history,
       personalDiagnostic: () => runPersonalDiagnostic(access.supabase),
       question, role, safetyUserId: userId,
+      ...(process.env.NODALITO_REPAIRS_ENABLED === "true" ? {
+        readRepairContext: () => readRepairContext(access.supabase),
+        prepareRepair: (draft: unknown) => prepareRepair(access.supabase, draft),
+        openIncident: (draft: unknown) => openRepairIncident(userId, question, draft),
+      } : {}),
     });
     return NextResponse.json({
       answer: {
         findings: result.mode === "audit" || result.mode === "diagnostic" ? result.findings : [],
         summary: result.text,
+        repairPreview: result.mode === "repair" ? result.repairPreview : undefined,
       },
       mode: result.mode,
     });

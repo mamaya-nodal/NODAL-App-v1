@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { canUseNodalAgentPilot } from "@/modules/agent/domain/pilot-access";
 import { inspectNodalAdminAccess } from "@/modules/admin/server/admin-access";
+import { repairChanges } from "@/modules/agent/domain/repair-summary";
 
 const allowedStatuses = new Set(["open", "investigating", "resolved", "dismissed"]);
 
@@ -19,12 +20,17 @@ export async function GET() {
   if (!userId || !canUseNodalAgentPilot(email)) return NextResponse.json({ message: "No autorizado." }, { status: 403 });
   const service = createServiceClient();
   let query = service.from("nodal_agent_cases")
-    .select("id,status,priority,category,title,description,evidence,source_question,resolution_note,created_at,updated_at,subject_user_id,nodal_users!nodal_agent_cases_subject_user_id_fkey(display_name,email)")
+    .select("id,status,priority,category,title,description,evidence,source_question,resolution_note,reviewed_at,created_at,updated_at,subject_user_id,nodal_users!nodal_agent_cases_subject_user_id_fkey(display_name,email)")
     .order("created_at", { ascending: false }).limit(100);
   if (access.status !== "allowed") query = query.eq("subject_user_id", userId);
   const { data, error } = await query;
   if (error) return NextResponse.json({ message: "No pude leer los casos." }, { status: 500 });
-  return NextResponse.json({ cases: data ?? [], master: access.status === "allowed" });
+  const cases = (data ?? []).map((item) => {
+    if (!item.evidence || Array.isArray(item.evidence) || !item.evidence.planId) return item;
+    const evidence = item.evidence;
+    return { ...item, evidence: { planId: evidence.planId, parameters: evidence.parameters, reversal: evidence.reversal, changes: repairChanges(evidence.changes) } };
+  });
+  return NextResponse.json({ cases, master: access.status === "allowed" });
 }
 
 export async function POST(request: Request) {
@@ -57,7 +63,7 @@ export async function PATCH(request: Request) {
   if (!id || !allowedStatuses.has(status)) return NextResponse.json({ message: "Cambio inválido." }, { status: 400 });
   const service = createServiceClient();
   const { error } = await service.from("nodal_agent_cases").update({
-    resolution_note: typeof body.resolutionNote === "string" ? body.resolutionNote.trim().slice(0, 4000) : null,
+    ...(typeof body.resolutionNote === "string" ? { resolution_note: body.resolutionNote.trim().slice(0, 4000) } : {}),
     reviewed_at: new Date().toISOString(), reviewed_by: userId, status, updated_at: new Date().toISOString(),
   }).eq("id", id);
   if (error) return NextResponse.json({ message: "No pude actualizar el caso." }, { status: 500 });

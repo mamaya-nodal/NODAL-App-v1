@@ -1,5 +1,46 @@
 # Decisiones tecnicas de NODAL App
 
+### Nodalito — reparaciones integradas, candidato local 2026-11-07
+
+- Un único flujo atiende once familias de incidentes. Conversación y ronda diaria
+  investigan registros; las correcciones conocidas se simulan antes de ofrecerse,
+  y las situaciones ambiguas quedan en la bandeja de Admin Master.
+- Doce acciones: registrar cuenta detectada, corregir origen de compra, recuperar
+  operación, corregir saldo y cadena posterior, ajustar días, recalcular estado,
+  aprobar/cobrar payout, registrar movimiento de billetera, conciliar transferencia
+  detectada, asignar cobertura y reintentar conciliación.
+- Preparar no modifica el libro: ejecuta las funciones reales en una subtransacción
+  que se revierte. Aplicar comprueba propietario, período abierto, vigencia y huella
+  de los registros; escribe corrección, comprobante, auditoría y aviso juntos.
+  Una interrupción permite reintentar el mismo plan sin duplicar efectos.
+- La IA sólo consulta, prepara o reporta. El usuario revisa el resumen y confirma.
+  No recibe SQL ejecutable, secretos ni permisos de Admin Master.
+- El diario captura también las escrituras de triggers. Admin Master con MFA
+  puede revertir y marcar como auditado. Si existe actividad posterior, se exige
+  una nueva reconstrucción; nunca se restaura silenciosamente una copia antigua.
+- La cadena recuperada parte de la apertura registrada, conserva saldos posteriores
+  observados, aplica redondeo oficial y rechaza contradicciones con ejecuciones Ninja
+  o distribuciones personalizadas. La cobertura distingue eventos de origen:
+  dos operaciones con idéntico importe no se consideran la misma.
+- La ronda de las 08:00 de Buenos Aires revisa únicamente usuarios habilitados.
+  Detecta estados inconsistentes, orígenes sin billetera, cobros sin destino,
+  versiones anteriores y lotes bloqueados; guarda hallazgos sin duplicar casos.
+  Un payout pendiente o ausencia de registros no prueban un error.
+- QA: esquema PostgreSQL aislado construido con las migraciones de la app;
+  sin datos de clientes ni sustituciones de las funciones económicas.
+  Se prueban las doce acciones, cinco participantes, reconstrucción, comisión,
+  payout pendiente/cobrado, reversión, aislamiento, MFA, idempotencia, cambios de
+  contexto y rollback si falla el aviso. La API rechaza solicitudes sin sesión.
+- Límites explícitos: compras ya incluidas en una apertura reconstruida, reparto
+  especial, fases contradictorias, operaciones anteriores al corte y reversión
+  con dependencias posteriores se elevan para revisión. No se fabrican ejecuciones
+  ausentes ni se instala/repara el conector desde el chat.
+- Publicación pendiente: migraciones sin aplicar a producción y reparaciones
+  deshabilitadas por NODALITO_REPAIRS_ENABLED y habilitación individual.
+  No se considera validada una conversación real de reparación en un despliegue
+  autenticado sólo por pasar las pruebas locales. La publicación queda condicionada
+  a esa verificación del piloto, conservando el alcance de Mauricio y Lore.
+
 ### APP-249 - Señal operativa mínima en la tabla Admin Master
 
 - La lista de usuarios no suma etiquetas ni texto persistente para describir
