@@ -25,7 +25,8 @@ export async function GET() {
   if (access.status !== "allowed") query = query.eq("subject_user_id", userId);
   const { data, error } = await query;
   if (error) return NextResponse.json({ message: "No pude leer los casos." }, { status: 500 });
-  const cases = (data ?? []).map((item) => {
+  const visibleCases = (data ?? []).filter((item) => item.category !== "scheduled_audit" || item.status === "open" || item.status === "investigating");
+  const cases = visibleCases.map((item) => {
     if (!item.evidence || Array.isArray(item.evidence) || !item.evidence.planId) return item;
     const evidence = item.evidence;
     return { ...item, evidence: { planId: evidence.planId, parameters: evidence.parameters, reversal: evidence.reversal, changes: repairChanges(evidence.changes) } };

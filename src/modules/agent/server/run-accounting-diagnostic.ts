@@ -12,7 +12,9 @@ import { connectorVersionState } from "@/modules/ninja/domain/connector-version"
 import { createServiceClient } from "@/lib/supabase/service";
 
 const MAX_ROWS = 3000;
-const RECENT_OPERATION_DAYS = 45;
+// La ronda diaria busca fallas nuevas. Historia antigua ya corregida a mano no
+// debe reaparecer como una operación omitida sólo porque no conserva lote técnico.
+const RECENT_OPERATION_DAYS = 7;
 
 function assertComplete(results: readonly Readonly<{ data: unknown[] | null; error: unknown }>[]) {
   for (const result of results) if (result.error) throw result.error;
@@ -78,9 +80,10 @@ export async function runAccountingDiagnosticForOwner(db: SupabaseClient, ownerI
   findings.push(...diagnoseBalanceChains(controls));
   findings.push(...diagnoseControlLedgers(controls, participants, entries));
 
-  const links = accountIds.length ? await db.from("ninja_account_links")
+  const activeAccountIds = accounts.filter((account) => account.state !== "closed").map((account) => account.id);
+  const links = activeAccountIds.length ? await db.from("ninja_account_links")
     .select("account_id,connector_id,connection_name,external_account_name,phase,accounting_phase,completed_trade_days")
-    .in("account_id", accountIds).is("closed_at", null).limit(MAX_ROWS) : { data: [], error: null };
+    .in("account_id", activeAccountIds).is("closed_at", null).limit(MAX_ROWS) : { data: [], error: null };
   if (links.error) throw links.error;
   if ((links.data?.length ?? 0) >= MAX_ROWS) throw new Error("accounting_diagnostic_incomplete");
   findings.push(...diagnoseOperationalBaselines(links.data ?? []));
@@ -102,7 +105,7 @@ export async function runAccountingDiagnosticForOwner(db: SupabaseClient, ownerI
         .in("connector_id", connectorIds).eq("status", "closed").is("excluded_at", null).gte("opened_at", cutoff).limit(MAX_ROWS),
     ]);
     assertComplete([batches, sessions]);
-    const relevantBatches = (batches.data ?? []).filter((batch) => !batch.accounting_period_id || periodIds.includes(batch.accounting_period_id));
+    const relevantBatches = (batches.data ?? []).filter((batch) => batch.accounting_period_id && periodIds.includes(batch.accounting_period_id));
     const batchIds = relevantBatches.map((batch) => batch.id);
     const members = batchIds.length ? await db.from("ninja_operation_batch_members").select("batch_id,session_id,account_id,role").in("batch_id", batchIds).limit(MAX_ROWS) : { data: [], error: null };
     if (members.error) throw members.error;

@@ -88,7 +88,10 @@ export function diagnoseControlLedgers(
     const controlParticipants = participantsByControl.get(control.id) ?? [];
     const controlEntries = entriesByControl.get(control.id) ?? [];
     const allocated = controlParticipants.reduce((total, row) => total + Number(row.allocated_result_cents), 0);
-    if (controlParticipants.length && allocated !== Number(control.operating_result_cents)) {
+    const allocationDifference = Math.abs(allocated - Number(control.operating_result_cents));
+    // La distribución oficial redondea por cuenta. Un remanente de hasta un
+    // centavo por participante no cambia el flotante y no es una anomalía.
+    if (controlParticipants.length && allocationDifference > controlParticipants.length) {
       findings.push({
         ...base,
         category: "billing",
@@ -130,13 +133,12 @@ export function diagnoseCommittedBatchCoverage(
     const expected = new Set(members.filter((row) => row.batch_id === batch.id && row.role === "prop" && row.account_id).map((row) => row.account_id!));
     const recorded = new Set(entries.filter((row) => row.daily_control_id === batch.daily_control_id).map((row) => row.account_id));
     const missing = [...expected].filter((accountId) => !recorded.has(accountId));
-    const unexpected = [...recorded].filter((accountId) => !expected.has(accountId));
-    if (!missing.length && !unexpected.length) continue;
+    if (!missing.length) continue;
     findings.push({
       ...base,
       category: "reconciliation",
-      detail: "El conector cerró una cobertura con un conjunto de cuentas, pero la contabilidad registró otro. No se completa automáticamente porque hay que respetar únicamente las cuentas detectadas.",
-      evidence: `Lote ${batch.id}; faltan ${missing.length}; sobran ${unexpected.length}; control ${batch.daily_control_id}.`,
+      detail: "El conector cerró una cobertura con cuentas explícitas que no aparecen en la contabilidad del mismo trade. No se completa automáticamente porque hay que respetar únicamente las cuentas detectadas.",
+      evidence: `Lote ${batch.id}; faltan ${missing.length}; control ${batch.daily_control_id}.`,
       id: `batch-coverage:${batch.id}`,
       severity: "critical",
       title: "Cobertura registrada con cuentas faltantes",

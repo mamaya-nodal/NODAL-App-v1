@@ -22,9 +22,13 @@ describe("auditoría contable determinística de Nodalito", () => {
       [{ daily_control_id: "c", account_id: "one", destination: "NETO BROKER -", magnitude_cents: 9 }],
     ).map((finding) => finding.id)).toEqual(["control-entries:c"]);
     expect(diagnoseControlLedgers(controls,
+      [{ daily_control_id: "c", account_id: "one", allocated_result_cents: -8 }],
+      [{ daily_control_id: "c", account_id: "one", destination: "NETO BROKER -", magnitude_cents: 8 }],
+    ).map((finding) => finding.id)).toEqual(["control-allocation:c"]);
+    expect(diagnoseControlLedgers(controls,
       [{ daily_control_id: "c", account_id: "one", allocated_result_cents: -9 }],
       [{ daily_control_id: "c", account_id: "one", destination: "NETO BROKER -", magnitude_cents: 9 }],
-    ).map((finding) => finding.id)).toEqual(["control-allocation:c"]);
+    ).map((finding) => finding.id)).toEqual([]);
   });
 
   it("encuentra cuentas omitidas en un lote ya conciliado", () => {
@@ -33,6 +37,14 @@ describe("auditoría contable determinística de Nodalito", () => {
       [{ batch_id: "batch", account_id: "one", role: "prop" }, { batch_id: "batch", account_id: "two", role: "prop" }],
       [{ daily_control_id: "control", account_id: "one", destination: "NETO BROKER -", magnitude_cents: 10 }],
     )).toMatchObject([{ id: "batch-coverage:batch", severity: "critical" }]);
+    expect(diagnoseCommittedBatchCoverage(
+      [{ id: "batch", daily_control_id: "control" }],
+      [{ batch_id: "batch", account_id: "one", role: "prop" }],
+      [
+        { daily_control_id: "control", account_id: "one", destination: "NETO BROKER -", magnitude_cents: 10 },
+        { daily_control_id: "control", account_id: "manual", destination: "NETO BROKER -", magnitude_cents: 10 },
+      ],
+    )).toEqual([]);
   });
 
   it("distingue una base faltante de una etapa incompatible", () => {
