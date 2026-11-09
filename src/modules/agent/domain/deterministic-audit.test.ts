@@ -40,4 +40,20 @@ describe("auditoría determinística de Nodalito", () => {
     const audit = buildDeterministicAudit({ ...snapshot, systemGrossInCents: 25_000 });
     expect(audit.findings[0]?.id).toBe("system-billing-mismatch");
   });
+
+  it("resuelve al usuario mencionado aunque use un apodo y limita el reporte a esa persona", () => {
+    const david: NodalitoAuditSnapshot["users"][number] = {
+      ...snapshot.users[0],
+      email: "david@example.com",
+      id: "david",
+      name: "Davicho Malagreca",
+      reconciliationAlerts: [{ amountInCents: -38_690, id: "david-batch", occurredAt: "2026-11-09", reason: "No se pudieron vincular 5 cuentas." }],
+    };
+    const audit = buildDeterministicAudit({ ...snapshot, systemGrossInCents: 40_000, users: [...snapshot.users, david] });
+    const answer = answerDeterministicAudit("David tenía problemas de conciliación, quiero un reporte completo", audit, "2026-11-09T15:00:00Z");
+    expect(answer.summary).toContain("Davicho Malagreca");
+    expect(answer.findings.length).toBeGreaterThan(1);
+    expect(answer.findings.every((finding) => finding.userId === "david")).toBe(true);
+    expect(answer.findings.some((finding) => finding.id === "reconciliation:david-batch")).toBe(true);
+  });
 });

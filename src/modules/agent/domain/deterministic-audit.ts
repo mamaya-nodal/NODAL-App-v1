@@ -43,6 +43,7 @@ export type NodalitoAudit = Readonly<{
   historicalGrossInCents: number;
   operatedYesterday: readonly NodalitoAuditUser[];
   systemGrossInCents: number;
+  users: readonly NodalitoAuditUser[];
   usersWithoutActivityYesterday: readonly NodalitoAuditUser[];
 }>;
 
@@ -126,24 +127,64 @@ export function buildDeterministicAudit(snapshot: NodalitoAuditSnapshot): Nodali
     historicalGrossInCents: snapshot.historicalGrossInCents,
     operatedYesterday: snapshot.users.filter((user) => user.lastOperatedOn === snapshot.yesterday),
     systemGrossInCents: snapshot.systemGrossInCents,
+    users: snapshot.users,
     usersWithoutActivityYesterday: snapshot.users.filter((user) => user.lastOperatedOn !== snapshot.yesterday),
   };
 }
 
+const userSearchStopWords = new Set([
+  "actual", "actuales", "aplicacion", "conciliacion", "conciliaciones", "completo", "detecta",
+  "errores", "informe", "muchisimos", "problema", "problemas", "quiero", "reporte", "revisar",
+  "tenia", "tiene", "todos", "usuario",
+]);
+
+function resolveAuditUser(question: string, users: readonly NodalitoAuditUser[]) {
+  const tokens = normalized(question).split(/[^a-z0-9@._-]+/).filter((token) => token.length >= 4 && !userSearchStopWords.has(token));
+  const ranked = users.map((user) => {
+    const aliases = normalized(`${user.name} ${user.email.split("@")[0]}`).split(/[^a-z0-9._-]+/).filter(Boolean);
+    const score = tokens.reduce((best, token) => Math.max(best, ...aliases.map((alias) => {
+      if (alias === token) return 4;
+      if (alias.includes(token) || token.includes(alias)) return 3;
+      return alias.length >= 4 && token.length >= 4 && alias.slice(0, 4) === token.slice(0, 4) ? 2 : 0;
+    })), 0);
+    return { score, user };
+  }).filter((candidate) => candidate.score > 0).sort((left, right) => right.score - left.score);
+  if (!ranked.length || (ranked[1] && ranked[1].score === ranked[0].score)) return null;
+  return ranked[0].user;
+}
+
 export function answerDeterministicAudit(question: string, audit: NodalitoAudit, generatedAt: string): NodalitoAuditAnswer {
   const value = normalized(question);
+  const subject = resolveAuditUser(question, audit.users);
   const wantsBilling = /factur|ganancia|resultado/.test(value);
   const wantsConnector = /conector|ninja|senal/.test(value);
   const wantsReconciliation = /concil|registro|error|problema/.test(value);
   const wantsActivity = /operaron|opero|actividad|ayer/.test(value);
   const wantsPayout = /payout|cobro/.test(value);
-  const focused = wantsBilling || wantsConnector || wantsReconciliation || wantsActivity || wantsPayout;
+  const wantsCompleteUserReport = Boolean(subject) && /reporte completo|informe completo|todos.{0,20}(problemas|errores)|problemas.{0,20}(tiene|tenia)/.test(value);
+  const focused = !wantsCompleteUserReport && (wantsBilling || wantsConnector || wantsReconciliation || wantsActivity || wantsPayout);
   const categories = new Set<NodalitoFindingCategory>();
   if (wantsBilling) categories.add("billing");
   if (wantsConnector) categories.add("connector");
   if (wantsReconciliation) categories.add("reconciliation");
   if (wantsPayout) categories.add("payout");
-  const findings = audit.findings.filter((finding) => !focused || categories.has(finding.category));
+  const findings = audit.findings.filter((finding) =>
+    (!subject || finding.userId === subject.id)
+    && (!focused || categories.has(finding.category)),
+  );
+
+  if (subject) {
+    const critical = findings.filter((finding) => finding.severity === "critical").length;
+    const attention = findings.filter((finding) => finding.severity === "attention").length;
+    const informational = findings.length - critical - attention;
+    return {
+      findings,
+      generatedAt,
+      summary: findings.length
+        ? `${subject.name}: encontré ${findings.length} situaciones (${critical} críticas, ${attention} que requieren atención y ${informational} informativas).`
+        : `${subject.name}: no encontré alertas de ${wantsReconciliation ? "conciliación " : ""}con las reglas determinísticas actuales.`,
+    };
+  }
 
   if (wantsActivity) {
     const operated = audit.operatedYesterday.map((user) => user.name).join(", ") || "ningún usuario";

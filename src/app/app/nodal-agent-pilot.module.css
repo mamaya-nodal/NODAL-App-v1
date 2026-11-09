@@ -283,6 +283,11 @@
   color: var(--brand-contrast);
 }
 
+:global(html[data-theme="day"]) .userMessage {
+  background: #187943;
+  color: #fff;
+}
+
 .quickQuestions,
 .guideDirectory {
   display: grid;
