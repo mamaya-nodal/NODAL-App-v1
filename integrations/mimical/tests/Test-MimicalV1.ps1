@@ -39,6 +39,10 @@ $cases = @(
     @{ Name = 'Stop manual redefine distancia'; Actual = Invoke-Math 'RebasedDistanceTicks' @($true, 30019.25, 30018.5, 0.25); Expected = 3 },
     @{ Name = 'Distancia manual nunca queda en cero'; Actual = Invoke-Math 'RebasedDistanceTicks' @($true, 30019.25, 30019.25, 0.25); Expected = 1 },
     @{ Name = 'Trailing conserva el nuevo margen'; Actual = Invoke-Math 'StopPrice' @($true, 30019.5, 3, 0.25); Expected = 30018.75 },
+    @{ Name = 'Long reconoce que el precio tocó el stop pretendido'; Actual = $assembly.GetType('NinjaTrader.NinjaScript.AddOns.MimicalTrailingRecovery', $true).GetMethod('StopReached').Invoke($null, @($true, 27936.0, 27936.0)); Expected = $true },
+    @{ Name = 'Long conserva el stop si aún no llegó al pretendido'; Actual = $assembly.GetType('NinjaTrader.NinjaScript.AddOns.MimicalTrailingRecovery', $true).GetMethod('StopReached').Invoke($null, @($true, 27936.25, 27936.0)); Expected = $false },
+    @{ Name = 'Short reconoce que el precio tocó el stop pretendido'; Actual = $assembly.GetType('NinjaTrader.NinjaScript.AddOns.MimicalTrailingRecovery', $true).GetMethod('StopReached').Invoke($null, @($false, 27936.0, 27936.0)); Expected = $true },
+    @{ Name = 'Una protección perdida exige cierre seguro'; Actual = $assembly.GetType('NinjaTrader.NinjaScript.AddOns.MimicalTrailingRecovery', $true).GetMethod('MustFlatten').Invoke($null, @($false, $true, 27936.25, 27936.0)); Expected = $true },
     @{ Name = 'CancelPending sigue activo hasta confirmación'; Actual = $workingMethod.Invoke($null, @($cancelPending)); Expected = $true },
     @{ Name = 'Cancelled es terminal'; Actual = $workingMethod.Invoke($null, @([Enum]::Parse($orderStateType, 'Cancelled'))); Expected = $false },
     @{ Name = 'CancelSubmitted sigue activo'; Actual = $workingMethod.Invoke($null, @([Enum]::Parse($orderStateType, 'CancelSubmitted'))); Expected = $true },
@@ -49,7 +53,7 @@ $text = Get-Content -LiteralPath $source -Raw
 $displayVersion = $assembly.GetType('NinjaTrader.NinjaScript.AddOns.MimicalWindow', $true).GetProperty('DisplayVersion').GetValue($null, $null)
 $fileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($output).FileVersion
 $checks = @(
-    @{ Name = 'La ventana muestra la versión exacta del DLL'; Pass = $displayVersion -eq $fileVersion -and $displayVersion -eq '1.1.0.3' -and $text.Contains('Caption = "MIMICAL · NodalBots " + DisplayVersion') -and $text.Contains('Text = "NodalBots  ·  " + DisplayVersion') },
+    @{ Name = 'La ventana muestra la versión exacta del DLL'; Pass = $displayVersion -eq $fileVersion -and $displayVersion -eq '1.1.0.4' -and $text.Contains('Caption = "MIMICAL · NodalBots " + DisplayVersion') -and $text.Contains('Text = "NodalBots  ·  " + DisplayVersion') },
     @{ Name = 'Menú agrupado bajo NodalBots'; Pass = $text.Contains('Header = "NodalBots"') -and $text.Contains('Header = "MIMICAL"') },
     @{ Name = 'Muestra sólo cuentas conectadas'; Pass = $text.Contains('a.Connection.Status == ConnectionStatus.Connected') -and $text.Contains('ConnectedAccounts()') },
     @{ Name = 'Actualiza la lista cuando cambia una conexión'; Pass = $text.Contains('followerRows.Children.Clear()') -and $text.Contains('leaderBox.Items.Clear()') -and $text.Contains('CONEXIÓN CAMBIÓ') },
@@ -68,6 +72,11 @@ $checks = @(
     @{ Name = 'Después SL admite cero'; Pass = $text.Contains('ParseTicks(activationOffsetTicksBox, "margen después del SL", 0)') },
     @{ Name = 'Devuelve exige dos'; Pass = $text.Contains('ParseTicks(distanceTicksBox, "devolución", 2)') },
     @{ Name = 'Movimiento manual del stop sigue soportado'; Pass = $text.Contains('AdoptManualTrailingStop(reportedStop, e.OrderState)') },
+    @{ Name = 'Un rechazo de cambio trailing ya no bloquea el copiador'; Pass = $text.Contains('RecoverTrailingOrderError(order, e)') -and -not $text.Contains('Trip("La protección trailing fue rechazada:') },
+    @{ Name = 'El stop anterior se conserva para reintentar'; Pass = $text.Contains('TRAILING_MOVE_RETRY_PENDING') -and $text.Contains('trailing.LastStopPrice = reportedStop') },
+    @{ Name = 'Si el precio atravesó el nivel protegido se cierra sólo la cobertura'; Pass = $text.Contains('TRAILING_EXIT_FALLBACK_REQUESTED') -and $text.Contains('current.Follower.Account.Flatten(new[] { current.Follower.Instrument })') },
+    @{ Name = 'El rechazo inicial conserva las salidas normales'; Pass = $text.Contains('TRAILING_PREPARE_REJECTED_NORMAL_RETAINED') -and $text.Contains('se conservaron las salidas normales') },
+    @{ Name = 'La cancelación causada por el cierre seguro no bloquea'; Pass = $text.Contains('TRAILING_EXIT_FALLBACK_STOP_CANCELLED') -and $text.Contains('if (trailing.ExitRecoveryPending)') },
     @{ Name = 'El botón funciona como activar o desactivar'; Pass = $text.Contains('if (trailing != null && trailing.Requested) DeactivateTrailing();') -and $text.Contains('DESACTIVAR TRAILING') },
     @{ Name = 'Desactivar antes del fill cancela sólo el modo pendiente'; Pass = $text.Contains('FinishTrailingDeactivationWithoutRestore("Desactivado antes del fill")') },
     @{ Name = 'Desactivar después del fill restaura salidas normales'; Pass = $text.Contains('BeginNormalExitRestore();') -and $text.Contains('TRAILING_DEACTIVATED_RESTORED') },

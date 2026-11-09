@@ -38,6 +38,16 @@ canales personal e identidad de NODAL App. La publicación no demuestra por sí
 misma que cada NinjaTrader haya importado la nueva DLL: la versión instalada se
 confirma en la barra de título y el encabezado de MIMICAL.
 
+El candidato `1.1.0.4` corrige el rechazo transitorio de NinjaTrader al mover un
+Stop Market trailing muy cerca del último precio. Si la modificación es
+rechazada, MIMICAL conserva el stop anterior y espera una nueva cotización para
+reintentar, sin bloquear el copiador. Si el precio ya alcanzó el nivel que el
+stop pretendía proteger, solicita `Account.Flatten` únicamente sobre la cuenta
+e instrumento de cobertura. La cancelación del stop producida por ese cierre no
+se interpreta como error. Ver `docs/MIMICAL_TRAILING_CHANGE_RECOVERY_2026-11-09.md`.
+Este paquete sigue siendo candidato SIM hasta completar una operación interactiva
+en NinjaTrader; no reemplaza automáticamente la descarga publicada por la App.
+
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\integrations\mimical\Compilar.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\integrations\mimical\tests\Test-MimicalV1.ps1

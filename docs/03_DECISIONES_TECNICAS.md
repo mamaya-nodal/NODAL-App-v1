@@ -3805,3 +3805,26 @@ vigente sin aprobacion y evidencia suficiente.
   el historial junto con sus cuentas y la cobertura distribuida. La interfaz la
   identifica como recuperada y no inventa instrumentos, posiciones ni tiempos
   técnicos inexistentes.
+
+### APP-257 — Un rechazo transitorio del stop trailing no bloquea MIMICAL
+
+- **Fecha:** 2026-11-09.
+- **Evidencia:** en la operación de Nico, MIMICAL 1.1.0.3 disparó el trailing de
+  la cobertura long de 5 MNQ en 27936,50 e intentó subir el stop a 27936,00.
+  NinjaTrader rechazó el cambio porque, al procesarlo, ese stop ya no estaba por
+  debajo del último negocio. El stop anterior en 27869 permaneció Working, pero
+  el motor se bloqueó antes de completar el trailing.
+- **Decisión:** un error al cambiar la protección trailing no bloquea el copiador.
+  Si el stop anterior continúa Working, se conserva, se limpia el cambio fallido
+  y se reintenta con una cotización posterior. Si el precio ya alcanzó el nivel
+  pretendido o la protección dejó de estar operativa, se solicita el cierre
+  nativo sólo de la cuenta e instrumento de cobertura.
+- **Seguridad:** el cierre alternativo usa `Account.Flatten` para cancelar la
+  protección y cerrar la posición como una única acción de NinjaTrader. No
+  aplana la líder ni las demás cuentas. Si la solicitud falla, se registra y se
+  reintenta ante el siguiente precio; no se genera una orden compensatoria a
+  ciegas ni se invierte la posición.
+- **Preparación:** si la protección independiente inicial es rechazada, las
+  salidas ATM normales todavía no fueron retiradas. MIMICAL abandona únicamente
+  el modo trailing, conserva esas salidas y continúa copiando.
+- **Versión:** candidato `1.1.0.4-trailing-change-recovery`, primero sólo en SIM.

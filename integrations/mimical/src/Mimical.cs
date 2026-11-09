@@ -118,6 +118,21 @@ namespace NinjaTrader.NinjaScript.AddOns
 
     }
 
+    public static class MimicalTrailingRecovery
+    {
+        public static bool StopReached(bool isLong, double lastPrice, double intendedStop)
+        {
+            if (lastPrice <= 0 || intendedStop <= 0) return false;
+            return isLong ? lastPrice <= intendedStop + 0.0000001
+                          : lastPrice >= intendedStop - 0.0000001;
+        }
+
+        public static bool MustFlatten(bool protectionWorking, bool isLong, double lastPrice, double intendedStop)
+        {
+            return !protectionWorking || StopReached(isLong, lastPrice, intendedStop);
+        }
+    }
+
     public sealed class MimicalAddOn : AddOnBase
     {
         private NTMenuItem menu;
@@ -282,6 +297,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             public bool ManualChangePending;
             public bool DeactivationRequested;
             public bool RestoreFinalizing;
+            public bool ExitRecoveryPending;
             public int ActivationOffsetTicks;
             public int DistanceTicks;
             public int ActiveDistanceTicks;
@@ -1005,7 +1021,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 configurationPending = false;
                 SaveSettings();
                 SetStatus("ACTIVO · " + leader.Name + " → " + String.Join(", ", followers.Select(f => f.Account.Name + " " + f.Ratio.ToString(CultureInfo.InvariantCulture))), ColorBrush(90, 211, 134));
-                Log("CONFIG", leader.Name, leaderInstrument.FullName, "", "", "", "", 0, 0, 0, 0, "log=" + logPath + ";build=" + DisplayVersion + "-position-settlement");
+                Log("CONFIG", leader.Name, leaderInstrument.FullName, "", "", "", "", 0, 0, 0, 0, "log=" + logPath + ";build=" + DisplayVersion + "-trailing-change-recovery");
                 foreach (FollowerConfig follower in followers)
                     Log("FOLLOWER_CONFIG", follower.Account.Name, follower.Instrument.FullName, "", "", "", "", 0, 0, 0, 0, "ratio=" + follower.Ratio.ToString(CultureInfo.InvariantCulture) + ";crossOrder=" + follower.CrossOrder.ToString());
             }
@@ -1557,7 +1573,7 @@ namespace NinjaTrader.NinjaScript.AddOns
             if (trailing == null || order != trailing.StopOrder) return;
             if (e.OrderState == OrderState.Rejected || e.Error != ErrorCode.NoError)
             {
-                Trip("La protección trailing fue rechazada: " + e.Error + " " + e.Comment);
+                RecoverTrailingOrderError(order, e);
                 return;
             }
             if (trailing.DeactivationRequested && !trailing.Prepared)
@@ -1663,8 +1679,138 @@ namespace NinjaTrader.NinjaScript.AddOns
             }
             else if (e.OrderState == OrderState.Cancelled && trailing.Prepared && trailing.SignedQuantity != 0 && !flattening)
             {
-                Trip("La protección trailing se canceló con la cobertura abierta.");
+                if (trailing.ExitRecoveryPending)
+                {
+                    Log("TRAILING_EXIT_FALLBACK_STOP_CANCELLED", trailing.Follower.Account.Name,
+                        trailing.Follower.Instrument.FullName, order.OrderId, e.OrderState.ToString(),
+                        order.OrderAction.ToString(), order.OrderType.ToString(), e.Quantity, e.Filled,
+                        e.LimitPrice, e.StopPrice, "Account.Flatten está cerrando la cobertura");
+                }
+                else
+                {
+                    RequestTrailingFallbackExit(trailing.LastStopPrice,
+                        "La protección trailing dejó de estar activa con la cobertura abierta");
+                }
             }
+        }
+
+        private void RecoverTrailingOrderError(Order order, OrderEventArgs e)
+        {
+            if (trailing == null || order != trailing.StopOrder) return;
+
+            string error = e.Error + " " + e.Comment;
+            string accountName = trailing.Follower.Account.Name;
+            string instrumentName = trailing.Follower.Instrument.FullName;
+            double reportedStop = e.StopPrice > 0 ? e.StopPrice : order.StopPrice;
+            bool protectionWorking = trailing.Prepared
+                && (IsWorking(e.OrderState) || IsWorking(order.OrderState))
+                && reportedStop > 0;
+            double intendedStop = trailing.AutomatedTargetStopPrice > 0
+                ? trailing.AutomatedTargetStopPrice
+                : trailing.LastStopPrice;
+
+            if (!trailing.Prepared)
+            {
+                ResetTrailing(false);
+                Log("TRAILING_PREPARE_REJECTED_NORMAL_RETAINED", accountName, instrumentName,
+                    order.OrderId, e.OrderState.ToString(), order.OrderAction.ToString(),
+                    order.OrderType.ToString(), e.Quantity, e.Filled, e.LimitPrice, e.StopPrice,
+                    error + "; se conservaron las salidas normales");
+                Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    trailingButton.Content = "ACTIVAR TRAILING";
+                    trailingButton.IsEnabled = armed;
+                    SetTrailingIndicator(0, "Trailing no preparado; TP/SL normales conservados");
+                    SetStatus("ACTIVO · trailing no preparado; continúan TP/SL normales", Brushes.Orange);
+                }));
+                return;
+            }
+
+            trailing.AutomatedChangePending = false;
+            trailing.ManualChangePending = false;
+            trailing.RestorePending = false;
+            trailing.AutomatedTargetQuantity = 0;
+            trailing.AutomatedTargetStopPrice = 0;
+
+            if (protectionWorking)
+            {
+                trailing.LastStopPrice = reportedStop;
+                if (trailing.DeactivationRequested)
+                {
+                    trailing.DeactivationRequested = false;
+                    trailing.RestoreFinalizing = false;
+                    bool triggered = trailing.Triggered;
+                    Dispatcher.BeginInvoke(new Action(delegate
+                    {
+                        trailingButton.Content = triggered ? "TRAILING SIGUIENDO" : "DESACTIVAR TRAILING";
+                        trailingButton.IsEnabled = !triggered;
+                        SetTrailingIndicator(1, "Trailing activo; no se pudo restaurar el modo normal");
+                    }));
+                }
+
+                Log("TRAILING_MOVE_RETRY_PENDING", accountName, instrumentName, order.OrderId,
+                    e.OrderState.ToString(), order.OrderAction.ToString(), order.OrderType.ToString(),
+                    e.Quantity, e.Filled, e.LimitPrice, reportedStop,
+                    "intendedStop=" + intendedStop.ToString("R", CultureInfo.InvariantCulture)
+                    + ";last=" + trailing.LastPrice.ToString("R", CultureInfo.InvariantCulture)
+                    + ";retainedStop=" + reportedStop.ToString("R", CultureInfo.InvariantCulture)
+                    + ";error=" + error);
+                ShowTrailingStatus();
+
+                bool isLong = trailing.SignedQuantity > 0;
+                if (MimicalTrailingRecovery.MustFlatten(true, isLong, trailing.LastPrice, intendedStop))
+                    RequestTrailingFallbackExit(intendedStop,
+                        "El precio alcanzó el stop pretendido mientras NinjaTrader rechazaba el cambio");
+                return;
+            }
+
+            Log("TRAILING_PROTECTION_LOST", accountName, instrumentName, order.OrderId,
+                e.OrderState.ToString(), order.OrderAction.ToString(), order.OrderType.ToString(),
+                e.Quantity, e.Filled, e.LimitPrice, e.StopPrice, error);
+            RequestTrailingFallbackExit(intendedStop,
+                "La actualización fue rechazada y la protección anterior ya no está operativa");
+        }
+
+        private void RequestTrailingFallbackExit(double intendedStop, string reason)
+        {
+            if (trailing == null || trailing.ExitRecoveryPending || trailing.SignedQuantity == 0) return;
+            TrailingCoverage current = trailing;
+            current.ExitRecoveryPending = true;
+            Log("TRAILING_EXIT_FALLBACK_REQUESTED", current.Follower.Account.Name,
+                current.Follower.Instrument.FullName, current.StopOrder == null ? "" : current.StopOrder.OrderId,
+                current.StopOrder == null ? "" : current.StopOrder.OrderState.ToString(),
+                current.StopOrder == null ? "" : current.StopOrder.OrderAction.ToString(),
+                current.StopOrder == null ? "" : current.StopOrder.OrderType.ToString(),
+                Math.Abs(current.SignedQuantity), current.StopOrder == null ? 0 : current.StopOrder.Filled,
+                0, intendedStop, reason);
+            Dispatcher.BeginInvoke(new Action(delegate
+            {
+                try
+                {
+                    RequireAccountPresent(current.Follower.Account);
+                    current.Follower.Account.Flatten(new[] { current.Follower.Instrument });
+                    Log("TRAILING_EXIT_FALLBACK_SUBMITTED", current.Follower.Account.Name,
+                        current.Follower.Instrument.FullName, "", "", "", "",
+                        Math.Abs(current.SignedQuantity), 0, 0, intendedStop,
+                        "Account.Flatten enviado sólo a la cobertura; " + reason);
+                    SetStatus("TRAILING · cerrando cobertura en el nivel protegido", Brushes.Orange);
+                }
+                catch (Exception ex)
+                {
+                    lock (gate)
+                    {
+                        if (trailing == current)
+                        {
+                            current.ExitRecoveryPending = false;
+                            Log("TRAILING_EXIT_FALLBACK_RETRY", current.Follower.Account.Name,
+                                current.Follower.Instrument.FullName, "", "", "", "",
+                                Math.Abs(current.SignedQuantity), 0, 0, intendedStop,
+                                "se reintentará con el próximo precio; " + ex.Message);
+                            SetStatus("TRAILING · cierre pendiente; se reintentará automáticamente", Brushes.Orange);
+                        }
+                    }
+                }
+            }), DispatcherPriority.Background);
         }
 
         private void CancelRetiredOrdersAfterUpdate(Account account, Order[] orders)
@@ -1687,9 +1833,17 @@ namespace NinjaTrader.NinjaScript.AddOns
 
         private void AdvanceTrailing(double lastPrice)
         {
-            if (trailing == null || trailing.DeactivationRequested || !trailing.Prepared || trailing.StopOrder == null || trailing.SignedQuantity == 0 || !IsWorking(trailing.StopOrder.OrderState) || trailing.AutomatedChangePending || trailing.ManualChangePending) return;
+            if (trailing == null || trailing.DeactivationRequested || !trailing.Prepared || trailing.StopOrder == null
+                || trailing.SignedQuantity == 0 || trailing.AutomatedChangePending
+                || trailing.ManualChangePending || trailing.ExitRecoveryPending) return;
             double tick = trailing.Follower.Instrument.MasterInstrument.TickSize;
             bool isLong = trailing.SignedQuantity > 0;
+            if (!IsWorking(trailing.StopOrder.OrderState))
+            {
+                RequestTrailingFallbackExit(trailing.LastStopPrice,
+                    "La protección dejó de estar activa antes de poder avanzar");
+                return;
+            }
             if ((isLong && lastPrice > trailing.BestPrice) || (!isLong && lastPrice < trailing.BestPrice)) trailing.BestPrice = lastPrice;
             if (!trailing.Triggered)
             {
@@ -1716,7 +1870,12 @@ namespace NinjaTrader.NinjaScript.AddOns
             double desired = MimicalTrailingMath.StopPrice(isLong, trailing.BestPrice, activeDistance, tick);
             bool improves = MimicalTrailingMath.Improves(isLong, desired, trailing.LastStopPrice, trailing.FrequencyTicks, tick);
             if (!improves) return;
-            if ((isLong && desired >= lastPrice) || (!isLong && desired <= lastPrice)) return;
+            if (MimicalTrailingRecovery.StopReached(isLong, lastPrice, desired))
+            {
+                RequestTrailingFallbackExit(desired,
+                    "El mercado alcanzó el nivel protegido antes de que pudiera aceptarse el nuevo stop");
+                return;
+            }
 
             double previous = trailing.LastStopPrice;
             trailing.LastStopPrice = desired;
@@ -2797,6 +2956,10 @@ namespace NinjaTrader.NinjaScript.AddOns
             if (kind == "TRAILING_PREPARED") return "Protección independiente activa en " + account;
             if (kind == "TRAILING_TRIGGERED") return "Trailing disparado en " + account;
             if (kind == "TRAILING_MOVE") return "Trailing avanzó en " + account;
+            if (kind == "TRAILING_MOVE_RETRY_PENDING") return "Trailing conservó el stop y reintentará en " + account;
+            if (kind == "TRAILING_EXIT_FALLBACK_REQUESTED") return "Trailing pidió el cierre seguro de " + account;
+            if (kind == "TRAILING_EXIT_FALLBACK_SUBMITTED") return "Cierre seguro enviado a " + account;
+            if (kind == "TRAILING_PREPARE_REJECTED_NORMAL_RETAINED") return "Trailing no preparado; continúan TP/SL normales en " + account;
             if (kind == "TRAILING_EXIT_FILLED") return "Trailing cerró la cobertura en " + account;
             if (kind == "TRAILING_COMPLETE") return "Trailing completado en " + account;
             if (kind == "ORDER" && !String.IsNullOrWhiteSpace(account)) return "Orden " + state + " · " + account;
