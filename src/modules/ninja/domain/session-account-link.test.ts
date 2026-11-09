@@ -29,6 +29,35 @@ describe("late session account resolution", () => {
     expect(resolveSessionAccountLink(session, [burned], purchases, [])).toBe(burned);
     expect(resolveSessionAccountLink(session, [{ ...burned, closed_at: "2026-09-30T15:00:00Z" }], purchases, [])).toBeNull();
   });
+  it("keeps the historical evaluation link when Ninja funds the account after the trade", () => {
+    const evaluationSession = {
+      connection_name: "Lucid - Baltss",
+      account_name: "LFE05096653910016",
+      opened_at: "2026-10-30T14:59:31.000Z",
+    };
+    const evaluation = {
+      account_id: "account-16",
+      connection_name: "Lucid - Baltss",
+      external_account_name: "LFE05096653910016",
+      first_seen_at: "2026-10-29T14:20:32.000Z",
+      closed_at: "2026-10-30T15:16:20.000Z",
+      life_id: "evaluation-life",
+    };
+    const funded = {
+      ...evaluation,
+      external_account_name: "LFF05096653910006",
+      first_seen_at: "2026-10-30T15:16:20.000Z",
+      closed_at: null,
+      life_id: "funded-life",
+    };
+
+    expect(resolveSessionAccountLink(
+      evaluationSession,
+      [evaluation, funded],
+      [{ account_id: "account-16", purchased_on: "2026-10-29" }],
+      [],
+    )).toBe(evaluation);
+  });
   it("does not backdate reset or transition lives", () => {
     expect(resolveSessionAccountLink(session, [{ ...link, life_id: "reset-life" }], purchases, [])).toBeNull();
     for (const event_type of ["reset", "reset_after_burn", "phase_transition", "unknown"]) {
