@@ -149,13 +149,17 @@ function resolveAuditUser(question: string, users: readonly NodalitoAuditUser[])
     })), 0);
     return { score, user };
   }).filter((candidate) => candidate.score > 0).sort((left, right) => right.score - left.score);
-  if (!ranked.length || (ranked[1] && ranked[1].score === ranked[0].score)) return null;
-  return ranked[0].user;
+  if (!ranked.length) return { ambiguous: [] as readonly NodalitoAuditUser[], subject: null };
+  const tied = ranked.filter((candidate) => candidate.score === ranked[0].score).map((candidate) => candidate.user);
+  return tied.length === 1
+    ? { ambiguous: [] as readonly NodalitoAuditUser[], subject: tied[0] }
+    : { ambiguous: tied, subject: null };
 }
 
 export function answerDeterministicAudit(question: string, audit: NodalitoAudit, generatedAt: string): NodalitoAuditAnswer {
   const value = normalized(question);
-  const subject = resolveAuditUser(question, audit.users);
+  const userResolution = resolveAuditUser(question, audit.users);
+  const subject = userResolution.subject;
   const wantsBilling = /factur|ganancia|resultado/.test(value);
   const wantsConnector = /conector|ninja|senal/.test(value);
   const wantsReconciliation = /concil|registro|error|problema/.test(value);
@@ -168,6 +172,13 @@ export function answerDeterministicAudit(question: string, audit: NodalitoAudit,
   if (wantsConnector) categories.add("connector");
   if (wantsReconciliation) categories.add("reconciliation");
   if (wantsPayout) categories.add("payout");
+  if (userResolution.ambiguous.length) {
+    return {
+      findings: [],
+      generatedAt,
+      summary: `Encontré más de un usuario posible: ${userResolution.ambiguous.map((user) => user.name).join(", ")}. Indicá el apellido para revisar a la persona correcta.`,
+    };
+  }
   const findings = audit.findings.filter((finding) =>
     (!subject || finding.userId === subject.id)
     && (!focused || categories.has(finding.category)),

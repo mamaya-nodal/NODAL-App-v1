@@ -41,19 +41,30 @@ describe("auditoría determinística de Nodalito", () => {
     expect(audit.findings[0]?.id).toBe("system-billing-mismatch");
   });
 
-  it("resuelve al usuario mencionado aunque use un apodo y limita el reporte a esa persona", () => {
+  it("resuelve al usuario real mencionado y limita el reporte a esa persona", () => {
     const david: NodalitoAuditSnapshot["users"][number] = {
       ...snapshot.users[0],
-      email: "david@example.com",
+      email: "david.zabaleta.1999@gmail.com",
       id: "david",
-      name: "Davicho Malagreca",
+      name: "David Johel Zabaleta Mallqui",
       reconciliationAlerts: [{ amountInCents: -38_690, id: "david-batch", occurredAt: "2026-11-09", reason: "No se pudieron vincular 5 cuentas." }],
     };
     const audit = buildDeterministicAudit({ ...snapshot, systemGrossInCents: 40_000, users: [...snapshot.users, david] });
     const answer = answerDeterministicAudit("David tenía problemas de conciliación, quiero un reporte completo", audit, "2026-11-09T15:00:00Z");
-    expect(answer.summary).toContain("Davicho Malagreca");
+    expect(answer.summary).toContain("David Johel Zabaleta Mallqui");
     expect(answer.findings.length).toBeGreaterThan(1);
     expect(answer.findings.every((finding) => finding.userId === "david")).toBe(true);
     expect(answer.findings.some((finding) => finding.id === "reconciliation:david-batch")).toBe(true);
+  });
+
+  it("pide apellido cuando dos usuarios coinciden exactamente con el nombre", () => {
+    const users: NodalitoAuditSnapshot["users"] = [
+      { ...snapshot.users[0], email: "david.uno@example.com", id: "david-1", name: "David Uno" },
+      { ...snapshot.users[0], email: "david.dos@example.com", id: "david-2", name: "David Dos" },
+    ];
+    const answer = answerDeterministicAudit("Revisá los problemas de David", buildDeterministicAudit({ ...snapshot, users }), "2026-11-09T15:00:00Z");
+    expect(answer.findings).toEqual([]);
+    expect(answer.summary).toContain("David Uno, David Dos");
+    expect(answer.summary).toContain("apellido");
   });
 });
