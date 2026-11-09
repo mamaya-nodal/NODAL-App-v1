@@ -32,7 +32,7 @@ begin
     'openings',(select coalesce(jsonb_agg(x),'[]') from (select period_id,broker_balance_cents,cutover_date,start_mode from public.period_opening_snapshots where period_id=any(periods_ids)) x),
     'companies',(select coalesce(jsonb_agg(x),'[]') from (select id,display_name from public.companies where is_active) x),
     'connectors',(select coalesce(jsonb_agg(x),'[]') from (select id,identity_id,connector_version,installed_source_version,last_seen_at,status from public.ninja_connectors where owner_user_id=owner_id) x),
-    'operations',(select coalesce(jsonb_agg(x),'[]') from (select b.id,b.connector_id,b.status,b.accounting_status,b.accounting_blocking_reason,b.broker_result_cents,b.opened_at,b.closed_at,b.daily_control_id,
+    'operations',(select coalesce(jsonb_agg(x),'[]') from (select b.id,b.connector_id,b.status,b.accounting_status,b.accounting_blocking_reason,b.broker_result_cents,b.opened_at,b.daily_control_id,
       (select coalesce(jsonb_agg(jsonb_build_object('session_id',m.session_id,'account_id',m.account_id,'role',m.role)),'[]') from public.ninja_operation_batch_members m where m.batch_id=b.id) members
       from public.ninja_operation_batches b join public.ninja_connectors c on c.id=b.connector_id where c.owner_user_id=owner_id and b.accounting_period_id=any(periods_ids) order by b.opened_at desc,b.id limit 500) x),
     'brokerEvents',(select coalesce(jsonb_agg(x),'[]') from (select e.id,e.connector_id,e.source_event_id,e.observed_at,e.balance_cents,e.source_accounts,e.status,e.daily_control_id from public.ninja_broker_balance_events e join public.ninja_connectors c on c.id=e.connector_id where c.owner_user_id=owner_id and e.status='pending' order by e.observed_at desc,e.id limit 500) x),
