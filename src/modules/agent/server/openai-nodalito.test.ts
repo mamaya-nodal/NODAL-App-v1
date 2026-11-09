@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("./openai-knowledge-store", () => ({ nodalitoKnowledgeStore: async () => null }));
 vi.mock("./run-deterministic-query", () => ({ runDeterministicNodalitoQuery: vi.fn(() => { throw new Error("private_admin_data"); }) }));
-import { askNodalito } from "./openai-nodalito";
+import { adminAuditResponseInstruction, askNodalito } from "./openai-nodalito";
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 const input = { role: "trader" as const, question: "Me olvidé de cargar el payout", safetyUserId: "trader", personalDiagnostic: async () => ({ findings: [], generatedAt: "now", summary: "ok" }) };
 function mockResponses(outputs: unknown[]) {
@@ -45,4 +45,11 @@ it("investigates a real user issue before answering", async () => {
   const result = await askNodalito({ ...input, question: "Tengo una transferencia pendiente", readRepairContext, prepareRepair: async () => ({ planId: "plan", label: "Transferencia", parameters: {} }) });
   expect(readRepairContext).toHaveBeenCalledWith("Tengo una transferencia pendiente");
   expect(result.text).toContain("fue detectada");
+});
+
+it("no deriva al propio Admin Master hacia Admin Master", () => {
+  const instruction = adminAuditResponseInstruction("master");
+  expect(instruction).toContain("propio Admin Master");
+  expect(instruction).toContain("No le indiques que reporte");
+  expect(instruction).not.toContain("puede reportarla al Admin Master");
 });
