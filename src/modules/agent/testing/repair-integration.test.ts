@@ -16,6 +16,17 @@ it("deduplicates repeated daily audit findings and denies the RPC to traders", a
   expect((await db.query<{ allowed: boolean }>("select has_function_privilege('authenticated','public.record_nodalito_audit_finding(uuid,text,text,text,jsonb,text)','execute') allowed")).rows[0].allowed).toBe(false);
 });
 
+it("audits every active user without enabling their self-repair access", async () => {
+  const args = [i.master,"master-case","Conector pendiente","Requiere revisión",{ source: "deterministic_audit" },"high"];
+  await db.query("select record_nodalito_audit_finding($1,$2,$3,$4,$5,$6)", args);
+  expect((await db.query("select * from nodal_agent_cases where subject_user_id=$1", [i.master])).rows).toHaveLength(1);
+  expect((await db.query("select * from nodalito_repair_access where user_id=$1", [i.master])).rows).toHaveLength(0);
+  const run = (await db.query<{ id: string }>("insert into nodalito_audit_runs(status,finished_at,target_count,reviewed_count) values('completed',now(),2,2) returning id")).rows[0].id;
+  await db.query("select resolve_nodalito_audit_findings($1,$2,$3)", [i.master, [], run]);
+  expect((await db.query<{ status: string }>("select status from nodal_agent_cases where subject_user_id=$1", [i.master])).rows[0].status).toBe("resolved");
+  expect((await db.query<{ allowed: boolean }>("select has_table_privilege('authenticated','public.nodalito_audit_runs','select') allowed")).rows[0].allowed).toBe(false);
+});
+
 async function prepare(action: string, parameters: Record<string, unknown>) {
   const { rows } = await db.query<{ id: string }>("select public.prepare_nodalito_repair($1,$2,$3) id", [i.period, action, parameters]);
   const plan = (await db.query<{ value: { status: string; failure: string | null } }>("select public.get_nodalito_repair($1) value", [rows[0].id])).rows[0].value;

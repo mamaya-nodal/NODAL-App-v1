@@ -5,7 +5,7 @@ export async function repairFixture() {
   const { db } = await createAccountingDatabase();
   const i = fixtureIds;
   try {
-    for (const name of ["20261106170000_nodalito_repair_workflow.sql", "20261106171000_nodalito_repair_journal.sql", "20261106172000_nodalito_historical_recovery.sql", "20261106173000_nodalito_repair_reversal.sql", "20261106174000_nodalito_audit_rounds.sql", "20261106175000_nodalito_context.sql"]) await db.exec(readFileSync(`supabase/migrations/${name}`, "utf8"));
+    for (const name of ["20261106170000_nodalito_repair_workflow.sql", "20261106171000_nodalito_repair_journal.sql", "20261106172000_nodalito_historical_recovery.sql", "20261106173000_nodalito_repair_reversal.sql", "20261106174000_nodalito_audit_rounds.sql", "20261106175000_nodalito_context.sql", "20261107100000_nodalito_master_audit.sql"]) await db.exec(readFileSync(`supabase/migrations/${name}`, "utf8"));
     await db.exec(`
       alter table auth.users disable trigger user;
       insert into auth.users(id,email) values('${i.owner}','trader@example.test'),('${i.master}','master@example.test');

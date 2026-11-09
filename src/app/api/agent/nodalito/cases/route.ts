@@ -30,7 +30,14 @@ export async function GET() {
     const evidence = item.evidence;
     return { ...item, evidence: { planId: evidence.planId, parameters: evidence.parameters, reversal: evidence.reversal, changes: repairChanges(evidence.changes) } };
   });
-  return NextResponse.json({ cases, master: access.status === "allowed" });
+  let latestAudit = null;
+  if (access.status === "allowed") {
+    const audit = await service.from("nodalito_audit_runs")
+      .select("id,started_at,finished_at,status,target_count,reviewed_count,failed_count,critical_count,attention_count,informational_count,opened_case_count")
+      .order("started_at", { ascending: false }).limit(1).maybeSingle();
+    if (!audit.error) latestAudit = audit.data;
+  }
+  return NextResponse.json({ audit: latestAudit, cases, master: access.status === "allowed" });
 }
 
 export async function POST(request: Request) {

@@ -1,0 +1,192 @@
+import type { NodalitoFinding } from "./deterministic-audit";
+
+type Control = Readonly<{
+  balance_after_cents: number;
+  balance_before_cents: number | null;
+  control_number: number;
+  id: string;
+  operating_result_cents: number | null;
+  period_id: string;
+}>;
+
+type Participant = Readonly<{
+  account_id: string;
+  allocated_result_cents: number;
+  daily_control_id: string;
+}>;
+
+type Entry = Readonly<{
+  account_id: string;
+  daily_control_id: string;
+  destination: "NETO BROKER +" | "NETO BROKER -" | "NONE";
+  magnitude_cents: number;
+}>;
+
+type Batch = Readonly<{ daily_control_id: string | null; id: string }>;
+type BatchMember = Readonly<{ account_id: string | null; batch_id: string; role: string }>;
+type Link = Readonly<{
+  account_id: string;
+  accounting_phase: string | null;
+  completed_trade_days: number | null;
+  external_account_name: string;
+  phase: string | null;
+}>;
+type Session = Readonly<{
+  account_name: string;
+  connection_name: string;
+  execution_count: number;
+  id: number;
+  opened_at: string;
+}>;
+
+const base = { userId: null, userName: null } as const;
+
+function signedEntry(entry: Entry) {
+  if (entry.destination === "NETO BROKER +") return Number(entry.magnitude_cents);
+  if (entry.destination === "NETO BROKER -") return -Number(entry.magnitude_cents);
+  return 0;
+}
+
+/** Detects broken broker continuity without inferring a missing movement. */
+export function diagnoseBalanceChains(controls: readonly Control[]): NodalitoFinding[] {
+  const byPeriod = new Map<string, Control[]>();
+  for (const control of controls) byPeriod.set(control.period_id, [...(byPeriod.get(control.period_id) ?? []), control]);
+  const findings: NodalitoFinding[] = [];
+  for (const [periodId, rows] of byPeriod) {
+    const ordered = [...rows].sort((left, right) => left.control_number - right.control_number);
+    for (let index = 1; index < ordered.length; index++) {
+      const previous = ordered[index - 1];
+      const current = ordered[index];
+      if (current.balance_before_cents === null || Number(current.balance_before_cents) === Number(previous.balance_after_cents)) continue;
+      findings.push({
+        ...base,
+        category: "billing",
+        detail: "El saldo inicial de un registro no coincide con el saldo final del registro anterior. Esto puede encadenar mal el resultado y el flotante posterior.",
+        evidence: `Período ${periodId}; controles ${previous.control_number} → ${current.control_number}; esperado ${previous.balance_after_cents}, registrado ${current.balance_before_cents}.`,
+        id: `balance-chain:${periodId}:${current.id}`,
+        severity: "critical",
+        title: "Cadena de saldo broker interrumpida",
+      });
+    }
+  }
+  return findings;
+}
+
+/** Reconciles the economic control, its account allocation and the visible operation entry. */
+export function diagnoseControlLedgers(
+  controls: readonly Control[],
+  participants: readonly Participant[],
+  entries: readonly Entry[],
+): NodalitoFinding[] {
+  const findings: NodalitoFinding[] = [];
+  const participantsByControl = new Map<string, Participant[]>();
+  const entriesByControl = new Map<string, Entry[]>();
+  for (const row of participants) participantsByControl.set(row.daily_control_id, [...(participantsByControl.get(row.daily_control_id) ?? []), row]);
+  for (const row of entries) entriesByControl.set(row.daily_control_id, [...(entriesByControl.get(row.daily_control_id) ?? []), row]);
+  for (const control of controls) {
+    if (control.operating_result_cents === null) continue;
+    const controlParticipants = participantsByControl.get(control.id) ?? [];
+    const controlEntries = entriesByControl.get(control.id) ?? [];
+    const allocated = controlParticipants.reduce((total, row) => total + Number(row.allocated_result_cents), 0);
+    if (controlParticipants.length && allocated !== Number(control.operating_result_cents)) {
+      findings.push({
+        ...base,
+        category: "billing",
+        detail: "El resultado broker del trade no coincide con lo distribuido entre sus cuentas. La facturación y el flotante por cuenta pueden quedar incompletos.",
+        evidence: `Control ${control.id}; resultado ${control.operating_result_cents}; distribuido ${allocated}.`,
+        id: `control-allocation:${control.id}`,
+        severity: "critical",
+        title: "Resultado distribuido de forma inconsistente",
+      });
+    }
+    const participantsByAccount = new Map(controlParticipants.map((row) => [row.account_id, Number(row.allocated_result_cents)]));
+    const entriesByAccount = new Map(controlEntries.map((row) => [row.account_id, signedEntry(row)]));
+    const mismatched = new Set([...participantsByAccount.keys(), ...entriesByAccount.keys()]);
+    const invalid = [...mismatched].filter((accountId) => participantsByAccount.get(accountId) !== entriesByAccount.get(accountId));
+    if (invalid.length) {
+      findings.push({
+        ...base,
+        category: "reconciliation",
+        detail: "Las cuentas visibles en la operación no coinciden con la distribución contable del mismo trade.",
+        evidence: `Control ${control.id}; ${invalid.length} cuenta(s) con diferencia: ${invalid.join(", ")}.`,
+        id: `control-entries:${control.id}`,
+        severity: "critical",
+        title: "Operación y asientos por cuenta no coinciden",
+      });
+    }
+  }
+  return findings;
+}
+
+/** A committed batch must expose every explicit prop member in its economic control. */
+export function diagnoseCommittedBatchCoverage(
+  batches: readonly Batch[],
+  members: readonly BatchMember[],
+  entries: readonly Entry[],
+): NodalitoFinding[] {
+  const findings: NodalitoFinding[] = [];
+  for (const batch of batches) {
+    if (!batch.daily_control_id) continue;
+    const expected = new Set(members.filter((row) => row.batch_id === batch.id && row.role === "prop" && row.account_id).map((row) => row.account_id!));
+    const recorded = new Set(entries.filter((row) => row.daily_control_id === batch.daily_control_id).map((row) => row.account_id));
+    const missing = [...expected].filter((accountId) => !recorded.has(accountId));
+    const unexpected = [...recorded].filter((accountId) => !expected.has(accountId));
+    if (!missing.length && !unexpected.length) continue;
+    findings.push({
+      ...base,
+      category: "reconciliation",
+      detail: "El conector cerró una cobertura con un conjunto de cuentas, pero la contabilidad registró otro. No se completa automáticamente porque hay que respetar únicamente las cuentas detectadas.",
+      evidence: `Lote ${batch.id}; faltan ${missing.length}; sobran ${unexpected.length}; control ${batch.daily_control_id}.`,
+      id: `batch-coverage:${batch.id}`,
+      severity: "critical",
+      title: "Cobertura registrada con cuentas faltantes",
+    });
+  }
+  return findings;
+}
+
+export function diagnoseOperationalBaselines(links: readonly Link[]): NodalitoFinding[] {
+  const findings: NodalitoFinding[] = [];
+  for (const link of links) {
+    if (link.accounting_phase === null || link.completed_trade_days === null) {
+      findings.push({
+        ...base,
+        category: "activity",
+        detail: "La cuenta está vinculada al conector, pero no tiene definido el punto operativo desde el cual contar vuelta y día.",
+        evidence: `Cuenta ${link.external_account_name}; vínculo contable incompleto.`,
+        id: `account-baseline:${link.account_id}`,
+        severity: "attention",
+        title: "Cuenta sin vuelta y día de partida",
+      });
+      continue;
+    }
+    const incompatible = (link.phase === "Evaluation" && link.accounting_phase !== "Evaluacion")
+      || ((link.phase === "Funded" || link.phase === "Live") && link.accounting_phase === "Evaluacion");
+    if (incompatible) findings.push({
+      ...base,
+      category: "activity",
+      detail: "El estado que transmite NinjaTrader no es compatible con la etapa contable usada para calcular la vuelta y el día.",
+      evidence: `Cuenta ${link.external_account_name}; Ninja ${link.phase}; etapa ${link.accounting_phase}; base ${link.completed_trade_days}.`,
+      id: `account-phase:${link.account_id}`,
+      severity: "attention",
+      title: "Etapa operativa y etapa contable no coinciden",
+    });
+  }
+  return findings;
+}
+
+/** Only linked prop sessions are considered; broker or unknown sessions are deliberately ignored. */
+export function diagnoseUnbatchedLinkedSessions(
+  sessions: readonly Session[],
+  linkedSessionIds: ReadonlySet<number>,
+): NodalitoFinding[] {
+  return sessions.filter((session) => session.execution_count > 0 && !linkedSessionIds.has(session.id)).map((session) => ({
+    ...base,
+    category: "reconciliation" as const,
+    detail: "NinjaTrader cerró una operación en una cuenta vinculada, pero esa sesión no quedó incorporada a ningún lote contable.",
+    evidence: `${session.connection_name} · ${session.account_name}; sesión ${session.id}; apertura ${session.opened_at}; ejecuciones ${session.execution_count}.`,
+    id: `unbatched-session:${session.id}`,
+    severity: "critical" as const,
+    title: "Operación cerrada sin lectura contable",
+  }));
+}

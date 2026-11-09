@@ -36,6 +36,20 @@ type AgentCase = Readonly<{
   title: string;
 }>;
 
+type AuditRun = Readonly<{
+  attention_count: number;
+  critical_count: number;
+  failed_count: number;
+  finished_at: string | null;
+  id: string;
+  informational_count: number;
+  opened_case_count: number;
+  reviewed_count: number;
+  started_at: string;
+  status: "running" | "completed" | "partial" | "failed";
+  target_count: number;
+}>;
+
 type AgentFunction = "nodalito" | "rutyx";
 
 function repairEvidence(agentCase: AgentCase) {
@@ -79,6 +93,7 @@ export function NodalAgentPilot() {
   const [caseLoading, setCaseLoading] = useState(false);
   const [caseError, setCaseError] = useState("");
   const [cases, setCases] = useState<readonly AgentCase[]>([]);
+  const [latestAudit, setLatestAudit] = useState<AuditRun | null>(null);
   const [caseView, setCaseView] = useState(false);
   const [masterCases, setMasterCases] = useState(false);
   const [messages, setMessages] = useState<ReadonlyArray<Message>>([openingMessage]);
@@ -98,8 +113,8 @@ export function NodalAgentPilot() {
       try {
         const response = await fetch("/api/agent/nodalito/cases", { cache: "no-store" });
         if (!response.ok) return;
-        const payload = await response.json() as { cases?: AgentCase[]; master?: boolean };
-        if (!cancelled) { setCases(payload.cases ?? []); setMasterCases(Boolean(payload.master)); }
+        const payload = await response.json() as { audit?: AuditRun | null; cases?: AgentCase[]; master?: boolean };
+        if (!cancelled) { setCases(payload.cases ?? []); setLatestAudit(payload.audit ?? null); setMasterCases(Boolean(payload.master)); }
       } catch { /* Keep the last successful snapshot; the explicit case view shows errors. */ }
     }
     void refreshCases();
@@ -169,9 +184,10 @@ export function NodalAgentPilot() {
     setCaseView(true);
     try {
       const response = await fetch("/api/agent/nodalito/cases", { cache: "no-store" });
-      const payload = await response.json() as { cases?: AgentCase[]; master?: boolean; message?: string };
+      const payload = await response.json() as { audit?: AuditRun | null; cases?: AgentCase[]; master?: boolean; message?: string };
       if (!response.ok) { setCaseError(payload.message ?? "No pude cargar los casos. Volvé a intentar."); return; }
       setCases(payload.cases ?? []);
+      setLatestAudit(payload.audit ?? null);
       setMasterCases(Boolean(payload.master));
     } catch {
       setCaseError("No pude conectar para cargar los casos. Volvé a intentar.");
@@ -352,6 +368,12 @@ export function NodalAgentPilot() {
               </> : (
                 <div className={styles.caseList}>
                   <p className={styles.caseHeading}>{masterCases ? "Bandeja de revisiones" : "Mis casos y reparaciones"}</p>
+                  {masterCases && latestAudit ? <article className={styles.auditSummary} data-status={latestAudit.status}>
+                    <div><strong>Última auditoría general</strong><span>{latestAudit.status === "completed" ? "Completa" : latestAudit.status === "running" ? "En curso" : latestAudit.status === "partial" ? "Parcial" : "Falló"}</span></div>
+                    <p>{latestAudit.reviewed_count} de {latestAudit.target_count} usuarios revisados · {latestAudit.critical_count} alertas críticas · {latestAudit.attention_count} a revisar</p>
+                    {latestAudit.failed_count ? <small>{latestAudit.failed_count} usuario(s) no pudieron revisarse y se reintentarán en la próxima ronda.</small> : latestAudit.critical_count + latestAudit.attention_count === 0 ? <small>Sin problemas accionables en la última ronda.</small> : <small>{latestAudit.opened_case_count} alertas activas quedaron en esta bandeja.</small>}
+                    <time>{new Date(latestAudit.finished_at ?? latestAudit.started_at).toLocaleString("es-AR")}</time>
+                  </article> : null}
                   {caseLoading && !cases.length ? <p className={styles.thinking}>Cargando casos…</p> : null}
                   {caseError ? <p role="alert" className={styles.emptyCases}>{caseError}</p> : null}
                   {!caseLoading && !caseError && !cases.length ? <p className={styles.emptyCases}>Todavía no hay casos reportados.</p> : null}
