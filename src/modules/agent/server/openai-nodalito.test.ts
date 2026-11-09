@@ -27,11 +27,22 @@ it("does not dispatch a fabricated master tool call for a trader", async () => {
   expect(result.text).not.toContain("private_admin_data");
 });
 it("bounds repeated investigation calls", async () => {
-  const output = { output: [{ type: "function_call", name: "read_my_repair_context", call_id: "call", arguments: "{}" }] };
-  const fetch = mockResponses(Array(5).fill(output));
+  const output = { output: [{ type: "function_call", name: "investigate_my_issue", call_id: "call", arguments: JSON.stringify({ question: "Revisá mi cuenta" }) }] };
+  const fetch = mockResponses(Array(7).fill(output));
   const readRepairContext = vi.fn(async () => ({}));
   const result = await askNodalito({ ...input, readRepairContext, prepareRepair: async () => ({ planId: "plan", label: "Payout", parameters: {} }) });
-  expect(readRepairContext).toHaveBeenCalledTimes(4);
-  expect(fetch).toHaveBeenCalledTimes(5);
+  expect(readRepairContext).toHaveBeenCalledTimes(6);
+  expect(fetch).toHaveBeenCalledTimes(7);
   expect(result.mode).toBe("knowledge");
+});
+
+it("investigates a real user issue before answering", async () => {
+  mockResponses([
+    { output: [{ type: "function_call", name: "investigate_my_issue", call_id: "inspect", arguments: JSON.stringify({ question: "Tengo una transferencia pendiente" }) }] },
+    { output_text: "La transferencia fue detectada por un cambio entre el saldo esperado y el saldo observado." },
+  ]);
+  const readRepairContext = vi.fn(async () => ({ brokerTransfers: [{ amount_cents: 234888 }] }));
+  const result = await askNodalito({ ...input, question: "Tengo una transferencia pendiente", readRepairContext, prepareRepair: async () => ({ planId: "plan", label: "Transferencia", parameters: {} }) });
+  expect(readRepairContext).toHaveBeenCalledWith("Tengo una transferencia pendiente");
+  expect(result.text).toContain("fue detectada");
 });

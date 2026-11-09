@@ -43,8 +43,8 @@ export async function POST(request: Request) {
       history,
       personalDiagnostic: () => runPersonalDiagnostic(access.supabase),
       question, role, safetyUserId: userId,
-      ...(process.env.NODALITO_REPAIRS_ENABLED === "true" ? {
-        readRepairContext: () => readRepairContext(access.supabase),
+      ...(process.env.NODALITO_REPAIRS_ENABLED !== "false" ? {
+        readRepairContext: (investigationQuestion: string) => readRepairContext(access.supabase, investigationQuestion),
         prepareRepair: (draft: unknown) => prepareRepair(access.supabase, draft),
         openIncident: (draft: unknown) => openRepairIncident(userId, question, draft),
       } : {}),

@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const { data, error } = await access.supabase.auth.getClaims();
   const email = typeof data?.claims.email === "string" ? data.claims.email : null;
   if (error || !data?.claims.sub || !canUseNodalAgentPilot(email)) return NextResponse.json({ message: "No autorizado." }, { status: 403 });
-  if (process.env.NODALITO_REPAIRS_ENABLED !== "true") return NextResponse.json({ message: "Las reparaciones automáticas están en validación. Podés seguir consultando y reportando problemas." }, { status: 503 });
+  if (process.env.NODALITO_REPAIRS_ENABLED === "false") return NextResponse.json({ message: "Las reparaciones automáticas están pausadas temporalmente. Podés seguir consultando y reportando problemas." }, { status: 503 });
   let body: Record<string, unknown>;
   try { body = await request.json(); } catch { return NextResponse.json({ message: "Solicitud inválida." }, { status: 400 }); }
   if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ message: "Solicitud inválida." }, { status: 400 });

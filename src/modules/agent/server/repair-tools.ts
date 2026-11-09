@@ -6,10 +6,75 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { repairSummary, repairChanges } from "../domain/repair-summary";
 
 export type RepairPreview = { planId: string; label: string; details?: string[]; parameters: Record<string, string | number | boolean | string[]> };
-export async function readRepairContext(db: SupabaseClient) {
+function rows(value: unknown, key: string): Record<string, unknown>[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const candidate = (value as Record<string, unknown>)[key];
+  return Array.isArray(candidate) ? candidate.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)) : [];
+}
+
+function cents(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+/** Converts the private, user-scoped repair snapshot into evidence the model can reason about. */
+export function buildInvestigationContext(raw: unknown, question: string) {
+  const companies = new Map(rows(raw, "companies").map((item) => [item.id, item.display_name]));
+  const identities = new Map(rows(raw, "identities").map((item) => [item.id, [item.first_name, item.last_name].filter(Boolean).join(" ")]));
+  const assignments = new Map(rows(raw, "assignments").map((item) => [item.account_id, item.identity_id]));
+  const accounts = rows(raw, "accounts").map((account) => {
+    const links = Array.isArray(account.links) ? account.links.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item)) : [];
+    const latestLink = links.at(-1) ?? null;
+    const identityId = assignments.get(account.id);
+    return {
+      company: companies.get(account.company_id) ?? null,
+      id: account.id,
+      identity: identities.get(identityId) ?? null,
+      link: latestLink,
+      period_id: account.period_id,
+      reference: account.reference_number,
+      state: account.state,
+    };
+  });
+  const brokerTransfers = rows(raw, "brokerEvents").map((event) => {
+    const sourceAccounts = Array.isArray(event.source_accounts) ? event.source_accounts : [];
+    const first = sourceAccounts[0] && typeof sourceAccounts[0] === "object" && !Array.isArray(sourceAccounts[0]) ? sourceAccounts[0] as Record<string, unknown> : {};
+    const expected = cents(first.expectedBalanceInCents);
+    const observed = cents(event.balance_cents);
+    const difference = expected === null || observed === null ? null : observed - expected;
+    return {
+      amount_cents: difference === null ? null : Math.abs(difference),
+      detected_direction: difference === null || difference === 0 ? "unknown" : difference > 0 ? "wallet_to_broker" : "broker_to_wallet",
+      event_id: event.id,
+      expected_balance_cents: expected,
+      observed_at: event.observed_at,
+      observed_balance_cents: observed,
+      source_event_id: event.source_event_id,
+      status: event.status,
+    };
+  });
+  return {
+    accounts,
+    availableRepairs: Object.fromEntries(Object.entries(repairActions).map(([name, action]) => [name, { label: action.label, required: action.required }])),
+    brokerTransfers,
+    connectors: rows(raw, "connectors"),
+    controls: rows(raw, "controls"),
+    incomplete: Boolean(raw && typeof raw === "object" && !Array.isArray(raw) && (raw as Record<string, unknown>).incomplete),
+    inventories: rows(raw, "inventories"),
+    openings: rows(raw, "openings"),
+    operations: rows(raw, "operations"),
+    payouts: rows(raw, "payouts"),
+    periods: rows(raw, "periods"),
+    purchases: rows(raw, "purchases"),
+    question,
+    wallets: rows(raw, "wallets"),
+  };
+}
+
+export async function readRepairContext(db: SupabaseClient, question = "") {
   const result = await db.rpc("get_nodalito_repair_context");
   if (result.error || !result.data) throw new Error("No pude leer los registros autorizados para esta investigación.");
-  return result.data;
+  return buildInvestigationContext(result.data, question);
 }
 
 export async function prepareRepair(db: SupabaseClient, input: unknown): Promise<RepairPreview> {
