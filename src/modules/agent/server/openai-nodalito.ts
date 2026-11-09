@@ -75,7 +75,7 @@ ${knowledgeContext(role)}`;
 }
 
 const adminAuditTool = {
-  description: "Lee la auditoría determinística actual de Admin Master. Usala para preguntas sobre datos reales, usuarios, facturación, actividad, payouts, conciliaciones o conectores actuales.",
+  description: "Investiga la auditoría actual de Admin Master. Si la pregunta identifica a una persona, ejecuta una revisión profunda de sus cuentas, compras, controles, vínculos, payouts, conectores, lotes, sesiones y eventos broker, incluidos registros sin período. Usala para datos reales, facturación, actividad, payouts, conciliaciones o conectores.",
   name: "read_admin_master_audit",
   parameters: {
     additionalProperties: false,
@@ -190,7 +190,7 @@ export async function askNodalito(input: Readonly<{
     input: [
       { content: baseInstructions(input.role), role: "developer" },
       {
-        content: `Pregunta del usuario:\n${input.question}\n\nResultado del diagnóstico autorizado:\n${JSON.stringify(audit)}\n\nExplicá el resultado sin alterar cifras. Separá hechos comprobados de recomendaciones. Si hay una alerta que requiera intervención, indicá que puede reportarla al Admin Master desde este mismo panel.`,
+        content: `Pregunta del usuario:\n${input.question}\n\nResultado del diagnóstico autorizado:\n${JSON.stringify(audit)}\n\nExplicá el resultado sin alterar cifras. Separá hechos comprobados de recomendaciones. Si coverageComplete es false, nunca afirmes que no hay problemas: indicá claramente que la investigación quedó incompleta. Si hay una alerta que requiera intervención, indicá que puede reportarla al Admin Master desde este mismo panel.`,
         role: "user",
       },
     ],

@@ -1,5 +1,26 @@
 # Decisiones tecnicas de NODAL App
 
+### Nodalito Admin Master — investigación profunda y cobertura verificable, 2026-11-09
+
+- Una consulta que identifica a un usuario ya no se responde únicamente con el
+  resumen visual del panel Admin Master. Nodalito ejecuta una inspección de sus
+  cuentas, compras, controles, vínculos, payouts, conectores, lotes, sesiones y
+  eventos de saldo broker.
+- Un lote sin `accounting_period_id` se considera una anomalía crítica. La falta
+  de período explica por qué no terminó la contabilidad y nunca puede utilizarse
+  como filtro para ocultarlo, aunque el mes calendario no coincida con la etiqueta
+  del período operativo extendido.
+- La conversación Admin Master revisa 45 días de telemetría operativa reciente;
+  la ronda diaria mantiene una ventana de 7 días para no reabrir historia antigua
+  ya saneada manualmente. Los eventos broker todavía pendientes se revisan sin
+  depender de esa etiqueta mensual y se agrupan por conector.
+- Cada respuesta informa si la cobertura terminó. Si una fuente falla, alcanza
+  el límite de lectura o no puede inspeccionarse, Nodalito no puede afirmar que
+  el usuario está libre de problemas; debe declarar la investigación incompleta.
+- La misma detección determinística alimenta las consultas dirigidas y la ronda
+  diaria. Este cambio amplía lectura y diagnóstico; no modifica contabilidad ni
+  autoriza reparaciones automáticas nuevas.
+
 ### Nodalito — reparaciones integradas, candidato local 2026-11-07
 
 - Un único flujo atiende once familias de incidentes. Conversación y ronda diaria

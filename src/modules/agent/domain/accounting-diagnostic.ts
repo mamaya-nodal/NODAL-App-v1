@@ -39,6 +39,21 @@ type Session = Readonly<{
   opened_at: string;
 }>;
 
+type UnreconciledBatch = Readonly<{
+  accounting_blocking_reason: string | null;
+  accounting_period_id: string | null;
+  accounting_status: string;
+  id: string;
+  opened_at: string;
+  status: string;
+}>;
+
+type PendingBrokerEvent = Readonly<{
+  connector_id: string;
+  id: string;
+  observed_at: string;
+}>;
+
 const base = { userId: null, userName: null } as const;
 
 function signedEntry(entry: Entry) {
@@ -191,4 +206,67 @@ export function diagnoseUnbatchedLinkedSessions(
     severity: "critical" as const,
     title: "Operación cerrada sin lectura contable",
   }));
+}
+
+/** Un lote sin resolver sigue siendo evidencia aunque haya fallado la asignación de período. */
+export function diagnoseUnreconciledBatches(
+  batches: readonly UnreconciledBatch[],
+  now = new Date(),
+  minimumAgeMinutes = 15,
+): NodalitoFinding[] {
+  const nowMs = now.getTime();
+  return batches.flatMap((batch) => {
+    if (batch.accounting_status === "committed") return [];
+    const openedAt = Date.parse(batch.opened_at);
+    const ageMinutes = Number.isFinite(openedAt)
+      ? Math.max(0, Math.floor((nowMs - openedAt) / 60_000))
+      : minimumAgeMinutes;
+    if (ageMinutes < minimumAgeMinutes) return [];
+    const conflict = batch.status === "conflict" || batch.status === "unmatched";
+    const missingPeriod = !batch.accounting_period_id;
+    return [{
+      ...base,
+      category: "reconciliation" as const,
+      detail: batch.accounting_blocking_reason
+        || (missingPeriod
+          ? "La operación fue detectada, pero no pudo asignarse a un período contable."
+          : batch.accounting_status === "shadow_ready"
+            ? "La conciliación quedó lista, pero no llegó a crear su registro contable."
+            : "La operación tiene un bloqueo contable que requiere revisión."),
+      evidence: `Lote ${batch.id}; apertura ${batch.opened_at}; ${missingPeriod ? "sin período asignado; " : ""}pendiente hace ${ageMinutes} minutos.`,
+      id: `unreconciled:${batch.id}`,
+      severity: conflict || missingPeriod ? "critical" as const : "attention" as const,
+      title: missingPeriod
+        ? "Operación detectada sin período contable"
+        : batch.accounting_status === "shadow_ready"
+          ? "Operación lista que no terminó de contabilizarse"
+          : "Operación detectada sin conciliar",
+    }];
+  });
+}
+
+/** Agrupa lecturas de saldo pendientes para evitar una alerta por cada pulso. */
+export function diagnosePendingBrokerEvents(
+  events: readonly PendingBrokerEvent[],
+  now = new Date(),
+  minimumAgeMinutes = 15,
+): NodalitoFinding[] {
+  const byConnector = new Map<string, PendingBrokerEvent[]>();
+  for (const event of events) {
+    const observedAt = Date.parse(event.observed_at);
+    if (Number.isFinite(observedAt) && now.getTime() - observedAt < minimumAgeMinutes * 60_000) continue;
+    byConnector.set(event.connector_id, [...(byConnector.get(event.connector_id) ?? []), event]);
+  }
+  return [...byConnector.entries()].map(([connectorId, rows]) => {
+    const ordered = [...rows].sort((left, right) => left.observed_at.localeCompare(right.observed_at));
+    return {
+      ...base,
+      category: "reconciliation" as const,
+      detail: `${rows.length} lectura${rows.length === 1 ? "" : "s"} de saldo broker siguen pendientes de clasificar o vincular con un movimiento económico.`,
+      evidence: `Conector ${connectorId}; primera ${ordered[0].observed_at}; última ${ordered.at(-1)!.observed_at}.`,
+      id: `pending-broker-events:${connectorId}`,
+      severity: "attention" as const,
+      title: "Movimientos broker pendientes de revisión",
+    };
+  });
 }

@@ -18,6 +18,8 @@ export type NodalitoAuditUser = Readonly<{
 
 export type NodalitoAuditSnapshot = Readonly<{
   auditDate: string;
+  coverageComplete: boolean;
+  coverageNotes: readonly string[];
   currentPeriod: string;
   historicalGrossInCents: number;
   systemGrossInCents: number;
@@ -38,6 +40,8 @@ export type NodalitoFinding = Readonly<{
 
 export type NodalitoAudit = Readonly<{
   auditDate: string;
+  coverageComplete: boolean;
+  coverageNotes: readonly string[];
   currentPeriod: string;
   findings: readonly NodalitoFinding[];
   historicalGrossInCents: number;
@@ -48,6 +52,8 @@ export type NodalitoAudit = Readonly<{
 }>;
 
 export type NodalitoAuditAnswer = Readonly<{
+  coverageComplete: boolean;
+  coverageNotes: readonly string[];
   findings: readonly NodalitoFinding[];
   generatedAt: string;
   summary: string;
@@ -122,6 +128,8 @@ export function buildDeterministicAudit(snapshot: NodalitoAuditSnapshot): Nodali
 
   return {
     auditDate: snapshot.auditDate,
+    coverageComplete: snapshot.coverageComplete,
+    coverageNotes: snapshot.coverageNotes,
     currentPeriod: snapshot.currentPeriod,
     findings,
     historicalGrossInCents: snapshot.historicalGrossInCents,
@@ -138,7 +146,7 @@ const userSearchStopWords = new Set([
   "tenia", "tiene", "todos", "usuario",
 ]);
 
-function resolveAuditUser(question: string, users: readonly NodalitoAuditUser[]) {
+export function resolveAuditUser(question: string, users: readonly NodalitoAuditUser[]) {
   const tokens = normalized(question).split(/[^a-z0-9@._-]+/).filter((token) => token.length >= 4 && !userSearchStopWords.has(token));
   const ranked = users.map((user) => {
     const aliases = normalized(`${user.name} ${user.email.split("@")[0]}`).split(/[^a-z0-9._-]+/).filter(Boolean);
@@ -168,12 +176,17 @@ export function answerDeterministicAudit(question: string, audit: NodalitoAudit,
   const wantsCompleteUserReport = Boolean(subject) && /reporte completo|informe completo|todos.{0,20}(problemas|errores)|problemas.{0,20}(tiene|tenia)/.test(value);
   const focused = !wantsCompleteUserReport && (wantsBilling || wantsConnector || wantsReconciliation || wantsActivity || wantsPayout);
   const categories = new Set<NodalitoFindingCategory>();
+  const coverage = {
+    coverageComplete: audit.coverageComplete,
+    coverageNotes: audit.coverageNotes,
+  };
   if (wantsBilling) categories.add("billing");
   if (wantsConnector) categories.add("connector");
   if (wantsReconciliation) categories.add("reconciliation");
   if (wantsPayout) categories.add("payout");
   if (userResolution.ambiguous.length) {
     return {
+      ...coverage,
       findings: [],
       generatedAt,
       summary: `Encontré más de un usuario posible: ${userResolution.ambiguous.map((user) => user.name).join(", ")}. Indicá el apellido para revisar a la persona correcta.`,
@@ -189,11 +202,14 @@ export function answerDeterministicAudit(question: string, audit: NodalitoAudit,
     const attention = findings.filter((finding) => finding.severity === "attention").length;
     const informational = findings.length - critical - attention;
     return {
+      ...coverage,
       findings,
       generatedAt,
       summary: findings.length
-        ? `${subject.name}: encontré ${findings.length} situaciones (${critical} críticas, ${attention} que requieren atención y ${informational} informativas).`
-        : `${subject.name}: no encontré alertas de ${wantsReconciliation ? "conciliación " : ""}con las reglas determinísticas actuales.`,
+        ? `${subject.name}: encontré ${findings.length} situaciones (${critical} críticas, ${attention} que requieren atención y ${informational} informativas).${audit.coverageComplete ? "" : " La investigación no pudo completar todas las fuentes, por lo que podrían existir otras."}`
+        : audit.coverageComplete
+          ? `${subject.name}: no encontré alertas de ${wantsReconciliation ? "conciliación " : ""}en las fuentes operativas revisadas.`
+          : `${subject.name}: no encontré alertas en el resumen disponible, pero la investigación quedó incompleta y no puedo confirmar que no tenga problemas.`,
     };
   }
 
@@ -201,6 +217,7 @@ export function answerDeterministicAudit(question: string, audit: NodalitoAudit,
     const operated = audit.operatedYesterday.map((user) => user.name).join(", ") || "ningún usuario";
     const withoutActivity = audit.usersWithoutActivityYesterday.map((user) => user.name).join(", ") || "ninguno";
     return {
+      ...coverage,
       findings,
       generatedAt,
       summary: `Ayer operaron ${audit.operatedYesterday.length} usuarios: ${operated}. Sin actividad registrada ayer: ${withoutActivity}. Una operación detectada pero no contabilizada aparece además como alerta de conciliación.`,
@@ -209,6 +226,7 @@ export function answerDeterministicAudit(question: string, audit: NodalitoAudit,
 
   if (wantsBilling) {
     return {
+      ...coverage,
       findings,
       generatedAt,
       summary: `La facturación oficial del período ${audit.currentPeriod} es ${money(audit.systemGrossInCents)} y la histórica es ${money(audit.historicalGrossInCents)}. ${findings.length ? `Encontré ${findings.length} inconsistencia${findings.length === 1 ? "" : "s"} relacionada${findings.length === 1 ? "" : "s"}.` : "La suma de usuarios incluidos coincide con el total del sistema."}`,
@@ -218,10 +236,13 @@ export function answerDeterministicAudit(question: string, audit: NodalitoAudit,
   const critical = findings.filter((finding) => finding.severity === "critical").length;
   const attention = findings.filter((finding) => finding.severity === "attention").length;
   return {
+    ...coverage,
     findings,
     generatedAt,
     summary: findings.length
       ? `La revisión determinística encontró ${findings.length} situaciones: ${critical} críticas, ${attention} que requieren atención y ${findings.length - critical - attention} informativas.`
-      : "No encontré alertas con las reglas determinísticas disponibles.",
+      : audit.coverageComplete
+        ? "No encontré alertas en todas las fuentes operativas revisadas."
+        : "No encontré alertas en el resumen disponible, pero la investigación no cubrió todas las fuentes y no confirma que el sistema esté libre de problemas.",
   };
 }

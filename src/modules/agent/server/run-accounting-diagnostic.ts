@@ -6,7 +6,9 @@ import {
   diagnoseCommittedBatchCoverage,
   diagnoseControlLedgers,
   diagnoseOperationalBaselines,
+  diagnosePendingBrokerEvents,
   diagnoseUnbatchedLinkedSessions,
+  diagnoseUnreconciledBatches,
 } from "../domain/accounting-diagnostic";
 import { connectorVersionState } from "@/modules/ninja/domain/connector-version";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -15,6 +17,11 @@ const MAX_ROWS = 3000;
 // La ronda diaria busca fallas nuevas. Historia antigua ya corregida a mano no
 // debe reaparecer como una operación omitida sólo porque no conserva lote técnico.
 const RECENT_OPERATION_DAYS = 7;
+
+export type AccountingDiagnosticOptions = Readonly<{
+  now?: Date;
+  recentOperationDays?: number;
+}>;
 
 function assertComplete(results: readonly Readonly<{ data: unknown[] | null; error: unknown }>[]) {
   for (const result of results) if (result.error) throw result.error;
@@ -32,7 +39,11 @@ export async function runAccountingDiagnostic(db: SupabaseClient): Promise<Nodal
 }
 
 /** Internal read-only audit. ownerId must come from an active NODAL user. */
-export async function runAccountingDiagnosticForOwner(db: SupabaseClient, ownerId: string): Promise<NodalitoFinding[]> {
+export async function runAccountingDiagnosticForOwner(
+  db: SupabaseClient,
+  ownerId: string,
+  options: AccountingDiagnosticOptions = {},
+): Promise<NodalitoFinding[]> {
   const owner = await db.from("nodal_users").select("id").eq("id", ownerId).eq("access_state", "active").maybeSingle();
   if (owner.error) throw owner.error;
   if (!owner.data) throw new Error("accounting_diagnostic_owner_inactive");
@@ -42,8 +53,7 @@ export async function runAccountingDiagnosticForOwner(db: SupabaseClient, ownerI
   if (!spaces?.length) return [];
   const { data: periods, error: periodsError } = await db.from("periods").select("id").in("workspace_id", spaces.map((space) => space.id)).eq("lifecycle_status", "open");
   if (periodsError) throw periodsError;
-  if (!periods?.length) return [];
-  const periodIds = periods.map((period) => period.id);
+  const periodIds = (periods ?? []).map((period) => period.id);
 
   const accountsResult = await db.from("accounts").select("id,state,reference_number").in("workspace_id", spaces.map((space) => space.id)).limit(MAX_ROWS);
   if (accountsResult.error) throw accountsResult.error;
@@ -54,8 +64,8 @@ export async function runAccountingDiagnosticForOwner(db: SupabaseClient, ownerI
     accountIds.length ? db.from("purchases").select("id,account_id,funds_origin,wallet_id").in("account_id", accountIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
     accountIds.length ? db.from("operation_entries").select("id,account_id,daily_control_id,destination,magnitude_cents").in("account_id", accountIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
     accountIds.length ? db.from("funding_withdrawals").select("id,account_id,approved_on,collected_on,wallet_id,amount_cents").in("account_id", accountIds).eq("is_active", true).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
-    db.from("daily_controls").select("id,period_id,control_number,balance_before_cents,balance_after_cents,operating_result_cents").in("period_id", periodIds).limit(MAX_ROWS),
-    db.from("daily_control_participants").select("daily_control_id,account_id,allocated_result_cents").in("period_id", periodIds).limit(MAX_ROWS),
+    periodIds.length ? db.from("daily_controls").select("id,period_id,control_number,balance_before_cents,balance_after_cents,operating_result_cents").in("period_id", periodIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
+    periodIds.length ? db.from("daily_control_participants").select("daily_control_id,account_id,allocated_result_cents").in("period_id", periodIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
   ]);
   assertComplete(responses);
   const [purchasesResult, entriesResult, payoutsResult, controlsResult, participantsResult] = responses;
@@ -97,15 +107,22 @@ export async function runAccountingDiagnosticForOwner(db: SupabaseClient, ownerI
 
   const connectorIds = (connectors.data ?? []).map((connector) => connector.id);
   if (connectorIds.length) {
-    const cutoff = new Date(Date.now() - RECENT_OPERATION_DAYS * 86_400_000).toISOString();
-    const [batches, sessions] = await Promise.all([
+    const now = options.now ?? new Date();
+    const recentOperationDays = Math.max(1, options.recentOperationDays ?? RECENT_OPERATION_DAYS);
+    const cutoff = new Date(now.getTime() - recentOperationDays * 86_400_000).toISOString();
+    const [batches, sessions, pendingBrokerEvents] = await Promise.all([
       db.from("ninja_operation_batches").select("id,broker_session_id,status,accounting_status,accounting_blocking_reason,accounting_period_id,daily_control_id,opened_at")
         .in("connector_id", connectorIds).gte("opened_at", cutoff).limit(MAX_ROWS),
       db.from("ninja_operation_probe_sessions").select("id,connector_id,connection_name,account_name,opened_at,settled_at,status,execution_count")
         .in("connector_id", connectorIds).eq("status", "closed").is("excluded_at", null).gte("opened_at", cutoff).limit(MAX_ROWS),
+      db.from("ninja_broker_balance_events").select("id,connector_id,observed_at")
+        .in("connector_id", connectorIds).eq("status", "pending").limit(MAX_ROWS),
     ]);
-    assertComplete([batches, sessions]);
-    const relevantBatches = (batches.data ?? []).filter((batch) => batch.accounting_period_id && periodIds.includes(batch.accounting_period_id));
+    assertComplete([batches, sessions, pendingBrokerEvents]);
+    // La falta de período es parte de la anomalía. Nunca debe ocultar el lote
+    // de la auditoría que intenta explicar por qué no terminó la contabilidad.
+    const relevantBatches = (batches.data ?? []).filter((batch) =>
+      !batch.accounting_period_id || periodIds.includes(batch.accounting_period_id));
     const batchIds = relevantBatches.map((batch) => batch.id);
     const members = batchIds.length ? await db.from("ninja_operation_batch_members").select("batch_id,session_id,account_id,role").in("batch_id", batchIds).limit(MAX_ROWS) : { data: [], error: null };
     if (members.error) throw members.error;
@@ -114,25 +131,12 @@ export async function runAccountingDiagnosticForOwner(db: SupabaseClient, ownerI
     const committed = relevantBatches.filter((batch) => batch.accounting_status === "committed" && batch.accounting_period_id && periodIds.includes(batch.accounting_period_id));
     findings.push(...diagnoseCommittedBatchCoverage(committed, members.data ?? [], entries));
 
-    const now = Date.now();
-    for (const batch of relevantBatches.filter((row) => row.accounting_status !== "committed")) {
-      const ageMinutes = Math.floor((now - new Date(batch.opened_at).getTime()) / 60_000);
-      if (ageMinutes < 15) continue;
-      const conflict = batch.status === "conflict" || batch.status === "unmatched";
-      findings.push({
-        ...base,
-        category: "reconciliation",
-        id: `unreconciled:${batch.id}`,
-        severity: conflict ? "critical" : "attention",
-        title: batch.accounting_status === "shadow_ready" ? "Operación lista que no terminó de contabilizarse" : "Operación detectada sin conciliar",
-        detail: batch.accounting_blocking_reason || (batch.accounting_status === "shadow_ready" ? "La conciliación quedó lista, pero no llegó a crear su registro contable." : "La operación tiene un bloqueo contable que requiere revisión."),
-        evidence: `Lote ${batch.id}; apertura ${batch.opened_at}; pendiente hace ${ageMinutes} minutos.`,
-      });
-    }
+    findings.push(...diagnoseUnreconciledBatches(relevantBatches, now));
+    findings.push(...diagnosePendingBrokerEvents(pendingBrokerEvents.data ?? [], now));
 
     const activeLinkKeys = new Set((links.data ?? []).map((link) => `${link.connector_id}\u0000${link.connection_name}\u0000${link.external_account_name}`.toUpperCase()));
     const linkedSessions = (sessions.data ?? []).filter((session) => activeLinkKeys.has(`${session.connector_id}\u0000${session.connection_name}\u0000${session.account_name}`.toUpperCase())
-      && session.settled_at && now - new Date(session.settled_at).getTime() >= 15 * 60_000);
+      && session.settled_at && now.getTime() - new Date(session.settled_at).getTime() >= 15 * 60_000);
     const linkedSessionIds = new Set<number>([
       ...relevantBatches.map((batch) => Number(batch.broker_session_id)),
       ...(members.data ?? []).map((member) => Number(member.session_id)),

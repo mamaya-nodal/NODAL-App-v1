@@ -4,6 +4,8 @@ import { answerDeterministicAudit, buildDeterministicAudit, type NodalitoAuditSn
 
 const snapshot: NodalitoAuditSnapshot = {
   auditDate: "2026-11-05",
+  coverageComplete: true,
+  coverageNotes: [],
   currentPeriod: "2026-10-16",
   historicalGrossInCents: 50_000,
   systemGrossInCents: 20_000,
@@ -66,5 +68,17 @@ describe("auditoría determinística de Nodalito", () => {
     expect(answer.findings).toEqual([]);
     expect(answer.summary).toContain("David Uno, David Dos");
     expect(answer.summary).toContain("apellido");
+  });
+
+  it("no declara sano al usuario cuando la cobertura quedó incompleta", () => {
+    const clean = buildDeterministicAudit({
+      ...snapshot,
+      coverageComplete: false,
+      coverageNotes: ["No se pudo leer la telemetría Ninja."],
+      users: [{ ...snapshot.users[0], connectorLight: "green", pendingPayouts: [], reconciliationAlerts: [] }],
+    });
+    const answer = answerDeterministicAudit("Revisá los problemas de Trader Uno", clean, "2026-11-09T15:00:00Z");
+    expect(answer.coverageComplete).toBe(false);
+    expect(answer.summary).toContain("no puedo confirmar");
   });
 });

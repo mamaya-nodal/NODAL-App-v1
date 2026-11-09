@@ -4,7 +4,9 @@ import {
   diagnoseCommittedBatchCoverage,
   diagnoseControlLedgers,
   diagnoseOperationalBaselines,
+  diagnosePendingBrokerEvents,
   diagnoseUnbatchedLinkedSessions,
+  diagnoseUnreconciledBatches,
 } from "./accounting-diagnostic";
 
 describe("auditoría contable determinística de Nodalito", () => {
@@ -58,5 +60,34 @@ describe("auditoría contable determinística de Nodalito", () => {
     const sessions = [{ id: 10, account_name: "A-1", connection_name: "Ninja", execution_count: 2, opened_at: "2026-11-07T10:00:00Z" }];
     expect(diagnoseUnbatchedLinkedSessions(sessions, new Set())).toMatchObject([{ id: "unbatched-session:10" }]);
     expect(diagnoseUnbatchedLinkedSessions(sessions, new Set([10]))).toEqual([]);
+  });
+
+  it("no oculta un lote bloqueado por carecer de período contable", () => {
+    const findings = diagnoseUnreconciledBatches([{
+      accounting_blocking_reason: "No se pudieron vincular 5 cuentas.",
+      accounting_period_id: null,
+      accounting_status: "blocked",
+      id: "batch-orphan",
+      opened_at: "2026-11-09T14:38:23.781Z",
+      status: "ready",
+    }], new Date("2026-11-09T15:00:00Z"));
+    expect(findings).toMatchObject([{
+      id: "unreconciled:batch-orphan",
+      severity: "critical",
+      title: "Operación detectada sin período contable",
+    }]);
+    expect(findings[0].evidence).toContain("sin período asignado");
+  });
+
+  it("agrupa los eventos broker pendientes sin ocultarlos", () => {
+    const findings = diagnosePendingBrokerEvents([
+      { connector_id: "connector", id: "one", observed_at: "2026-11-09T13:00:00Z" },
+      { connector_id: "connector", id: "two", observed_at: "2026-11-09T14:00:00Z" },
+    ], new Date("2026-11-09T15:00:00Z"));
+    expect(findings).toMatchObject([{
+      id: "pending-broker-events:connector",
+      severity: "attention",
+    }]);
+    expect(findings[0].detail).toContain("2 lecturas");
   });
 });

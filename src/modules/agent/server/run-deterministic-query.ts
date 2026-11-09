@@ -1,11 +1,14 @@
 import "server-only";
 
+import { createServiceClient } from "@/lib/supabase/service";
 import { loadMasterControl } from "@/modules/admin/server/load-master-control";
 import {
   answerDeterministicAudit,
   buildDeterministicAudit,
+  resolveAuditUser,
   type NodalitoAuditSnapshot,
 } from "../domain/deterministic-audit";
+import { runAccountingDiagnosticForOwner } from "./run-accounting-diagnostic";
 
 function buenosAiresDate(now: Date) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -28,6 +31,8 @@ export async function runDeterministicNodalitoQuery(question: string, now = new 
   const excluded = new Set(data.excludedFromMasterReportingUserIds);
   const snapshot: NodalitoAuditSnapshot = {
     auditDate,
+    coverageComplete: false,
+    coverageNotes: ["La consulta global usa el resumen Admin Master. La investigación profunda se ejecuta al identificar un usuario."],
     currentPeriod: data.month,
     historicalGrossInCents: data.performanceHistory.reduce((total, period) => total + period.gross, 0),
     systemGrossInCents: data.overview.gross,
@@ -59,6 +64,40 @@ export async function runDeterministicNodalitoQuery(question: string, now = new 
     }),
     yesterday: previousDate(auditDate),
   };
-  const audit = buildDeterministicAudit(snapshot);
+  let audit = buildDeterministicAudit(snapshot);
+  const resolution = resolveAuditUser(question, audit.users);
+  if (resolution.subject) {
+    try {
+      const deepFindings = await runAccountingDiagnosticForOwner(
+        createServiceClient(),
+        resolution.subject.id,
+        { now, recentOperationDays: 45 },
+      );
+      const findingsById = new Map(audit.findings.map((finding) => [finding.id, finding]));
+      for (const finding of deepFindings) {
+        findingsById.set(finding.id, {
+          ...finding,
+          userId: resolution.subject.id,
+          userName: resolution.subject.name,
+        });
+      }
+      audit = {
+        ...audit,
+        coverageComplete: true,
+        coverageNotes: [
+          "Se revisaron cuentas, compras, controles, vínculos, payouts, conectores, lotes, sesiones y eventos broker del usuario.",
+          "Los lotes sin período contable se incluyen como anomalías y no se descartan por el mes del panel.",
+        ],
+        findings: [...findingsById.values()],
+      };
+    } catch (error) {
+      console.error("nodalito_master_user_investigation_incomplete", error);
+      audit = {
+        ...audit,
+        coverageComplete: false,
+        coverageNotes: ["La investigación profunda no se completó. El resumen no permite declarar al usuario sin problemas."],
+      };
+    }
+  }
   return answerDeterministicAudit(question, audit, now.toISOString());
 }
