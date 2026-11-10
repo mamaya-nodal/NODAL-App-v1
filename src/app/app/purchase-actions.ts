@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { persistAutomaticOperationBatches } from "@/modules/ninja/server/automatic-operation-processing";
+import { refreshNinjaTechnicalOperations } from "@/modules/ninja/server/technical-operation-processing";
 
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -170,7 +170,12 @@ export async function createDetectedPurchase(formData: FormData): Promise<never>
   // even when Ninja is no longer sending and the browser was closed during trading.
   after(async () => {
     try {
-      await persistAutomaticOperationBatches(connectorId);
+      // Reconstruye primero las sesiones técnicas desde la telemetría conservada.
+      // Reintentar sólo los lotes existentes dejaba afuera una cuenta registrada
+      // después de operar, porque su sesión todavía no había sido materializada.
+      await refreshNinjaTechnicalOperations(connectorId, {
+        replaySince: `${purchasedOn}T00:00:00-03:00`,
+      });
     } catch {
       console.warn("Ninja post-registration reconciliation deferred");
     }

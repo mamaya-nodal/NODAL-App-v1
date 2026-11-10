@@ -9,7 +9,10 @@ import { buildNinjaTechnicalOperations, type NinjaTechnicalOperation } from "../
 import { persistAutomaticOperationBatches } from "./automatic-operation-processing";
 import { processNinjaOperationBurns } from "./transition-processing";
 
-export async function refreshNinjaTechnicalOperations(connectorId: string) {
+export async function refreshNinjaTechnicalOperations(
+  connectorId: string,
+  options: Readonly<{ replaySince?: string }> = {},
+) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return { processedAccounts: 0, persistedOperations: 0 };
@@ -100,6 +103,11 @@ export async function refreshNinjaTechnicalOperations(connectorId: string) {
       startAt = latestClosed?.opened_at
         ? new Date(Date.parse(latestClosed.opened_at) - 5 * 60_000).toISOString()
         : new Date(Date.now() - 12 * 60 * 60_000).toISOString();
+    }
+    if (options.replaySince && Number.isFinite(Date.parse(options.replaySince))) {
+      const oldestAllowed = Date.now() - 45 * 24 * 60 * 60_000;
+      const requested = Math.max(Date.parse(options.replaySince), oldestAllowed);
+      if (requested < Date.parse(startAt)) startAt = new Date(requested).toISOString();
     }
 
     const data: Array<Record<string, unknown>> = [];
