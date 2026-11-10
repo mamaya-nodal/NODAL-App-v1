@@ -1,5 +1,12 @@
 export type NinjaPhase = "Evaluation" | "Funded" | "Live";
 
+export type NinjaAccountRiskRule = Readonly<{
+  drawdownType: "EOD";
+  lockedMaxLossBalanceInCents: number;
+  maxLossLimitInCents: number;
+  version: string;
+}>;
+
 export type TrackedNinjaAccount = Readonly<{
   accountSizeInCents: number;
   balanceInCents: number;
@@ -11,6 +18,7 @@ export type TrackedNinjaAccount = Readonly<{
   phase: NinjaPhase;
   product: string | null;
   reachedEvaluationTarget: boolean;
+  riskRule?: NinjaAccountRiskRule;
 }>;
 
 export type NewNinjaAccount = Readonly<{
@@ -20,6 +28,7 @@ export type NewNinjaAccount = Readonly<{
   externalAccountName: string;
   phase: NinjaPhase;
   product: string | null;
+  riskRule?: NinjaAccountRiskRule;
 }>;
 
 export type NinjaAccountChange = Readonly<{
@@ -71,12 +80,16 @@ function isLucidFlex(account: Pick<TrackedNinjaAccount, "companyCode" | "product
   return account.companyCode === "LUCID" && account.product === "Flex";
 }
 
-function eodTrailingFloor(account: Pick<TrackedNinjaAccount, "companyCode" | "product">, highestEodBalanceInCents: number) {
-  const trailingFloor = Math.max(INITIAL_BURN_FLOOR_IN_CENTS, highestEodBalanceInCents - 200_000);
+function eodTrailingFloor(account: Pick<TrackedNinjaAccount, "accountSizeInCents" | "companyCode" | "product" | "riskRule">, highestEodBalanceInCents: number) {
+  const initialFloor = account.riskRule
+    ? account.accountSizeInCents - account.riskRule.maxLossLimitInCents
+    : INITIAL_BURN_FLOOR_IN_CENTS;
+  const lockedFloor = account.riskRule?.lockedMaxLossBalanceInCents ?? FUNDED_FLOOR_IN_CENTS;
+  const trailingFloor = Math.max(initialFloor, highestEodBalanceInCents - (account.riskRule?.maxLossLimitInCents ?? 200_000));
   return isFtmoGrowth(account)
     ? Math.min(INITIAL_BALANCE_IN_CENTS, trailingFloor)
     : isLucidFlex(account)
-      ? Math.min(FUNDED_FLOOR_IN_CENTS, trailingFloor)
+      ? Math.min(lockedFloor, trailingFloor)
       : trailingFloor;
 }
 
@@ -90,7 +103,9 @@ export function startTrackingNinjaAccount(account: NewNinjaAccount, businessDate
   }
   return {
     ...account,
-    burnFloorInCents: INITIAL_BURN_FLOOR_IN_CENTS,
+    burnFloorInCents: account.riskRule
+      ? account.accountSizeInCents - account.riskRule.maxLossLimitInCents
+      : INITIAL_BURN_FLOOR_IN_CENTS,
     highestEodBalanceInCents: account.balanceInCents,
     lastBusinessDate: businessDate,
     reachedEvaluationTarget: account.phase === "Evaluation" && account.balanceInCents >= evaluationTargetInCents(account),

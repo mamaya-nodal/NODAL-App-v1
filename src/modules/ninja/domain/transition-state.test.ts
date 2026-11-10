@@ -44,6 +44,59 @@ describe("evolveNinjaTransitionState", () => {
     expect(repeated.changes).toHaveLength(0);
   });
 
+  it("incorpora el perfil versionado cuando la cuenta se registra después", () => {
+    sequence = 0;
+    const first = evolveNinjaTransitionState({
+      businessDate: "2026-11-10",
+      connectedNames: ["Lucid"],
+      createLifeId: id,
+      observations: [observation("LFE-LATE", "Evaluation")],
+      state: { lives: [] },
+    });
+    const riskRule = {
+      drawdownType: "EOD" as const,
+      lockedMaxLossBalanceInCents: 5_010_000,
+      maxLossLimitInCents: 200_000,
+      version: "lucid-flex-50k-2026-11-10",
+    };
+    const linked = evolveNinjaTransitionState({
+      businessDate: "2026-11-10",
+      connectedNames: ["Lucid"],
+      createLifeId: id,
+      observations: [{ ...observation("LFE-LATE", "Evaluation"), riskRule }],
+      state: first.state,
+    });
+    expect(linked.state.lives[0].tracked.riskRule).toEqual(riskRule);
+    expect(linked.changes).toEqual([]);
+  });
+
+  it("no convierte el DLL diario de Lucid en una quema definitiva", () => {
+    sequence = 0;
+    const riskRule = {
+      drawdownType: "EOD" as const,
+      lockedMaxLossBalanceInCents: 5_010_000,
+      maxLossLimitInCents: 200_000,
+      version: "lucid-flex-50k-2026-11-10",
+    };
+    const first = evolveNinjaTransitionState({
+      businessDate: "2026-11-10",
+      connectedNames: ["Lucid"],
+      createLifeId: id,
+      observations: [{ ...observation("LFE-DLL", "Evaluation"), riskRule }],
+      state: { lives: [] },
+    });
+    const dailyLimit = evolveNinjaTransitionState({
+      businessDate: "2026-11-10",
+      connectedNames: ["Lucid"],
+      createLifeId: id,
+      observations: [{ ...observation("LFE-DLL", "Evaluation", 48_800), riskRule }],
+      state: first.state,
+    });
+    expect(dailyLimit.changes).toEqual([]);
+    expect(dailyLimit.state.lives[0].status).toBe("active");
+    expect(dailyLimit.state.lives[0].tracked.burnFloorInCents).toBe(4_800_000);
+  });
+
   it("mantiene irreversible una quema aunque Ninja vuelva a mostrar saldo superior", () => {
     sequence = 0;
     const first = evolveNinjaTransitionState({ businessDate: "2026-09-17", connectedNames: ["Tradeify"], createLifeId: id,

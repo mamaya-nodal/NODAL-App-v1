@@ -49,7 +49,13 @@ export function evolveNinjaTransitionState(args: Readonly<{
         return { ...life, status: "missing" as const };
       }
       if (observation.balanceStatus !== "verified") return life;
-      const tracked = observeTrackedNinjaAccount(life.tracked, observation.balanceInCents, args.businessDate);
+      // La cuenta puede registrarse en NODAL después de que Ninja ya haya
+      // empezado a observarla. Incorporamos su perfil inmutable sin reiniciar
+      // la vida; el próximo cálculo EOD aplicará la regla de esa cuenta.
+      const trackedWithRule = observation.riskRule
+        ? { ...life.tracked, riskRule: observation.riskRule }
+        : life.tracked;
+      const tracked = observeTrackedNinjaAccount(trackedWithRule, observation.balanceInCents, args.businessDate);
       if (tracked.balanceInCents <= tracked.burnFloorInCents) {
         changes.push({
           automatic: true,

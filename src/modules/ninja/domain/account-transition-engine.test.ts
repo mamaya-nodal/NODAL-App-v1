@@ -51,6 +51,23 @@ describe("pisos y objetivos del seguimiento Ninja", () => {
     expect(lucid.burnFloorInCents).toBe(5_010_000);
   });
 
+  it("usa la regla versionada propia de la cuenta para calcular su piso", () => {
+    let lucid = startTrackingNinjaAccount({
+      ...account("LFE-VERSIONED", "Evaluation"),
+      riskRule: {
+        drawdownType: "EOD",
+        lockedMaxLossBalanceInCents: 5_005_000,
+        maxLossLimitInCents: 250_000,
+        version: "test-rule",
+      },
+    }, "2026-11-10");
+    expect(lucid.burnFloorInCents).toBe(4_750_000);
+    lucid = observeTrackedNinjaAccount(lucid, 5_300_000, "2026-11-10");
+    lucid = observeTrackedNinjaAccount(lucid, 5_200_000, "2026-11-11");
+    expect(lucid.burnFloorInCents).toBe(5_005_000);
+    expect(lucid.riskRule?.version).toBe("test-rule");
+  });
+
   it("no mezcla vidas de programas con distinto tamaño", () => {
     const evaluation = startTrackingNinjaAccount(account("LFE1", "Evaluation", 53_001), "2026-08-24");
     const funded = { ...account("LFF1", "Funded"), accountSizeInCents: 10_000_000 };

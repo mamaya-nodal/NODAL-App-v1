@@ -8,6 +8,7 @@ import type { NinjaInventorySnapshot } from "../domain/ingestion-payload";
 import { isNinjaInventorySnapshot } from "../domain/ingestion-payload";
 import { resolveNinjaReferenceBalance } from "../domain/reference-balance";
 import { evolveNinjaTransitionState, type NinjaTransitionObservation, type NinjaTransitionState } from "../domain/transition-state";
+import type { NinjaAccountRiskRule } from "../domain/account-transition-engine";
 import type { NinjaTechnicalOperation } from "../domain/technical-operation";
 
 export type TransitionProcessingResult = Readonly<{
@@ -18,6 +19,20 @@ export type TransitionProcessingResult = Readonly<{
 
 function businessDate(isoDate: string) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(isoDate));
+}
+
+function accountKey(connectionName: string, accountName: string) {
+  return `${connectionName}\u0000${accountName}`.toUpperCase();
+}
+
+function parseRiskRule(version: unknown, configuration: unknown): NinjaAccountRiskRule | undefined {
+  if (typeof version !== "string" || !version.trim() || !configuration || typeof configuration !== "object") return undefined;
+  const value = configuration as Record<string, unknown>;
+  const maxLossLimitInCents = Number(value.maxLossLimitInCents);
+  const lockedMaxLossBalanceInCents = Number(value.lockedMaxLossBalanceInCents);
+  if (value.drawdownType !== "EOD" || !Number.isFinite(maxLossLimitInCents)
+    || !Number.isFinite(lockedMaxLossBalanceInCents) || maxLossLimitInCents <= 0) return undefined;
+  return { drawdownType: "EOD", lockedMaxLossBalanceInCents, maxLossLimitInCents, version };
 }
 
 function validState(value: unknown): NinjaTransitionState {
@@ -42,11 +57,26 @@ export async function processNinjaTransitions(connectorId: string, snapshot: Nin
   if (!url || !serviceRoleKey) return { detectedChanges: 0, processed: false, reason: "not_configured" };
   const supabase = createClient(url, serviceRoleKey, { global: { fetch: observedNinjaFetch }, auth: { autoRefreshToken: false, persistSession: false } });
 
-  const [{ data: reviewRows, error: reviewError }, { data: storedState, error: stateError }] = await Promise.all([
+  const [{ data: reviewRows, error: reviewError }, { data: storedState, error: stateError }, linksResult] = await Promise.all([
     supabase.from("ninja_connector_connection_reviews").select("connection_name,status").eq("connector_id", connectorId).eq("status", "isolated"),
     supabase.from("ninja_transition_states").select("revision, state").eq("connector_id", connectorId).maybeSingle(),
+    supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name").eq("connector_id", connectorId).is("closed_at", null),
   ]);
-  if (reviewError || stateError) return { detectedChanges: 0, processed: false, reason: "storage_error" };
+  if (reviewError || stateError || linksResult.error) return { detectedChanges: 0, processed: false, reason: "storage_error" };
+
+  const linkedAccountIds = [...new Set((linksResult.data ?? []).map((link) => link.account_id))];
+  const profilesResult = linkedAccountIds.length
+    ? await supabase.from("accounts").select("id,state,risk_rule_version,risk_configuration").in("id", linkedAccountIds)
+    : { data: [], error: null };
+  if (profilesResult.error) return { detectedChanges: 0, processed: false, reason: "storage_error" };
+  const profileByAccountId = new Map((profilesResult.data ?? []).filter((account) => account.state !== "closed").map((account) => [
+    account.id,
+    parseRiskRule(account.risk_rule_version, account.risk_configuration),
+  ]));
+  const riskRuleByExternalAccount = new Map((linksResult.data ?? []).flatMap((link) => {
+    const rule = profileByAccountId.get(link.account_id);
+    return rule ? [[accountKey(link.connection_name, link.external_account_name), rule] as const] : [];
+  }));
 
   const isolated = isolatedNinjaConnectionNames(reviewRows ?? []);
   const connectedNames = [...new Set(snapshot.accounts
@@ -67,6 +97,7 @@ export async function processNinjaTransitions(connectorId: string, snapshot: Nin
       externalAccountName: account.accountName,
       phase: classified.phase,
       product: classified.product,
+      riskRule: riskRuleByExternalAccount.get(accountKey(account.connectionName, account.accountName)),
     }];
   });
 
