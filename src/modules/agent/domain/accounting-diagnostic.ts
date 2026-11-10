@@ -31,6 +31,12 @@ type Link = Readonly<{
   external_account_name: string;
   phase: string | null;
 }>;
+type AccountLinkState = Readonly<{
+  account_id: string;
+  account_state: string;
+  closed_at: string | null;
+  external_account_name: string;
+}>;
 type Session = Readonly<{
   account_name: string;
   connection_name: string;
@@ -190,6 +196,19 @@ export function diagnoseOperationalBaselines(links: readonly Link[]): NodalitoFi
     });
   }
   return findings;
+}
+
+/** A closed NODAL account cannot keep receiving operations through an active link. */
+export function diagnoseClosedAccountLinks(links: readonly AccountLinkState[]): NodalitoFinding[] {
+  return links.filter((link) => link.account_state === "closed" && link.closed_at === null).map((link) => ({
+    ...base,
+    category: "reconciliation" as const,
+    detail: "La cuenta está cerrada en NODAL, pero su vínculo Ninja sigue activo. Una operación posterior podría quedar sin cuenta válida o adjudicarse a una vida incorrecta.",
+    evidence: `Cuenta ${link.external_account_name}; cuenta NODAL ${link.account_id}; vínculo sin fecha de cierre.`,
+    id: `closed-account-active-link:${link.account_id}`,
+    severity: "critical" as const,
+    title: "Cuenta cerrada con vínculo Ninja activo",
+  }));
 }
 
 /** Only linked prop sessions are considered; broker or unknown sessions are deliberately ignored. */

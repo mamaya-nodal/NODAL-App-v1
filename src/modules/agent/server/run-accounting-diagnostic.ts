@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NodalitoFinding } from "../domain/deterministic-audit";
 import {
   diagnoseBalanceChains,
+  diagnoseClosedAccountLinks,
   diagnoseCommittedBatchCoverage,
   diagnoseControlLedgers,
   diagnoseOperationalBaselines,
@@ -90,13 +91,20 @@ export async function runAccountingDiagnosticForOwner(
   findings.push(...diagnoseBalanceChains(controls));
   findings.push(...diagnoseControlLedgers(controls, participants, entries));
 
-  const activeAccountIds = accounts.filter((account) => account.state !== "closed").map((account) => account.id);
-  const links = activeAccountIds.length ? await db.from("ninja_account_links")
-    .select("account_id,connector_id,connection_name,external_account_name,phase,accounting_phase,completed_trade_days")
-    .in("account_id", activeAccountIds).is("closed_at", null).limit(MAX_ROWS) : { data: [], error: null };
+  const accountStateById = new Map(accounts.map((account) => [account.id, account.state]));
+  const links = accountIds.length ? await db.from("ninja_account_links")
+    .select("account_id,connector_id,connection_name,external_account_name,phase,accounting_phase,completed_trade_days,closed_at")
+    .in("account_id", accountIds).is("closed_at", null).limit(MAX_ROWS) : { data: [], error: null };
   if (links.error) throw links.error;
   if ((links.data?.length ?? 0) >= MAX_ROWS) throw new Error("accounting_diagnostic_incomplete");
-  findings.push(...diagnoseOperationalBaselines(links.data ?? []));
+  const activeLinks = (links.data ?? []).filter((link) => accountStateById.get(link.account_id) !== "closed");
+  findings.push(...diagnoseOperationalBaselines(activeLinks));
+  findings.push(...diagnoseClosedAccountLinks((links.data ?? []).map((link) => ({
+    account_id: link.account_id,
+    account_state: accountStateById.get(link.account_id) ?? "unknown",
+    closed_at: link.closed_at,
+    external_account_name: link.external_account_name,
+  }))));
 
   const connectors = await db.from("ninja_connectors").select("id,connector_version,last_seen_at").eq("owner_user_id", ownerId).eq("status", "active").limit(201);
   if (connectors.error) throw connectors.error;
@@ -134,7 +142,7 @@ export async function runAccountingDiagnosticForOwner(
     findings.push(...diagnoseUnreconciledBatches(relevantBatches, now));
     findings.push(...diagnosePendingBrokerEvents(pendingBrokerEvents.data ?? [], now));
 
-    const activeLinkKeys = new Set((links.data ?? []).map((link) => `${link.connector_id}\u0000${link.connection_name}\u0000${link.external_account_name}`.toUpperCase()));
+    const activeLinkKeys = new Set(activeLinks.map((link) => `${link.connector_id}\u0000${link.connection_name}\u0000${link.external_account_name}`.toUpperCase()));
     const linkedSessions = (sessions.data ?? []).filter((session) => activeLinkKeys.has(`${session.connector_id}\u0000${session.connection_name}\u0000${session.account_name}`.toUpperCase())
       && session.settled_at && now.getTime() - new Date(session.settled_at).getTime() >= 15 * 60_000);
     const linkedSessionIds = new Set<number>([

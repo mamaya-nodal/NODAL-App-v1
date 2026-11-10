@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   diagnoseBalanceChains,
+  diagnoseClosedAccountLinks,
   diagnoseCommittedBatchCoverage,
   diagnoseControlLedgers,
   diagnoseOperationalBaselines,
@@ -54,6 +55,14 @@ describe("auditoría contable determinística de Nodalito", () => {
       { account_id: "one", external_account_name: "A-1", phase: "Evaluation", accounting_phase: null, completed_trade_days: null },
       { account_id: "two", external_account_name: "A-2", phase: "Funded", accounting_phase: "Evaluacion", completed_trade_days: 1 },
     ]).map((finding) => finding.id)).toEqual(["account-baseline:one", "account-phase:two"]);
+  });
+
+  it("detecta una cuenta cerrada que conserva un vínculo Ninja activo", () => {
+    expect(diagnoseClosedAccountLinks([
+      { account_id: "closed", account_state: "closed", closed_at: null, external_account_name: "LFE-01" },
+      { account_id: "open", account_state: "active", closed_at: null, external_account_name: "LFE-02" },
+      { account_id: "historic", account_state: "closed", closed_at: "2026-11-10T12:00:00Z", external_account_name: "LFE-03" },
+    ])).toMatchObject([{ id: "closed-account-active-link:closed", severity: "critical" }]);
   });
 
   it("sólo denuncia sesiones vinculadas sin lote", () => {
