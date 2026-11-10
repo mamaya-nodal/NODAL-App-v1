@@ -31,16 +31,24 @@ describe("pisos y objetivos del seguimiento Ninja", () => {
     expect(tracked.reachedEvaluationTarget).toBe(true);
   });
 
-  it("aplica el umbral funded común y la excepción Topstep en tiempo real", () => {
+  it("aplica LucidFlex funded por cierre EOD y conserva Topstep en tiempo real", () => {
     let lucid = startTrackingNinjaAccount(account("LFF1", "Funded"), "2026-08-24");
-    lucid = observeTrackedNinjaAccount(lucid, 5_209_900, "2026-08-24");
+    lucid = observeTrackedNinjaAccount(lucid, 5_250_000, "2026-08-24");
     expect(lucid.burnFloorInCents).toBe(4_800_000);
-    lucid = observeTrackedNinjaAccount(lucid, 5_210_000, "2026-08-24");
+    lucid = observeTrackedNinjaAccount(lucid, 5_180_000, "2026-08-25");
     expect(lucid.burnFloorInCents).toBe(5_010_000);
 
     let topstep = startTrackingNinjaAccount(account("EXPRESS-1", "Funded", 50_000, "TOPSTEP"), "2026-08-24");
     topstep = observeTrackedNinjaAccount(topstep, 5_200_000, "2026-08-24");
     expect(topstep.burnFloorInCents).toBe(5_010_000);
+  });
+
+  it("bloquea el MLL EOD de LucidFlex en 50.100 también durante evaluación", () => {
+    let lucid = startTrackingNinjaAccount(account("LFE1", "Evaluation"), "2026-08-24");
+    lucid = observeTrackedNinjaAccount(lucid, 5_300_000, "2026-08-24");
+    lucid = observeTrackedNinjaAccount(lucid, 5_250_000, "2026-08-25");
+    expect(lucid.highestEodBalanceInCents).toBe(5_300_000);
+    expect(lucid.burnFloorInCents).toBe(5_010_000);
   });
 
   it("no mezcla vidas de programas con distinto tamaño", () => {

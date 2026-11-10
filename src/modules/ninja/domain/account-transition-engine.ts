@@ -27,7 +27,6 @@ export type NinjaAccountChange = Readonly<{
   fromAccountName: string | null;
   kind:
     | "burned"
-    | "burn_reversed"
     | "evaluation_to_funded"
     | "funded_to_live_review"
     | "new_account"
@@ -68,6 +67,19 @@ function isFtmoGrowth(account: Pick<TrackedNinjaAccount, "companyCode" | "produc
   return account.companyCode === "FTMO" && account.product === "Growth";
 }
 
+function isLucidFlex(account: Pick<TrackedNinjaAccount, "companyCode" | "product">) {
+  return account.companyCode === "LUCID" && account.product === "Flex";
+}
+
+function eodTrailingFloor(account: Pick<TrackedNinjaAccount, "companyCode" | "product">, highestEodBalanceInCents: number) {
+  const trailingFloor = Math.max(INITIAL_BURN_FLOOR_IN_CENTS, highestEodBalanceInCents - 200_000);
+  return isFtmoGrowth(account)
+    ? Math.min(INITIAL_BALANCE_IN_CENTS, trailingFloor)
+    : isLucidFlex(account)
+      ? Math.min(FUNDED_FLOOR_IN_CENTS, trailingFloor)
+      : trailingFloor;
+}
+
 function evaluationTargetInCents(account: Pick<TrackedNinjaAccount, "companyCode" | "product">) {
   return isFtmoGrowth(account) ? FTMO_GROWTH_EVALUATION_TARGET_IN_CENTS : EVALUATION_TARGET_IN_CENTS;
 }
@@ -95,19 +107,17 @@ export function observeTrackedNinjaAccount(
 
   if (businessDate !== account.lastBusinessDate && account.phase === "Evaluation") {
     highestEodBalanceInCents = Math.max(highestEodBalanceInCents, account.balanceInCents);
-    const trailingFloor = Math.max(INITIAL_BURN_FLOOR_IN_CENTS, highestEodBalanceInCents - 200_000);
-    burnFloorInCents = isFtmoGrowth(account)
-      ? Math.min(INITIAL_BALANCE_IN_CENTS, trailingFloor)
-      : trailingFloor;
+    burnFloorInCents = eodTrailingFloor(account, highestEodBalanceInCents);
   }
 
-  if (businessDate !== account.lastBusinessDate && account.phase === "Funded" && isFtmoGrowth(account)) {
+  if (businessDate !== account.lastBusinessDate
+    && account.phase === "Funded"
+    && (isFtmoGrowth(account) || isLucidFlex(account))) {
     highestEodBalanceInCents = Math.max(highestEodBalanceInCents, account.balanceInCents);
-    burnFloorInCents = Math.min(
-      INITIAL_BALANCE_IN_CENTS,
-      Math.max(INITIAL_BURN_FLOOR_IN_CENTS, highestEodBalanceInCents - 200_000),
-    );
-  } else if (account.phase === "Funded" && balanceInCents >= fundedTriggerInCents(account.companyCode)) {
+    burnFloorInCents = eodTrailingFloor(account, highestEodBalanceInCents);
+  } else if (account.phase === "Funded"
+    && !isLucidFlex(account)
+    && balanceInCents >= fundedTriggerInCents(account.companyCode)) {
     burnFloorInCents = FUNDED_FLOOR_IN_CENTS;
   }
 

@@ -18,6 +18,18 @@ const commonDocuments: readonly NodalitoKnowledgeDocument[] = NODALITO_GUIDES.ma
 
 const protectedDocuments: readonly NodalitoKnowledgeDocument[] = [
   {
+    audience: ["master"],
+    content: "Una conciliación Ninja sólo es completa cuando el lote, Control Diario, participantes, asientos por cuenta y estado visible en Cuentas coinciden. Registrar tarde una cuenta dispara un reproceso servidor de la telemetría conservada, hasta 45 días desde la compra, sin requerir actualización del conector. Si el evento nunca llegó al servidor, no debe fabricarse: requiere reconstrucción auditada.",
+    id: "policy:reconciliation-account-projection",
+    title: "Conciliación y Cuentas deben actualizarse juntas",
+  },
+  {
+    audience: ["master"],
+    content: "LucidFlex 50K usa MLL de USD 2.000 con trailing EOD: el piso inicial es USD 48.000 y se bloquea como máximo en USD 50.100 según cierres de sesión, no máximos intradía. El DLL opcional de USD 1.200 es un bloqueo blando hasta la sesión siguiente y no cierra la cuenta. Una quema confirmada es irreversible para esa vida; una lectura posterior superior no la revive.",
+    id: "policy:lucid-flex-50k-risk",
+    title: "Riesgo y quema de LucidFlex 50K",
+  },
+  {
     audience: ["trader", "admin", "master"],
     content: "No es necesario instalar el conector en todas las identidades registradas. Sólo cada identidad que efectivamente vaya a operar desde su propio NinjaTrader necesita instalar y vincular su conector desde su tarjeta. Una identidad que no opera no necesita conector.",
     id: "policy:identity-connector-requirement",
