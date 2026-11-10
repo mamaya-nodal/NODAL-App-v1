@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
 
 import { sendIdentityMimicalInstallation } from "./identity-actions";
-import { markCurrentIdentityMimicalSent, markCurrentMimicalDownloaded } from "./mimical-update-status";
+import {
+  hasDownloadedCurrentMimical,
+  hasSentCurrentIdentityMimical,
+  markCurrentIdentityMimicalSent,
+  markCurrentMimicalDownloaded,
+  subscribeToIdentityMimicalSend,
+  subscribeToMimicalDownload,
+} from "./mimical-update-status";
 
 type PairingCode = Readonly<{ code: string; expiresAt: string }>;
 
@@ -21,6 +28,15 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId }: Mimical
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const updateHandled = useSyncExternalStore(
+    (callback) => identityId
+      ? subscribeToIdentityMimicalSend(identityId, callback)
+      : subscribeToMimicalDownload(callback),
+    () => identityId
+      ? hasSentCurrentIdentityMimical(identityId)
+      : hasDownloadedCurrentMimical(),
+    () => false,
+  );
 
   useEffect(() => {
     if (!code) return;
@@ -98,7 +114,7 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId }: Mimical
         <div className="addon-card-heading">
           <div>
             <p className="status">NODALBOTS</p>
-            <h3>MIMICAL</h3>
+            <h3>MIMICAL {!updateHandled ? <b className="new-update-badge">NUEVA</b> : null}</h3>
             <p>Copiador de órdenes y trailing de cobertura para NinjaTrader.</p>
           </div>
           <span className={`addon-pilot-badge ${enabled ? "is-enabled" : ""}`}>

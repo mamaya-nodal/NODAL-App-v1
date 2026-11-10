@@ -12,6 +12,7 @@ describe("MIMICAL configuration", () => {
   it("keeps the local download for the NODAL user's own Ninja", () => {
     const html = renderToStaticMarkup(createElement(MimicalConfiguration, { enabled: true }));
     expect(html).toContain("Descargar MIMICAL");
+    expect(html).toContain("NUEVA");
     expect(html).not.toContain("Enviar MIMICAL por correo");
   });
 
@@ -25,6 +26,7 @@ describe("MIMICAL configuration", () => {
     expect(html).toContain("Enviar MIMICAL por correo");
     expect(html).toContain("identidad@example.com");
     expect(html).toContain("Generar código de vinculación");
+    expect(html).toContain("NUEVA");
     expect(html).not.toContain("Descargar MIMICAL");
   });
 });

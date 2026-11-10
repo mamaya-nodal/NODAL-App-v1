@@ -8,7 +8,7 @@ describe("MIMICAL update notice", () => {
   it("sends users with Configuración enabled to the update screen", () => {
     const html = renderToStaticMarkup(createElement(MimicalUpdateNotice, { configurationEnabled: true }));
 
-    expect(html).toContain("MIMICAL 1.1.0.3");
+    expect(html).toContain("MIMICAL 1.1.0.7");
     expect(html).toContain('href="#configuracion"');
     expect(html).toContain("Ir a Configuración");
   });
@@ -16,7 +16,7 @@ describe("MIMICAL update notice", () => {
   it("does not bypass Admin Master permissions when Configuración is disabled", () => {
     const html = renderToStaticMarkup(createElement(MimicalUpdateNotice, { configurationEnabled: false }));
 
-    expect(html).toContain("MIMICAL 1.1.0.3");
+    expect(html).toContain("MIMICAL 1.1.0.7");
     expect(html).toContain("se habilita desde Admin Master");
     expect(html).not.toContain('href="#configuracion"');
   });
