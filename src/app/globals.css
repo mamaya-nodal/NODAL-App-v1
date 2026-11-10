@@ -7589,6 +7589,44 @@ html[data-theme="day"] .accounting-history {
 .demo-account-kpis span,
 .demo-operation-grid article > span,
 .demo-accounting-grid article > span { color: var(--app-subtle); font-size: 11px; font-weight: 700; }
+.metric-label { display: inline-flex; align-items: center; gap: 5px; }
+.metric-info { position: relative; display: inline-flex; }
+.metric-info > summary {
+  width: 14px;
+  height: 14px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: inherit;
+  cursor: help;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  list-style: none;
+}
+.metric-info > summary::-webkit-details-marker { display: none; }
+.metric-info > span {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(250px, 58vw);
+  padding: 9px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  color: var(--app-copy);
+  background: var(--app-panel-strong, var(--app-panel));
+  box-shadow: 0 12px 28px rgb(0 0 0 / 24%);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.metric-info:not([open]) > span { display: none; }
+.metric-info:hover > span,
+.metric-info[open] > span { display: block; }
 .demo-account-kpis strong,
 .demo-operation-grid article > strong,
 .demo-accounting-grid article > strong {

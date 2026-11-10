@@ -22,6 +22,7 @@ import {
 import { assignWalletIdentity, refreshWalletSource } from "./wallet-source-actions";
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 import { WalletConnections } from "./wallet-connections";
+import { InfoTooltip } from "./info-tooltip";
 
 type Props = Readonly<{
   accounts: Array<{ eligibleForPayout: boolean; id: string; label: string }>;
@@ -339,19 +340,19 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
 
       <div className="demo-accounting-grid">
         <article className="demo-accounting-primary">
-          <span>Facturación</span>
+          <span className="metric-label">Facturación<InfoTooltip label="Facturación" text="Resultado realizado de cuentas cerradas y de fases con payout aprobado durante este período." /></span>
           <strong>{money(summary.realizedGainInCents)}</strong>
           {periodLabel && <small>{periodLabel}</small>}
         </article>
-        <article><span>Resultado del período</span><strong>{money(summary.periodResultInCents)}</strong></article>
-        <article><span>Resultado acumulado</span><strong>{money(summary.accumulatedResultInCents)}</strong><small>Incluye períodos anteriores</small></article>
+        <article><span className="metric-label">Resultado del período<InfoTooltip label="Resultado del período" text="Cambio contable del período: resultado broker, compras, payouts aprobados y comisiones de transferencia." /></span><strong>{money(summary.periodResultInCents)}</strong></article>
+        <article><span className="metric-label">Resultado acumulado<InfoTooltip label="Resultado acumulado" text="Suma del resultado de este período y los resultados registrados en períodos anteriores." /></span><strong>{money(summary.accumulatedResultInCents)}</strong><small>Incluye períodos anteriores</small></article>
         <article>
-          <span>Saldo broker contable</span>
+          <span className="metric-label">Saldo broker contable<InfoTooltip label="Saldo broker contable" text="Saldo de la última lectura incorporada a la contabilidad. Debajo se muestra el saldo más reciente detectado por NinjaTrader." /></span>
           <strong>{summary.brokerBalanceInCents === null ? "—" : money(summary.brokerBalanceInCents)}</strong>
           <small>{liveBalance ? `Detectado: ${money(liveBalance.balanceInCents)}` : "Sin saldo detectado"}</small>
         </article>
-        <article><span>Comisión sobre tu operativa</span><strong>{money(summary.commissionInCents)}</strong><small>{summary.commissionRateLabel}</small></article>
-        <article><span>Ganancia por operativa propia</span><strong>{money(summary.traderGainInCents)}</strong></article>
+        <article><span className="metric-label">Comisión sobre tu operativa<InfoTooltip label="Comisión sobre tu operativa" text="Parte de la facturación que corresponde a NODAL según el acuerdo vigente." /></span><strong>{money(summary.commissionInCents)}</strong><small>{summary.commissionRateLabel}</small></article>
+        <article><span className="metric-label">Ganancia por operativa propia<InfoTooltip label="Ganancia por operativa propia" text="Parte de la facturación que te corresponde luego de aplicar la comisión de NODAL." /></span><strong>{money(summary.traderGainInCents)}</strong></article>
       </div>
 
       <details className="demo-operation-disclosure accounting-result-detail">
