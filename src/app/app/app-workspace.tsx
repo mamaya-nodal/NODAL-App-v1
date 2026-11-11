@@ -52,6 +52,7 @@ type Props = Readonly<{
   configurationEnabled: boolean;
   identitiesEnabled: boolean;
   initialView?: WorkspaceView;
+  mimicalReportedVersion?: string | null;
   userLabel: string;
   username?: string;
   versionInfo: WorkspaceVersionInfo;
@@ -89,6 +90,7 @@ export function AppWorkspace({
   configurationEnabled,
   identitiesEnabled,
   initialView = "home",
+  mimicalReportedVersion = null,
   userLabel,
   username,
   versionInfo,
@@ -190,7 +192,7 @@ export function AppWorkspace({
         </header>
 
         <div className="app-page-shell workspace-content">
-          <MimicalUpdateNotice configurationEnabled={configurationEnabled} />
+          <MimicalUpdateNotice configurationEnabled={configurationEnabled} reportedVersion={mimicalReportedVersion} />
           {children}
         </div>
 

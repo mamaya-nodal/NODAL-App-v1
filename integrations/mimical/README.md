@@ -26,17 +26,13 @@ salidas ATM. El registro CONFIG identifica esta corrección como
 `1.1.0.1-stoplimit`. Ver `docs/MIMICAL_STOPLIMIT_2026-10-26.md` desde la raíz del
 repositorio para evidencia, alcance y recuperación.
 
-## Verificación local
+## Versión vigente y verificación local
 
-El candidato 1.1.0.3 incorpora conciliación de ejecuciones parciales y posiciones
-demoradas. Ver `docs/MIMICAL_POSITION_SETTLEMENT_2026-11-02.md`. La prueba
-`tests/Test-PositionSettlement.ps1` usa la DLL compilada del alcance personal.
+La versión publicada para los canales personal e identidad es `1.1.0.8`.
 La ventana obtiene el FileVersion del DLL y muestra la versión completa en la
-barra de título y el encabezado, para distinguir con claridad cada instalación.
-Mauricio aprobó el 2 de noviembre de 2026 la publicación de 1.1.0.3 en los
-canales personal e identidad de NODAL App. La publicación no demuestra por sí
-misma que cada NinjaTrader haya importado la nueva DLL: la versión instalada se
-confirma en la barra de título y el encabezado de MIMICAL.
+barra de título y el encabezado. NODAL utiliza ese mismo FileVersion informado
+por el complemento para confirmar la instalación y retirar los avisos de
+actualización correspondientes.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\integrations\mimical\Compilar.ps1

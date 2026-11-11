@@ -6,7 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   useTransition,
   type CSSProperties,
   type FormEvent,
@@ -20,6 +19,7 @@ import type {
   IdentitySummary,
 } from "@/modules/identities/domain/identity-summary";
 import { connectorVersionState, LATEST_NINJA_CONNECTOR_VERSION } from "@/modules/ninja/domain/connector-version";
+import { isConfirmedMimicalVersion, type MimicalInstallationVersion } from "@/modules/addons/domain/mimical-pilot";
 
 import {
   assignIdentityAccount,
@@ -32,7 +32,6 @@ import {
   updateIdentityOperationalStatus,
 } from "./identity-actions";
 import { IdentityMimicalConfiguration } from "./mimical-configuration";
-import { hasSentCurrentIdentityMimical, subscribeToIdentityMimicalSend } from "./mimical-update-status";
 import { NinjaConnectorPanel, type NinjaConnectorStatus } from "./ninja-connector-panel";
 
 type ActionResult = Readonly<{ message: string; ok: boolean }>;
@@ -42,6 +41,7 @@ type Props = Readonly<{
   configurationEnabled: boolean;
   connectors: NinjaConnectorStatus[];
   identities: IdentitySummary[];
+  mimicalInstallations?: Readonly<Record<string, MimicalInstallationVersion>>;
   ownerName: string;
   signalStates: Readonly<Record<string, boolean>>;
   workspaceId: string;
@@ -177,21 +177,17 @@ function accountState(account: IdentityAccount) {
 function IdentityAddonConfigurationRow({
   identity,
   onOpen,
+  reportedVersion,
 }: Readonly<{
   identity: IdentitySummary;
   onOpen: (identity: IdentitySummary) => void;
+  reportedVersion: string | null;
 }>) {
-  const updateSent = useSyncExternalStore(
-    (callback) => subscribeToIdentityMimicalSend(identity.id, callback),
-    () => hasSentCurrentIdentityMimical(identity.id),
-    () => false,
-  );
-
   return (
     <div className="identity-addon-configuration-row">
       <span><strong>Complementos</strong></span>
       <div className="identity-addon-configuration-actions">
-        {!updateSent ? <small className="identity-addon-update-badge">Actualización disponible</small> : null}
+        {!isConfirmedMimicalVersion(reportedVersion) ? <small className="identity-addon-update-badge">Actualización disponible</small> : null}
         <button onClick={() => onOpen(identity)} type="button">Configuración</button>
       </div>
     </div>
@@ -227,7 +223,7 @@ function IdentityDeliveryEmail({
   </div>;
 }
 
-export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors, identities, ownerName, signalStates, workspaceId }: Props) {
+export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors, identities, mimicalInstallations = {}, ownerName, signalStates, workspaceId }: Props) {
   const router = useRouter();
   const createFormRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
@@ -313,6 +309,7 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
           const liveAccounts = identity.accounts.filter((account) => account.state !== "closed").length;
           const closedAccounts = identity.accounts.filter((account) => account.state === "closed").length;
           const degradation = deteriorationLabel(identity);
+          const mimicalInstallation = mimicalInstallations[identity.id];
           return <details className={`identity-card status-${identity.operationalStatus}`} id={`identity-${identity.id}`} key={identity.id}>
             <summary>
               <span><strong>{identity.firstName} {identity.lastName}</strong><small>{identity.contactEmail}</small></span>
@@ -386,7 +383,7 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
               </div>
 
               {configurationEnabled && identity.onboardingStatus === "approved" ? (
-                <IdentityAddonConfigurationRow identity={identity} onOpen={setConfigurationIdentity} />
+                <IdentityAddonConfigurationRow identity={identity} onOpen={setConfigurationIdentity} reportedVersion={mimicalInstallation?.reportedVersion ?? null} />
               ) : null}
 
               <div className="identity-subsection-title"><strong>Billeteras o cuentas bancarias</strong><span>{identity.wallets.length}</span></div>
@@ -462,6 +459,7 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
           identityId={configurationIdentity.id}
           identityName={`${configurationIdentity.firstName} ${configurationIdentity.lastName}`}
           onClose={() => setConfigurationIdentity(null)}
+          reportedVersion={mimicalInstallations[configurationIdentity.id]?.reportedVersion ?? null}
         />
       ) : null}
     </section>

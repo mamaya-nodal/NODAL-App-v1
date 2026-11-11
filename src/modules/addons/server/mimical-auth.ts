@@ -67,13 +67,15 @@ export async function activateMimical(input: Readonly<{
     : null;
 }
 
-export async function validateMimical(token: string, installationKey: string) {
+export async function validateMimical(token: string, installationKey: string, mimicalVersion: string | null) {
   if (!token || token.length > 256 || !/^[0-9a-f-]{36}$/i.test(installationKey)) return null;
+  if (mimicalVersion !== null && !/^\d+(?:\.\d+){2,3}$/.test(mimicalVersion)) return null;
   const supabase = serviceClient();
   if (!supabase) throw new MimicalServiceUnavailable();
-  const { data, error } = await supabase.rpc("validate_addon_installation", {
+  const { data, error } = await supabase.rpc("validate_addon_installation_with_version", {
     target_installation_key: installationKey,
     target_installation_token_hash: hashMimicalSecret(token),
+    target_mimical_version: mimicalVersion,
     target_product_key: MIMICAL_PRODUCT_KEY,
   });
   if (error) {

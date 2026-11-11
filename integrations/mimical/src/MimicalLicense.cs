@@ -30,6 +30,7 @@ namespace NinjaTrader.NinjaScript.AddOns
     internal sealed class MimicalValidationRequest
     {
         [DataMember(Name = "installationKey")] public string InstallationKey;
+        [DataMember(Name = "mimicalVersion")] public string MimicalVersion;
     }
 
     [DataContract]
@@ -55,7 +56,6 @@ namespace NinjaTrader.NinjaScript.AddOns
 #else
         private const string ActivationScope = "personal";
 #endif
-        private const string Version = "1.1.0.2";
         private readonly string licensePath;
         private string installationId;
         private string installationToken;
@@ -80,7 +80,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 {
                     MimicalActivationResponse response = Post<MimicalActivationRequest, MimicalActivationResponse>(
                         "/api/integrations/mimical/activate",
-                        new MimicalActivationRequest { ActivationScope = ActivationScope, Code = code, InstallationKey = InstallationKey, MimicalVersion = Version },
+                        new MimicalActivationRequest { ActivationScope = ActivationScope, Code = code, InstallationKey = InstallationKey, MimicalVersion = MimicalWindow.DisplayVersion },
                         null);
                     installationId = response.InstallationId;
                     installationToken = response.InstallationToken;
@@ -111,7 +111,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 {
                     MimicalValidationResponse response = Post<MimicalValidationRequest, MimicalValidationResponse>(
                         "/api/integrations/mimical/validate",
-                        new MimicalValidationRequest { InstallationKey = InstallationKey },
+                        new MimicalValidationRequest { InstallationKey = InstallationKey, MimicalVersion = MimicalWindow.DisplayVersion },
                         installationToken);
                     completed(new MimicalLicenseResult
                     {

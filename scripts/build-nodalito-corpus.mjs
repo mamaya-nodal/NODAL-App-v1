@@ -26,7 +26,9 @@ async function filesBelow(relativeDirectory, extensions) {
 async function corpus(files) {
   const sections = [];
   for (const file of files) {
-    const content = await readFile(path.join(root, file), "utf8");
+    const content = (await readFile(path.join(root, file), "utf8"))
+      .replaceAll("1.1.0.3", "versión histórica sustituida")
+      .replaceAll("1.1.0.9", "versión no publicada");
     sections.push(`\n\n===== FUENTE: ${file} =====\n${content}`);
   }
   return sections.join("");
@@ -38,14 +40,18 @@ const commonFiles = [
   "docs/38_WALLETS_CRIPTO.md",
   "docs/43_NINJA_INSTALLER_PILOT.md",
   "docs/CONTEXTO_Y_DEFINICIONES_MIMICAL_NODAL_2026-10-26.md",
-  "docs/MIMICAL_POSITION_SETTLEMENT_2026-11-02.md",
   "docs/MIMICAL_STOPLIMIT_2026-10-26.md",
 ];
+
+const supersededOperationalDocuments = new Set([
+  "docs/MIMICAL_POSITION_SETTLEMENT_2026-11-02.md",
+]);
 
 const domainFiles = (await filesBelow("src/modules", [".ts"]))
   .filter((file) => !file.includes("/agent/generated/"));
 const migrationFiles = await filesBelow("supabase/migrations", [".sql"]);
-const documentationFiles = await filesBelow("docs", [".md", ".mp"]);
+const documentationFiles = (await filesBelow("docs", [".md", ".mp"]))
+  .filter((file) => !supersededOperationalDocuments.has(file));
 const adminFiles = domainFiles.filter((file) =>
   /\/(admin|accounting|control-diario|diagnostics|operations|summary|wallets|ninja)\//.test(file)
   && !file.endsWith(".test.ts"),

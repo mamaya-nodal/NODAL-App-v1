@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-import { MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
+import { isConfirmedMimicalVersion, MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
 
 import { sendIdentityMimicalInstallation } from "./identity-actions";
-import { markCurrentIdentityMimicalSent, markCurrentMimicalDownloaded } from "./mimical-update-status";
 
 type PairingCode = Readonly<{ code: string; expiresAt: string }>;
 
@@ -13,9 +12,10 @@ type MimicalAddonCardProps = Readonly<{
   enabled: boolean;
   identityEmail?: string | null;
   identityId: string | null;
+  reportedVersion?: string | null;
 }>;
 
-function MimicalAddonCard({ enabled, identityEmail = null, identityId }: MimicalAddonCardProps) {
+function MimicalAddonCard({ enabled, identityEmail = null, identityId, reportedVersion = null }: MimicalAddonCardProps) {
   const [code, setCode] = useState<PairingCode | null>(null);
   const [busy, setBusy] = useState<"code" | "download" | "send" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,6 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId }: Mimical
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(href);
-      markCurrentMimicalDownloaded();
     } catch {
       setError("No se pudo descargar MIMICAL. Intentá nuevamente.");
     } finally {
@@ -62,7 +61,6 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId }: Mimical
     const result = await sendIdentityMimicalInstallation(identityId);
     if (result.ok) {
       setMessage(result.message);
-      markCurrentIdentityMimicalSent(identityId);
     } else setError(result.message);
     setBusy(null);
   }
@@ -138,6 +136,9 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId }: Mimical
               </div>
             ) : null}
             {message ? <p className="purchase-message success" role="status">{message}</p> : null}
+            {isConfirmedMimicalVersion(reportedVersion)
+              ? <p className="purchase-message success" role="status">Versión confirmada: MIMICAL {reportedVersion}</p>
+              : <p className="addon-safety-note">La actualización se confirmará cuando MIMICAL informe su versión desde NinjaTrader.</p>}
             <p className="addon-safety-note">Si tu acceso NODAL deja de estar habilitado, MIMICAL no podrá iniciar ciclos nuevos. Una operación ya iniciada conserva su protección hasta finalizar.</p>
           </>
         ) : <p className="notice">Este complemento todavía no está habilitado para tu usuario.</p>}
@@ -146,7 +147,7 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId }: Mimical
   );
 }
 
-export function MimicalConfiguration({ enabled }: Readonly<{ enabled: boolean }>) {
+export function MimicalConfiguration({ enabled, reportedVersion = null }: Readonly<{ enabled: boolean; reportedVersion?: string | null }>) {
   return (
     <section aria-labelledby="configuration-title" className="configuration-view" id="configuracion">
       <div className="workspace-section-heading">
@@ -156,7 +157,7 @@ export function MimicalConfiguration({ enabled }: Readonly<{ enabled: boolean }>
         </div>
         <p>Herramientas de NodalBots vinculadas a tu acceso NODAL.</p>
       </div>
-      <MimicalAddonCard enabled={enabled} identityId={null} />
+      <MimicalAddonCard enabled={enabled} identityId={null} reportedVersion={reportedVersion} />
     </section>
   );
 }
@@ -166,11 +167,13 @@ export function IdentityMimicalConfiguration({
   identityId,
   identityName,
   onClose,
+  reportedVersion = null,
 }: Readonly<{
   identityId: string;
   identityEmail: string | null;
   identityName: string;
   onClose: () => void;
+  reportedVersion?: string | null;
 }>) {
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -190,7 +193,7 @@ export function IdentityMimicalConfiguration({
           </div>
           <button aria-label="Cerrar configuración" onClick={onClose} type="button">×</button>
         </header>
-        <MimicalAddonCard enabled identityEmail={identityEmail} identityId={identityId} />
+        <MimicalAddonCard enabled identityEmail={identityEmail} identityId={identityId} reportedVersion={reportedVersion} />
       </section>
     </div>
   );

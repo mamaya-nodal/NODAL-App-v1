@@ -1,39 +1,26 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
-
-import { MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
-
-import { hasDownloadedCurrentMimical, subscribeToMimicalDownload } from "./mimical-update-status";
+import { isConfirmedMimicalVersion, MIMICAL_VERSION } from "@/modules/addons/domain/mimical-pilot";
 
 type Props = Readonly<{
   configurationEnabled: boolean;
+  reportedVersion?: string | null;
 }>;
 
-export function MimicalUpdateNotice({ configurationEnabled }: Props) {
-  const [closed, setClosed] = useState(false);
-  const downloaded = useSyncExternalStore(
-    subscribeToMimicalDownload,
-    hasDownloadedCurrentMimical,
-    () => false,
-  );
-
-  if (closed || downloaded) return null;
+export function MimicalUpdateNotice({ configurationEnabled, reportedVersion = null }: Props) {
+  if (isConfirmedMimicalVersion(reportedVersion)) return null;
 
   return (
     <aside className="mimical-update-notice notice" aria-label="Actualización de MIMICAL disponible">
       <div>
-        <span>ACTUALIZACIÓN DISPONIBLE</span>
-        <strong>MIMICAL {MIMICAL_VERSION}</strong>
-        <p>Actualizá el complemento para incorporar la nueva corrección de sincronización de posiciones.</p>
+        <strong>Nueva versión de MIMICAL disponible (v{MIMICAL_VERSION})</strong>
       </div>
       <div className="mimical-update-notice-actions">
         {configurationEnabled ? (
-          <a href="#configuracion">Ir a Configuración</a>
+          <a href="#configuracion">Descargar</a>
         ) : (
           <small>La actualización se habilita desde Admin Master.</small>
         )}
-        <button type="button" aria-label="Cerrar aviso" onClick={() => setClosed(true)}>×</button>
       </div>
     </aside>
   );
