@@ -1,6 +1,7 @@
 export const NODAL_AGENT_PILOT_EMAILS = [
   "mauriciosebastianamaya@gmail.com",
   "loremalagreca@gmail.com",
+  "financealmironbaltss@gmail.com",
 ] as const;
 
 export function canUseNodalAgentPilot(email: string | null | undefined): boolean {
