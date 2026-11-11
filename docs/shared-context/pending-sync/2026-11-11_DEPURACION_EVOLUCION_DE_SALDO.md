@@ -22,4 +22,3 @@ El cambio es exclusivamente de presentación. No elimina registros, controles di
 ## Impacto para Nodalito
 
 Sin reparación nueva. Nodalito puede indicar que la evolución del saldo se consulta desde la tarjeta desplegable única.
-
