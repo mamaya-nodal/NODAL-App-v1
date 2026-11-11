@@ -10,8 +10,9 @@ export async function POST(request: Request) {
   if (!input.ok) return input.response;
   const body = input.payload as Record<string, unknown> | null;
   if (!body || typeof body.installationKey !== "string") return response({ error: "Datos incompletos." }, 422);
+  const mimicalVersion = typeof body.mimicalVersion === "string" ? body.mimicalVersion : null;
   try {
-    const validation = await validateMimical(bearerToken(request) ?? "", body.installationKey);
+    const validation = await validateMimical(bearerToken(request) ?? "", body.installationKey, mimicalVersion);
     return validation ? response(validation, 200) : response({ allowNewCycles: false, error: "MIMICAL no está autorizado." }, 401);
   } catch (error) {
     if (error instanceof MimicalServiceUnavailable) return response({ allowNewCycles: false, error: "No se pudo verificar la licencia." }, 503);

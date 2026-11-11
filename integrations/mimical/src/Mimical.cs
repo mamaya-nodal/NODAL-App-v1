@@ -118,6 +118,14 @@ namespace NinjaTrader.NinjaScript.AddOns
 
     }
 
+    public static class MimicalTrailingActivationGate
+    {
+        public static bool CanTrigger(bool leaderStopConfirmed, int offsetTicks, bool leaderLevelReached)
+        {
+            return leaderStopConfirmed && (offsetTicks == 0 || leaderLevelReached);
+        }
+    }
+
     public static class MimicalTrailingRecovery
     {
         public static bool StopReached(bool isLong, double lastPrice, double intendedStop)
@@ -129,7 +137,28 @@ namespace NinjaTrader.NinjaScript.AddOns
 
         public static bool MustFlatten(bool protectionWorking, bool isLong, double lastPrice, double intendedStop)
         {
-            return !protectionWorking || StopReached(isLong, lastPrice, intendedStop);
+            // Reaching the intended price is not, by itself, a reason to flatten.
+            // NinjaTrader may reject a stop change because the market crossed the
+            // requested level while the change was in flight.  If the previous stop
+            // is still working, MIMICAL must keep it and retry at a valid price.
+            return !protectionWorking;
+        }
+
+        public static double RetryStopPrice(bool isLong, double lastPrice, double intendedStop, double tick, int safetyTicks)
+        {
+            if (lastPrice <= 0 || intendedStop <= 0 || tick <= 0) return intendedStop;
+            int ticks = Math.Max(1, safetyTicks);
+            double validEdge = isLong ? lastPrice - ticks * tick : lastPrice + ticks * tick;
+            double safe = isLong ? Math.Min(intendedStop, validEdge) : Math.Max(intendedStop, validEdge);
+            return Math.Round(safe / tick, MidpointRounding.AwayFromZero) * tick;
+        }
+    }
+
+    public static class MimicalTrailingIsolation
+    {
+        public static bool ShouldSkipFollowerExit(bool trailingPrepared, bool sameFollower, int signedPosition, bool closesPosition)
+        {
+            return trailingPrepared && sameFollower && signedPosition != 0 && closesPosition;
         }
     }
 
@@ -286,6 +315,8 @@ namespace NinjaTrader.NinjaScript.AddOns
             public FollowerConfig Follower;
             public MarketData MarketData;
             public bool MarketDataSubscribed;
+            public MarketData LeaderMarketData;
+            public bool LeaderMarketDataSubscribed;
             public Order StopOrder;
             public bool Requested;
             public bool Preparing;
@@ -308,6 +339,9 @@ namespace NinjaTrader.NinjaScript.AddOns
             public double LeaderStopPrice;
             public double ActivationPrice;
             public Order LeaderStopOrder;
+            public bool LeaderStopExecutionObserved;
+            public bool LeaderStopConfirmed;
+            public double LeaderLastPrice;
             public double BestPrice;
             public double LastStopPrice;
             public double AutomatedTargetStopPrice;
@@ -1133,6 +1167,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                     };
                     DiagnosticTrace("TRAILING_BEFORE_MARKETDATA");
                     pending.MarketData = new MarketData(coverage.Instrument);
+                    pending.LeaderMarketData = new MarketData(leaderInstrument);
                     DiagnosticTrace("TRAILING_AFTER_MARKETDATA");
                     trailing = pending;
                     trailingButton.IsEnabled = true;
@@ -1167,6 +1202,8 @@ namespace NinjaTrader.NinjaScript.AddOns
                 DiagnosticTrace("TRAILING_BEFORE_SUBSCRIBE");
                 pending.MarketData.Update += OnMarketData;
                 pending.MarketDataSubscribed = true;
+                pending.LeaderMarketData.Update += OnLeaderMarketData;
+                pending.LeaderMarketDataSubscribed = true;
                 DiagnosticTrace("TRAILING_AFTER_SUBSCRIBE");
                 lock (gate)
                 {
@@ -1187,6 +1224,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                 try
                 {
                     if (pending.MarketDataSubscribed) pending.MarketData.Update -= OnMarketData;
+                    if (pending.LeaderMarketDataSubscribed) pending.LeaderMarketData.Update -= OnLeaderMarketData;
                 }
                 catch { }
                 trailingButton.IsEnabled = armed;
@@ -1447,6 +1485,16 @@ namespace NinjaTrader.NinjaScript.AddOns
                     catch (Exception ex) { DiagnosticTrace("TRAILING_UNSUBSCRIBE_ERROR " + ex.Message); }
                 }));
             }
+            if (current.LeaderMarketData != null && current.LeaderMarketDataSubscribed)
+            {
+                MarketData leaderData = current.LeaderMarketData;
+                current.LeaderMarketDataSubscribed = false;
+                Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    try { leaderData.Update -= OnLeaderMarketData; }
+                    catch (Exception ex) { DiagnosticTrace("TRAILING_LEADER_UNSUBSCRIBE_ERROR " + ex.Message); }
+                }));
+            }
             if (cancelWorkingStop && current.StopOrder != null && IsWorking(current.StopOrder.OrderState))
             {
                 try { current.Follower.Account.Cancel(new[] { current.StopOrder }); }
@@ -1470,9 +1518,28 @@ namespace NinjaTrader.NinjaScript.AddOns
                         TryPrepareTrailingProtection();
                         if (!trailing.Prepared) return;
                     }
+                    if (!trailing.Triggered) return;
                     AdvanceTrailing(e.Price);
                 }
                 catch (Exception ex) { Trip("Error en trailing: " + ex.Message); }
+            }
+        }
+
+        private void OnLeaderMarketData(object sender, MarketDataEventArgs e)
+        {
+            if (e == null || e.MarketDataType != MarketDataType.Last || e.Price <= 0) return;
+            lock (gate)
+            {
+                try
+                {
+                    if (!armed || trailing == null || !trailing.Requested
+                        || e.Instrument.FullName != leaderInstrument.FullName) return;
+                    trailing.LeaderLastPrice = e.Price;
+                    if (trailing.Triggered || !trailing.LeaderStopConfirmed) return;
+                    if (TryTriggerTrailing(e.Price, "leader-market") && trailing.LastPrice > 0)
+                        AdvanceTrailing(trailing.LastPrice);
+                }
+                catch (Exception ex) { Trip("Error al activar trailing desde la líder: " + ex.Message); }
             }
         }
 
@@ -1532,7 +1599,7 @@ namespace NinjaTrader.NinjaScript.AddOns
         private void RecalculateTrailingActivation(string sourceOrderId)
         {
             if (trailing == null || trailing.Triggered || trailing.LeaderStopPrice <= 0 || trailing.SignedQuantity == 0) return;
-            double tick = trailing.Follower.Instrument.MasterInstrument.TickSize;
+            double tick = leaderInstrument.MasterInstrument.TickSize;
             if (tick <= 0) throw new InvalidOperationException("No se pudo determinar el tamaño de tick de la cobertura.");
             bool isLong = trailing.SignedQuantity > 0;
             double activation = MimicalTrailingMath.ActivationPrice(isLong, trailing.LeaderStopPrice, trailing.ActivationOffsetTicks, tick);
@@ -1544,7 +1611,10 @@ namespace NinjaTrader.NinjaScript.AddOns
                 + ";offsetTicks=" + trailing.ActivationOffsetTicks.ToString(CultureInfo.InvariantCulture)
                 + ";activationPrice=" + activation.ToString("R", CultureInfo.InvariantCulture));
             ShowTrailingStatus();
-            if (trailing.Prepared && trailing.LastPrice > 0) AdvanceTrailing(trailing.LastPrice);
+            if (trailing.LeaderStopConfirmed && trailing.LeaderLastPrice > 0
+                && TryTriggerTrailing(trailing.LeaderLastPrice, "leader-anchor-update")
+                && trailing.LastPrice > 0)
+                AdvanceTrailing(trailing.LastPrice);
         }
 
         private void TryPrepareTrailingProtection()
@@ -1701,7 +1771,10 @@ namespace NinjaTrader.NinjaScript.AddOns
             string error = e.Error + " " + e.Comment;
             string accountName = trailing.Follower.Account.Name;
             string instrumentName = trailing.Follower.Instrument.FullName;
-            double reportedStop = e.StopPrice > 0 ? e.StopPrice : order.StopPrice;
+            // On UnableToChangeOrder NinjaTrader can echo the rejected target in
+            // e.StopPrice/order.StopPrice even though the previously accepted stop
+            // remains live. LastStopPrice is our confirmed, accepted protection.
+            double reportedStop = trailing.LastStopPrice;
             bool protectionWorking = trailing.Prepared
                 && (IsWorking(e.OrderState) || IsWorking(order.OrderState))
                 && reportedStop > 0;
@@ -1734,7 +1807,6 @@ namespace NinjaTrader.NinjaScript.AddOns
 
             if (protectionWorking)
             {
-                trailing.LastStopPrice = reportedStop;
                 if (trailing.DeactivationRequested)
                 {
                     trailing.DeactivationRequested = false;
@@ -1756,11 +1828,6 @@ namespace NinjaTrader.NinjaScript.AddOns
                     + ";retainedStop=" + reportedStop.ToString("R", CultureInfo.InvariantCulture)
                     + ";error=" + error);
                 ShowTrailingStatus();
-
-                bool isLong = trailing.SignedQuantity > 0;
-                if (MimicalTrailingRecovery.MustFlatten(true, isLong, trailing.LastPrice, intendedStop))
-                    RequestTrailingFallbackExit(intendedStop,
-                        "El precio alcanzó el stop pretendido mientras NinjaTrader rechazaba el cambio");
                 return;
             }
 
@@ -1845,40 +1912,24 @@ namespace NinjaTrader.NinjaScript.AddOns
                 return;
             }
             if ((isLong && lastPrice > trailing.BestPrice) || (!isLong && lastPrice < trailing.BestPrice)) trailing.BestPrice = lastPrice;
-            if (!trailing.Triggered)
-            {
-                if (trailing.ActivationPrice <= 0 || !MimicalTrailingMath.ActivationReached(isLong, lastPrice, trailing.ActivationPrice)) return;
-                trailing.Triggered = true;
-                Dispatcher.BeginInvoke(new Action(delegate
-                {
-                    trailingButton.IsEnabled = false;
-                    trailingButton.Content = "TRAILING SIGUIENDO";
-                    SetTrailingIndicator(1, "Trailing siguiendo el precio");
-                }));
-                double favorableTicks = MimicalTrailingMath.FavorableTicks(isLong, trailing.EntryPrice, lastPrice, tick);
-                Log("TRAILING_TRIGGERED", trailing.Follower.Account.Name, trailing.Follower.Instrument.FullName, trailing.StopOrder.OrderId,
-                    trailing.StopOrder.OrderState.ToString(), trailing.StopOrder.OrderAction.ToString(), trailing.StopOrder.OrderType.ToString(),
-                    trailing.StopOrder.Quantity, trailing.StopOrder.Filled, 0, trailing.StopOrder.StopPrice,
-                    "price=" + lastPrice.ToString("R", CultureInfo.InvariantCulture)
-                    + ";leaderStop=" + trailing.LeaderStopPrice.ToString("R", CultureInfo.InvariantCulture)
-                    + ";offsetTicks=" + trailing.ActivationOffsetTicks.ToString(CultureInfo.InvariantCulture)
-                    + ";activationPrice=" + trailing.ActivationPrice.ToString("R", CultureInfo.InvariantCulture)
-                    + ";profitTicks=" + favorableTicks.ToString("0.##", CultureInfo.InvariantCulture));
-            }
+            if (!trailing.Triggered) return;
 
             int activeDistance = trailing.ActiveDistanceTicks > 0 ? trailing.ActiveDistanceTicks : trailing.DistanceTicks;
-            double desired = MimicalTrailingMath.StopPrice(isLong, trailing.BestPrice, activeDistance, tick);
+            double intended = MimicalTrailingMath.StopPrice(isLong, trailing.BestPrice, activeDistance, tick);
+            double desired = MimicalTrailingRecovery.RetryStopPrice(isLong, lastPrice, intended, tick, 1);
             bool improves = MimicalTrailingMath.Improves(isLong, desired, trailing.LastStopPrice, trailing.FrequencyTicks, tick);
             if (!improves) return;
-            if (MimicalTrailingRecovery.StopReached(isLong, lastPrice, desired))
+            if (!Same(desired, intended))
             {
-                RequestTrailingFallbackExit(desired,
-                    "El mercado alcanzó el nivel protegido antes de que pudiera aceptarse el nuevo stop");
-                return;
+                Log("TRAILING_MOVE_REPRICED", trailing.Follower.Account.Name, trailing.Follower.Instrument.FullName,
+                    trailing.StopOrder.OrderId, trailing.StopOrder.OrderState.ToString(),
+                    trailing.StopOrder.OrderAction.ToString(), trailing.StopOrder.OrderType.ToString(),
+                    Math.Abs(trailing.SignedQuantity), trailing.StopOrder.Filled, 0, desired,
+                    "intended=" + intended.ToString("R", CultureInfo.InvariantCulture)
+                    + ";last=" + lastPrice.ToString("R", CultureInfo.InvariantCulture)
+                    + ";se reubicó a un tick del mercado para evitar rechazo");
             }
 
-            double previous = trailing.LastStopPrice;
-            trailing.LastStopPrice = desired;
             try
             {
                 trailing.StopOrder.QuantityChanged = Math.Abs(trailing.SignedQuantity);
@@ -1897,10 +1948,60 @@ namespace NinjaTrader.NinjaScript.AddOns
             }
             catch
             {
-                trailing.LastStopPrice = previous;
                 trailing.AutomatedChangePending = false;
                 throw;
             }
+        }
+
+        private bool TryTriggerTrailing(double leaderPrice, string source)
+        {
+            if (trailing == null || trailing.Triggered || !trailing.Prepared || trailing.StopOrder == null
+                || trailing.SignedQuantity == 0) return false;
+            bool isLong = trailing.SignedQuantity > 0;
+            bool levelReached = trailing.ActivationPrice > 0 && leaderPrice > 0
+                && MimicalTrailingMath.ActivationReached(isLong, leaderPrice, trailing.ActivationPrice);
+            if (!MimicalTrailingActivationGate.CanTrigger(trailing.LeaderStopConfirmed,
+                trailing.ActivationOffsetTicks, levelReached)) return false;
+
+            trailing.Triggered = true;
+            Dispatcher.BeginInvoke(new Action(delegate
+            {
+                trailingButton.IsEnabled = false;
+                trailingButton.Content = "TRAILING SIGUIENDO";
+                SetTrailingIndicator(1, "Trailing siguiendo el precio");
+            }));
+            double tick = trailing.Follower.Instrument.MasterInstrument.TickSize;
+            double favorableTicks = MimicalTrailingMath.FavorableTicks(isLong, trailing.EntryPrice, trailing.LastPrice, tick);
+            Log("TRAILING_TRIGGERED", trailing.Follower.Account.Name, trailing.Follower.Instrument.FullName, trailing.StopOrder.OrderId,
+                trailing.StopOrder.OrderState.ToString(), trailing.StopOrder.OrderAction.ToString(), trailing.StopOrder.OrderType.ToString(),
+                trailing.StopOrder.Quantity, trailing.StopOrder.Filled, 0, trailing.StopOrder.StopPrice,
+                "source=" + source
+                + ";coveragePrice=" + trailing.LastPrice.ToString("R", CultureInfo.InvariantCulture)
+                + ";leaderPrice=" + leaderPrice.ToString("R", CultureInfo.InvariantCulture)
+                + ";leaderStop=" + trailing.LeaderStopPrice.ToString("R", CultureInfo.InvariantCulture)
+                + ";leaderStopConfirmed=true"
+                + ";offsetTicks=" + trailing.ActivationOffsetTicks.ToString(CultureInfo.InvariantCulture)
+                + ";activationPrice=" + trailing.ActivationPrice.ToString("R", CultureInfo.InvariantCulture)
+                + ";profitTicks=" + favorableTicks.ToString("0.##", CultureInfo.InvariantCulture));
+            ShowTrailingStatus();
+            return true;
+        }
+
+        private void ConfirmLeaderStopForTrailing()
+        {
+            if (trailing == null || trailing.Triggered || trailing.LeaderStopConfirmed
+                || !trailing.LeaderStopExecutionObserved) return;
+            trailing.LeaderStopConfirmed = true;
+            Log("TRAILING_LEADER_STOP_CONFIRMED", leader.Name, leaderInstrument.FullName,
+                trailing.LeaderStopOrder == null ? "" : trailing.LeaderStopOrder.OrderId,
+                "Filled", trailing.LeaderStopOrder == null ? "" : trailing.LeaderStopOrder.OrderAction.ToString(),
+                trailing.LeaderStopOrder == null ? "" : trailing.LeaderStopOrder.OrderType.ToString(),
+                0, 0, 0, trailing.LeaderStopPrice,
+                "La posición líder quedó Flat por ejecución del stop; el trailing ya puede activarse");
+            ShowTrailingStatus();
+            double leaderPrice = trailing.LeaderLastPrice > 0 ? trailing.LeaderLastPrice : trailing.LeaderStopPrice;
+            if (TryTriggerTrailing(leaderPrice, "leader-stop-filled") && trailing.LastPrice > 0)
+                AdvanceTrailing(trailing.LastPrice);
         }
 
         private void AdoptManualTrailingStop(double manualStopPrice, OrderState state)
@@ -1978,6 +2079,8 @@ namespace NinjaTrader.NinjaScript.AddOns
                 phase = "SIGUIENDO";
             else if (!trailing.Prepared)
                 phase = "PREPARANDO";
+            else if (!trailing.LeaderStopConfirmed)
+                phase = "ESPERA EJECUCIÓN SL LÍDER";
             else if (trailing.ActivationPrice <= 0)
                 phase = "ESPERA SL LÍDER";
             else
@@ -2272,6 +2375,18 @@ namespace NinjaTrader.NinjaScript.AddOns
                 double followerLimit;
                 double followerStop;
                 Transform(leaderOrder, follower, limit, stop, out action, out type, out followerLimit, out followerStop);
+                if (MimicalTrailingIsolation.ShouldSkipFollowerExit(
+                    trailing != null && trailing.Prepared,
+                    trailing != null && follower == trailing.Follower,
+                    trailing == null ? 0 : trailing.SignedQuantity,
+                    trailing != null && ClosesPosition(action, trailing.SignedQuantity)))
+                {
+                    Log("TRAILING_ACTIVE_EXIT_SKIP", follower.Account.Name, follower.Instrument.FullName,
+                        leaderOrder.OrderId, "", action.ToString(), type.ToString(), followerQuantity, 0,
+                        followerLimit, followerStop,
+                        "La protección trailing independiente ya cubre la posición agregada; no se crea otra salida ATM en el broker");
+                    continue;
+                }
                 string oco = MapOco(leaderOrder.Oco, follower.Account);
                 string name = "NODAL-" + Guid.NewGuid().ToString("N").Substring(0, 8) + "-" + SafeName(leaderOrder.Name);
                 Order copy = follower.Account.CreateOrder(follower.Instrument, action, type, OrderEntry.Manual, leaderOrder.TimeInForce, followerQuantity, followerLimit, followerStop, oco, name, Core.Globals.MaxDate, null);
@@ -2414,6 +2529,21 @@ namespace NinjaTrader.NinjaScript.AddOns
                 Execution x = e.Execution;
                 ObservePositionProgress(x.Account, x.Instrument);
                 Log("EXECUTION", x.Account.Name, x.Instrument.FullName, x.Order == null ? "" : x.Order.OrderId, "", x.Order == null ? "" : x.Order.OrderAction.ToString(), x.Order == null ? "" : x.Order.OrderType.ToString(), e.Quantity, 0, e.Price, 0, "execution=" + x.ExecutionId);
+                if (armed && trailing != null && !trailing.Triggered && x.Account == leader
+                    && x.Instrument.FullName == leaderInstrument.FullName && x.Order != null
+                    && (x.Order.OrderType == OrderType.StopMarket || x.Order.OrderType == OrderType.StopLimit)
+                    && trailing.SignedQuantity != 0
+                    && ClosesPosition(x.Order.OrderAction, -trailing.SignedQuantity))
+                {
+                    trailing.LeaderStopExecutionObserved = true;
+                    trailing.LeaderStopOrder = x.Order;
+                    if (x.Order.StopPrice > 0) trailing.LeaderStopPrice = x.Order.StopPrice;
+                    RecalculateTrailingActivation(x.Order.OrderId);
+                    Log("TRAILING_LEADER_STOP_EXECUTION", x.Account.Name, x.Instrument.FullName,
+                        x.Order.OrderId, x.Order.OrderState.ToString(), x.Order.OrderAction.ToString(),
+                        x.Order.OrderType.ToString(), e.Quantity, x.Order.Filled, e.Price, x.Order.StopPrice,
+                        "Se observó una ejecución real del stop líder; esperando posición líder Flat");
+                }
             }
         }
 
@@ -2442,6 +2572,8 @@ namespace NinjaTrader.NinjaScript.AddOns
                     && e.Position.Instrument.FullName == leaderInstrument.FullName
                     && e.MarketPosition == MarketPosition.Flat)
                 {
+                    try { ConfirmLeaderStopForTrailing(); }
+                    catch (Exception ex) { Trip("Error al confirmar el stop de la líder: " + ex.Message); }
                     Dispatcher.BeginInvoke(new Action(delegate
                     {
                         trailingButton.IsEnabled = false;
@@ -2607,6 +2739,7 @@ namespace NinjaTrader.NinjaScript.AddOns
                         SetTrailingIndicator(0, "Trailing desactivado");
                         trailingStateText.Text = "NORMAL";
                         trailingStateText.Foreground = Brushes.DarkGray;
+                        SetStatus("ACTIVO · listo para una nueva operación", ColorBrush(90, 211, 134));
                     }));
                 }
             }

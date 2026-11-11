@@ -117,6 +117,7 @@ import type { AccountingPeriodView, EconomicTraceItem } from "./progress-summary
 import { IdentitiesWorkspace } from "./identities-workspace";
 import { BrokerAccountClaims, type PendingBrokerAccountView } from "./broker-account-claims";
 import { MimicalConfiguration } from "./mimical-configuration";
+import type { MimicalInstallationVersion } from "@/modules/addons/domain/mimical-pilot";
 
 type PrivateAppPageProps = {
   searchParams: Promise<{
@@ -214,6 +215,12 @@ type NinjaReconciliationRpcRow = {
   opened_at: string;
 };
 
+type MimicalInstallationRpcRow = {
+  identity_id: string | null;
+  reported_file_version: string | null;
+  reported_file_version_at: string | null;
+};
+
 async function renderPrivateAppPage({
   searchParams,
 }: PrivateAppPageProps) {
@@ -290,15 +297,19 @@ async function renderPrivateAppPage({
     technicalTradeCount: number;
   }>();
   let hasPendingNinjaOperation = false;
+  let personalMimicalInstallation: MimicalInstallationVersion | null = null;
+  const identityMimicalInstallations: Record<string, MimicalInstallationVersion> = {};
 
   if (allowed) {
-    const [{ data: workspaces, error: workspaceError }, { data: ninjaConnectorRows, error: connectorError }] = await Promise.all([
+    const [{ data: workspaces, error: workspaceError }, { data: ninjaConnectorRows, error: connectorError }, { data: mimicalInstallations }] = await Promise.all([
       readWithRetry(() => supabase
         .from("workspaces")
         .select("id, modality, periods(id, period_month, lifecycle_status, operational_start_on, scheduled_close_at)")
         .eq("owner_user_id", userId)
         .order("modality")),
       readWithRetry(() => supabase.rpc("get_current_user_ninja_connector_status_v2")),
+      // Una falta temporal de telemetría no debe impedir que el usuario use su app.
+      supabase.rpc("get_current_user_mimical_installations"),
     ]);
 
     if (workspaceError || connectorError) {
@@ -329,6 +340,15 @@ async function renderPrivateAppPage({
       status: connectorRow.status,
     }));
     ninjaConnector = ninjaConnectors.find((connector) => connector.identityId === null) ?? null;
+    for (const row of (mimicalInstallations ?? []) as MimicalInstallationRpcRow[]) {
+      const state = {
+        identityId: row.identity_id,
+        reportedAt: row.reported_file_version_at,
+        reportedVersion: row.reported_file_version,
+      } satisfies MimicalInstallationVersion;
+      if (row.identity_id) identityMimicalInstallations[row.identity_id] = state;
+      else personalMimicalInstallation = state;
+    }
   }
 
   let connectorOnline = false;
@@ -1346,6 +1366,7 @@ async function renderPrivateAppPage({
       configurationEnabled={nodalUser?.configuration_enabled === true}
       identitiesEnabled={nodalUser?.identities_enabled === true}
       initialView={singleValue(purchaseResult) || singleValue(resetResult) ? "accounts" : "home"}
+      mimicalReportedVersion={personalMimicalInstallation?.reportedVersion ?? null}
       userLabel={nodalUser?.display_name || nodalUser?.email || userEmail || "Alumno"}
       username={typeof claimsData?.claims.user_metadata?.username === "string" ? claimsData.claims.user_metadata.username : undefined}
       versionInfo={{
@@ -1658,13 +1679,14 @@ async function renderPrivateAppPage({
           configurationEnabled={nodalUser?.configuration_enabled === true}
           connectors={ninjaConnectors.filter((connector) => connector.identityId !== null)}
           identities={identitySummaries}
+          mimicalInstallations={identityMimicalInstallations}
           ownerName={nodalUser?.display_name || nodalUser?.email || "Mi espacio"}
           signalStates={identitySignalStates}
           workspaceId={selection.workspace.id}
         />
       )}
 
-      {allowed && nodalUser?.configuration_enabled ? <MimicalConfiguration enabled /> : null}
+      {allowed && nodalUser?.configuration_enabled ? <MimicalConfiguration enabled reportedVersion={personalMimicalInstallation?.reportedVersion ?? null} /> : null}
 
       {allowed && !selection && (
         <p className="notice">
