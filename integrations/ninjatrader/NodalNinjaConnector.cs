@@ -1,4 +1,4 @@
-// NODAL Ninja Connector v0.17 (server v2 required)
+// NODAL Ninja Connector v0.18 (server v2 required)
 // Read-only local connector for NinjaTrader 8. It never sends trading orders.
 
 #region Using declarations
@@ -231,7 +231,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 			}
 		}
 
-		private const string ConnectorVersion = "0.17";
+		private const string ConnectorVersion = "0.18";
 		private const string ConfigFileName = "nodal-ninja-connector.config";
 		private const string TelemetryQueueFileName = "nodal-ninja-telemetry.queue";
 		private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10), MaxResponseContentBufferSize = 1024 * 1024 };
@@ -240,6 +240,8 @@ namespace NinjaTrader.NinjaScript.AddOns
 		private readonly SemaphoreSlim telemetryFlushLock = new SemaphoreSlim(1, 1);
 		private readonly Dictionary<string, DateTime> lastBalanceSampleUtc = new Dictionary<string, DateTime>(StringComparer.Ordinal);
 		private readonly Dictionary<string, string> lastBalanceFingerprint = new Dictionary<string, string>(StringComparer.Ordinal);
+		private readonly Dictionary<string, DateTime> recentExecutionKeys = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+		private readonly Dictionary<string, DateTime> recentPositionKeys = new Dictionary<string, DateTime>(StringComparer.Ordinal);
 		private readonly object inventoryRefreshLock = new object();
 		private readonly object telemetryFileLock = new object();
 		private readonly object sendLock = new object();
@@ -338,6 +340,13 @@ namespace NinjaTrader.NinjaScript.AddOns
 			Execution execution = e.Execution;
 			if (account == null || execution == null || execution.Instrument == null)
 				return;
+			string executionKey = string.Join("|", new[] {
+				ConnectionName(account), account.Name, execution.Instrument.FullName,
+				execution.ExecutionId ?? string.Empty, execution.OrderId ?? string.Empty,
+				execution.Time.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+				Number(execution.Price), execution.Quantity.ToString(CultureInfo.InvariantCulture)
+			});
+			if (IsDuplicateTelemetry(recentExecutionKeys, executionKey, TimeSpan.FromMinutes(30))) return;
 
 			string orderAction = execution.Order == null ? "Unknown" : execution.Order.OrderAction.ToString();
 			string json = "{"
@@ -359,6 +368,12 @@ namespace NinjaTrader.NinjaScript.AddOns
 			Account account = sender as Account;
 			if (account == null || e.Position == null || e.Position.Instrument == null)
 				return;
+			string positionKey = string.Join("|", new[] {
+				ConnectionName(account), account.Name, e.Position.Instrument.FullName,
+				e.MarketPosition.ToString(), Number(e.AveragePrice),
+				e.Quantity.ToString(CultureInfo.InvariantCulture)
+			});
+			if (IsDuplicateTelemetry(recentPositionKeys, positionKey, TimeSpan.FromSeconds(1))) return;
 
 			string json = "{"
 				+ "\"kind\":\"position\","
@@ -378,11 +393,15 @@ namespace NinjaTrader.NinjaScript.AddOns
 				return;
 
 			List<Account> accounts;
+			List<Account> accountInstances;
 			lock (inventoryRefreshLock)
 			{
-				accounts = ConnectedAccounts();
+				accountInstances = ConnectedAccountInstances();
+				accounts = LogicalAccounts(accountInstances);
 
-				foreach (Account account in accounts)
+				// Subscribe to every physical instance. Ninja can publish balances on one
+				// object and executions on another object for the same logical account.
+				foreach (Account account in accountInstances)
 				{
 					if (subscribedAccounts.Contains(account))
 						continue;
@@ -395,7 +414,7 @@ namespace NinjaTrader.NinjaScript.AddOns
 					QueueCurrentPositions(account);
 				}
 
-				foreach (Account account in subscribedAccounts.Where(account => !accounts.Contains(account)).ToList())
+				foreach (Account account in subscribedAccounts.Where(account => !accountInstances.Contains(account)).ToList())
 				{
 					account.AccountItemUpdate -= OnAccountItemUpdate;
 					account.ExecutionUpdate -= OnExecutionUpdate;
@@ -532,7 +551,22 @@ namespace NinjaTrader.NinjaScript.AddOns
 
 		private void QueueInventorySend(bool force)
 		{
-			QueueInventorySend(force, ConnectedAccounts());
+			QueueInventorySend(force, LogicalAccounts(ConnectedAccountInstances()));
+		}
+
+		private bool IsDuplicateTelemetry(Dictionary<string, DateTime> recent, string key, TimeSpan window)
+		{
+			DateTime now = DateTime.UtcNow;
+			lock (telemetryFileLock)
+			{
+				DateTime previous;
+				if (recent.TryGetValue(key, out previous) && now - previous <= window) return true;
+				recent[key] = now;
+				if (recent.Count > 2048)
+					foreach (string stale in recent.Where(item => now - item.Value > TimeSpan.FromMinutes(30)).Select(item => item.Key).ToList())
+						recent.Remove(stale);
+			}
+			return false;
 		}
 
 		private void QueueInventorySend(bool force, IEnumerable<Account> accounts)
@@ -841,14 +875,10 @@ namespace NinjaTrader.NinjaScript.AddOns
 				+ "}";
 		}
 
-		private static List<Account> ConnectedAccounts()
+		private static List<Account> ConnectedAccountInstances()
 		{
-			// Providers do not expose their inventory consistently: some accounts only
-			// appear in Account.All while others only appear in connection.Accounts.
-			// Prefer the instance owned by the active connection because that is the
-			// object that emits ExecutionUpdate and PositionUpdate. Account.All can
-			// expose a second object with the same account name whose balances update
-			// but whose execution callbacks never fire.
+			// Providers can emit executions from either collection. Keep every physical
+			// instance for subscriptions and deduplicate only the inventory representation.
 			List<Account> accounts = new List<Account>();
 			List<Connection> connections;
 			lock (Connection.Connections)
@@ -868,7 +898,12 @@ namespace NinjaTrader.NinjaScript.AddOns
 			lock (Account.All)
 				accounts.AddRange(Account.All.Where(IsConnectedAccount));
 
-			return accounts
+			return accounts.Distinct().ToList();
+		}
+
+		private static List<Account> LogicalAccounts(IEnumerable<Account> accountInstances)
+		{
+			return accountInstances
 				.GroupBy(
 					account => ConnectionName(account) + "\u0000" + account.Name,
 					StringComparer.Ordinal)

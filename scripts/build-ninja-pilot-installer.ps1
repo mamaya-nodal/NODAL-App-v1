@@ -21,7 +21,7 @@ foreach ($required in @($sourcePath, $installerPath, $csc, (Join-Path $ninjaBin 
 New-Item -ItemType Directory -Force -Path $buildRoot, $outputRoot, $downloadRoot | Out-Null
 $runtimeSourcePath = Join-Path $buildRoot "NodalNinjaConnector.Runtime.cs"
 $runtimeDllPath = Join-Path $buildRoot "Nodal.NinjaConnector.dll"
-$outputExePath = Join-Path $outputRoot "NODAL-Conector-0.17.exe"
+$outputExePath = Join-Path $outputRoot "NODAL-Conector-0.18.exe"
 $downloadExePath = Join-Path $downloadRoot "NODAL-Conector.exe"
 
 $runtimeSource = Get-Content -LiteralPath $sourcePath -Raw

@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $repoRoot "output\NODAL-Conector-0.17.exe"
+$exe = Join-Path $repoRoot "output\NODAL-Conector-0.18.exe"
 if (!(Test-Path -LiteralPath $exe)) { throw "Primero ejecuta scripts/build-ninja-pilot-installer.ps1" }
 
 $testRoot = Join-Path $repoRoot ("tmp\ninja-installer-test-" + [Guid]::NewGuid().ToString("N"))
@@ -36,7 +36,7 @@ $session = @{
   RefreshExpiresAt = "2030-12-23T12:00:00.0000000Z"
 } | ConvertTo-Json -Compress
 [IO.File]::WriteAllText($sessionPath, $session, [Text.UTF8Encoding]::new($false))
-$ticketedExe = Join-Path $testRoot "NODAL-Conector-0.17-ENLACE-ABCD2345 (1).exe"
+$ticketedExe = Join-Path $testRoot "NODAL-Conector-0.18-ENLACE-ABCD2345 (1).exe"
 Copy-Item -LiteralPath $exe -Destination $ticketedExe -Force
 
 $previousTestMode = $env:NODAL_INSTALLER_TEST
@@ -49,7 +49,7 @@ try {
   $runtimeDll = Join-Path $validRoot "bin\Custom\Nodal.NinjaConnector.dll"
   $legacyConfig = Join-Path $validRoot "NODAL\nodal-ninja-connector.config"
   if (!(Test-Path -LiteralPath $runtimeConfig) -or !(Test-Path -LiteralPath $runtimeDll)) { throw "Faltan archivos instalados." }
-  if ((Get-Content -LiteralPath $runtimeConfig -Raw) -notmatch 'InstalledSourceVersion=0\.17') { throw "La configuracion nueva no informa 0.17." }
+  if ((Get-Content -LiteralPath $runtimeConfig -Raw) -notmatch 'InstalledSourceVersion=0\.18') { throw "La configuracion nueva no informa 0.18." }
   if ((Get-Content -LiteralPath $runtimeConfig -Raw) -notmatch '(?m)^BaseUrl=https://app\.nodaltrading\.com\r?$') { throw "El dominio de compatibilidad no se migro a produccion." }
   if ((Get-Content -LiteralPath $legacyConfig -Raw) -notmatch '(?m)^BaseUrl=\r?$') { throw "El runtime anterior no quedo deshabilitado." }
   if (@(Get-ChildItem -LiteralPath (Join-Path $validRoot "NODAL\installer-backups") -File -Recurse).Count -lt 1) { throw "No se creo respaldo." }

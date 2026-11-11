@@ -20,11 +20,11 @@ describe("automatic connector onboarding", () => {
 
   it("continues only after the new runtime reports its version", () => {
     expect(connectorOnboardingState({
-      connector: { connectorVersion: "0.16", installedSourceVersion: "0.17", status: "active" },
+      connector: { connectorVersion: "0.17", installedSourceVersion: "0.18", status: "active" },
       automaticInstallerEnabled: true,
     })).toBe("update_required");
     expect(connectorOnboardingState({
-      connector: { connectorVersion: "0.17", installedSourceVersion: "0.17", status: "active" },
+      connector: { connectorVersion: "0.18", installedSourceVersion: "0.18", status: "active" },
       automaticInstallerEnabled: true,
     })).toBe("ready");
   });

@@ -93,14 +93,12 @@ describe("Ninja connector source", () => {
     expect(connectorSource).toContain('ConnectionName(account) + "\\u0000" + account.Name');
   });
 
-  it("prioriza la instancia de la conexión activa que emite las ejecuciones", () => {
-    const method = connectorSource.slice(
-      connectorSource.indexOf("private static List<Account> ConnectedAccounts()"),
-      connectorSource.indexOf("private static bool IsConnectedAccount"),
-    );
-    expect(method.indexOf("accounts.AddRange(connection.Accounts.Where(IsConnectedAccount))"))
-      .toBeLessThan(method.indexOf("accounts.AddRange(Account.All.Where(IsConnectedAccount))"));
-    expect(method).toContain("object that emits ExecutionUpdate and PositionUpdate");
+  it("se suscribe a todas las instancias físicas y deduplica después", () => {
+    expect(connectorSource).toContain("ConnectedAccountInstances()");
+    expect(connectorSource).toContain("foreach (Account account in accountInstances)");
+    expect(connectorSource).toContain("LogicalAccounts(accountInstances)");
+    expect(connectorSource).toContain("IsDuplicateTelemetry(recentExecutionKeys");
+    expect(connectorSource).toContain("IsDuplicateTelemetry(recentPositionKeys");
   });
 
   it("envía la captura encontrada sin volver a consultar Ninja desde la tarea diferida", () => {

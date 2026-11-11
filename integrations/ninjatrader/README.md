@@ -87,6 +87,11 @@ a la conexión activa, que es la que emite `ExecutionUpdate` y `PositionUpdate`.
 Esto evita que el saldo siga actualizándose mientras las ejecuciones quedan sin
 capturar.
 
+La versión 0.18 deja de elegir una sola copia interna de la cuenta. Se suscribe
+a todas las instancias que expone NinjaTrader y elimina los eventos repetidos
+después de recibirlos. Así conserva las ejecuciones cuando un proveedor publica
+los saldos y las operaciones desde objetos distintos.
+
 ## Vinculación
 
 1. El alumno inicia sesión en NODAL y genera un código de ocho caracteres.
