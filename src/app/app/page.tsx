@@ -7,6 +7,7 @@ import { resolveWithDeadline } from "@/lib/async/resolve-with-deadline";
 import { currentAppRelease } from "@/lib/app-release";
 import { createClient } from "@/lib/supabase/server";
 import { canUseNodalAgentPilot } from "@/modules/agent/domain/pilot-access";
+import { buildBrokerBalanceHistory } from "@/modules/control-diario/domain/broker-balance-history";
 import { readWithRetry, reportReadFailure } from "@/lib/supabase/read-with-retry";
 import { DataReadError, requireReadData, requireSuccessfulReads } from "@/lib/supabase/require-read";
 import { ConnectionRecovery } from "./connection-recovery";
@@ -877,43 +878,24 @@ async function renderPrivateAppPage({
       operatedOn: control.operated_on,
       phase: control.phase,
     }));
-    const brokerEventByControlId = new Map(
-      brokerRowsAscending
-        .filter((row) => row.daily_control_id)
-        .map((row) => [row.daily_control_id as string, row] as const),
-    );
-    const controlsInHistory = dailyControls
-      .filter((control) => control.kind === "balance_update")
-      .map((control): NinjaBrokerBalanceHistoryItem => {
-        const brokerEvent = brokerEventByControlId.get(control.controlId);
-        return {
-          balanceInCents: control.balanceInCents,
-          changeInCents: control.operatingResultInCents,
-          id: brokerEvent?.id ?? `daily-control:${control.controlId}`,
-          kind: "operation",
-          observedAt: brokerEvent?.observed_at ?? control.createdAt ?? `${control.operatedOn ?? "1970-01-01"}T12:00:00-03:00`,
-          origins: [],
-          previousBalanceInCents: control.balanceBeforeInCents ?? null,
-        };
-      });
-    const controlsWithBrokerEvents = new Set(brokerEventByControlId.keys());
-    const standaloneBrokerEvents = brokerRowsAscending
-      .filter((row) => !row.daily_control_id || !controlsWithBrokerEvents.has(row.daily_control_id))
-      .map((row, index, rows): NinjaBrokerBalanceHistoryItem => {
-        const previous = index === 0 ? null : Number(rows[index - 1].balance_cents);
-        const balance = Number(row.balance_cents);
-        return {
-          balanceInCents: balance,
-          changeInCents: previous === null ? null : balance - previous,
-          id: row.id,
-          kind: row.source_event_id.startsWith("ninja-operation:") ? "operation" : "initial",
-          observedAt: row.observed_at,
-          origins: [],
-          previousBalanceInCents: previous,
-        };
-      });
-    ninjaBrokerBalanceHistory = [...controlsInHistory, ...standaloneBrokerEvents]
-      .sort((left, right) => right.observedAt.localeCompare(left.observedAt));
+    ninjaBrokerBalanceHistory = buildBrokerBalanceHistory(
+      dailyControls.map((control) => ({
+        balanceAfterInCents: control.balanceInCents,
+        balanceBeforeInCents: control.balanceBeforeInCents ?? null,
+        controlId: control.controlId,
+        createdAt: control.createdAt ?? `${control.operatedOn ?? "1970-01-01"}T12:00:00-03:00`,
+        kind: control.kind,
+        operatedOn: control.operatedOn ?? null,
+        operatingResultInCents: control.operatingResultInCents,
+      })),
+      brokerRowsAscending.map((row) => ({
+        balanceInCents: Number(row.balance_cents),
+        controlId: row.daily_control_id,
+        id: row.id,
+        observedAt: row.observed_at,
+        sourceEventId: row.source_event_id,
+      })),
+    ).map((row): NinjaBrokerBalanceHistoryItem => ({ ...row, origins: [] }));
     const historicalPeriodsById = new Map(
       selection.workspace.periods.map((period) => [period.id, period] as const),
     );

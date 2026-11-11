@@ -23,6 +23,8 @@ Los controles 23, 24 y 25 existen con fecha operativa 2026-11-10, saldos consecu
 - Los eventos técnicos sin control se mantienen para no perder saldos iniciales u observaciones independientes.
 - Cada cambio muestra `Titular` o los nombres de las identidades participantes.
 - Las identidades reutilizan el mismo color determinista de Cuentas y Conciliaciones.
+- La construcción quedó centralizada en una única función de dominio: una conciliación válida actualiza el control diario y ese mismo control alimenta tanto Cuentas como Evolución del saldo. No existe un segundo registro visual que pueda quedar desactualizado.
+- Se agregó una prueba de regresión que reproduce controles recuperados sin evento técnico y exige que todos aparezcan en la evolución.
 
 ## Validación
 
@@ -30,6 +32,7 @@ Los controles 23, 24 y 25 existen con fecha operativa 2026-11-10, saldos consecu
 - 789 pruebas aprobadas.
 - Compilación productiva aprobada.
 - Consulta de producción confirmó que los tres cambios omitidos pertenecen a Alanis Santana.
+- Prueba específica del invariante: tres controles recuperados sin eventos técnicos aparecen completos, un evento enlazado no duplica el control y una lectura inicial independiente se conserva.
 
 ## Riesgos y rollback
 
