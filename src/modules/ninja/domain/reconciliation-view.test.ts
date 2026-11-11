@@ -4,6 +4,7 @@ import {
   currentAndPreviousMonthKeys,
   reconciliationPairLabel,
   reconciliationPosition,
+  splitReconciliationMonthKeys,
 } from "./reconciliation-view";
 
 describe("vista de conciliaciones", () => {
@@ -19,5 +20,16 @@ describe("vista de conciliaciones", () => {
   it("presenta explicitamente el aparejamiento broker-prop", () => {
     expect(reconciliationPairLabel("2211575", ["LFE0009", "LFE0010"]))
       .toBe("2211575 ↔ LFE0009, LFE0010");
+  });
+
+  it("separa el mes vigente de los meses historicos", () => {
+    expect(splitReconciliationMonthKeys(["2026-11", "2026-10"], "2026-11")).toEqual({
+      current: ["2026-11"],
+      archived: ["2026-10"],
+    });
+    expect(splitReconciliationMonthKeys(["2026-10"], "2026-11")).toEqual({
+      current: [],
+      archived: ["2026-10"],
+    });
   });
 });

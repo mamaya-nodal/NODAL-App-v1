@@ -8074,6 +8074,30 @@ html[data-theme="day"] .accounting-history {
 .demo-period-history > div { padding: 0 10px 10px; }
 .demo-period-history .demo-history-day { background: var(--app-input); }
 .demo-period-history .demo-history-day > div p { background: color-mix(in srgb, var(--app-panel) 80%, var(--app-input)); }
+.demo-period-history.is-current {
+  border-color: color-mix(in srgb, var(--app-accent) 34%, var(--app-border));
+}
+.demo-period-history.is-current > summary {
+  background: color-mix(in srgb, var(--app-accent) 5%, var(--app-panel));
+}
+.demo-period-history.is-archived {
+  margin-top: 6px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--app-panel) 72%, transparent);
+}
+.demo-period-history.is-archived > summary {
+  min-height: 42px;
+  padding: 6px 12px;
+}
+.demo-period-history.is-archived > summary > span { font-size: 11px; }
+.demo-period-history.is-archived > summary > small { font-size: 9px; }
+.demo-period-history.is-archived > summary > strong { font-size: 10px; }
+.demo-period-history.is-archived > div { padding: 0 7px 7px; }
+.demo-period-history.is-archived .demo-history-day { margin-top: 5px; }
+.demo-period-history.is-archived .demo-history-day > summary {
+  min-height: 48px;
+  padding-block: 7px;
+}
 .demo-history-day { margin-top: 7px; }
 .demo-history-day > summary { min-height: 58px; }
 .demo-history-day > summary > span { min-width: 164px; color: var(--app-title); font-size: 12px; font-weight: 800; }

@@ -8,6 +8,7 @@ import {
   currentAndPreviousMonthKeys,
   reconciliationPairLabel,
   reconciliationPosition,
+  splitReconciliationMonthKeys,
 } from "@/modules/ninja/domain/reconciliation-view";
 import { happenedAfterOpening, observedAfterOpening } from "@/modules/ninja/domain/opening-cutoff";
 import { assignManualAccountsToCoverage } from "./coverage-assignment-actions";
@@ -365,6 +366,8 @@ export function TradeTelemetryProbe({
     ...reconciliationMonths.keys(),
     ...recoveredReconciliationMonths.keys(),
   ])].sort((left, right) => right.localeCompare(left));
+  const currentReconciliationMonth = currentAndPreviousMonthKeys(new Date())[0];
+  const reconciliationPeriodGroups = splitReconciliationMonthKeys(reconciliationMonthKeys, currentReconciliationMonth);
   const automationBatches = currentBatches.filter((batch) => batch.accounting_status !== "committed").slice(0, 30);
   const activeGroups = [
     activeProps.length > 0 ? { label: "Cuentas prop", probes: activeProps } : null,
@@ -581,12 +584,17 @@ export function TradeTelemetryProbe({
 
       {reconciliationMonthKeys.length > 0 && (
         <div className="demo-history real-operation-history">
-          <div className="demo-group-title"><h3>Historial</h3><span>{reconciliationMonthKeys.reduce((total, month) => total + (reconciliationMonths.get(month)?.length ?? 0) + (recoveredReconciliationMonths.get(month)?.length ?? 0), 0)}</span></div>
-          {reconciliationMonthKeys.map((month, monthIndex) => {
+          <div className="demo-group-title"><h3>Conciliaciones</h3><span>{reconciliationMonthKeys.reduce((total, month) => total + (reconciliationMonths.get(month)?.length ?? 0) + (recoveredReconciliationMonths.get(month)?.length ?? 0), 0)}</span></div>
+          {[...reconciliationPeriodGroups.current, ...reconciliationPeriodGroups.archived].map((month) => {
             const monthBatches = reconciliationMonths.get(month) ?? [];
             const monthRecovered = recoveredReconciliationMonths.get(month) ?? [];
+            const isCurrentMonth = month === currentReconciliationMonth;
             return (
-            <details className="demo-period-history operations-disclosure-card" key={month} open={monthIndex === 0}>
+            <details
+              className={`demo-period-history operations-disclosure-card ${isCurrentMonth ? "is-current" : "is-archived"}`}
+              key={month}
+              open={isCurrentMonth || undefined}
+            >
               <summary>
                 <span>{monthLabel(`${month}-01T12:00:00Z`)}</span>
                 <small>{monthBatches.length + monthRecovered.length} conciliaciones</small>
@@ -595,7 +603,7 @@ export function TradeTelemetryProbe({
               </summary>
               <div>
                 {monthBatches.map((batch, index) => (
-                  <details className="demo-history-day" key={batch.id} open={monthIndex === 0 && index === 0}>
+                  <details className="demo-history-day" key={batch.id} open={isCurrentMonth && index === 0}>
                     <summary>
                       <span>{formatHistoryMoment(batch.opened_at, batch.operated_on)}</span>
                       <small>{reconciliationPairLabel(batch.broker?.account_name ?? null, batch.prop_accounts.map((account) => account.account_name))}</small>
@@ -611,7 +619,7 @@ export function TradeTelemetryProbe({
                   </details>
                 ))}
                 {monthRecovered.map((row, index) => (
-                  <details className="demo-history-day" key={row.controlId} open={monthIndex === 0 && monthBatches.length === 0 && index === 0}>
+                  <details className="demo-history-day" key={row.controlId} open={isCurrentMonth && monthBatches.length === 0 && index === 0}>
                     <summary>
                       <span>{formatHistoryMoment(`${row.operatedOn}T12:00:00-03:00`, row.operatedOn)}</span>
                       <small>{row.participants.map((participant) => participant.accountName).join(" + ")}</small>

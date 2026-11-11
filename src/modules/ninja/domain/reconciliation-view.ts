@@ -6,6 +6,16 @@ export function currentAndPreviousMonthKeys(now: Date) {
   );
 }
 
+export function splitReconciliationMonthKeys(
+  monthKeys: readonly string[],
+  currentMonthKey: string,
+) {
+  return {
+    current: monthKeys.filter((month) => month === currentMonthKey),
+    archived: monthKeys.filter((month) => month !== currentMonthKey),
+  };
+}
+
 export function reconciliationPosition(
   direction: string | null,
   quantity: number,
