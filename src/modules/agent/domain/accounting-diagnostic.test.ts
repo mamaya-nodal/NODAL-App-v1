@@ -6,6 +6,7 @@ import {
   diagnoseControlLedgers,
   diagnoseOperationalBaselines,
   diagnosePendingBrokerEvents,
+  diagnosePurchasesRegisteredAfterActivity,
   diagnoseUnbatchedLinkedSessions,
   diagnoseUnreconciledBatches,
 } from "./accounting-diagnostic";
@@ -100,5 +101,16 @@ describe("auditoría contable determinística de Nodalito", () => {
     }]);
     expect(findings[0].detail).toContain("2 cambios");
     expect(findings[0].detail).toContain("operación que el conector no capturó");
+  });
+
+  it("advierte cuando una cuenta se registró después de operar", () => {
+    expect(diagnosePurchasesRegisteredAfterActivity(
+      [{ account_id: "account", id: "purchase", price_cents: 18375, purchased_on: "2026-11-09" }],
+      [{ account_id: "account", operated_on: "2026-11-06" }],
+    )).toMatchObject([{
+      id: "purchase-after-activity:purchase",
+      severity: "attention",
+      title: "Cuenta registrada después de operar",
+    }]);
   });
 });

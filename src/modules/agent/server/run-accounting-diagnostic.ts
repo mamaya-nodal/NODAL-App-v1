@@ -8,6 +8,7 @@ import {
   diagnoseControlLedgers,
   diagnoseOperationalBaselines,
   diagnosePendingBrokerEvents,
+  diagnosePurchasesRegisteredAfterActivity,
   diagnoseUnbatchedLinkedSessions,
   diagnoseUnreconciledBatches,
 } from "../domain/accounting-diagnostic";
@@ -62,8 +63,8 @@ export async function runAccountingDiagnosticForOwner(
   const accounts = accountsResult.data ?? [];
   const accountIds = accounts.map((account) => account.id);
   const responses = await Promise.all([
-    accountIds.length ? db.from("purchases").select("id,account_id,funds_origin,wallet_id").in("account_id", accountIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
-    accountIds.length ? db.from("operation_entries").select("id,account_id,daily_control_id,destination,magnitude_cents").in("account_id", accountIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
+    accountIds.length ? db.from("purchases").select("id,account_id,price_cents,purchased_on,funds_origin,wallet_id").in("account_id", accountIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
+    accountIds.length ? db.from("operation_entries").select("id,account_id,daily_control_id,destination,magnitude_cents,operated_on").in("account_id", accountIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
     accountIds.length ? db.from("funding_withdrawals").select("id,account_id,approved_on,collected_on,wallet_id,amount_cents").in("account_id", accountIds).eq("is_active", true).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
     periodIds.length ? db.from("daily_controls").select("id,period_id,control_number,balance_before_cents,balance_after_cents,operating_result_cents").in("period_id", periodIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
     periodIds.length ? db.from("daily_control_participants").select("daily_control_id,account_id,allocated_result_cents").in("period_id", periodIds).limit(MAX_ROWS) : Promise.resolve({ data: [], error: null }),
@@ -90,6 +91,7 @@ export async function runAccountingDiagnosticForOwner(
 
   findings.push(...diagnoseBalanceChains(controls));
   findings.push(...diagnoseControlLedgers(controls, participants, entries));
+  findings.push(...diagnosePurchasesRegisteredAfterActivity(purchasesResult.data ?? [], entries));
 
   const accountStateById = new Map(accounts.map((account) => [account.id, account.state]));
   const links = accountIds.length ? await db.from("ninja_account_links")

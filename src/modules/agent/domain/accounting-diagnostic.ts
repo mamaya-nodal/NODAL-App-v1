@@ -60,12 +60,49 @@ type PendingBrokerEvent = Readonly<{
   observed_at: string;
 }>;
 
+type PurchaseActivity = Readonly<{
+  account_id: string;
+  id: string;
+  price_cents: number;
+  purchased_on: string;
+}>;
+
+type DatedOperationEntry = Readonly<{
+  account_id: string;
+  operated_on: string;
+}>;
+
 const base = { userId: null, userName: null } as const;
 
 function signedEntry(entry: Entry) {
   if (entry.destination === "NETO BROKER +") return Number(entry.magnitude_cents);
   if (entry.destination === "NETO BROKER -") return -Number(entry.magnitude_cents);
   return 0;
+}
+
+/** A late registration can duplicate a result if it was embedded in the price and later reconciled. */
+export function diagnosePurchasesRegisteredAfterActivity(
+  purchases: readonly PurchaseActivity[],
+  entries: readonly DatedOperationEntry[],
+): NodalitoFinding[] {
+  const earliestOperationByAccount = new Map<string, string>();
+  for (const entry of entries) {
+    const current = earliestOperationByAccount.get(entry.account_id);
+    if (!current || entry.operated_on < current) earliestOperationByAccount.set(entry.account_id, entry.operated_on);
+  }
+  return purchases.flatMap((purchase) => {
+    const earliestOperation = earliestOperationByAccount.get(purchase.account_id);
+    if (!earliestOperation || earliestOperation >= purchase.purchased_on) return [];
+    return [{
+      ...base,
+      category: "billing" as const,
+      detail: "La cuenta se registró después de su primera operación. Hay que confirmar que el precio cargado no incluya ese resultado, porque la conciliación lo contabiliza por separado.",
+      evidence: `Compra ${purchase.id}; precio ${purchase.price_cents}; primera operación ${earliestOperation}; alta ${purchase.purchased_on}.`,
+      id: `purchase-after-activity:${purchase.id}`,
+      severity: "attention" as const,
+      title: "Cuenta registrada después de operar",
+    }];
+  });
 }
 
 /** Detects broken broker continuity without inferring a missing movement. */
