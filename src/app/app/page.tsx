@@ -193,6 +193,7 @@ type NinjaTransitionRpcRow = {
 
 type NinjaBrokerBalanceRpcRow = {
   balance_cents: number | string;
+  daily_control_id: string | null;
   id: string;
   observed_at: string;
   source_accounts: NinjaBrokerBalanceEvent["sourceAccounts"];
@@ -483,7 +484,7 @@ async function renderPrivateAppPage({
         supabase
           .from("daily_controls")
           .select(
-            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_after_cents, operating_result_cents, is_uncovered, allocation_reason, source, source_event_key, created_at, wallet_id, transfer_fee_cents, phase",
+            "id, control_number, operated_on, kind, movement_cents, origin_destination, balance_before_cents, balance_after_cents, operating_result_cents, is_uncovered, allocation_reason, source, source_event_key, created_at, wallet_id, transfer_fee_cents, phase",
           )
           .eq("period_id", selection.period.id)
           .order("control_number"),
@@ -515,7 +516,7 @@ async function renderPrivateAppPage({
           .limit(500),
         (privileged ?? supabase)
           .from("ninja_broker_balance_events")
-          .select("id, observed_at, balance_cents, source_accounts, source_event_id, status")
+          .select("id, observed_at, balance_cents, source_accounts, source_event_id, status, daily_control_id")
           .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
           .order("observed_at", { ascending: false })
           .limit(30),
@@ -806,18 +807,6 @@ async function renderPrivateAppPage({
       eventId: pendingPreoperationRow.id,
       observedAt: pendingPreoperationRow.observed_at,
     } : null;
-    ninjaBrokerBalanceHistory = brokerRowsAscending.map((row, index) => {
-      const previous = index === 0 ? null : Number(brokerRowsAscending[index - 1].balance_cents);
-      const balance = Number(row.balance_cents);
-      return {
-        balanceInCents: balance,
-        changeInCents: previous === null ? null : balance - previous,
-        id: row.id,
-        kind: row.source_event_id.startsWith("ninja-operation:") ? "operation" as const : "initial" as const,
-        observedAt: row.observed_at,
-        previousBalanceInCents: previous,
-      };
-    }).reverse();
     incomingNinjaBalance = null;
     const accountsById = new Map(
       (accountRows ?? []).map((account) => [account.id, account]),
@@ -867,7 +856,9 @@ async function renderPrivateAppPage({
       isUncovered: control.is_uncovered,
       allocationReason: control.allocation_reason,
       balanceInCents: Number(control.balance_after_cents),
+      balanceBeforeInCents: control.balance_before_cents === null ? null : Number(control.balance_before_cents),
       controlId: control.id,
+      createdAt: control.created_at,
       id: control.control_number,
       kind: control.kind,
       movementInCents:
@@ -886,6 +877,43 @@ async function renderPrivateAppPage({
       operatedOn: control.operated_on,
       phase: control.phase,
     }));
+    const brokerEventByControlId = new Map(
+      brokerRowsAscending
+        .filter((row) => row.daily_control_id)
+        .map((row) => [row.daily_control_id as string, row] as const),
+    );
+    const controlsInHistory = dailyControls
+      .filter((control) => control.kind === "balance_update")
+      .map((control): NinjaBrokerBalanceHistoryItem => {
+        const brokerEvent = brokerEventByControlId.get(control.controlId);
+        return {
+          balanceInCents: control.balanceInCents,
+          changeInCents: control.operatingResultInCents,
+          id: brokerEvent?.id ?? `daily-control:${control.controlId}`,
+          kind: "operation",
+          observedAt: brokerEvent?.observed_at ?? control.createdAt ?? `${control.operatedOn ?? "1970-01-01"}T12:00:00-03:00`,
+          origins: [],
+          previousBalanceInCents: control.balanceBeforeInCents ?? null,
+        };
+      });
+    const controlsWithBrokerEvents = new Set(brokerEventByControlId.keys());
+    const standaloneBrokerEvents = brokerRowsAscending
+      .filter((row) => !row.daily_control_id || !controlsWithBrokerEvents.has(row.daily_control_id))
+      .map((row, index, rows): NinjaBrokerBalanceHistoryItem => {
+        const previous = index === 0 ? null : Number(rows[index - 1].balance_cents);
+        const balance = Number(row.balance_cents);
+        return {
+          balanceInCents: balance,
+          changeInCents: previous === null ? null : balance - previous,
+          id: row.id,
+          kind: row.source_event_id.startsWith("ninja-operation:") ? "operation" : "initial",
+          observedAt: row.observed_at,
+          origins: [],
+          previousBalanceInCents: previous,
+        };
+      });
+    ninjaBrokerBalanceHistory = [...controlsInHistory, ...standaloneBrokerEvents]
+      .sort((left, right) => right.observedAt.localeCompare(left.observedAt));
     const historicalPeriodsById = new Map(
       selection.workspace.periods.map((period) => [period.id, period] as const),
     );
@@ -1184,6 +1212,33 @@ async function renderPrivateAppPage({
         identityId,
         identityName: identityId ? identityNameById.get(identityId) ?? "Identidad" : null,
       };
+    });
+    const dailyControlById = new Map(dailyControls.map((control) => [control.controlId, control] as const));
+    const brokerControlIdByEventId = new Map(
+      brokerRowsAscending
+        .filter((row) => row.daily_control_id)
+        .map((row) => [row.id, row.daily_control_id as string] as const),
+    );
+    ninjaBrokerBalanceHistory = ninjaBrokerBalanceHistory.map((item) => {
+      const controlId = item.id.startsWith("daily-control:")
+        ? item.id.slice("daily-control:".length)
+        : brokerControlIdByEventId.get(item.id) ?? null;
+      const control = controlId ? dailyControlById.get(controlId) : null;
+      if (!control) return item;
+      const origins = new Map<string, { identityId: string | null; label: string }>();
+      for (const participant of control.participants) {
+        const identityId = identityByAccountId.get(participant.accountId) ?? null;
+        if (identityId) {
+          origins.set(identityId, {
+            identityId,
+            label: identityNameById.get(identityId) ?? "Identidad",
+          });
+        } else {
+          origins.set("owner", { identityId: null, label: "Titular" });
+        }
+      }
+      if (origins.size === 0) origins.set("owner", { identityId: null, label: "Titular" });
+      return { ...item, origins: [...origins.values()] };
     });
     identityAccounts = accountHistory.map((account) => ({
       balanceInCents: account.currentCashValueInCents,

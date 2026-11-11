@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, type CSSProperties, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -41,6 +41,7 @@ import {
 } from "./daily-control-actions";
 import { NINJA_STATUS_EVENT, type NinjaStatusEventDetail } from "./ninja-status-event";
 import { BrokerAccountBreakdown } from "./broker-account-breakdown";
+import { identityAccentClass, identityAccentStyle } from "@/modules/identities/domain/identity-accent";
 
 type EntryKind = DailyBalanceEntry["kind"];
 
@@ -48,6 +49,8 @@ type PreviewRow = {
   isUncovered?: boolean;
   allocationReason: string | null;
   balanceInCents: number;
+  balanceBeforeInCents?: number | null;
+  createdAt?: string;
   controlId: string;
   id: number;
   kind: EntryKind;
@@ -83,6 +86,10 @@ export type NinjaBrokerBalanceHistoryItem = Readonly<{
   id: string;
   kind: "initial" | "operation";
   observedAt: string;
+  origins: ReadonlyArray<{
+    identityId: string | null;
+    label: string;
+  }>;
   previousBalanceInCents: number | null;
 }>;
 
@@ -748,6 +755,21 @@ export function DailyControlPreview({
                 <div>
                   <strong>{item.kind === "initial" ? "Saldo inicial detectado" : "Operación cerrada"}</strong>
                   <span>{new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(new Date(item.observedAt))}</span>
+                  {item.origins.length > 0 ? (
+                    <span className="broker-balance-origins">
+                      {item.origins.map((origin) => origin.identityId ? (
+                        <b
+                          className={identityAccentClass(origin.identityId)}
+                          key={origin.identityId}
+                          style={identityAccentStyle(origin.identityId) as CSSProperties}
+                        >
+                          {origin.label}
+                        </b>
+                      ) : (
+                        <b className="broker-balance-origin-owner" key="owner">{origin.label}</b>
+                      ))}
+                    </span>
+                  ) : null}
                 </div>
                 <div><span>Anterior</span><strong>{item.previousBalanceInCents === null ? "—" : formatMoney(item.previousBalanceInCents)}</strong></div>
                 <div><span>Variación</span><strong className={(item.changeInCents ?? 0) < 0 ? "negative" : "positive"}>{item.changeInCents === null ? "—" : formatMoney(item.changeInCents)}</strong></div>

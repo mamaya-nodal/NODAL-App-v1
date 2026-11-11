@@ -38,7 +38,7 @@ describe("identity connector delivery", () => {
     const markup = render(identity, true, [connector]);
     expect(markup).toContain("Enviar actualización");
     expect(markup).toContain("NUEVA");
-    expect(markup).toContain("Actualización 0.17 disponible");
+    expect(markup).toContain("Actualización 0.18 disponible");
     expect(markup).toContain("Sólo desvincular");
     expect(markup).not.toContain("Descarga local");
   });

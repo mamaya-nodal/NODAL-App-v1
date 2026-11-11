@@ -8786,6 +8786,18 @@ html[data-theme="day"] .manual-coverage-close { background: #ffffff; }
 .broker-balance-history-list strong { color: var(--app-title); font-size: 11px; }
 .broker-balance-history-list strong.positive { color: var(--app-positive); }
 .broker-balance-history-list strong.negative { color: #ff7d72; }
+.broker-balance-origins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.broker-balance-origins b {
+  color: var(--identity-accent-dark, var(--app-positive));
+  font-size: 10px;
+  font-weight: 800;
+}
+.broker-balance-origins .broker-balance-origin-owner { color: var(--app-positive); }
 
 .broker-balance-history {
   margin-top: 10px;
