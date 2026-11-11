@@ -1612,7 +1612,7 @@ async function renderPrivateAppPage({
           </div>
           {openingSnapshot ? <OpeningOperationReference opening={openingSnapshot} /> : null}
           <DailyControlPreview
-            key={`${ninjaBrokerBalanceHistory[0]?.id ?? "no-ninja-balance"}:${dailyControls.at(-1)?.controlId ?? "no-control"}:${dailyControls.length}`}
+            key={`${ninjaBrokerBalanceHistory[0]?.id ?? "no-ninja-balance"}:${dailyControls.map((control) => `${control.controlId}:${control.balanceInCents}:${control.operatingResultInCents ?? ""}:${control.participants.map((participant) => `${participant.accountId}:${participant.amountInCents}`).join(",")}`).join("|")}`}
             accounts={accountOptions}
             brokerAccountNames={connectedNinjaBrokerAccountNames}
             companies={companies.map((company) => ({
