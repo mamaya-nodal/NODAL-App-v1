@@ -2,9 +2,6 @@ import { requireNinjaConnector, rememberNinjaConnectorVersions } from "@/modules
 import { after } from "next/server";
 import { isTelemetryV2Enabled } from "@/modules/ninja/server/telemetry-v2-rollout";
 import { safelyDrainTelemetryV2 } from "@/modules/ninja/server/telemetry-v2";
-import { refreshNinjaTechnicalOperations } from "@/modules/ninja/server/technical-operation-processing";
-import { refreshNinjaTransitionsFromLatestSnapshot } from "@/modules/ninja/server/transition-processing";
-import { bootstrapNinjaBrokerBalance } from "@/modules/ninja/server/broker-balance-processing";
 import { ninjaIntakeResponse as response, readNinjaJson } from "@/modules/ninja/server/intake-http";
 
 export const dynamic = "force-dynamic";
@@ -23,18 +20,15 @@ export async function POST(request: Request) {
     installedSourceVersion?: unknown;
   };
   try {
-    // La versión debe registrarse aunque una tarea posterior de reconstrucción
-    // falle. Así el diagnóstico no muestra una revisión anterior como actual.
+    // El heartbeat sólo confirma presencia y versión. Inventario y telemetría
+    // ya procesan saldos, operaciones y transiciones al recibir datos; repetir
+    // una reconstrucción completa en cada latido satura la base y puede impedir
+    // que los usuarios abran la aplicación.
     await rememberNinjaConnectorVersions(
       connector.connectorId,
       body.connectorVersion,
       body.installedSourceVersion,
     );
-    // Primero reconstruimos las operaciones mientras todos los vínculos de cuenta
-    // siguen disponibles. Recién después aplicamos quemados y cierres de vínculo.
-    await bootstrapNinjaBrokerBalance(connector.connectorId);
-    await refreshNinjaTechnicalOperations(connector.connectorId);
-    await refreshNinjaTransitionsFromLatestSnapshot(connector.connectorId);
     return response({ accepted: true }, 202);
   } catch {
     console.error("NODAL_NINJA_INTAKE_UNAVAILABLE", { scope: "heartbeat" });
