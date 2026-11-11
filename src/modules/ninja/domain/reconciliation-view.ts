@@ -34,3 +34,26 @@ export function reconciliationPairLabel(
   const props = propAccountNames.length > 0 ? propAccountNames.join(", ") : "Sin cuentas prop";
   return `${broker} ↔ ${props}`;
 }
+
+export type ReconciliationChronology = Readonly<{
+  controlNumber: number | null;
+  id: string;
+  occurredAt: string;
+  operatedOn: string;
+}>;
+
+export function compareReconciliationChronology(
+  left: ReconciliationChronology,
+  right: ReconciliationChronology,
+) {
+  const operationalDate = right.operatedOn.localeCompare(left.operatedOn);
+  if (operationalDate !== 0) return operationalDate;
+
+  if (left.controlNumber !== null && right.controlNumber !== null) {
+    const controlOrder = right.controlNumber - left.controlNumber;
+    if (controlOrder !== 0) return controlOrder;
+  }
+
+  const momentOrder = right.occurredAt.localeCompare(left.occurredAt);
+  return momentOrder !== 0 ? momentOrder : right.id.localeCompare(left.id);
+}

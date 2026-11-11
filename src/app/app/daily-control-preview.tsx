@@ -698,6 +698,7 @@ export function DailyControlPreview({
         recoveredReconciliations={rows
           .filter((row) => row.kind === "balance_update" && row.participants.length > 0)
           .map((row) => ({
+            controlNumber: row.id,
             controlId: row.controlId,
             operatedOn: row.operatedOn ?? currentOperationalDay(),
             participants: row.participants.map((participant) => {

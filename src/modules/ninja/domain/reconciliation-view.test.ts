@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  compareReconciliationChronology,
   currentAndPreviousMonthKeys,
   reconciliationPairLabel,
   reconciliationPosition,
@@ -31,5 +32,21 @@ describe("vista de conciliaciones", () => {
       current: [],
       archived: ["2026-10"],
     });
+  });
+
+  it("ordena conciliaciones automaticas y recuperadas en una sola cronologia descendente", () => {
+    const rows = [
+      { controlNumber: 17, id: "recovered-older", occurredAt: "2026-11-09T12:00:00-03:00", operatedOn: "2026-11-09" },
+      { controlNumber: 20, id: "automatic-newer", occurredAt: "2026-11-10T18:25:00-03:00", operatedOn: "2026-11-10" },
+      { controlNumber: 19, id: "recovered-newer", occurredAt: "2026-11-10T12:00:00-03:00", operatedOn: "2026-11-10" },
+      { controlNumber: 18, id: "automatic-older", occurredAt: "2026-11-10T20:00:00-03:00", operatedOn: "2026-11-10" },
+    ];
+
+    expect(rows.sort(compareReconciliationChronology).map((row) => row.id)).toEqual([
+      "automatic-newer",
+      "recovered-newer",
+      "automatic-older",
+      "recovered-older",
+    ]);
   });
 });
