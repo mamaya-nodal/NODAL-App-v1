@@ -7669,23 +7669,8 @@ html[data-theme="day"] .accounting-history {
 .demo-account-reference em { color: var(--app-title); font-size: 10px; font-style: normal; font-weight: 720; white-space: nowrap; }
 .demo-account-identity .demo-account-connection { color: color-mix(in srgb, var(--app-accent) 58%, var(--app-subtle)); font-size: 8px; font-weight: 750; letter-spacing: .01em; }
 .demo-account-identity .demo-account-owner { font-size: 9px; font-weight: 850; }
-.identity-accent { color: var(--identity-accent) !important; }
-.identity-accent-0 { --identity-accent: #63c8ff; }
-.identity-accent-1 { --identity-accent: #ff9b6b; }
-.identity-accent-2 { --identity-accent: #d58cff; }
-.identity-accent-3 { --identity-accent: #58dda0; }
-.identity-accent-4 { --identity-accent: #f4cc5f; }
-.identity-accent-5 { --identity-accent: #ff7fac; }
-.identity-accent-6 { --identity-accent: #8fa5ff; }
-.identity-accent-7 { --identity-accent: #52d4cf; }
-html[data-theme="day"] .identity-accent-0 { --identity-accent: #1477a8; }
-html[data-theme="day"] .identity-accent-1 { --identity-accent: #a94d22; }
-html[data-theme="day"] .identity-accent-2 { --identity-accent: #7a3ca1; }
-html[data-theme="day"] .identity-accent-3 { --identity-accent: #18794d; }
-html[data-theme="day"] .identity-accent-4 { --identity-accent: #876800; }
-html[data-theme="day"] .identity-accent-5 { --identity-accent: #a63763; }
-html[data-theme="day"] .identity-accent-6 { --identity-accent: #445db4; }
-html[data-theme="day"] .identity-accent-7 { --identity-accent: #147b77; }
+.identity-accent { color: var(--identity-accent-dark) !important; }
+html[data-theme="day"] .identity-accent { color: var(--identity-accent-day) !important; }
 .demo-stage { min-width: 72px; padding: 6px 8px; border-radius: 8px; font-size: 9px; font-weight: 850; text-align: center; }
 .demo-stage.evaluation { color: #6ecbff; background: rgb(110 203 255 / 11%); }
 .demo-stage.funded { color: #ffae59; background: rgb(255 174 89 / 11%); }

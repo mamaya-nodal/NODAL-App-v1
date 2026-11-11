@@ -770,7 +770,7 @@ export function DailyControlPreview({
         </p>
       )}
 
-      {rows.length > 0 && <div className="preview-history" aria-label="Historial de operaciones">
+      {rows.length > 0 && ninjaBrokerBalanceHistory.length === 0 && <div className="preview-history" aria-label="Historial de operaciones">
         {(
           rows.map((row) => (
             <article className="preview-row" key={row.id}>

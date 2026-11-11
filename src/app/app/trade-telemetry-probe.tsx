@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 
 import { buildNinjaOperationProbe, type NinjaTelemetryRow } from "@/modules/ninja/domain/operation-probe";
-import { identityAccentClass } from "@/modules/identities/domain/identity-accent";
+import { identityAccentClass, identityAccentStyle } from "@/modules/identities/domain/identity-accent";
 import {
   currentAndPreviousMonthKeys,
   reconciliationPairLabel,
@@ -124,7 +124,11 @@ function IdentityLabels({ identities }: Readonly<{ identities: readonly Identity
   return (
     <span className="reconciliation-identity-labels">
       {identities.map((identity) => (
-        <b className={identityAccentClass(identity.id)} key={identity.id}>{identity.name}</b>
+        <b
+          className={identityAccentClass(identity.id)}
+          key={identity.id}
+          style={identityAccentStyle(identity.id) as CSSProperties}
+        >{identity.name}</b>
       ))}
     </span>
   );

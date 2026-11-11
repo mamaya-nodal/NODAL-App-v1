@@ -18,14 +18,14 @@ La interfaz disponía de la asignación cuenta-identidad en la carga principal, 
 - Cada cuenta asignada muestra el nombre de su identidad en Cuentas.
 - Las operaciones activas muestran la misma identidad.
 - Las conciliaciones pendientes, automáticas, recuperadas e históricas muestran las identidades participantes.
-- Cada identidad recibe un acento de una paleta de ocho colores calculado de forma determinista a partir de su identificador.
+- Cada identidad recibe un matiz calculado de forma determinista sobre el círculo cromático completo a partir de su identificador, evitando las colisiones frecuentes de la paleta inicial de ocho colores.
 - El color se mantiene estable entre vistas y tiene variantes legibles para modo oscuro y claro.
 - El acento se limita al nombre de la identidad; las tarjetas no se pintan completas.
 
 ## Evidencia y validación
 
 - La identidad se obtiene de `identity_account_assignments`, no del nombre libre de la conexión de NinjaTrader.
-- Se agregaron pruebas de estabilidad y rango de la paleta.
+- Se agregaron pruebas de estabilidad y rango cromático.
 - TypeScript, ESLint y las pruebas dirigidas fueron aprobados.
 
 ## Riesgos

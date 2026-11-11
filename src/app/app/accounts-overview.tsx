@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -20,7 +20,7 @@ import {
   type AccountOperationalState,
   type ApprovedAccountPayout,
 } from "@/modules/operations/domain/account-progress";
-import { identityAccentClass } from "@/modules/identities/domain/identity-accent";
+import { identityAccentClass, identityAccentStyle } from "@/modules/identities/domain/identity-accent";
 
 import type { RegisterAccount } from "./operation-register";
 import { deleteRegisteredAccount, updateRegisteredAccountPurchase } from "./purchase-actions";
@@ -237,7 +237,10 @@ function AccountCard({ item, wallets }: Readonly<{
             <em>{accountProgressLabel(progress)}</em>
           </span>
           {account.identityId && account.identityName && (
-            <small className={`demo-account-owner ${identityAccentClass(account.identityId)}`}>{account.identityName}</small>
+            <small
+              className={`demo-account-owner ${identityAccentClass(account.identityId)}`}
+              style={identityAccentStyle(account.identityId) as CSSProperties}
+            >{account.identityName}</small>
           )}
           {account.ninjaConnectionName && <small className="demo-account-connection">{account.ninjaConnectionName}</small>}
         </span>
