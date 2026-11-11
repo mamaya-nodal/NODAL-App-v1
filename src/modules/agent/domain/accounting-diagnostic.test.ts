@@ -96,7 +96,9 @@ describe("auditoría contable determinística de Nodalito", () => {
     expect(findings).toMatchObject([{
       id: "pending-broker-events:connector",
       severity: "attention",
+      title: "Cambio de saldo sin registrar",
     }]);
-    expect(findings[0].detail).toContain("2 lecturas");
+    expect(findings[0].detail).toContain("2 cambios");
+    expect(findings[0].detail).toContain("operación que el conector no capturó");
   });
 });

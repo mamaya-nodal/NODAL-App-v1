@@ -281,11 +281,11 @@ export function diagnosePendingBrokerEvents(
     return {
       ...base,
       category: "reconciliation" as const,
-      detail: `${rows.length} lectura${rows.length === 1 ? "" : "s"} de saldo broker siguen pendientes de clasificar o vincular con un movimiento económico.`,
+      detail: `NODAL detectó ${rows.length} cambio${rows.length === 1 ? "" : "s"} de saldo broker sin una operación o transferencia registrada. Nodalito debe revisar, en este orden, si fue un depósito o retiro, un trade sin cobertura, una cuenta todavía no registrada o una operación que el conector no capturó.`,
       evidence: `Conector ${connectorId}; primera ${ordered[0].observed_at}; última ${ordered.at(-1)!.observed_at}.`,
       id: `pending-broker-events:${connectorId}`,
       severity: "attention" as const,
-      title: "Movimientos broker pendientes de revisión",
+      title: "Cambio de saldo sin registrar",
     };
   });
 }
