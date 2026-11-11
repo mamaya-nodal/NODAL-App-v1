@@ -1723,6 +1723,6 @@ export default function PrivateAppPage(props: PrivateAppPageProps) {
       throw error;
     }),
     45_000,
-    () => <ConnectionRecovery subject="data" />,
+    () => <ConnectionRecovery subject="data" reference="TIMEOUT" />,
   );
 }
