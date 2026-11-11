@@ -206,6 +206,7 @@ export function buildMasterControlDemo(requestedMonth?: string): MasterControlDa
     excludedFromMasterReportingUserIds: [],
     floatingByUser: Object.fromEntries(personSpecs.map(([id], index) => [id, ((index % 4) + 1) * 37_500])),
     historicalGrossByUser,
+    nodalitoModificationsByUser: {},
     historicCommission: Object.fromEntries(current.overview.people.map((person) => [person.id, person.commission])),
     history: [],
     identifierHistoryByUser: Object.fromEntries(personSpecs.map(([id, , deskId]) => [id, [{

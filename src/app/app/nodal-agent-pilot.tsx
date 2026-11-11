@@ -17,7 +17,6 @@ type Message = Readonly<{
   question?: string;
   repairCompleted?: boolean;
   repairPreview?: { planId: string; label: string; details?: string[]; parameters: Record<string, unknown> };
-  reportedCaseId?: string;
   role: "agent" | "user";
   text: string;
 }>;
@@ -96,6 +95,7 @@ export function NodalAgentPilot() {
   const [latestAudit, setLatestAudit] = useState<AuditRun | null>(null);
   const [caseView, setCaseView] = useState(false);
   const [masterCases, setMasterCases] = useState(false);
+  const [humanHelpSent, setHumanHelpSent] = useState(false);
   const [messages, setMessages] = useState<ReadonlyArray<Message>>([openingMessage]);
   const [showGuides, setShowGuides] = useState(false);
   const [rutyxExpanded, setRutyxExpanded] = useState(false);
@@ -139,6 +139,7 @@ export function NodalAgentPilot() {
     const nextId = nextMessageId.current;
     nextMessageId.current += 2;
     setMessages((current) => [...current, { id: nextId, role: "user", text: question }]);
+    setHumanHelpSent(false);
     setShowGuides(false);
 
     setLoading(true);
@@ -196,27 +197,31 @@ export function NodalAgentPilot() {
     }
   }
 
-  async function reportMessage(message: Message) {
-    if (!message.question || message.reportedCaseId) return;
+  async function requestHumanHelp() {
+    const contextMessage = [...messages].reverse().find((message) => message.role === "agent" && message.question);
+    const sourceQuestion = contextMessage?.question ?? "Solicitud de asistencia desde Nodalito";
     setCaseLoading(true);
     try {
-      const primary = message.findings?.[0];
       const response = await fetch("/api/agent/nodalito/cases", {
         body: JSON.stringify({
-          category: primary?.category ?? "general",
-          description: message.text,
-          evidence: message.findings ?? [],
-          priority: message.findings?.some((finding) => finding.severity === "critical") ? "critical" : "normal",
-          sourceAnswer: message.text,
-          sourceQuestion: message.question,
-          title: primary?.title ?? `Consulta: ${message.question}`,
+          category: "human_help",
+          description: contextMessage?.text ?? "El usuario solicitó expresamente asistencia del equipo de NODAL.",
+          evidence: contextMessage?.findings ?? [],
+          priority: "normal",
+          sourceAnswer: contextMessage?.text ?? "",
+          sourceQuestion,
+          title: "Solicitud de asistencia de NODAL",
         }),
         headers: { "content-type": "application/json" }, method: "POST",
       });
-      const payload = await response.json() as { case?: { id: string } };
-      if (payload.case?.id) {
-        setMessages((current) => current.map((item) => item.id === message.id ? { ...item, reportedCaseId: payload.case!.id } : item));
-      }
+      if (!response.ok) throw new Error("help_request_failed");
+      setHumanHelpSent(true);
+      setMessages((current) => [...current, {
+        id: nextMessageId.current++, role: "agent",
+        text: "Tu solicitud fue enviada al equipo de NODAL. Un agente se pondrá en contacto para continuar la revisión.",
+      }]);
+    } catch {
+      setMessages((current) => [...current, { id: nextMessageId.current++, role: "agent", text: "No pude enviar la solicitud al equipo de NODAL. Volvé a intentar." }]);
     } finally {
       setCaseLoading(false);
     }
@@ -338,11 +343,6 @@ export function NodalAgentPilot() {
                         {message.repairPreview.details?.map((detail, index) => <small key={index}>{detail}</small>)}
                         <button className={styles.repairButton} disabled={caseLoading || message.repairCompleted} onClick={() => void applyRepair(message)} type="button">{message.repairCompleted ? "Corregido" : "Confirmar corrección"}</button>
                       </div> : null}
-                      {(message.findings?.length ?? 0) > 0 ? (
-                        <button className={styles.reportButton} disabled={caseLoading || Boolean(message.reportedCaseId)} onClick={() => void reportMessage(message)} type="button">
-                          {message.reportedCaseId ? "Reportado" : "Reportar"}
-                        </button>
-                      ) : null}
                     </div>
                   ) : null}
                 </article>
@@ -399,6 +399,7 @@ export function NodalAgentPilot() {
             <RutyxNavigator expanded={rutyxExpanded} onExpand={() => setRutyxExpanded(true)} />
           )}
 
+          {activeFunction === "nodalito" && !caseView ? <button className={styles.humanHelpButton} disabled={caseLoading || humanHelpSent} onClick={() => void requestHumanHelp()} type="button">{humanHelpSent ? "Solicitud enviada al equipo de NODAL" : "Hablar con el equipo de NODAL"}</button> : null}
           {activeFunction === "nodalito" && !caseView ? (
             <form className={styles.composer} onSubmit={submitMessage}>
               <input

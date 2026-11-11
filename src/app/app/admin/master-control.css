@@ -384,6 +384,7 @@
   color: var(--app-action-text, #10200b);
 }
 .master-user-tabs b { min-width: 19px; padding: 2px 5px; border-radius: 999px; background: #ef6868; color: #fff; font-size: .58rem; }
+.master-user-tabs button > span { min-width: 19px; padding: 2px 5px; border-radius: 999px; background: color-mix(in srgb, var(--brand) 18%, var(--app-panel, var(--surface))); color: inherit; font-size: .58rem; }
 .master-user-section { display: grid; gap: 16px; }
 .master-user-summary-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .master-user-overview-card {
@@ -418,6 +419,17 @@
 .master-alert-list small { color: var(--app-copy, var(--muted)); font-size: .6rem; }
 .master-alert-list b { color: #e79065; font-size: .72rem; }
 .master-operation-ok { margin: 0; color: var(--brand); font-size: .72rem; font-weight: 800; }
+.master-nodalito-history { display: grid; gap: 9px; }
+.master-nodalito-history > article { display: grid; gap: 7px; padding: 13px; border: 1px solid var(--app-border, var(--line)); border-radius: 12px; background: var(--app-input, var(--app-bg)); }
+.master-nodalito-history header { display: flex; align-items: start; justify-content: space-between; gap: 14px; }
+.master-nodalito-history header > div { display: grid; gap: 3px; }
+.master-nodalito-history time, .master-nodalito-history small { color: var(--app-copy, var(--muted)); font-size: .6rem; }
+.master-nodalito-history header > span { padding: 4px 7px; border-radius: 999px; background: color-mix(in srgb, #e6b95c 15%, transparent); color: #b47818; font-size: .58rem; font-weight: 850; }
+.master-nodalito-history header > span[data-reviewed="true"] { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); }
+.master-nodalito-history p { margin: 0; font-size: .68rem; line-height: 1.4; }
+.master-nodalito-history details { padding-top: 5px; border-top: 1px solid var(--app-border, var(--line)); }
+.master-nodalito-history summary { color: var(--app-copy, var(--muted)); font-size: .64rem; font-weight: 800; cursor: pointer; }
+.master-nodalito-history details p { margin-top: 6px; color: var(--app-copy, var(--muted)); font-size: .63rem; }
 .master-display-name-editor { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; margin-bottom: 16px; }
 .master-display-name-editor label { display: grid; gap: 6px; color: var(--app-copy, var(--muted)); font-size: .64rem; font-weight: 750; }
 .master-display-name-editor input { min-height: 44px; border: 1px solid var(--app-border, var(--line)); border-radius: 11px; background: var(--app-input, var(--app-bg)); color: var(--app-title, var(--ink)); padding: 10px 12px; font: inherit; }

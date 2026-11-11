@@ -4,7 +4,8 @@ import { canUseNodalAgentPilot } from "@/modules/agent/domain/pilot-access";
 import { askNodalito, NodalitoConfigurationError } from "@/modules/agent/server/openai-nodalito";
 import { runPersonalDiagnostic } from "@/modules/agent/server/run-personal-diagnostic";
 import { inspectNodalAdminAccess } from "@/modules/admin/server/admin-access";
-import { readRepairContext, prepareRepair, openRepairIncident } from "@/modules/agent/server/repair-tools";
+import { openEscalationCase, prepareRepair, readRepairContext } from "@/modules/agent/server/repair-tools";
+import { classifyNodalitoEscalation } from "@/modules/agent/domain/escalation-policy";
 
 export async function POST(request: Request) {
   const access = await inspectNodalAdminAccess();
@@ -35,6 +36,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Escribí una consulta de hasta 600 caracteres." }, { status: 400 });
   }
 
+  const escalation = classifyNodalitoEscalation(question);
+  if (escalation) {
+    try {
+      const caseId = await openEscalationCase(userId, question, escalation);
+      return NextResponse.json({
+        answer: {
+          findings: [],
+          summary: "Tu solicitud fue enviada al equipo de NODAL. Un agente se pondrá en contacto para continuar la revisión.",
+        },
+        caseId,
+        mode: "escalated",
+      });
+    } catch (error) {
+      console.error("nodalito_escalation_failed", error);
+      return NextResponse.json({ message: "No pude enviar la solicitud al equipo de NODAL. Volvé a intentar." }, { status: 500 });
+    }
+  }
+
   try {
     // Las guías se pueden consultar desde la app personal. Los datos reales del
     // Master Control sólo se habilitan después de verificar MFA.
@@ -46,7 +65,6 @@ export async function POST(request: Request) {
       ...(process.env.NODALITO_REPAIRS_ENABLED !== "false" ? {
         readRepairContext: (investigationQuestion: string) => readRepairContext(access.supabase, investigationQuestion),
         prepareRepair: (draft: unknown) => prepareRepair(access.supabase, draft),
-        openIncident: (draft: unknown) => openRepairIncident(userId, question, draft),
       } : {}),
     });
     return NextResponse.json({

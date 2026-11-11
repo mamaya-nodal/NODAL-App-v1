@@ -441,6 +441,21 @@
   background: color-mix(in srgb, var(--paper) 50%, var(--surface));
 }
 
+.humanHelpButton {
+  margin: 0 12px 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: .67rem;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.humanHelpButton:disabled { cursor: default; opacity: .45; }
+
 .composer input {
   min-width: 0;
   height: 42px;

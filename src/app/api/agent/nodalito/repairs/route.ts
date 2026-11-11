@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const result = await access.supabase.rpc(body.operation === "revert" ? "revert_nodalito_repair" : "apply_nodalito_repair", { target_plan_id: body.planId });
     if (result.error) return NextResponse.json({ message: "No se aplicó la corrección. Los datos cambiaron o necesitan revisión; prepará nuevamente el diagnóstico." }, { status: 409 });
     if (result.data?.status === "needs_review") return NextResponse.json({ message: result.data.message }, { status: 409 });
-    return NextResponse.json({ receipt: result.data, message: body.operation === "revert" ? "Corrección revertida; la auditoría se conserva." : "Corrección aplicada y registrada para auditoría de Admin Master." });
+    return NextResponse.json({ receipt: result.data, message: body.operation === "revert" ? "Corrección revertida; la auditoría se conserva." : "Modificación realizada exitosamente y notificada al equipo de NODAL." });
   }
   if (body.operation !== "prepare") return NextResponse.json({ message: "Operación inválida." }, { status: 400 });
   try {

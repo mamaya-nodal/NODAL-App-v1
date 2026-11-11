@@ -83,7 +83,7 @@ export async function prepareRepair(db: SupabaseClient, input: unknown): Promise
   if (result.error || typeof result.data !== "string") throw new Error("No pude preparar la corrección. Necesita revisión y no se modificó ningún dato.");
   const preview = await db.rpc("get_nodalito_repair", { target_plan_id: result.data });
   if (preview.error || preview.data?.status !== "ready" || !Array.isArray(preview.data?.simulation)) {
-    throw new Error("La simulación no permitió validar esta corrección. No cambié registros contables; el caso quedó en revisión de Admin Master.");
+    throw new Error("No pude validar esta corrección. No cambié registros contables.");
   }
   const details = [...repairSummary(draft.parameters), ...repairChanges(preview.data.simulation)];
   const accountIds = Array.isArray(draft.parameters.account_ids) ? draft.parameters.account_ids : typeof draft.parameters.account_id === "string" ? [draft.parameters.account_id] : [];
@@ -96,7 +96,7 @@ export async function prepareRepair(db: SupabaseClient, input: unknown): Promise
     if (typeof preview.data.walletName !== "string") throw new Error("No pude identificar la billetera.");
     details.unshift(`Billetera: ${preview.data.walletName}`);
   }
-  details.push("La simulación contable pasó. El cambio quedará registrado para revisión de Admin Master.");
+  details.push("Al confirmar, la modificación se aplicará y quedará notificada al equipo de NODAL.");
   return { planId: result.data, label: repairActions[draft.action].label, parameters: draft.parameters, details };
 }
 
@@ -116,4 +116,36 @@ export async function openRepairIncident(ownerId: string, question: string, inpu
   }).select("id").single();
   if (error || !data) throw new Error("incident_save_failed");
   return { caseId: data.id, state: "needs_review", message: "La investigación quedó registrada en la bandeja privada de Admin Master. Todavía no se modificó la contabilidad." };
+}
+
+export async function openEscalationCase(
+  ownerId: string,
+  question: string,
+  escalation: Readonly<{ kind: "human_help" | "suspected_manipulation"; priority: "critical" | "normal"; reason: string }>,
+) {
+  const db = createServiceClient();
+  const category = escalation.kind === "human_help" ? "human_help" : "risk:manipulation";
+  const sourceQuestion = question.slice(0, 1000);
+  const { data: existing, error: lookupError } = await db.from("nodal_agent_cases")
+    .select("id")
+    .eq("subject_user_id", ownerId)
+    .eq("category", category)
+    .eq("source_question", sourceQuestion)
+    .in("status", ["open", "investigating"])
+    .limit(1);
+  if (lookupError) throw lookupError;
+  if (existing?.length) return existing[0].id as string;
+  const { data, error } = await db.from("nodal_agent_cases").insert({
+    reporter_user_id: ownerId,
+    subject_user_id: ownerId,
+    status: "open",
+    priority: escalation.priority,
+    category,
+    title: escalation.kind === "human_help" ? "Solicitud de asistencia de NODAL" : "Solicitud contable sensible",
+    description: escalation.reason,
+    source_question: sourceQuestion,
+    evidence: { source: "nodalito", verified: false, escalationKind: escalation.kind },
+  }).select("id").single();
+  if (error || !data) throw new Error("escalation_save_failed");
+  return data.id as string;
 }

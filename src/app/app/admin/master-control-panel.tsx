@@ -278,11 +278,12 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
   const operationalDetail = data.operationalDetailByUser[person.id] ?? {
     accounts: [], alerts: [], floatingInCents: 0, lastOperatedOn: null, performance: [],
   };
+  const nodalitoModifications = data.nodalitoModificationsByUser[person.id] ?? [];
   const managedDesk = data.overview.desks.find((desk) => desk.terms.active && desk.terms.manager_id === person.id);
   const identifier = data.identifiersByUser[person.id] ?? "ID pendiente";
   const initialRole: MasterUserRole = profile?.access_role === "admin" ? "admin_master" : managedDesk ? "admin" : "user";
   const [role, setRole] = useState<MasterUserRole>(initialRole);
-  const [activeSection, setActiveSection] = useState<"administration" | "operation" | "summary">("summary");
+  const [activeSection, setActiveSection] = useState<"administration" | "nodalito" | "operation" | "summary">("summary");
   const [accessState, setAccessState] = useState(person.access);
   const [displayName, setDisplayName] = useState(profile?.display_name || person.name);
   const [userPercent, setUserPercent] = useState(String(person.distribution.user_bps / 100));
@@ -410,6 +411,7 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
     <nav aria-label="Secciones de la ficha" className="master-user-tabs">
       <button aria-current={activeSection === "summary" ? "page" : undefined} onClick={() => setActiveSection("summary")} type="button">Resumen</button>
       <button aria-current={activeSection === "operation" ? "page" : undefined} onClick={() => setActiveSection("operation")} type="button">Operación{operationalDetail.alerts.length ? <b>{operationalDetail.alerts.length}</b> : null}</button>
+      <button aria-current={activeSection === "nodalito" ? "page" : undefined} onClick={() => setActiveSection("nodalito")} type="button">Modificaciones{nodalitoModifications.length ? <span>{nodalitoModifications.length}</span> : null}</button>
       <button aria-current={activeSection === "administration" ? "page" : undefined} onClick={() => setActiveSection("administration")} type="button">Administración</button>
     </nav>
     {activeSection === "summary" ? <div className="master-user-section">
@@ -435,6 +437,16 @@ function MasterUserModal({ data, onClose, person }: Readonly<{ data: MasterContr
       </section>
       <section className={`master-user-overview-card master-alerts-card ${operationalDetail.alerts.length ? "has-alerts" : ""}`}><div className="master-user-section-heading"><div><span>CONCILIACIÓN</span><h3>Alertas pendientes</h3></div><strong>{operationalDetail.alerts.length}</strong></div>
         {operationalDetail.alerts.length ? <div className="master-alert-list">{operationalDetail.alerts.map((alert) => <article key={alert.id}><div><strong>{alert.reason}</strong><small>{dateTimeLabel(alert.occurredAt)}</small></div><b>{money(alert.amount)}</b></article>)}</div> : <p className="master-operation-ok">Sin alertas de conciliación pendientes.</p>}
+      </section>
+    </div> : null}
+    {activeSection === "nodalito" ? <div className="master-user-section">
+      <section className="master-user-overview-card"><div className="master-user-section-heading"><div><span>NODALITO</span><h3>Modificaciones contables del usuario</h3></div><strong>{nodalitoModifications.length}</strong></div>
+        {nodalitoModifications.length ? <div className="master-nodalito-history">{nodalitoModifications.map((modification) => <article key={modification.id}>
+          <header><div><strong>{modification.title}</strong><time>{dateTimeLabel(modification.createdAt)}</time></div><span data-reviewed={modification.reviewedAt ? "true" : "false"}>{modification.reviewedAt ? "Auditada" : "Notificada"}</span></header>
+          <p>{modification.description}</p>
+          {modification.details.length ? <details><summary>Ver cambios realizados</summary>{modification.details.map((detail, index) => <p key={index}>{detail}</p>)}</details> : null}
+          {modification.resolution ? <small>{modification.resolution}</small> : null}
+        </article>)}</div> : <p className="desk-empty">Este usuario todavía no realizó modificaciones con Nodalito.</p>}
       </section>
     </div> : null}
     {activeSection === "administration" ? <>

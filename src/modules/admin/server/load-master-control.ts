@@ -13,6 +13,7 @@ import { calculateDeskOverview } from "../domain/desks";
 import { happenedAfterOpening, openingCutoffTimestamp } from "@/modules/ninja/domain/opening-cutoff";
 import { requireNodalAdmin } from "./admin-access";
 import { loadDesks } from "./load-desks";
+import { repairChanges } from "@/modules/agent/domain/repair-summary";
 
 type UnitRow = Readonly<{
   agreement_bps: number;
@@ -65,6 +66,17 @@ export type MasterUserOperationalDetail = Readonly<{
   performance: readonly Readonly<{ amount: number; label: string }>[];
 }>;
 
+export type MasterNodalitoModification = Readonly<{
+  createdAt: string;
+  description: string;
+  details: readonly string[];
+  id: string;
+  resolution: string | null;
+  reviewedAt: string | null;
+  status: string;
+  title: string;
+}>;
+
 export async function loadMasterControl(
   requestedMonth?: string,
 ) {
@@ -75,7 +87,7 @@ export async function loadMasterControl(
   const { data: claimsData } = await adminDb.auth.getClaims();
   const db = createServiceClient();
   const userIds = deskData.overview.people.map((person) => person.id);
-  const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult, openingRevisionRequestsResult] = await Promise.all([
+  const [unitsResult, profilesResult, identifiersResult, workspacesResult, connectorsResult, openingRevisionRequestsResult, nodalitoModificationsResult] = await Promise.all([
     db.from("nodal_units").select("id,ordinal,name,code,root_desk_id,responsible_name,responsible_email,agreement_bps,included_in_master_reporting").order("ordinal"),
     db.from("nodal_users")
       .select("id,email,contact_email,display_name,access_state,access_role,created_at,identities_enabled,configuration_enabled,last_app_seen_at")
@@ -92,9 +104,34 @@ export async function loadMasterControl(
     db.from("period_opening_revision_requests")
       .select("id,requested_by,requested_at")
       .eq("status", "pending").order("requested_at", { ascending: true }),
+    db.from("nodal_agent_cases")
+      .select("id,subject_user_id,status,title,description,evidence,resolution_note,reviewed_at,created_at")
+      .eq("category", "nodalito_repair")
+      .in("subject_user_id", userIds)
+      .order("created_at", { ascending: false })
+      .limit(1000),
   ]);
-  if (unitsResult.error || profilesResult.error || identifiersResult.error || workspacesResult.error || connectorsResult.error || openingRevisionRequestsResult.error) {
+  if (unitsResult.error || profilesResult.error || identifiersResult.error || workspacesResult.error || connectorsResult.error || openingRevisionRequestsResult.error || nodalitoModificationsResult.error) {
     throw new Error("No se pudo cargar el panel de control Admin Master.");
+  }
+
+  const nodalitoModificationsByUser: Record<string, MasterNodalitoModification[]> = {};
+  for (const modification of nodalitoModificationsResult.data ?? []) {
+    nodalitoModificationsByUser[modification.subject_user_id] = [
+      ...(nodalitoModificationsByUser[modification.subject_user_id] ?? []),
+      {
+        createdAt: modification.created_at,
+        description: modification.description,
+        details: repairChanges(modification.evidence && typeof modification.evidence === "object" && !Array.isArray(modification.evidence)
+          ? (modification.evidence as Record<string, unknown>).changes
+          : []),
+        id: modification.id,
+        resolution: modification.resolution_note,
+        reviewedAt: modification.reviewed_at,
+        status: modification.status,
+        title: modification.title,
+      },
+    ];
   }
 
   const workspaceRows = workspacesResult.data ?? [];
@@ -439,6 +476,7 @@ export async function loadMasterControl(
     historicCommission,
     historicalGrossByUser,
     operationalDetailByUser,
+    nodalitoModificationsByUser,
     traderLiveStatusByUser,
     performanceHistory: reportingPeriodOverviews
       .slice()
