@@ -21,8 +21,9 @@ export async function GET() {
   const service = createServiceClient();
   let query = service.from("nodal_agent_cases")
     .select("id,status,priority,category,title,description,evidence,source_question,resolution_note,reviewed_at,created_at,updated_at,subject_user_id,nodal_users!nodal_agent_cases_subject_user_id_fkey(display_name,email)")
-    .order("created_at", { ascending: false }).limit(100);
+    .order("created_at", { ascending: false }).limit(access.status === "allowed" ? 1000 : 100);
   if (access.status !== "allowed") query = query.eq("subject_user_id", userId);
+  else query = query.in("status", ["open", "investigating"]);
   const { data, error } = await query;
   if (error) return NextResponse.json({ message: "No pude leer los casos." }, { status: 500 });
   const visibleCases = (data ?? []).filter((item) => item.category !== "scheduled_audit" || item.status === "open" || item.status === "investigating");
@@ -32,13 +33,20 @@ export async function GET() {
     return { ...item, evidence: { planId: evidence.planId, parameters: evidence.parameters, reversal: evidence.reversal, changes: repairChanges(evidence.changes) } };
   });
   let latestAudit = null;
+  let users: Array<{ access_state: string; display_name: string | null; email: string; id: string }> = [];
   if (access.status === "allowed") {
     const audit = await service.from("nodalito_audit_runs")
       .select("id,started_at,finished_at,status,target_count,reviewed_count,failed_count,critical_count,attention_count,informational_count,opened_case_count")
       .order("started_at", { ascending: false }).limit(1).maybeSingle();
     if (!audit.error) latestAudit = audit.data;
+    const profiles = await service.from("nodal_users")
+      .select("id,display_name,email,access_state")
+      .order("display_name", { ascending: true })
+      .order("email", { ascending: true });
+    if (profiles.error) return NextResponse.json({ message: "No pude leer los usuarios." }, { status: 500 });
+    users = profiles.data ?? [];
   }
-  return NextResponse.json({ audit: latestAudit, cases, master: access.status === "allowed" });
+  return NextResponse.json({ audit: latestAudit, cases, master: access.status === "allowed", users });
 }
 
 export async function POST(request: Request) {

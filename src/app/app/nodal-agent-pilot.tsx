@@ -31,9 +31,13 @@ type AgentCase = Readonly<{
   priority: string;
   resolution_note: string | null;
   reviewed_at?: string | null;
+  source_question?: string | null;
   status: "open" | "investigating" | "resolved" | "dismissed";
+  subject_user_id: string;
   title: string;
 }>;
+
+type CaseUser = Readonly<{ access_state: string; display_name: string | null; email: string; id: string }>;
 
 type AuditRun = Readonly<{
   attention_count: number;
@@ -92,6 +96,7 @@ export function NodalAgentPilot() {
   const [caseLoading, setCaseLoading] = useState(false);
   const [caseError, setCaseError] = useState("");
   const [cases, setCases] = useState<readonly AgentCase[]>([]);
+  const [caseUsers, setCaseUsers] = useState<readonly CaseUser[]>([]);
   const [latestAudit, setLatestAudit] = useState<AuditRun | null>(null);
   const [caseView, setCaseView] = useState(false);
   const [masterCases, setMasterCases] = useState(false);
@@ -113,8 +118,8 @@ export function NodalAgentPilot() {
       try {
         const response = await fetch("/api/agent/nodalito/cases", { cache: "no-store" });
         if (!response.ok) return;
-        const payload = await response.json() as { audit?: AuditRun | null; cases?: AgentCase[]; master?: boolean };
-        if (!cancelled) { setCases(payload.cases ?? []); setLatestAudit(payload.audit ?? null); setMasterCases(Boolean(payload.master)); }
+        const payload = await response.json() as { audit?: AuditRun | null; cases?: AgentCase[]; master?: boolean; users?: CaseUser[] };
+        if (!cancelled) { setCases(payload.cases ?? []); setCaseUsers(payload.users ?? []); setLatestAudit(payload.audit ?? null); setMasterCases(Boolean(payload.master)); }
       } catch { /* Keep the last successful snapshot; the explicit case view shows errors. */ }
     }
     void refreshCases();
@@ -185,9 +190,10 @@ export function NodalAgentPilot() {
     setCaseView(true);
     try {
       const response = await fetch("/api/agent/nodalito/cases", { cache: "no-store" });
-      const payload = await response.json() as { audit?: AuditRun | null; cases?: AgentCase[]; master?: boolean; message?: string };
+      const payload = await response.json() as { audit?: AuditRun | null; cases?: AgentCase[]; master?: boolean; message?: string; users?: CaseUser[] };
       if (!response.ok) { setCaseError(payload.message ?? "No pude cargar los casos. Volvé a intentar."); return; }
       setCases(payload.cases ?? []);
+      setCaseUsers(payload.users ?? []);
       setLatestAudit(payload.audit ?? null);
       setMasterCases(Boolean(payload.master));
     } catch {
@@ -275,6 +281,17 @@ export function NodalAgentPilot() {
     void askQuestion(text);
   }
 
+  const usersWithProblems = masterCases ? caseUsers.filter((user) => cases.some((agentCase) => agentCase.subject_user_id === user.id)).length : 0;
+
+  function groupedUserProblems(userId: string) {
+    const groups = new Map<string, AgentCase[]>();
+    for (const agentCase of cases.filter((item) => item.subject_user_id === userId)) {
+      const key = `${agentCase.category}:${agentCase.title}`;
+      groups.set(key, [...(groups.get(key) ?? []), agentCase]);
+    }
+    return [...groups.values()].sort((left, right) => right.length - left.length || left[0].title.localeCompare(right[0].title));
+  }
+
   return (
     <div className={styles.root} data-open={open ? "true" : "false"}>
       {open && rutyxExpanded ? <button aria-label="Minimizar Rutyx" className={styles.backdrop} onClick={() => setRutyxExpanded(false)} type="button" /> : null}
@@ -319,7 +336,7 @@ export function NodalAgentPilot() {
             <div aria-live="polite" className={styles.messages}>
               <div className={styles.agentSubnav}>
                 <button aria-current={!caseView ? "page" : undefined} onClick={() => setCaseView(false)} type="button">Conversación</button>
-                <button aria-current={caseView ? "page" : undefined} onClick={() => void loadCases()} type="button">Casos{masterCases && cases.some((c) => !c.reviewed_at) ? ` · ${cases.filter((c) => !c.reviewed_at).length}` : ""}</button>
+                <button aria-current={caseView ? "page" : undefined} onClick={() => void loadCases()} type="button">Casos{masterCases && usersWithProblems ? ` · ${usersWithProblems}` : ""}</button>
               </div>
               {!caseView ? <>
               {messages.map((message) => (
@@ -377,7 +394,27 @@ export function NodalAgentPilot() {
                   {caseLoading && !cases.length ? <p className={styles.thinking}>Cargando casos…</p> : null}
                   {caseError ? <p role="alert" className={styles.emptyCases}>{caseError}</p> : null}
                   {!caseLoading && !caseError && !cases.length ? <p className={styles.emptyCases}>Todavía no hay casos reportados.</p> : null}
-                  {cases.map((agentCase) => (
+                  {masterCases ? <div className={styles.userCaseDirectory}>
+                    {caseUsers.map((user) => {
+                      const problems = groupedUserProblems(user.id);
+                      const findings = problems.reduce((sum, group) => sum + group.length, 0);
+                      return <details key={user.id}>
+                        <summary><span><strong>{user.display_name || user.email}</strong><small>{user.email}{user.access_state !== "active" ? " · Desactivado" : ""}</small></span><b data-empty={findings === 0 ? "true" : "false"}>{findings ? `${problems.length} problema${problems.length === 1 ? "" : "s"} · ${findings} hallazgo${findings === 1 ? "" : "s"}` : "Sin problemas"}</b></summary>
+                        {problems.length ? <div className={styles.userProblemGroups}>{problems.map((problemCases) => <details key={`${user.id}:${problemCases[0].category}:${problemCases[0].title}`}>
+                          <summary><span><strong>{problemCases[0].title}</strong><small>{problemCases[0].description}</small></span><b>{problemCases.length}</b></summary>
+                          <div className={styles.problemFindingList}>{problemCases.map((agentCase) => <article data-priority={agentCase.priority} key={agentCase.id}>
+                            <p>{agentCase.description}</p>
+                            <small>{agentCase.source_question ?? "Hallazgo de auditoría"}</small>
+                            <time>{new Date(agentCase.created_at).toLocaleString("es-AR")}</time>
+                            <div className={styles.caseActions}>
+                              <button onClick={() => void updateCase(agentCase, "investigating")} type="button">Revisar</button>
+                              <button onClick={() => void updateCase(agentCase, "resolved")} type="button">Resolver</button>
+                            </div>
+                          </article>)}</div>
+                        </details>)}</div> : <p className={styles.emptyUserProblems}>Este usuario no tiene problemas activos.</p>}
+                      </details>;
+                    })}
+                  </div> : cases.map((agentCase) => (
                     <article data-priority={agentCase.priority} key={agentCase.id}>
                       <div><strong>{agentCase.title}</strong><span>{agentCase.status === "open" ? "Revisión requerida" : agentCase.status === "investigating" ? "En revisión" : agentCase.status === "resolved" ? "Resuelto" : "Descartado"}</span></div>
                       {masterCases && agentCase.nodal_users ? <small>{agentCase.nodal_users.display_name || agentCase.nodal_users.email}</small> : null}

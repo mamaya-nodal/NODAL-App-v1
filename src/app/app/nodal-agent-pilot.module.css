@@ -414,6 +414,24 @@
 .caseActions { display: flex; gap: 6px; }
 .caseActions button { flex: 1; padding: 6px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); font: inherit; font-size: .68rem; cursor: pointer; }
 .caseActions .revertButton { border-color: color-mix(in srgb, #ef7b68 58%, var(--line)); color: #ef7b68; }
+.userCaseDirectory { display: grid; gap: 8px; }
+.userCaseDirectory > details { border: 1px solid var(--line); border-radius: 11px; background: color-mix(in srgb, var(--paper) 55%, var(--surface)); }
+.userCaseDirectory > details > summary, .userProblemGroups > details > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px; list-style: none; cursor: pointer; }
+.userCaseDirectory summary::-webkit-details-marker { display: none; }
+.userCaseDirectory summary > span { display: grid; min-width: 0; gap: 3px; }
+.userCaseDirectory summary strong { overflow: hidden; font-size: .74rem; text-overflow: ellipsis; white-space: nowrap; }
+.userCaseDirectory summary small { overflow: hidden; color: var(--muted); font-size: .61rem; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+.userCaseDirectory summary > b { flex: 0 0 auto; padding: 4px 7px; border-radius: 999px; background: color-mix(in srgb, #ef7b68 14%, transparent); color: #ef7b68; font-size: .58rem; }
+.userCaseDirectory summary > b[data-empty="true"] { background: var(--brand-soft); color: var(--muted); }
+.userProblemGroups { display: grid; gap: 7px; padding: 0 8px 8px; }
+.userProblemGroups > details { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+.userProblemGroups > details > summary { padding: 9px; }
+.problemFindingList { display: grid; gap: 6px; padding: 0 8px 8px; }
+.problemFindingList > article { display: grid; gap: 5px; padding: 9px; border-left: 3px solid #e6b95c; border-radius: 8px; background: color-mix(in srgb, var(--paper) 62%, var(--surface)); }
+.problemFindingList > article[data-priority="critical"] { border-left-color: #ef7b68; }
+.problemFindingList p { margin: 0; font-size: .68rem; line-height: 1.35; }
+.problemFindingList small, .problemFindingList time { color: var(--muted); font-size: .59rem; }
+.emptyUserProblems { margin: 0; padding: 4px 11px 12px; color: var(--muted); font-size: .68rem; }
 .messageActions { display: flex; gap: 6px; margin-top: 8px; }
 .messageActions button { padding: 6px 8px; border-radius: 8px; font: inherit; font-size: .68rem; font-weight: 700; cursor: pointer; }
 .repairButton { border: 1px solid color-mix(in srgb, var(--brand) 68%, var(--line)); background: var(--brand-soft); color: var(--ink); }
