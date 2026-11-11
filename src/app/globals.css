@@ -7591,7 +7591,7 @@ html[data-theme="day"] .accounting-history {
 .demo-accounting-grid article > span { color: var(--app-subtle); font-size: 11px; font-weight: 700; }
 .metric-label { display: inline-flex; align-items: center; gap: 5px; }
 .metric-info { position: relative; display: inline-flex; }
-.metric-info > summary {
+.metric-info > span:first-child {
   width: 14px;
   height: 14px;
   display: inline-grid;
@@ -7605,10 +7605,8 @@ html[data-theme="day"] .accounting-history {
   font-style: normal;
   font-weight: 800;
   line-height: 1;
-  list-style: none;
 }
-.metric-info > summary::-webkit-details-marker { display: none; }
-.metric-info > span {
+.metric-info > span[role="tooltip"] {
   position: absolute;
   z-index: 30;
   top: calc(100% + 8px);
@@ -7624,9 +7622,10 @@ html[data-theme="day"] .accounting-history {
   font-weight: 650;
   line-height: 1.35;
 }
-.metric-info:not([open]) > span { display: none; }
-.metric-info:hover > span,
-.metric-info[open] > span { display: block; }
+.metric-info > span[role="tooltip"] { display: none; }
+.metric-info:hover > span[role="tooltip"],
+.metric-info:focus-visible > span[role="tooltip"] { display: block; }
+.metric-info:focus-visible > span:first-child { outline: 2px solid var(--app-accent); outline-offset: 2px; }
 .demo-account-kpis strong,
 .demo-operation-grid article > strong,
 .demo-accounting-grid article > strong {
