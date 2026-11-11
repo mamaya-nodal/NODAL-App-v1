@@ -7668,6 +7668,24 @@ html[data-theme="day"] .accounting-history {
 .demo-account-reference b { color: var(--app-border-strong); font-size: 13px; font-weight: 500; }
 .demo-account-reference em { color: var(--app-title); font-size: 10px; font-style: normal; font-weight: 720; white-space: nowrap; }
 .demo-account-identity .demo-account-connection { color: color-mix(in srgb, var(--app-accent) 58%, var(--app-subtle)); font-size: 8px; font-weight: 750; letter-spacing: .01em; }
+.demo-account-identity .demo-account-owner { font-size: 9px; font-weight: 850; }
+.identity-accent { color: var(--identity-accent) !important; }
+.identity-accent-0 { --identity-accent: #63c8ff; }
+.identity-accent-1 { --identity-accent: #ff9b6b; }
+.identity-accent-2 { --identity-accent: #d58cff; }
+.identity-accent-3 { --identity-accent: #58dda0; }
+.identity-accent-4 { --identity-accent: #f4cc5f; }
+.identity-accent-5 { --identity-accent: #ff7fac; }
+.identity-accent-6 { --identity-accent: #8fa5ff; }
+.identity-accent-7 { --identity-accent: #52d4cf; }
+html[data-theme="day"] .identity-accent-0 { --identity-accent: #1477a8; }
+html[data-theme="day"] .identity-accent-1 { --identity-accent: #a94d22; }
+html[data-theme="day"] .identity-accent-2 { --identity-accent: #7a3ca1; }
+html[data-theme="day"] .identity-accent-3 { --identity-accent: #18794d; }
+html[data-theme="day"] .identity-accent-4 { --identity-accent: #876800; }
+html[data-theme="day"] .identity-accent-5 { --identity-accent: #a63763; }
+html[data-theme="day"] .identity-accent-6 { --identity-accent: #445db4; }
+html[data-theme="day"] .identity-accent-7 { --identity-accent: #147b77; }
 .demo-stage { min-width: 72px; padding: 6px 8px; border-radius: 8px; font-size: 9px; font-weight: 850; text-align: center; }
 .demo-stage.evaluation { color: #6ecbff; background: rgb(110 203 255 / 11%); }
 .demo-stage.funded { color: #ffae59; background: rgb(255 174 89 / 11%); }
@@ -8137,6 +8155,13 @@ html[data-theme="day"] .accounting-history {
 .demo-history-day > summary { min-height: 58px; }
 .demo-history-day > summary > span { min-width: 164px; color: var(--app-title); font-size: 12px; font-weight: 800; }
 .demo-history-day > summary > small { flex: 1; color: var(--app-subtle); font-size: 10px; }
+.reconciliation-summary-context { min-width: 0; display: grid; gap: 3px; }
+.reconciliation-summary-context > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reconciliation-identity-labels { display: flex; flex-wrap: wrap; gap: 3px 8px; }
+.reconciliation-identity-labels b { font-size: 8px; font-weight: 850; line-height: 1.2; }
+.automatic-batch-card > summary .reconciliation-identity-labels { margin-top: 2px; }
+.demo-live-operation > .reconciliation-identity-labels { margin-top: -3px; }
+.demo-history-day > div p > span > .reconciliation-identity-labels { margin-top: 3px; }
 .demo-history-day > summary > strong { min-width: 85px; color: var(--app-positive); font-size: 11px; text-align: right; }
 .demo-history-day > div { padding: 0 10px 10px; }
 .demo-history-day > div p { min-height: 43px; display: grid; grid-template-columns: 1fr 110px 90px; align-items: center; gap: 12px; margin: 0; padding: 0 11px; border-radius: 9px; background: var(--app-input); }

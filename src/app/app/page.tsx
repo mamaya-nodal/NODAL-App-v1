@@ -1041,6 +1041,8 @@ async function renderPrivateAppPage({
         economicHistory,
         fundsOrigin: purchase?.funds_origin ?? null,
         id: account.id,
+        identityId: null,
+        identityName: null,
         initialBalanceInCents: ninjaBalance?.initialInCents ?? manualBalance?.initialBalanceInCents ?? null,
         minimumNetLiquidationInCents: ninjaBalance?.minimumNetLiquidationInCents ?? null,
         ninjaConnectionName: ninjaConnectionNamesByAccountId.get(account.id) ?? null,
@@ -1172,6 +1174,17 @@ async function renderPrivateAppPage({
     const identityByAccountId = new Map(
       (identityAssignmentRows ?? []).map((assignment) => [assignment.account_id, assignment.identity_id]),
     );
+    const identityNameById = new Map(
+      (identityRows ?? []).map((identity) => [identity.id, `${identity.first_name} ${identity.last_name}`.trim()]),
+    );
+    accountHistory = accountHistory.map((account) => {
+      const identityId = identityByAccountId.get(account.id) ?? null;
+      return {
+        ...account,
+        identityId,
+        identityName: identityId ? identityNameById.get(identityId) ?? "Identidad" : null,
+      };
+    });
     identityAccounts = accountHistory.map((account) => ({
       balanceInCents: account.currentCashValueInCents,
       companyCode: companies.find((company) => company.id === account.companyId)?.code ?? account.companyName,
@@ -1611,13 +1624,18 @@ async function renderPrivateAppPage({
             incomingNinjaBalance={incomingNinjaBalance}
             manualCoverageAccounts={accountOptions
               .filter((account) => account.state !== "closed")
-              .map((account) => ({
-                companyName: account.companyName,
-                connectionName: ninjaConnectionNamesByAccountId.get(account.id) ?? null,
-                id: account.id,
-                label: account.externalName ?? `Cuenta ${account.referenceNumber}`,
-                state: account.state,
-              }))}
+              .map((account) => {
+                const accountWithIdentity = accountHistory.find((candidate) => candidate.id === account.id);
+                return {
+                  companyName: account.companyName,
+                  connectionName: ninjaConnectionNamesByAccountId.get(account.id) ?? null,
+                  id: account.id,
+                  identityId: accountWithIdentity?.identityId ?? null,
+                  identityName: accountWithIdentity?.identityName ?? null,
+                  label: account.externalName ?? `Cuenta ${account.referenceNumber}`,
+                  state: account.state,
+                };
+              })}
             ninjaBrokerBalanceHistory={ninjaBrokerBalanceHistory}
             initialLiveNinjaBalance={liveNinjaBrokerBalance}
             ninjaBrokerSourceNotice={ninjaBrokerSourceNotice}

@@ -20,6 +20,7 @@ import {
   type AccountOperationalState,
   type ApprovedAccountPayout,
 } from "@/modules/operations/domain/account-progress";
+import { identityAccentClass } from "@/modules/identities/domain/identity-accent";
 
 import type { RegisterAccount } from "./operation-register";
 import { deleteRegisteredAccount, updateRegisteredAccountPurchase } from "./purchase-actions";
@@ -50,6 +51,8 @@ export type AccountOverviewAccount = RegisterAccount & Readonly<{
   baselinePhase?: AccountPhase | null;
   currentOperationalState: AccountOperationalState | null;
   initialBalanceInCents: number | null;
+  identityId: string | null;
+  identityName: string | null;
   minimumNetLiquidationInCents: number | null;
   ninjaConnectionName: string | null;
   periodLabel: string;
@@ -233,6 +236,9 @@ function AccountCard({ item, wallets }: Readonly<{
             <b aria-hidden="true">|</b>
             <em>{accountProgressLabel(progress)}</em>
           </span>
+          {account.identityId && account.identityName && (
+            <small className={`demo-account-owner ${identityAccentClass(account.identityId)}`}>{account.identityName}</small>
+          )}
           {account.ninjaConnectionName && <small className="demo-account-connection">{account.ninjaConnectionName}</small>}
         </span>
         <span className={`demo-stage ${operationalState.toLowerCase()}`}>{operationalState}</span>

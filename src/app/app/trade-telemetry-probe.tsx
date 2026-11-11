@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { buildNinjaOperationProbe, type NinjaTelemetryRow } from "@/modules/ninja/domain/operation-probe";
+import { identityAccentClass } from "@/modules/identities/domain/identity-accent";
 import {
   currentAndPreviousMonthKeys,
   reconciliationPairLabel,
@@ -79,6 +80,8 @@ export type RecoveredReconciliationRow = Readonly<{
   participants: readonly Readonly<{
     accountName: string;
     allocatedResultInCents: number;
+    identityId: string | null;
+    identityName: string | null;
   }>[];
   phase: string | null;
   resultInCents: number;
@@ -88,9 +91,44 @@ export type ManualCoverageAccount = Readonly<{
   companyName: string;
   connectionName: string | null;
   id: string;
+  identityId: string | null;
+  identityName: string | null;
   label: string;
   state: "closed" | "live" | "virgin";
 }>;
+
+type IdentityLabel = Readonly<{
+  id: string;
+  name: string;
+}>;
+
+function identityForAccount(
+  accounts: readonly ManualCoverageAccount[],
+  accountId: string | null,
+  accountName: string,
+): IdentityLabel | null {
+  const account = accountId !== null
+    ? accounts.find((candidate) => candidate.id === accountId)
+    : accounts.find((candidate) => candidate.label === accountName);
+  return account?.identityId && account.identityName
+    ? { id: account.identityId, name: account.identityName }
+    : null;
+}
+
+function uniqueIdentities(identities: readonly (IdentityLabel | null)[]) {
+  return [...new Map(identities.flatMap((identity) => identity ? [[identity.id, identity] as const] : [])).values()];
+}
+
+function IdentityLabels({ identities }: Readonly<{ identities: readonly IdentityLabel[] }>) {
+  if (identities.length === 0) return null;
+  return (
+    <span className="reconciliation-identity-labels">
+      {identities.map((identity) => (
+        <b className={identityAccentClass(identity.id)} key={identity.id}>{identity.name}</b>
+      ))}
+    </span>
+  );
+}
 
 const labels = {
   open: "En operación",
@@ -391,38 +429,67 @@ export function TradeTelemetryProbe({
           <i aria-hidden="true" />
         </summary>
         <div>
-          {monthBatches.map((batch, index) => (
+          {monthBatches.map((batch, index) => {
+            const identities = uniqueIdentities(batch.prop_accounts.map((account) =>
+              identityForAccount(manualAccounts, account.account_id, account.account_name),
+            ));
+            return (
             <details className="demo-history-day" key={batch.id} open={isCurrentMonth && index === 0}>
               <summary>
                 <span>{formatHistoryMoment(batch.opened_at, batch.operated_on)}</span>
-                <small>{reconciliationPairLabel(batch.broker?.account_name ?? null, batch.prop_accounts.map((account) => account.account_name))}</small>
+                <small className="reconciliation-summary-context">
+                  <span>{reconciliationPairLabel(batch.broker?.account_name ?? null, batch.prop_accounts.map((account) => account.account_name))}</span>
+                  <IdentityLabels identities={identities} />
+                </small>
                 <strong className={(moneyNumber(batch.broker_result_cents) ?? 0) < 0 ? "negative" : ""}>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
                 <i aria-hidden="true" />
               </summary>
               <div>
                 <p><span>{batch.company_name ?? "Sin empresa"} · {phaseLabel(batch.phase)}</span><small>{batch.broker ? reconciliationPosition(batch.broker.direction, batch.broker.quantity, batch.broker.instruments) : "Sin cobertura identificada"}</small><strong>{duration(batch.opened_at, batch.settled_at)}</strong></p>
-                {batch.prop_accounts.map((account) => (
-                  <p key={account.session_id ?? account.account_id ?? account.account_name}><span>{account.account_name}</span><small>{reconciliationPosition(account.direction, account.quantity, account.instruments)}</small><strong>{formatMoney(moneyNumber(account.result))}</strong></p>
-                ))}
+                {batch.prop_accounts.map((account) => {
+                  const identity = identityForAccount(manualAccounts, account.account_id, account.account_name);
+                  return (
+                    <p key={account.session_id ?? account.account_id ?? account.account_name}>
+                      <span>{account.account_name}{identity && <IdentityLabels identities={[identity]} />}</span>
+                      <small>{reconciliationPosition(account.direction, account.quantity, account.instruments)}</small>
+                      <strong>{formatMoney(moneyNumber(account.result))}</strong>
+                    </p>
+                  );
+                })}
               </div>
             </details>
-          ))}
-          {monthRecovered.map((row, index) => (
+            );
+          })}
+          {monthRecovered.map((row, index) => {
+            const identities = uniqueIdentities(row.participants.map((participant) =>
+              participant.identityId && participant.identityName
+                ? { id: participant.identityId, name: participant.identityName }
+                : null,
+            ));
+            return (
             <details className="demo-history-day" key={row.controlId} open={isCurrentMonth && monthBatches.length === 0 && index === 0}>
               <summary>
                 <span>{formatHistoryMoment(`${row.operatedOn}T12:00:00-03:00`, row.operatedOn)}</span>
-                <small>{row.participants.map((participant) => participant.accountName).join(" + ")}</small>
+                <small className="reconciliation-summary-context">
+                  <span>{row.participants.map((participant) => participant.accountName).join(" + ")}</span>
+                  <IdentityLabels identities={identities} />
+                </small>
                 <strong className={row.resultInCents < 0 ? "negative" : ""}>{formatMoney(row.resultInCents / 100)}</strong>
                 <i aria-hidden="true" />
               </summary>
               <div>
                 <p><span>Conciliación recuperada · {phaseLabel(row.phase)}</span><small>Sin telemetría de ejecución disponible</small><strong>{row.participants.length} cuentas</strong></p>
                 {row.participants.map((participant) => (
-                  <p key={`${row.controlId}-${participant.accountName}`}><span>{participant.accountName}</span><small>Cobertura asignada</small><strong>{formatMoney(participant.allocatedResultInCents / 100)}</strong></p>
+                  <p key={`${row.controlId}-${participant.accountName}`}>
+                    <span>{participant.accountName}{participant.identityId && participant.identityName && <IdentityLabels identities={[{ id: participant.identityId, name: participant.identityName }]} />}</span>
+                    <small>Cobertura asignada</small>
+                    <strong>{formatMoney(participant.allocatedResultInCents / 100)}</strong>
+                  </p>
                 ))}
               </div>
             </details>
-          ))}
+            );
+          })}
         </div>
       </details>
     );
@@ -508,12 +575,16 @@ export function TradeTelemetryProbe({
                 const title = batch.company_name ?? (batch.accounting_status === "committed" && batch.prop_accounts.length === 0
                   ? "Trade sin cobertura"
                   : "Cobertura sin asignar");
+                const identities = uniqueIdentities(batch.prop_accounts.map((account) =>
+                  identityForAccount(manualAccounts, account.account_id, account.account_name),
+                ));
                 return (
                   <details className={`automatic-batch-card${batch.accounting_status === "blocked" ? " blocked" : ""}`} key={batch.id}>
                     <summary>
                       <div>
                         <strong>{title}</strong>
                         <span>{batch.prop_accounts.length} {batch.prop_accounts.length === 1 ? "cuenta" : "cuentas"}{batch.phase ? ` · ${phaseLabel(batch.phase)}` : ""}</span>
+                        <IdentityLabels identities={identities} />
                       </div>
                       <div>
                         <strong className={(moneyNumber(batch.broker_result_cents) ?? 0) < 0 ? "negative" : ""}>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
@@ -614,6 +685,7 @@ export function TradeTelemetryProbe({
               <div className="demo-live-operations">
                 {group.probes.map((probe) => {
                   const positions = latestOpenPosition(currentEvents, probe.connectionName, probe.accountName);
+                  const identity = identityForAccount(manualAccounts, null, probe.accountName);
                   const operation = currentOperations.find((candidate) =>
                     candidate.connection_name === probe.connectionName && candidate.account_name === probe.accountName && candidate.status !== "closed",
                   );
@@ -621,6 +693,7 @@ export function TradeTelemetryProbe({
                     <div><span className="demo-live-dot" />{labels[probe.status]}</div>
                     <h3>{probe.accountName}</h3>
                     <p>{probe.connectionName}</p>
+                    {identity && <IdentityLabels identities={[identity]} />}
                     <dl>
                       <div><dt>Posición</dt><dd>{positions.length ? positions.map((position) => `${position.direction} · ${position.quantity} ${position.instrument}`).join(" + ") : "Flat"}</dd></div>
                       <div><dt>Net liquidation</dt><dd>{formatMoney(probe.netLiquidation)}</dd></div>

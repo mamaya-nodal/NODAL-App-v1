@@ -695,9 +695,12 @@ export function DailyControlPreview({
             operatedOn: row.operatedOn ?? currentOperationalDay(),
             participants: row.participants.map((participant) => {
               const account = accounts.find((candidate) => candidate.id === participant.accountId);
+              const coverageAccount = manualCoverageAccounts.find((candidate) => candidate.id === participant.accountId);
               return {
                 accountName: account?.externalName ?? `Cuenta ${participant.accountReference}`,
                 allocatedResultInCents: participant.amountInCents,
+                identityId: coverageAccount?.identityId ?? null,
+                identityName: coverageAccount?.identityName ?? null,
               };
             }),
             phase: row.phase ?? null,
