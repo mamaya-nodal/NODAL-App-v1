@@ -61,6 +61,8 @@ type PreviewRow = {
     accountId: string;
     accountReference: number;
     amountInCents: number;
+    identityId?: string | null;
+    identityName?: string | null;
     role: "leader" | "replica";
   }>;
   phase?: string | null;
@@ -704,11 +706,17 @@ export function DailyControlPreview({
             participants: row.participants.map((participant) => {
               const account = accounts.find((candidate) => candidate.id === participant.accountId);
               const coverageAccount = manualCoverageAccounts.find((candidate) => candidate.id === participant.accountId);
+              const identityId = participant.identityId === undefined
+                ? coverageAccount?.identityId ?? null
+                : participant.identityId;
+              const identityName = participant.identityName === undefined
+                ? coverageAccount?.identityName ?? null
+                : participant.identityName;
               return {
                 accountName: account?.externalName ?? `Cuenta ${participant.accountReference}`,
                 allocatedResultInCents: participant.amountInCents,
-                identityId: coverageAccount?.identityId ?? null,
-                identityName: coverageAccount?.identityName ?? null,
+                identityId,
+                identityName,
               };
             }),
             phase: row.phase ?? null,

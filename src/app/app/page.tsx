@@ -21,6 +21,7 @@ import {
   type IdentitySummary,
   type ManagedIdentity,
 } from "@/modules/identities/domain/identity-summary";
+import { identityAssignmentOnOperationalDay } from "@/modules/identities/domain/historical-assignment";
 import { decideAccess } from "@/modules/access/domain/access-decision";
 import {
   canOpenDeskAdmin,
@@ -1166,9 +1167,8 @@ async function renderPrivateAppPage({
         .order("first_name"),
       supabase
         .from("identity_account_assignments")
-        .select("identity_id,account_id")
-        .eq("workspace_id", selection.workspace.id)
-        .is("unassigned_at", null),
+        .select("identity_id,account_id,assigned_at,unassigned_at")
+        .eq("workspace_id", selection.workspace.id),
       supabase
         .from("identity_connector_installations")
         .select("identity_id,status,expires_at,sent_at,created_at")
@@ -1182,11 +1182,43 @@ async function renderPrivateAppPage({
     ]).then(requireSuccessfulReads);
     identitySignalStates = Object.fromEntries((identitySignalRows ?? []).map((row) => [row.identity_id, row.is_enabled]));
     const identityByAccountId = new Map(
-      (identityAssignmentRows ?? []).map((assignment) => [assignment.account_id, assignment.identity_id]),
+      (identityAssignmentRows ?? [])
+        .filter((assignment) => assignment.unassigned_at === null)
+        .map((assignment) => [assignment.account_id, assignment.identity_id]),
     );
     const identityNameById = new Map(
       (identityRows ?? []).map((identity) => [identity.id, `${identity.first_name} ${identity.last_name}`.trim()]),
     );
+    const historicalIdentityAssignmentsByAccountId = new Map<string, Array<{
+      assignedAt: string;
+      identityId: string;
+      unassignedAt: string | null;
+    }>>();
+    for (const assignment of identityAssignmentRows ?? []) {
+      const assignments = historicalIdentityAssignmentsByAccountId.get(assignment.account_id) ?? [];
+      assignments.push({
+        assignedAt: assignment.assigned_at,
+        identityId: assignment.identity_id,
+        unassignedAt: assignment.unassigned_at,
+      });
+      historicalIdentityAssignmentsByAccountId.set(assignment.account_id, assignments);
+    }
+    dailyControls = dailyControls.map((control) => ({
+      ...control,
+      participants: control.participants.map((participant) => {
+        const assignment = identityAssignmentOnOperationalDay(
+          historicalIdentityAssignmentsByAccountId.get(participant.accountId) ?? [],
+          control.operatedOn,
+        );
+        return {
+          ...participant,
+          identityId: assignment?.identityId ?? null,
+          identityName: assignment
+            ? identityNameById.get(assignment.identityId) ?? "Identidad"
+            : null,
+        };
+      }),
+    }));
     accountHistory = accountHistory.map((account) => {
       const identityId = identityByAccountId.get(account.id) ?? null;
       return {
