@@ -18,6 +18,19 @@ export type AutomaticOperationBatch = Readonly<{
 // El copiador puede informar la apertura prop algunos segundos después que la
 // cobertura aun cuando pertenecen al mismo disparo operativo.
 const defaultOpeningToleranceMs = 10_000;
+const defaultSettlementToleranceMs = 2_000;
+
+function temporallyAligned(
+  left: NinjaTechnicalOperation,
+  right: NinjaTechnicalOperation,
+  openingToleranceMs: number,
+) {
+  if (Math.abs(Date.parse(left.openedAt) - Date.parse(right.openedAt)) <= openingToleranceMs) {
+    return true;
+  }
+  return left.settledAt !== null && right.settledAt !== null &&
+    Math.abs(Date.parse(left.settledAt) - Date.parse(right.settledAt)) <= defaultSettlementToleranceMs;
+}
 
 function opposite(left: NinjaTechnicalOperation["direction"], right: NinjaTechnicalOperation["direction"]) {
   return (left === "Long" && right === "Short") || (left === "Short" && right === "Long");
@@ -48,7 +61,7 @@ export function countBrokerContextProps(
 ): number {
   return new Set(operations.flatMap((operation, index) =>
     operation.role === "prop" &&
-      Math.abs(Date.parse(operation.openedAt) - Date.parse(broker.openedAt)) <= openingToleranceMs &&
+      temporallyAligned(operation, broker, openingToleranceMs) &&
       opposite(operation.direction, broker.direction) &&
       compatibleSingleInstrument(operation, broker)
       ? [logicalPropKey(operation, index)]
@@ -70,7 +83,7 @@ export function correlateAutomaticOperationBatches(
       .filter(({ index, operation }) =>
         operation.role === "prop" &&
         !usedProps.has(index) &&
-        Math.abs(Date.parse(operation.openedAt) - Date.parse(broker.openedAt)) <= openingToleranceMs &&
+        temporallyAligned(operation, broker, openingToleranceMs) &&
         opposite(operation.direction, broker.direction) &&
         compatibleSingleInstrument(operation, broker),
       );

@@ -268,12 +268,40 @@ describe("automatic operation batches", () => {
     });
   });
 
-  it("does not match operations opened more than ten seconds apart", () => {
+  it("matches a delayed replica when both sides settle together", () => {
+    const prop = operation({
+      accountName: "LUCID1",
+      direction: "Long",
+      instruments: ["NQ DEC26"],
+      openedAt: "2026-09-08T14:00:51.000Z",
+      settledAt: "2026-09-08T14:03:34.982Z",
+      quantity: 1,
+      role: "prop",
+    });
+    const broker = operation({
+      accountName: "Broker principal",
+      direction: "Short",
+      instruments: ["MNQ DEC26"],
+      openedAt: "2026-09-08T14:00:01.000Z",
+      settledAt: "2026-09-08T14:03:34.625Z",
+      quantity: 1,
+      role: "broker",
+    });
+
+    expect(countBrokerContextProps([prop, broker], broker)).toBe(1);
+    expect(correlateAutomaticOperationBatches([prop, broker])[0]).toMatchObject({
+      props: [expect.objectContaining({ accountName: "LUCID1" })],
+      status: "ready",
+    });
+  });
+
+  it("does not match operations whose openings and settlements are both unrelated", () => {
     const prop = operation({
       accountName: "LUCID1",
       direction: "Long",
       instruments: ["NQ DEC26"],
       openedAt: "2026-09-08T14:00:12.000Z",
+      settledAt: "2026-09-08T14:00:31.000Z",
       quantity: 1,
       role: "prop",
     });
