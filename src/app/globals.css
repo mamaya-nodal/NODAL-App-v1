@@ -4386,6 +4386,15 @@ html[data-theme="day"] .admin-shell .admin-revoke { background: #fff0f1; color: 
 .identity-connector-row small { color: var(--app-subtle); font-size: 10px; }
 .identity-connector-product { display: flex; align-items: center; gap: 7px; }
 .identity-connector-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.identity-email-delivery-message {
+  grid-column: 1 / -1;
+  justify-self: end;
+  margin: 0;
+  color: var(--app-positive);
+  font-size: 10px;
+  font-weight: 800;
+}
+.identity-email-delivery-message.is-error { color: #ff7d72; }
 .identity-connector-actions > .primary-action { width: auto; min-height: 34px; padding: 7px 11px; border-radius: 9px; font-size: 10px; }
 .identity-installation-resend { min-height: 34px; padding: 7px 11px; border: 1px solid #a3dc78; border-radius: 9px; background: #83e936; box-shadow: 0 8px 20px rgb(131 233 54 / 16%); color: #102008; cursor: pointer; font: inherit; font-size: 10px; font-weight: 850; }
 .identity-installation-resend:hover { filter: saturate(108%) brightness(1.02); transform: translateY(-1px); }

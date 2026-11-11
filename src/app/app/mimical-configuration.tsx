@@ -60,7 +60,7 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId, reportedV
     setMessage(null);
     const result = await sendIdentityMimicalInstallation(identityId);
     if (result.ok) {
-      setMessage(result.message);
+      setMessage("Correo enviado");
     } else setError(result.message);
     setBusy(null);
   }

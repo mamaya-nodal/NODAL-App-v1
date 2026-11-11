@@ -228,6 +228,7 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
   const createFormRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<ActionResult | null>(null);
+  const [connectorMailResults, setConnectorMailResults] = useState<Readonly<Record<string, ActionResult>>>({});
   const [configurationIdentity, setConfigurationIdentity] = useState<IdentitySummary | null>(null);
   const assignedIds = new Set(accounts.filter((account) => account.currentIdentityId).map((account) => account.id));
   const unassigned = accounts.filter((account) => !assignedIds.has(account.id));
@@ -257,6 +258,29 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
       });
       if (result.ok) form.reset();
       return result;
+    });
+  }
+
+  function sendConnectorEmail(identityId: string) {
+    setConnectorMailResults((current) => {
+      const next = { ...current };
+      delete next[identityId];
+      return next;
+    });
+    startTransition(async () => {
+      try {
+        const result = await sendIdentityConnectorInstallation(identityId);
+        setConnectorMailResults((current) => ({
+          ...current,
+          [identityId]: result.ok ? { ok: true, message: "Correo enviado" } : result,
+        }));
+        if (result.ok) router.refresh();
+      } catch {
+        setConnectorMailResults((current) => ({
+          ...current,
+          [identityId]: { message: "No se pudo enviar el correo. Intentá nuevamente.", ok: false },
+        }));
+      }
     });
   }
 
@@ -360,7 +384,7 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
                     <button
                       className="identity-installation-resend"
                       disabled={pending}
-                      onClick={() => run(() => sendIdentityConnectorInstallation(identity.id))}
+                      onClick={() => sendConnectorEmail(identity.id)}
                       type="button"
                     >
                       {pending ? "Enviando…" : connector ? "Enviar actualización" : installationAvailable ? "Reenviar instalación" : "Enviar instalación"}
@@ -373,6 +397,14 @@ export function IdentitiesWorkspace({ accounts, configurationEnabled, connectors
                     targetIdentityId={identity.id}
                   /> : null}
                 </div>
+                {connectorMailResults[identity.id] ? (
+                  <p
+                    aria-live="polite"
+                    className={`identity-email-delivery-message${connectorMailResults[identity.id].ok ? "" : " is-error"}`}
+                  >
+                    {connectorMailResults[identity.id].message}
+                  </p>
+                ) : null}
               </div>
 
               <div className="identity-signal-row">
