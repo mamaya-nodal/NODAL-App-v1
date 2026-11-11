@@ -375,6 +375,59 @@ export function TradeTelemetryProbe({
     otherActive.length > 0 ? { label: "Otras cuentas", probes: otherActive } : null,
   ].filter((group): group is { label: string; probes: typeof activeProbes } => group !== null);
 
+  function renderReconciliationMonth(month: string, isCurrentMonth: boolean) {
+    const monthBatches = reconciliationMonths.get(month) ?? [];
+    const monthRecovered = recoveredReconciliationMonths.get(month) ?? [];
+    return (
+      <details
+        className={`demo-period-history operations-disclosure-card ${isCurrentMonth ? "is-current" : "is-archived"}`}
+        key={month}
+        open={isCurrentMonth || undefined}
+      >
+        <summary>
+          <span>{monthLabel(`${month}-01T12:00:00Z`)}</span>
+          <small>{monthBatches.length + monthRecovered.length} conciliaciones</small>
+          <strong>{formatMoney((monthBatches.reduce((total, batch) => total + (moneyNumber(batch.broker_result_cents) ?? 0), 0) + monthRecovered.reduce((total, row) => total + row.resultInCents, 0)) / 100)}</strong>
+          <i aria-hidden="true" />
+        </summary>
+        <div>
+          {monthBatches.map((batch, index) => (
+            <details className="demo-history-day" key={batch.id} open={isCurrentMonth && index === 0}>
+              <summary>
+                <span>{formatHistoryMoment(batch.opened_at, batch.operated_on)}</span>
+                <small>{reconciliationPairLabel(batch.broker?.account_name ?? null, batch.prop_accounts.map((account) => account.account_name))}</small>
+                <strong className={(moneyNumber(batch.broker_result_cents) ?? 0) < 0 ? "negative" : ""}>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
+                <i aria-hidden="true" />
+              </summary>
+              <div>
+                <p><span>{batch.company_name ?? "Sin empresa"} · {phaseLabel(batch.phase)}</span><small>{batch.broker ? reconciliationPosition(batch.broker.direction, batch.broker.quantity, batch.broker.instruments) : "Sin cobertura identificada"}</small><strong>{duration(batch.opened_at, batch.settled_at)}</strong></p>
+                {batch.prop_accounts.map((account) => (
+                  <p key={account.session_id ?? account.account_id ?? account.account_name}><span>{account.account_name}</span><small>{reconciliationPosition(account.direction, account.quantity, account.instruments)}</small><strong>{formatMoney(moneyNumber(account.result))}</strong></p>
+                ))}
+              </div>
+            </details>
+          ))}
+          {monthRecovered.map((row, index) => (
+            <details className="demo-history-day" key={row.controlId} open={isCurrentMonth && monthBatches.length === 0 && index === 0}>
+              <summary>
+                <span>{formatHistoryMoment(`${row.operatedOn}T12:00:00-03:00`, row.operatedOn)}</span>
+                <small>{row.participants.map((participant) => participant.accountName).join(" + ")}</small>
+                <strong className={row.resultInCents < 0 ? "negative" : ""}>{formatMoney(row.resultInCents / 100)}</strong>
+                <i aria-hidden="true" />
+              </summary>
+              <div>
+                <p><span>Conciliación recuperada · {phaseLabel(row.phase)}</span><small>Sin telemetría de ejecución disponible</small><strong>{row.participants.length} cuentas</strong></p>
+                {row.participants.map((participant) => (
+                  <p key={`${row.controlId}-${participant.accountName}`}><span>{participant.accountName}</span><small>Cobertura asignada</small><strong>{formatMoney(participant.allocatedResultInCents / 100)}</strong></p>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
+      </details>
+    );
+  }
+
   useEffect(() => {
     let active = true;
     let running = false;
@@ -585,59 +638,17 @@ export function TradeTelemetryProbe({
       {reconciliationMonthKeys.length > 0 && (
         <div className="demo-history real-operation-history">
           <div className="demo-group-title"><h3>Conciliaciones</h3><span>{reconciliationMonthKeys.reduce((total, month) => total + (reconciliationMonths.get(month)?.length ?? 0) + (recoveredReconciliationMonths.get(month)?.length ?? 0), 0)}</span></div>
-          {[...reconciliationPeriodGroups.current, ...reconciliationPeriodGroups.archived].map((month) => {
-            const monthBatches = reconciliationMonths.get(month) ?? [];
-            const monthRecovered = recoveredReconciliationMonths.get(month) ?? [];
-            const isCurrentMonth = month === currentReconciliationMonth;
-            return (
-            <details
-              className={`demo-period-history operations-disclosure-card ${isCurrentMonth ? "is-current" : "is-archived"}`}
-              key={month}
-              open={isCurrentMonth || undefined}
-            >
+          {reconciliationPeriodGroups.current.map((month) => renderReconciliationMonth(month, true))}
+          {reconciliationPeriodGroups.archived.length > 0 && (
+            <details className="reconciliation-archive">
               <summary>
-                <span>{monthLabel(`${month}-01T12:00:00Z`)}</span>
-                <small>{monthBatches.length + monthRecovered.length} conciliaciones</small>
-                <strong>{formatMoney((monthBatches.reduce((total, batch) => total + (moneyNumber(batch.broker_result_cents) ?? 0), 0) + monthRecovered.reduce((total, row) => total + row.resultInCents, 0)) / 100)}</strong>
+                <span>Períodos anteriores</span>
+                <small>{reconciliationPeriodGroups.archived.length}</small>
                 <i aria-hidden="true" />
               </summary>
-              <div>
-                {monthBatches.map((batch, index) => (
-                  <details className="demo-history-day" key={batch.id} open={isCurrentMonth && index === 0}>
-                    <summary>
-                      <span>{formatHistoryMoment(batch.opened_at, batch.operated_on)}</span>
-                      <small>{reconciliationPairLabel(batch.broker?.account_name ?? null, batch.prop_accounts.map((account) => account.account_name))}</small>
-                      <strong className={(moneyNumber(batch.broker_result_cents) ?? 0) < 0 ? "negative" : ""}>{formatMoney((moneyNumber(batch.broker_result_cents) ?? 0) / 100)}</strong>
-                      <i aria-hidden="true" />
-                    </summary>
-                    <div>
-                      <p><span>{batch.company_name ?? "Sin empresa"} · {phaseLabel(batch.phase)}</span><small>{batch.broker ? reconciliationPosition(batch.broker.direction, batch.broker.quantity, batch.broker.instruments) : "Sin cobertura identificada"}</small><strong>{duration(batch.opened_at, batch.settled_at)}</strong></p>
-                      {batch.prop_accounts.map((account) => (
-                        <p key={account.session_id ?? account.account_id ?? account.account_name}><span>{account.account_name}</span><small>{reconciliationPosition(account.direction, account.quantity, account.instruments)}</small><strong>{formatMoney(moneyNumber(account.result))}</strong></p>
-                      ))}
-                    </div>
-                  </details>
-                ))}
-                {monthRecovered.map((row, index) => (
-                  <details className="demo-history-day" key={row.controlId} open={isCurrentMonth && monthBatches.length === 0 && index === 0}>
-                    <summary>
-                      <span>{formatHistoryMoment(`${row.operatedOn}T12:00:00-03:00`, row.operatedOn)}</span>
-                      <small>{row.participants.map((participant) => participant.accountName).join(" + ")}</small>
-                      <strong className={row.resultInCents < 0 ? "negative" : ""}>{formatMoney(row.resultInCents / 100)}</strong>
-                      <i aria-hidden="true" />
-                    </summary>
-                    <div>
-                      <p><span>Conciliación recuperada · {phaseLabel(row.phase)}</span><small>Sin telemetría de ejecución disponible</small><strong>{row.participants.length} cuentas</strong></p>
-                      {row.participants.map((participant) => (
-                        <p key={`${row.controlId}-${participant.accountName}`}><span>{participant.accountName}</span><small>Cobertura asignada</small><strong>{formatMoney(participant.allocatedResultInCents / 100)}</strong></p>
-                      ))}
-                    </div>
-                  </details>
-                ))}
-              </div>
+              <div>{reconciliationPeriodGroups.archived.map((month) => renderReconciliationMonth(month, false))}</div>
             </details>
-            );
-          })}
+          )}
         </div>
       )}
     </section>

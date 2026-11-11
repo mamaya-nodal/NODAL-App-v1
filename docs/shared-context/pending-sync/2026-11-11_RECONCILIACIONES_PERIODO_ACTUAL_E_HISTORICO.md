@@ -16,8 +16,8 @@ La interfaz renderizaba todos los meses con la misma clase y abría automáticam
 ## Cambio aplicado
 
 - El mes vigente se identifica de forma explícita y permanece abierto con jerarquía principal.
-- Los meses anteriores se muestran como filas compactas y cerradas.
-- Cada período histórico puede desplegarse para consultar sus conciliaciones.
+- Todos los meses anteriores se agrupan bajo una única fila cerrada llamada `Períodos anteriores`.
+- Al abrirla, cada período histórico puede desplegarse para consultar sus conciliaciones.
 - El encabezado general pasa de `Historial` a `Conciliaciones`.
 - Se agregó una regla determinista y una prueba para separar período vigente e histórico.
 

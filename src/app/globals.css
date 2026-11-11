@@ -8098,6 +8098,41 @@ html[data-theme="day"] .accounting-history {
   min-height: 48px;
   padding-block: 7px;
 }
+.reconciliation-archive {
+  margin-top: 7px;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--app-panel) 72%, transparent);
+  overflow: hidden;
+}
+.reconciliation-archive > summary {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  color: var(--app-title);
+  font-size: 11px;
+  font-weight: 820;
+  list-style: none;
+  cursor: pointer;
+}
+.reconciliation-archive > summary::-webkit-details-marker { display: none; }
+.reconciliation-archive > summary > span { flex: 1; }
+.reconciliation-archive > summary > small {
+  min-width: 22px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: var(--app-subtle);
+  background: var(--app-input);
+  font-size: 8px;
+  text-align: center;
+}
+.reconciliation-archive > summary > i { width: 16px; color: var(--app-subtle); font-style: normal; text-align: center; }
+.reconciliation-archive > summary > i::before { content: "+"; }
+.reconciliation-archive[open] > summary > i::before { content: "−"; }
+.reconciliation-archive > div { padding: 0 7px 7px; }
+.reconciliation-archive .demo-period-history.is-archived { border-radius: 9px; }
 .demo-history-day { margin-top: 7px; }
 .demo-history-day > summary { min-height: 58px; }
 .demo-history-day > summary > span { min-width: 164px; color: var(--app-title); font-size: 12px; font-weight: 800; }
