@@ -29,7 +29,7 @@ vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc, from: (tab
       filters[`not:${key}`] = { operator, value };
       return query;
     },
-    order: () => query, limit: () => query,
+    order: (key: string) => { ((filters.order ??= []) as string[]).push(key); return query; }, limit: () => query,
     range: async () => rows(table, filters, false),
     maybeSingle: async () => rows(table, filters, true),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(rows(table, filters, false)).then(resolve),
@@ -120,6 +120,24 @@ it("previews the late trade using the preceding committed balance, without write
     projection: expect.objectContaining({ status: "shadow_ready", reason: null }),
     members: [expect.objectContaining({ accountId: "account", allocatedBrokerResultInCents: -16064 })],
   })]);
+  expect(rpc).not.toHaveBeenCalled();
+});
+
+it("uses the last economic control when an earlier control was saved later during repair", async () => {
+  const baseRead = rows.getMockImplementation()!;
+  const controls = [
+    { control_number: 22, balance_after_cents: 541474, received_balance_cents: 541474, sync_issue_reason: null, created_at: "2026-09-30T15:35:00Z" },
+    { control_number: 23, balance_after_cents: 538474, received_balance_cents: 538474, sync_issue_reason: null, created_at: "2026-09-30T15:30:00Z" },
+  ];
+  rows.mockImplementation((table, filters, single) => {
+    if (table === "daily_controls" && single && filters.period_id === "period" && filters["lte:created_at"] >= controls[0].created_at) {
+      const firstOrder = (filters.order as string[])[0];
+      return { data: [...controls].sort((a,b) => firstOrder === "control_number" ? b.control_number-a.control_number : b.created_at.localeCompare(a.created_at))[0], error: null };
+    }
+    return baseRead(table, filters, single);
+  });
+  const result = await persistAutomaticOperationBatches("connector", 20, true);
+  expect(result.previews?.[0].projection).toMatchObject({status:"shadow_ready",reason:null});
   expect(rpc).not.toHaveBeenCalled();
 });
 

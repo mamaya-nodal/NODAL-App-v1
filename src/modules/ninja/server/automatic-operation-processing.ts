@@ -248,8 +248,8 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       .select("balance_after_cents,created_at,received_balance_cents,sync_issue_reason")
       .eq("period_id", periodId)
       .lte("created_at", openedAt)
-      .order("created_at", { ascending: false })
       .order("control_number", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (currentControl) {
