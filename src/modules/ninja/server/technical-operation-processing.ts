@@ -171,6 +171,11 @@ export async function refreshNinjaTechnicalOperations(
     // Do not persist an artificial open tail cut by the page boundary. Replay
     // from the last complete operation, retaining the boundary's opening data.
     const operations = capped ? reconstructed.filter((operation) => operation.status === "closed") : reconstructed;
+    // A flat tail still inside its quiet window needs one later pass even if
+    // Ninja sends no more trading events. The next heartbeat can finish it.
+    if (!capped) for (const operation of operations) {
+      if (operation.status === "settling" && operation.closingBalance !== null) replayCursors.push(operation.openedAt);
+    }
     if (capped) {
       const cursor = operations.at(-1)?.openedAt ?? (reconstructed.length ? null : rows.at(-1)!.occurred_at);
       if (cursor && Date.parse(cursor) > Date.parse(startAt) + 1_000) replayCursors.push(cursor);
