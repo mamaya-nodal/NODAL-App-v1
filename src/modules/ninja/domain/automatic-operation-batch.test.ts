@@ -274,6 +274,7 @@ describe("automatic operation batches", () => {
       direction: "Long",
       instruments: ["NQ DEC26"],
       openedAt: "2026-09-08T14:00:51.000Z",
+      flatAt: "2026-09-08T14:03:24.000Z",
       settledAt: "2026-09-08T14:03:34.982Z",
       quantity: 1,
       role: "prop",
@@ -284,6 +285,7 @@ describe("automatic operation batches", () => {
       instruments: ["MNQ DEC26"],
       openedAt: "2026-09-08T14:00:01.000Z",
       settledAt: "2026-09-08T14:03:34.625Z",
+      flatAt: "2026-09-08T14:03:24.000Z",
       quantity: 1,
       role: "broker",
     });
@@ -302,6 +304,8 @@ describe("automatic operation batches", () => {
       direction: "Long",
       instruments: ["NQ DEC26"],
       openedAt: "2026-11-13T16:16:44.100Z",
+      flatAt: "2026-11-13T16:18:00.000Z",
+      settledAt: "2026-11-13T16:18:10.000Z",
       quantity: 1,
       role: "prop",
     }));
@@ -310,6 +314,8 @@ describe("automatic operation batches", () => {
       direction: "Short",
       instruments: ["MNQ DEC26"],
       openedAt: "2026-11-13T16:16:28.656Z",
+      flatAt: "2026-11-13T16:18:00.000Z",
+      settledAt: "2026-11-13T16:18:10.000Z",
       quantity: 1,
       role: "broker",
     });
@@ -343,6 +349,22 @@ describe("automatic operation batches", () => {
       props: [],
       status: "unmatched",
     });
+  });
+
+  it("never assigns a prop to the first of two competing broker trades", () => {
+    const first = operation({ accountName: "broker-a", role: "broker", direction: "Short", quantity: 1 });
+    const second = operation({ ...first, accountName: "broker-b", openingEventId: 2 });
+    const prop = operation({ accountName: "prop", role: "prop", direction: "Long", quantity: 1 });
+    expect(correlateAutomaticOperationBatches([first, second, prop]).map((batch) => batch.status))
+      .toEqual(["conflict", "conflict"]);
+  });
+
+  it("does not match positions that never overlapped despite close opening times", () => {
+    const broker = operation({ accountName: "broker", role: "broker", direction: "Short", quantity: 1,
+      flatAt: "2026-09-08T14:00:02.000Z" });
+    const prop = operation({ accountName: "prop", role: "prop", direction: "Long", quantity: 1,
+      openedAt: "2026-09-08T14:00:05.000Z" });
+    expect(correlateAutomaticOperationBatches([broker, prop])[0].status).toBe("unmatched");
   });
 
   it("does not infer equivalences for other micro and mini instruments", () => {

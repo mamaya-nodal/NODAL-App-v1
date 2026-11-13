@@ -3,6 +3,10 @@ import { observedNinjaFetch, runObservedNinjaProcessing } from "./processing-obs
 
 afterEach(() => vi.unstubAllGlobals());
 describe("durable processing observation", () => {
+  it("allows a recorded business review without retrying a permanent posting rejection forever", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({code:"P0001",message:"NINJA_EXISTING_REPAIR_REVIEW_REQUIRED"},{status:400})));
+    expect(await runObservedNinjaProcessing(()=>observedNinjaFetch("https://invalid.test/rpc/commit_ninja_automatic_operation_batch"))).toBe(true);
+  });
   it("does not mark a swallowed HTTP failure complete", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
     expect(await runObservedNinjaProcessing(async () => { await observedNinjaFetch("https://invalid.test"); return 0; })).toBe(false);

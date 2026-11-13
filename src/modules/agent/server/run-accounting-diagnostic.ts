@@ -123,12 +123,18 @@ export async function runAccountingDiagnosticForOwner(
     const [batches, sessions, pendingBrokerEvents] = await Promise.all([
       db.from("ninja_operation_batches").select("id,broker_session_id,status,accounting_status,accounting_blocking_reason,accounting_period_id,daily_control_id,opened_at")
         .in("connector_id", connectorIds).gte("opened_at", cutoff).limit(MAX_ROWS),
-      db.from("ninja_operation_probe_sessions").select("id,connector_id,connection_name,account_name,opened_at,settled_at,status,execution_count")
+      db.from("ninja_operation_probe_sessions").select("id,connector_id,connection_name,account_name,opened_at,settled_at,status,execution_count,result_conflict")
         .in("connector_id", connectorIds).eq("status", "closed").is("excluded_at", null).gte("opened_at", cutoff).limit(MAX_ROWS),
       db.from("ninja_broker_balance_events").select("id,connector_id,observed_at")
         .in("connector_id", connectorIds).eq("status", "pending").limit(MAX_ROWS),
     ]);
     assertComplete([batches, sessions, pendingBrokerEvents]);
+    for (const session of sessions.data ?? []) if (session.result_conflict) findings.push({
+      ...base, category: "reconciliation", id: `result-evidence:${session.id}`, severity: "attention",
+      title: "Saldo y resultado realizado no coinciden",
+      detail: "El cambio de saldo no coincide con el resultado realizado informado. Revisar movimientos de fondos y comisiones antes de asignarlo a las cuentas.",
+      evidence: `Sesión ${session.id}; cuenta ${session.account_name}; apertura ${session.opened_at}.`,
+    });
     // La falta de período es parte de la anomalía. Nunca debe ocultar el lote
     // de la auditoría que intenta explicar por qué no terminó la contabilidad.
     const relevantBatches = (batches.data ?? []).filter((batch) =>

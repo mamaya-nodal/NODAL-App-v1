@@ -1,10 +1,10 @@
-import { afterAll, beforeAll, beforeEach, afterEach, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, afterEach, expect, it, vi } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { repairFixture, fixtureIds as i } from "./repair-fixture";
 import { ninjaBatchFixture } from "./repair-ninja-fixture";
 let db: PGlite;
-beforeAll(async () => { db = await repairFixture(); }, 120000);
-afterAll(async () => { if (db) await db.close(); });
+beforeAll(async () => { vi.useFakeTimers({toFake:["Date"]}); vi.setSystemTime(new Date("2026-11-12T15:00:00Z")); db = await repairFixture(); }, 120000);
+afterAll(async () => { if (db) await db.close(); vi.useRealTimers(); });
 beforeEach(async () => { await db.exec("begin"); });
 afterEach(async () => { await db.exec("rollback"); });
 

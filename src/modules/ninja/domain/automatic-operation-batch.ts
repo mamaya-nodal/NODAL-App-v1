@@ -4,6 +4,7 @@ import type { NinjaTechnicalOperation } from "./technical-operation";
 export type ClassifiedTechnicalOperation = NinjaTechnicalOperation & Readonly<{
   accountId: string | null;
   role: "broker" | "prop";
+  sourceConnectorId?: string;
 }>;
 
 export type AutomaticOperationBatch = Readonly<{
@@ -25,6 +26,10 @@ function temporallyAligned(
   right: NinjaTechnicalOperation,
   openingToleranceMs: number,
 ) {
+  // Settlement messages may arrive late; the positions themselves must overlap.
+  const leftEnd = Date.parse(left.flatAt ?? left.lastEventAt);
+  const rightEnd = Date.parse(right.flatAt ?? right.lastEventAt);
+  if (Math.max(Date.parse(left.openedAt), Date.parse(right.openedAt)) > Math.min(leftEnd, rightEnd)) return false;
   if (Math.abs(Date.parse(left.openedAt) - Date.parse(right.openedAt)) <= openingToleranceMs) {
     return true;
   }
@@ -75,14 +80,19 @@ export function correlateAutomaticOperationBatches(
 ): AutomaticOperationBatch[] {
   const closed = operations.filter((operation) => operation.status === "closed");
   const brokers = closed.filter((operation) => operation.role === "broker");
-  const usedProps = new Set<number>();
+  const compatible = (prop: ClassifiedTechnicalOperation, broker: ClassifiedTechnicalOperation) =>
+    prop.role === "prop" && temporallyAligned(prop, broker, openingToleranceMs) &&
+    opposite(prop.direction, broker.direction) && compatibleSingleInstrument(prop, broker);
+  const sameBrokerObservation = (a: ClassifiedTechnicalOperation, b: ClassifiedTechnicalOperation) =>
+    a.accountName === b.accountName && a.direction === b.direction && a.quantity === b.quantity &&
+    a.result === b.result && a.instruments.join() === b.instruments.join() &&
+    Math.abs(Date.parse(a.openedAt) - Date.parse(b.openedAt)) <= 5_000;
 
   return brokers.map((broker) => {
     const technicalCandidates = closed
       .map((operation, index) => ({ index, operation }))
       .filter(({ index, operation }) =>
         operation.role === "prop" &&
-        !usedProps.has(index) &&
         temporallyAligned(operation, broker, openingToleranceMs) &&
         opposite(operation.direction, broker.direction) &&
         compatibleSingleInstrument(operation, broker),
@@ -95,7 +105,9 @@ export function correlateAutomaticOperationBatches(
       return true;
     });
     const result = broker.result === null ? null : roundLikeSheets(broker.result * 100);
-    const conflict = broker.instruments.length !== 1 || broker.direction === null || broker.quantity <= 0;
+    const ambiguous = technicalCandidates.some(({ operation }) => brokers.some((other) =>
+      other !== broker && !sameBrokerObservation(other, broker) && compatible(operation, other)));
+    const conflict = ambiguous || broker.instruments.length !== 1 || broker.direction === null || broker.quantity <= 0;
     if (candidates.length === 0 || result === null || conflict) {
       return {
         broker,
@@ -109,7 +121,6 @@ export function correlateAutomaticOperationBatches(
 
     // Dos conectores pueden observar la misma cuenta prop. Conservamos todas las
     // sesiones técnicas, pero la cuenta económica participa una sola vez.
-    technicalCandidates.forEach((candidate) => usedProps.add(candidate.index));
     const perProp = roundLikeSheets(result / candidates.length);
     const props = candidates.map(({ operation }) => ({
       ...operation,

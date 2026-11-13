@@ -6,7 +6,17 @@ const attempts = new AsyncLocalStorage<{ failed: boolean }>();
 export const observedNinjaFetch: typeof fetch = async (input, init) => {
   try {
     const response = await fetch(input, init);
-    if (!response.ok) { const attempt = attempts.getStore(); if (attempt) attempt.failed = true; }
+    if (!response.ok) {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      let reviewRecorded = false;
+      if (url.endsWith("/rpc/commit_ninja_automatic_operation_batch")) {
+        const error = await response.clone().json().catch(() => null);
+        reviewRecorded = error?.code === "P0001" &&
+          /NINJA_(EXISTING_REPAIR|HISTORICAL_REPLAY)_REVIEW_REQUIRED/.test(error.message ?? "");
+      }
+      const attempt = attempts.getStore();
+      if (attempt && !reviewRecorded) attempt.failed = true;
+    }
     return response;
   } catch (error) {
     const attempt = attempts.getStore(); if (attempt) attempt.failed = true;

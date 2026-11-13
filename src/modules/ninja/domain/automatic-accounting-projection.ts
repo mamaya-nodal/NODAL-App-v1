@@ -17,6 +17,7 @@ export type AutomaticAccountingProjection = Readonly<{
     | "batch_unmatched"
     | "broker_balance_mismatch"
     | "broker_result_mismatch"
+    | "broker_result_conflict"
     | "company_mismatch"
     | "initial_broker_balance_missing"
     | "member_distribution_mismatch"
@@ -36,6 +37,8 @@ type Input = Readonly<{
   brokerClosingBalanceInCents: number | null;
   brokerOpeningBalanceInCents: number | null;
   brokerResultInCents: number;
+  brokerResultVerified?: boolean;
+  brokerResultConflict?: boolean;
   expectedOpeningBalanceInCents: number | null;
   members: readonly AutomaticAccountingMember[];
   technicalMemberCount: number;
@@ -73,6 +76,10 @@ export function projectAutomaticAccounting(input: Input): AutomaticAccountingPro
   const companyId = input.members[0].companyId;
   const phase = input.members[0].phase as Exclude<AutomaticAccountingMember["phase"], null>;
   const identified = { accountCount: input.members.length, companyId, periodId, phase };
+  if (input.brokerResultConflict) {
+    return { ...identified, reason: "El resultado realizado informado no coincide con el cambio de saldo. Revisá movimientos y comisiones.",
+      reasonCode: "broker_result_conflict", status: "blocked" };
+  }
   if (input.brokerOpeningBalanceInCents === null || input.brokerClosingBalanceInCents === null) {
     return { ...identified, reason: "Falta el saldo inicial o final de la cobertura", reasonCode: "technical_balance_missing", status: "blocked" };
   }
@@ -81,7 +88,7 @@ export function projectAutomaticAccounting(input: Input): AutomaticAccountingPro
   }
   if (
     input.brokerBalanceScope !== "aggregate" &&
-    input.brokerOpeningBalanceInCents !== input.expectedOpeningBalanceInCents
+    input.brokerOpeningBalanceInCents !== input.expectedOpeningBalanceInCents && !input.brokerResultVerified
   ) {
     return { ...identified, reason: "El saldo inicial no coincide con el último saldo contable", reasonCode: "broker_balance_mismatch", status: "blocked" };
   }

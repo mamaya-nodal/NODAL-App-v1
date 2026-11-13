@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { observedNinjaFetch } from "./processing-observation";
+import { readAll } from "@/modules/admin/server/read-all";
 
 import { roundLikeSheets } from "@/modules/control-diario/domain/result-allocation";
 import { correlateAutomaticOperationBatches, countBrokerContextProps } from "../domain/automatic-operation-batch";
@@ -95,20 +96,39 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const aggregateBrokerBalance = await usesAggregateBrokerBalance(supabase, connectorId);
+  const { data: source, error: sourceError } = await supabase.from("ninja_connectors")
+    .select("owner_user_id").eq("id", connectorId).maybeSingle();
+  if (sourceError) throw new Error("No se pudo verificar el titular de la conciliación.");
+  const { data: owned, error: ownedError } = source?.owner_user_id
+    ? await supabase.from("ninja_connectors").select("id").eq("owner_user_id", source.owner_user_id)
+    : { data: [{ id: connectorId }], error: null };
+  if (ownedError) throw new Error("No se pudieron verificar las instalaciones del titular.");
+  const scopeIds = (owned ?? []).map((row) => row.id);
+  if (!scopeIds.includes(connectorId)) throw new Error("Instalación fuera del titular.");
 
   const [{ data: sessions, error: sessionsError }, { data: links, error: linksError }, { data: inventory }] = await Promise.all([
-    supabase.from("ninja_operation_probe_sessions").select("id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,execution_count,instruments,direction,quantity").eq("connector_id", connectorId).is("excluded_at", null).order("opened_at").order("id"),
-    supabase.from("ninja_account_links").select("account_id,connection_name,external_account_name,first_seen_at,closed_at,phase,closure_reason,life_id,accounting_phase,completed_trade_days").eq("connector_id", connectorId),
+    readAll(supabase.from("ninja_operation_probe_sessions").select("id,connector_id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,result_verified,result_conflict,execution_count,instruments,direction,quantity").in("connector_id", scopeIds).is("excluded_at", null).order("opened_at").order("id")),
+    supabase.from("ninja_account_links").select("connector_id,account_id,connection_name,external_account_name,first_seen_at,closed_at,phase,closure_reason,life_id,accounting_phase,completed_trade_days").in("connector_id", scopeIds),
     supabase.from("ninja_inventory_snapshots").select("accounts,observed_at").eq("connector_id", connectorId).order("observed_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (sessionsError || linksError || !sessions?.length) return { persistedBatches: 0 };
   const linkedIds = [...new Set((links ?? []).map((link) => link.account_id))];
   const [purchasesResult, changesResult] = await Promise.all([
-    linkedIds.length ? supabase.from("purchases").select("account_id,purchased_on").in("account_id", linkedIds)
+    linkedIds.length ? supabase.from("purchases").select("account_id,purchased_on,period_id").in("account_id", linkedIds)
       : Promise.resolve({ data: [], error: null }),
-    supabase.from("ninja_account_change_events").select("connection_name,to_account_name,event_type,from_account_name,from_life_id,to_life_id").eq("connector_id", connectorId),
+    supabase.from("ninja_account_change_events").select("connector_id,connection_name,to_account_name,event_type,from_account_name,from_life_id,to_life_id").in("connector_id", scopeIds),
   ]);
   if (purchasesResult.error || changesResult.error) throw new Error("No se pudo verificar la historia de las cuentas.");
+  const purchasePeriods = [...new Set((purchasesResult.data ?? []).flatMap((row) => row.period_id ? [row.period_id] : []))];
+  const { data: schedules, error: schedulesError } = purchasePeriods.length
+    ? await supabase.from("periods").select("id,operational_start_on,scheduled_close_at").in("id", purchasePeriods)
+    : { data: [], error: null };
+  if (schedulesError) throw new Error("No se pudo verificar el período de las cuentas.");
+  const economicPeriods = (purchasesResult.data ?? []).flatMap((purchase) => {
+    const period = schedules?.find((row) => row.id === purchase.period_id);
+    return period?.operational_start_on && period.scheduled_close_at ? [{ accountId: purchase.account_id,
+      startOn: period.operational_start_on, closeOn: period.scheduled_close_at.slice(0, 10) }] : [];
+  });
 
   const inventoryClassifications = new Map<string, ReturnType<typeof classifyNinjaAccount>>();
   for (const account of (inventory?.accounts ?? []) as NinjaAccountSnapshot[]) {
@@ -119,7 +139,9 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
   }
 
   const linkForSession = (session: (typeof sessions)[number]) => resolveSessionAccountLink(
-    session, links ?? [], purchasesResult.data ?? [], changesResult.data ?? [],
+    session, (links ?? []).filter((link) => (link.connector_id ?? connectorId) === (session.connector_id ?? connectorId)),
+    purchasesResult.data ?? [], (changesResult.data ?? []).filter((change) =>
+      (change.connector_id ?? connectorId) === (session.connector_id ?? connectorId)), economicPeriods,
   );
 
   const classified = sessions.flatMap((session) => {
@@ -140,6 +162,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
     if (!accountId && detected.type !== "broker" && detected.type !== "prop") return [];
     return [{
       accountId,
+      sourceConnectorId: session.connector_id ?? connectorId,
       accountName: session.account_name,
       closingBalance: session.closing_balance === null ? null : Number(session.closing_balance),
       connectionName: session.connection_name,
@@ -161,6 +184,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
     }];
   });
   const batches = correlateAutomaticOperationBatches(classified)
+    .filter((batch) => batch.broker.sourceConnectorId === connectorId)
     .sort((left, right) => left.broker.openedAt.localeCompare(right.broker.openedAt));
   const accountIds = [...new Set(classified.flatMap((operation) => operation.accountId ? [operation.accountId] : []))];
   const [
@@ -299,7 +323,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       const session = sessions.find((candidate) => Number(candidate.opening_event_id) === prop.openingEventId);
       if (!account || !session || !accountBelongsToCurrentOpening(prop.accountId, session.opened_at)) return [];
       const key = `${session.connection_name}\u0000${session.account_name}`;
-      const detectedPhase = inventoryClassifications.get(key)?.phase
+      const detectedPhase = linkForSession(session)?.phase ?? inventoryClassifications.get(key)?.phase
         ?? classifyNinjaAccount({
           accountName: session.account_name,
           cashValue: null,
@@ -360,6 +384,8 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       brokerClosingBalanceInCents,
       brokerOpeningBalanceInCents,
       brokerResultInCents: batch.brokerResultInCents,
+      brokerResultVerified: brokerSession.result_verified === true,
+      brokerResultConflict: brokerSession.result_conflict === true,
       expectedOpeningBalanceInCents,
       members: projectionMembers,
       technicalMemberCount: contextPropCount,
@@ -399,9 +425,9 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       broker_balance_scope: aggregateBrokerBalance ? "aggregate" : "single",
     }).eq("id", storedBatchId).neq("accounting_status", "committed");
     if (
-      projection.reasonCode === "broker_balance_mismatch" &&
+      !aggregateBrokerBalance &&
       brokerOpeningBalanceInCents !== null &&
-      expectedOpeningBalanceInCents !== null
+      expectedOpeningBalanceInCents !== null && brokerOpeningBalanceInCents !== expectedOpeningBalanceInCents
     ) {
       await recordNinjaBrokerPreOperationBalance({
         accountName: batch.broker.accountName,
@@ -459,7 +485,11 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
           );
         } else {
           await supabase.from("ninja_operation_batches").update({
-            accounting_blocking_reason: "El cierre quedó conciliado, pero no pudo registrarse automáticamente.",
+            accounting_blocking_reason: commitError.message?.includes("NINJA_EXISTING_REPAIR_REVIEW_REQUIRED")
+              ? "La operación podría estar registrada en una reparación anterior. Revisá la correspondencia antes de duplicarla."
+              : commitError.message?.includes("NINJA_HISTORICAL_REPLAY_REVIEW_REQUIRED")
+                ? "Se recuperó una operación anterior a registros ya confirmados. Requiere reconstrucción cronológica."
+                : "El cierre quedó conciliado, pero no pudo registrarse automáticamente.",
           }).eq("id", storedBatchId).neq("accounting_status", "committed");
         }
       }

@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     after(() => safelyDrainTelemetryV2(connector.connectorId));
     return response({ protocol: 2, batchId: batch.batchId, receipts }, 200);
   } catch {
-    console.error("NODAL_NINJA_V2_INTAKE_UNAVAILABLE");
+    console.error("NODAL_NINJA_V2_INTAKE_UNAVAILABLE", { physicalConnectorId: connector.connectorId });
     return response({ error: "Recepción pendiente. Conservar y reintentar." }, 503);
   }
 }

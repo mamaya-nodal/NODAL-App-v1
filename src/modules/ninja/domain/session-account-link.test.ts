@@ -7,6 +7,14 @@ const link = { account_id: "account-10", connection_name: "Lucid", external_acco
 const purchases = [{ account_id: "account-10", purchased_on: "2026-09-30" }];
 
 describe("late session account resolution", () => {
+  it("uses the actual economic period when purchase and trade cross calendar months", () => {
+    const late = {...link,first_seen_at:"2026-11-20T15:00:00Z"};
+    const trade = {...session,opened_at:"2026-11-04T15:00:00Z"};
+    const purchase = [{account_id:link.account_id,purchased_on:"2026-10-30"}];
+    const period = [{accountId:link.account_id,startOn:"2026-10-19",closeOn:"2026-11-13"}];
+    expect(resolveSessionAccountLink(trade,[late],purchase,[],period)).toBe(late);
+    expect(resolveSessionAccountLink({...trade,opened_at:"2026-11-14T15:00:00Z"},[late],purchase,[],period)).toBeNull();
+  });
   it("links a trade before first observation without changing timestamps", () => {
     expect(resolveSessionAccountLink(session, [link], purchases, [])).toBe(link);
     expect(link.first_seen_at).toBe("2026-09-30T15:46:55.453Z");

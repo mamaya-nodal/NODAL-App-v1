@@ -8,6 +8,7 @@ import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
 import { buildNinjaTechnicalOperations, type NinjaTechnicalOperation } from "../domain/technical-operation";
 import { persistAutomaticOperationBatches } from "./automatic-operation-processing";
 import { processNinjaOperationBurns } from "./transition-processing";
+import { ninjaSessionResultEvidence } from "../domain/result-evidence";
 
 export async function refreshNinjaTechnicalOperations(
   connectorId: string,
@@ -78,9 +79,18 @@ export async function refreshNinjaTechnicalOperations(
   // La allowlist conserva únicamente la excepción de prueba Sim101. Ya no es
   // necesaria para cuentas reales vinculadas o brokers inequívocos.
   for (const account of allowlistResult.data ?? []) add(account.connection_name, account.account_name);
+  if (options.replaySince && Number.isFinite(Date.parse(options.replaySince))) {
+    const { data: replayAccounts, error: replayError } = await supabase.rpc("get_ninja_replay_accounts", {
+      target_connector: connectorId, target_since: options.replaySince,
+    });
+    if (replayError) throw new Error("No se pudieron recuperar las cuentas de la telemetría pendiente.");
+    for (const account of replayAccounts ?? []) add(account.connection_name, account.account_name);
+  }
   const observedAccounts = [...candidates.values()];
   if (!observedAccounts.length) return { processedAccounts: 0, persistedOperations: 0 };
 
+  const replayCursors: string[] = [];
+  let replayStalled = false;
   const operationCounts = await Promise.all(observedAccounts.map(async (account) => {
     const unsettled = (unsettledResult.data ?? []).filter((session) =>
       session.connection_name === account.connection_name &&
@@ -105,14 +115,14 @@ export async function refreshNinjaTechnicalOperations(
         : new Date(Date.now() - 12 * 60 * 60_000).toISOString();
     }
     if (options.replaySince && Number.isFinite(Date.parse(options.replaySince))) {
-      const oldestAllowed = Date.now() - 45 * 24 * 60 * 60_000;
-      const requested = Math.max(Date.parse(options.replaySince), oldestAllowed);
+      const requested = Date.parse(options.replaySince);
       if (requested < Date.parse(startAt)) startAt = new Date(requested).toISOString();
     }
 
     const data: Array<Record<string, unknown>> = [];
     const pageSize = 1_000;
-    for (let offset = 0; ; offset += pageSize) {
+    let capped = false;
+    for (let offset = 0; offset < 10_000; offset += pageSize) {
       const { data: page, error } = await supabase
         .from("ninja_trade_telemetry_events")
         .select("id,event_type,occurred_at,connection_name,account_name,instrument,payload")
@@ -129,6 +139,7 @@ export async function refreshNinjaTechnicalOperations(
       }
       data.push(...page);
       if (page.length < pageSize) break;
+      if (offset + pageSize >= 10_000) capped = true;
     }
     if (!data.length) return 0;
 
@@ -155,12 +166,21 @@ export async function refreshNinjaTechnicalOperations(
     const baselineBalance = baselineAccount?.cashValue !== null && baselineAccount?.cashValue !== undefined
       ? baselineAccount.cashValue
       : null;
-    const operations = buildNinjaTechnicalOperations(rows, new Date(), baselineBalance);
+    const reconstructed = buildNinjaTechnicalOperations(rows,
+      capped ? new Date(rows.at(-1)!.occurred_at) : new Date(), baselineBalance);
+    // Do not persist an artificial open tail cut by the page boundary. Replay
+    // from the last complete operation, retaining the boundary's opening data.
+    const operations = capped ? reconstructed.filter((operation) => operation.status === "closed") : reconstructed;
+    if (capped) {
+      const cursor = operations.at(-1)?.openedAt ?? (reconstructed.length ? null : rows.at(-1)!.occurred_at);
+      if (cursor && Date.parse(cursor) > Date.parse(startAt) + 1_000) replayCursors.push(cursor);
+      else replayStalled = true;
+    }
     if (!operations.length) {
       const staleIds = unsettled
         .filter((session) => session.status !== "closed")
         .map((session) => session.id);
-      if (staleIds.length > 0) {
+      if (!capped && staleIds.length > 0) {
         await supabase.from("ninja_operation_probe_sessions").delete().in("id", staleIds);
       }
       return 0;
@@ -185,6 +205,8 @@ export async function refreshNinjaTechnicalOperations(
         opening_event_id: operation.openingEventId,
         quantity: operation.quantity,
         result: operation.result,
+        result_verified: ninjaSessionResultEvidence(rows, operation.openedAt, operation.settledAt, operation.result) === "verified",
+        result_conflict: ninjaSessionResultEvidence(rows, operation.openedAt, operation.settledAt, operation.result) === "conflict",
         settled_at: operation.settledAt,
         status: operation.status,
         updated_at: new Date().toISOString(),
@@ -194,6 +216,7 @@ export async function refreshNinjaTechnicalOperations(
       const staleIds = unsettled
         .filter((session) => session.status !== "closed")
         .filter((session) => !validOpeningIds.has(Number(session.opening_event_id)))
+        .filter((session) => !capped || Date.parse(session.opened_at) < Date.parse(operations.at(-1)!.openedAt))
         .map((session) => session.id);
       // Retira artefactos creados cuando el límite anterior de 1.000 filas
       // cortaba una operación larga y confundía su cierre con otra apertura.
@@ -233,6 +256,8 @@ export async function refreshNinjaTechnicalOperations(
     status: operation.status as NinjaTechnicalOperation["status"],
   })));
   return {
+    replayPending: replayStalled || replayCursors.length > 0,
+    replaySince: replayStalled ? options.replaySince ?? null : replayCursors.sort()[0] ?? null,
     processedAccounts: observedAccounts.length,
     persistedOperations: operationCounts.reduce((total, count) => total + count, 0),
     ...batches,

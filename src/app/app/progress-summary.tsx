@@ -45,6 +45,7 @@ type Props = Readonly<{
 
 export type PendingBrokerTransfer = Readonly<{
   balanceInCents: number;
+  expectedBalanceInCents?: number;
   eventId: string;
   observedAt: string;
 }>;
@@ -145,7 +146,8 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const remainingMovementCount = Math.max(0, orderedWalletMovements.length - visibleWalletMovements.length);
   const displayedPayouts = payouts ?? summary.fundingWithdrawals;
   const brokerDifferenceInCents = summary.brokerBalanceInCents !== null && (pendingBrokerTransfer || liveBalance)
-    ? (pendingBrokerTransfer?.balanceInCents ?? liveBalance!.balanceInCents) - summary.brokerBalanceInCents
+    ? (pendingBrokerTransfer?.balanceInCents ?? liveBalance!.balanceInCents) -
+      (pendingBrokerTransfer?.expectedBalanceInCents ?? summary.brokerBalanceInCents)
     : 0;
   const brokerTransferKind = brokerDifferenceInCents > 0 ? "wallet_to_broker" : "broker_to_wallet";
   const hasBrokerTransferToReconcile = brokerDifferenceInCents !== 0 && (pendingBrokerTransfer !== null || !hasPendingNinjaOperation);
@@ -602,9 +604,10 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
           {hasBrokerTransferToReconcile && (
             <div className="broker-transfer-reconciliation" role="status">
               <div className="broker-transfer-heading">
-                <strong>Transferencia pendiente</strong>
-                <span>{brokerDifferenceInCents > 0 ? "Billetera/cuenta bancaria → broker" : "Broker → billetera/cuenta bancaria"} · {money(Math.abs(brokerDifferenceInCents))}</span>
+                <strong>Diferencia de saldo pendiente</strong>
+                <span>{money(brokerDifferenceInCents)}</span>
               </div>
+              <p>Si corresponde a una transferencia, completá sus datos. Si fue una operación, revisala con Nodalito.</p>
               <form className="summary-form broker-transfer-form" onSubmit={reconcileBrokerTransfer}>
                 <label>
                   <span>Billetera o cuenta bancaria relacionada</span>
@@ -629,7 +632,7 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                   <span>Observación (opcional)</span>
                   <input name="observation" placeholder="Agregar una nota" />
                 </label>
-                <button disabled={saving || wallets.length === 0}>Conciliar movimiento</button>
+                <button disabled={saving || wallets.length === 0}>Confirmar transferencia</button>
               </form>
             </div>
           )}

@@ -624,12 +624,13 @@ async function renderPrivateAppPage({
       : [];
     const technicalBatchRows = privileged && technicalBatchIds.length
       ? requireReadData(await privileged.from("ninja_operation_batches")
-          .select("id,daily_control_id,status")
+          .select("id,daily_control_id,status,accounting_status")
           .in("id", technicalBatchIds))
       : [];
     const countableTechnicalBatchIds = new Set(technicalBatchRows
-      .filter((batch) => batch.status === "ready")
+      .filter((batch) => batch.status === "ready" && batch.accounting_status === "committed")
       .map((batch) => batch.id));
+    const accountedTechnicalMembers = technicalMemberRows.filter((member) => countableTechnicalBatchIds.has(member.batch_id));
     const logicalTradeCountByAccountId = countLogicalTradeBatchesByAccount(
       technicalMemberRows.flatMap((member) => countableTechnicalBatchIds.has(member.batch_id)
         ? [{ accountId: member.account_id, batchId: member.batch_id }]
@@ -806,6 +807,8 @@ async function renderPrivateAppPage({
     );
     pendingBrokerTransfer = pendingPreoperationRow ? {
       balanceInCents: Number(pendingPreoperationRow.balance_cents),
+      expectedBalanceInCents: (pendingPreoperationRow.source_accounts as ReadonlyArray<{ expectedBalanceInCents?: number }>)
+        .find((source) => Number.isSafeInteger(source.expectedBalanceInCents))?.expectedBalanceInCents,
       eventId: pendingPreoperationRow.id,
       observedAt: pendingPreoperationRow.observed_at,
     } : null;
@@ -933,7 +936,7 @@ async function renderPrivateAppPage({
       const controlByBatchId = new Map(technicalBatchRows.flatMap((batch) =>
         batch.daily_control_id ? [[batch.id, batch.daily_control_id] as const] : [],
       ));
-      const technicalRows = technicalMemberRows
+      const technicalRows = accountedTechnicalMembers
         .filter((member) => member.account_id === account.id)
         .flatMap((member) => {
           const session = sessionById.get(Number(member.session_id));
@@ -1024,7 +1027,7 @@ async function renderPrivateAppPage({
             magnitudeInCents: Number(entry.magnitude_cents),
           })),
         purchaseCostInCents: purchaseCost,
-        technicalAllocationsInCents: technicalMemberRows
+        technicalAllocationsInCents: accountedTechnicalMembers
           .filter((member) => member.account_id === account.id)
           .map((member) => Number(member.allocated_broker_result_cents ?? 0)),
         technicalDailyControlIds,

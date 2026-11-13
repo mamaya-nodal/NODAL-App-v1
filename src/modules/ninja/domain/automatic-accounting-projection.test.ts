@@ -11,6 +11,12 @@ const member = (accountId: string, allocatedBrokerResultInCents = 10_000): Autom
 });
 
 describe("automatic accounting projection", () => {
+  it("continues an independently verified trade while leaving the earlier difference unresolved", () => {
+    expect(projectAutomaticAccounting({batchStatus:"ready",brokerClosingBalanceInCents:94900,
+      brokerOpeningBalanceInCents:95000,brokerResultInCents:-100,brokerResultVerified:true,
+      expectedOpeningBalanceInCents:100000,members:[member("a",-100)],technicalMemberCount:1}))
+      .toMatchObject({status:"shadow_ready",reason:null});
+  });
   it("prepara cinco cuentas compatibles sin exigir líder ni grupo", () => {
     const result = projectAutomaticAccounting({
       batchStatus: "ready",

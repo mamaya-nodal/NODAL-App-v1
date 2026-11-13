@@ -11,6 +11,7 @@ type Session = Readonly<{ connection_name: string; account_name: string; opened_
 type Purchase = Readonly<{ account_id: string; purchased_on: string }>;
 type Change = Readonly<{ connection_name: string; to_account_name: string | null; event_type: string;
   from_account_name?: string | null; from_life_id?: string | null; to_life_id?: string | null }>;
+type EconomicPeriod = Readonly<{ accountId: string; startOn: string; closeOn: string }>;
 
 /** first_seen_at is an observation, not the economic start of an initial account.
  * Never extrapolate a reset/transition life backwards or choose between duplicate links.
@@ -21,6 +22,7 @@ export function resolveSessionAccountLink<T extends Link>(
   links: readonly T[],
   purchases: readonly Purchase[],
   changes: readonly Change[],
+  periods: readonly EconomicPeriod[] = [],
 ): T | null {
   const openedAt = Date.parse(session.opened_at);
   if (!Number.isFinite(openedAt)) return null;
@@ -44,7 +46,9 @@ export function resolveSessionAccountLink<T extends Link>(
     timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit",
   }).format(new Date(openedAt));
   // Do not retroactively assign an operation before purchase or in a different period.
-  if (!purchase || purchase.purchased_on > operatedOn ||
-    purchase.purchased_on.slice(0, 7) !== operatedOn.slice(0, 7)) return null;
+  if (!purchase || purchase.purchased_on > operatedOn) return null;
+  const period = periods.find((row) => row.accountId === link.account_id);
+  if (period ? operatedOn < period.startOn || operatedOn > period.closeOn
+    : purchase.purchased_on.slice(0, 7) !== operatedOn.slice(0, 7)) return null;
   return link;
 }

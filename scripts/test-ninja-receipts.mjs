@@ -1,6 +1,6 @@
 // Isolated PostgreSQL (WASM); no production credentials or network database.
 // npm install --prefix tmp/ninja-v2-validation --no-save --package-lock=false @electric-sql/pglite
-import { PGlite } from "../tmp/ninja-v2-validation/node_modules/@electric-sql/pglite/dist/index.js";
+import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 const db = new PGlite();
@@ -18,12 +18,16 @@ for (const [file, table] of [
   ["20260828000000_ninja_user_pairing.sql", "ninja_connectors"],
   ["20260930190000_identity_signal_controls.sql", "ninja_connector_destinations"],
   ["20260907010000_ninja_trade_telemetry.sql", "ninja_trade_telemetry_events"],
+  ["20260930190000_identity_signal_controls.sql", "ninja_account_ownership"],
+  ["20260907030000_ninja_technical_operation_probe.sql", "ninja_operation_probe_sessions"],
 ]) {
   const ddl = migration(file).match(new RegExp("create table public\\." + table + "\\s*\\([\\s\\S]*?\\n\\);"));
   assert.ok(ddl, "Real table definition required: " + table);
   await db.exec(ddl[0]);
 }
 await db.exec(readFileSync(new URL("../supabase/migrations/20261007000000_ninja_event_receipts.sql", import.meta.url), "utf8"));
+await db.exec("alter table ninja_connectors add column identity_id uuid");
+await db.exec(migration("20261113233000_shared_broker_receipt_recovery.sql"));
 const owner = "00000000-0000-0000-0000-000000000001";
 const physical = "00000000-0000-0000-0000-000000000002";
 const destination = "00000000-0000-0000-0000-000000000003";
@@ -53,9 +57,20 @@ try {
   await assert.rejects(receive([event("revoked")]));
   assert.equal((await db.query("select * from claim_ninja_rebuild_job($1,$2)", [physical, token])).rows.length, 0);
   await db.query("update nodal_users set access_state='active',revoked_at=null where id=$1", [owner]);
-  // Whole transaction rolls back, including preceding valid events.
-  await assert.rejects(receive([event("rollback"), event("invalid-dest", physical)]));
-  assert.equal((await db.query("select * from ninja_event_receipts where event_id='rollback'")).rows.length, 0);
+  // An unauthorized destination stays durable without blocking a valid sibling.
+  const mixed = await receive([event("valid-sibling"), event("invalid-dest", physical)]);
+  assert.equal(mixed[0].status, "persisted");
+  assert.equal(mixed[1].status, "pending");
+  assert.equal(mixed[1].reason, "destination_not_authorized");
+  assert.equal((await db.query("select * from ninja_event_receipts where event_id='valid-sibling'")).rows.length, 1);
+  // A recognized broker can go to its same owner's personal connector without
+  // creating a general destination for every prop account in that installation.
+  await db.query("insert into ninja_account_ownership(physical_connector_id,connection_name,account_name,account_type,destination_connector_id,owner_user_id,claimed_by) values($1,'connection','shared-broker','broker',$1,$2,$2)",[physical,owner]);
+  assert.equal((await receive([{...event("shared-broker",physical),payload:{...event("shared-broker").payload,accountName:"shared-broker"}}]))[0].status,"persisted");
+  assert.equal((await receive([event("not-a-broker",physical)]))[0].status,"pending");
+  const retry = await receive([event("valid-sibling")]);
+  assert.equal(retry[0].reason,"duplicate");
+  assert.equal((await db.query("select count(*) count from ninja_trade_telemetry_events where event_id='valid-sibling'")).rows[0].count,1);
   // A persisted event cannot later be moved to a different destination by retry.
   assert.equal((await receive([event("one", physical)]))[0].status, "persisted");
   assert.equal((await db.query("select destination_connector_id from ninja_event_receipts where event_id='one'")).rows[0].destination_connector_id, destination);
@@ -64,9 +79,19 @@ try {
   await assert.rejects(receive([event("forbidden")]));
   await db.exec("reset role");
   await db.exec("update ninja_telemetry_rebuild_jobs set next_attempt_at=now()-interval '1 minute'");
-  const retry = (await db.query("select * from claim_ninja_rebuild_job($1,$2)", [physical, token])).rows[0];
-  await db.query("select finish_ninja_rebuild_job($1,$2,$3,false)", [destination, token, retry.revision]);
-  assert.equal((await jobs())[0].last_error, "processing_unavailable");
+  const retriedJob = (await db.query("select * from claim_ninja_rebuild_job($1,$2)", [physical, token])).rows[0];
+  await db.query("select finish_ninja_rebuild_job($1,$2,$3,false)", [retriedJob.connector_id, token, retriedJob.revision]);
+  assert.equal((await jobs()).find(j=>j.connector_id===retriedJob.connector_id).last_error, "processing_unavailable");
   assert.ok(Number((await jobs())[0].revision) > Number((await jobs())[0].completed_revision));
-  console.log("PASS: migration, receipts, idempotency, conflicts, pending retry, exclusion, rollback, leases, revisions and authenticated isolation.");
+  // A late arrival during a page lease must not be skipped by its cursor.
+  await db.exec("update ninja_telemetry_rebuild_jobs set completed_revision=revision,lease_token=null,lease_until=null");
+  await receive([event("replay-old")]);
+  const pageJob=(await db.query("select * from claim_ninja_rebuild_job($1,$2)",[physical,token])).rows[0];
+  assert.ok(pageJob.replay_since);
+  await receive([{...event("replay-arrived-during-lease"),payload:{...event("replay-arrived-during-lease").payload,occurredAt:"2026-10-07T09:00:00Z"}}]);
+  await db.query("select finish_ninja_rebuild_job_page($1,$2,$3,true,'2026-10-07T10:01:00Z')",[destination,token,pageJob.revision]);
+  const replay=(await jobs()).find(j=>j.connector_id===destination);
+  assert.equal(new Date(replay.replay_since).toISOString(),"2026-10-07T09:00:00.000Z");
+  assert.ok(Number(replay.revision)>Number(replay.completed_revision));
+  console.log("PASS: recognized shared broker, valid/invalid mixed batch, receipt idempotency, pending retry, exclusion, leases, replay cursor with concurrent late arrival, authenticated isolation.");
 } finally { await db.close(); }

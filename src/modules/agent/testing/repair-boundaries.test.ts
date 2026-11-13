@@ -1,9 +1,9 @@
-import { afterAll, beforeAll, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { repairFixture, fixtureIds as i } from "./repair-fixture";
 let db: PGlite;
-beforeAll(async () => { db = await repairFixture(); }, 120000);
-afterAll(async () => { if (db) await db.close(); });
+beforeAll(async () => { vi.useFakeTimers({toFake:["Date"]}); vi.setSystemTime(new Date("2026-11-12T15:00:00Z")); db = await repairFixture(); }, 120000);
+afterAll(async () => { if (db) await db.close(); vi.useRealTimers(); });
 async function prepare(amount = 100) {
   const date = (await db.query<{ today: string }>("select current_date::text today")).rows[0].today;
   return (await db.query<{ id: string }>("select prepare_nodalito_repair($1,'wallet_movement',$2) id", [i.period, { wallet_id: i.wallet, occurred_on: date, kind: "external_contribution", amount_cents: amount, fee_cents: 0 }])).rows[0].id;

@@ -14,6 +14,7 @@ const { rows, rpc, state } = vi.hoisted(() => ({
     },
     previousCommitted: true,
     openingCutoffAt: null as string | null,
+    identityScope: false,
   },
 }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc, from: (table: string) => {
@@ -21,7 +22,7 @@ vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc, from: (tab
   const query = {
     select: () => query, eq: (key: string, value: unknown) => { filters[key] = value; return query; },
     is: (key: string, value: unknown) => { filters[`is:${key}`] = value; return query; },
-    in: () => query,
+    in: (key: string, value: unknown) => { filters[`in:${key}`] = value; return query; },
     lt: (key: string, value: unknown) => { filters[`lt:${key}`] = value; return query; },
     lte: (key: string, value: unknown) => { filters[`lte:${key}`] = value; return query; },
     not: (key: string, operator: string, value: unknown) => {
@@ -29,6 +30,7 @@ vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc, from: (tab
       return query;
     },
     order: () => query, limit: () => query,
+    range: async () => rows(table, filters, false),
     maybeSingle: async () => rows(table, filters, true),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(rows(table, filters, false)).then(resolve),
   };
@@ -55,6 +57,7 @@ beforeEach(() => {
   state.manualControl = null;
   state.previousCommitted = true;
   state.openingCutoffAt = null;
+  state.identityScope = false;
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-only");
   rows.mockImplementation((table, filters, single) => {
@@ -70,9 +73,9 @@ beforeEach(() => {
       typeof filters["lte:created_at"] === "string" &&
       state.manualControl.created_at <= filters["lte:created_at"];
     const data: Record<string, unknown> = {
-      ninja_connectors: null,
-      ninja_operation_probe_sessions: [previous, currentSession, prop],
-      ninja_account_links: [{ account_id: "account", connection_name: prop.connection_name, external_account_name: prop.account_name,
+      ninja_connectors: state.identityScope ? single ? {owner_user_id:"same-owner"} : [{id:"connector"},{id:"identity"}] : null,
+      ninja_operation_probe_sessions: [previous, currentSession, {...prop,connector_id:state.identityScope?"identity":undefined}],
+      ninja_account_links: [{ connector_id:state.identityScope?"identity":undefined,account_id: "account", connection_name: prop.connection_name, external_account_name: prop.account_name,
         first_seen_at: "2026-09-30T15:46:55Z", closed_at: null, life_id: null, phase: null, closure_reason: null }],
       ninja_inventory_snapshots: null,
       purchases: [{ account_id: "account", purchased_on: "2026-09-30" }],
@@ -101,6 +104,15 @@ beforeEach(() => {
   });
 });
 afterEach(() => vi.unstubAllEnvs());
+
+it("correlates the titular broker with a prop session kept in its identity destination", async () => {
+  state.identityScope=true;
+  const result=await persistAutomaticOperationBatches("connector",20,true);
+  expect(result.previews?.[0].projection.status).toBe("shadow_ready");
+  expect(result.previews?.[0].members.map(member=>member.accountId)).toEqual(["account"]);
+  expect(rows).toHaveBeenCalledWith("ninja_operation_probe_sessions",expect.objectContaining({"in:connector_id":["connector","identity"]}),false);
+  expect(rows).toHaveBeenCalledWith("ninja_connectors",expect.objectContaining({owner_user_id:"same-owner"}),false);
+});
 
 it("previews the late trade using the preceding committed balance, without writes", async () => {
   const result = await persistAutomaticOperationBatches("connector", 20, true);
