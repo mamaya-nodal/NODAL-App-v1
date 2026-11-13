@@ -187,6 +187,7 @@ export const NODALITO_GUIDES: readonly NodalitoGuide[] = [
       "Una diferencia de saldo puede ser una transferencia, una operación sin cobertura o una operación cuya información falta. No la clasifiques por el importe ni por el signo.",
       "Para una operación de identidad, investigá tanto los eventos de esa identidad como los del broker de su titular. La señal de conexión no demuestra que se hayan guardado ejecuciones.",
       "Si se recuperan eventos antiguos, comprobá primero si ya fueron registrados mediante una reparación. Debe quedar una sola operación económica.",
+      "Si faltan ejecuciones, Nodalito debe contrastar los inventarios originales de broker y cuentas con el P&L realizado. Si faltan cuentas registradas o precios de compra, debe pedir esos datos antes de asignar importes.",
       "Confirmá que la cuenta tenga empresa, etapa, vuelta y día correctamente registrados.",
       "Verificá que la operación pertenezca al titular o a la identidad seleccionada.",
       "Consultá a Nodalito para que enumere la alerta y su evidencia antes de modificar datos.",
