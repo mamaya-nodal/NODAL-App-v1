@@ -4,7 +4,7 @@ import { GET } from "./route";
 
 describe("GET /api/health", () => {
   it("informa disponibilidad sin revelar configuracion privada", async () => {
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/health"));
     const body = (await response.json()) as Record<string, unknown>;
 
     expect(response.status).toBe(200);

@@ -91,7 +91,7 @@ export function correlateAutomaticOperationBatches(
   return brokers.map((broker) => {
     const technicalCandidates = closed
       .map((operation, index) => ({ index, operation }))
-      .filter(({ index, operation }) =>
+      .filter(({ operation }) =>
         operation.role === "prop" &&
         temporallyAligned(operation, broker, openingToleranceMs) &&
         opposite(operation.direction, broker.direction) &&

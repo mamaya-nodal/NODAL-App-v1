@@ -1,18 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
-
-export function safeNextPath(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/app";
-  }
-
-  return value;
-}
-
-export function authErrorPath(reason: "provider" | "session") {
-  return `/auth/error?reason=${reason}`;
-}
+import { authErrorPath, safeNextPath } from "./paths";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");

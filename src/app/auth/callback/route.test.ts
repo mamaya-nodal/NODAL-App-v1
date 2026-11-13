@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { authErrorPath, safeNextPath } from "./route";
+import { authErrorPath, safeNextPath } from "./paths";
 
 describe("safeNextPath", () => {
   it("acepta únicamente rutas internas", () => {

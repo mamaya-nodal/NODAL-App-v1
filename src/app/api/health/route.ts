@@ -34,7 +34,7 @@ async function probeDatabase() {
   };
 }
 
-export async function GET(request?: Request) {
+export async function GET(request: Request) {
   const shouldProbeDatabase = request
     ? new URL(request.url).searchParams.get("database") === "1"
     : false;
