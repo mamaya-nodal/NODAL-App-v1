@@ -1,4 +1,8 @@
 const BUENOS_AIRES_OFFSET = "-03:00";
+const EXTENDED_PERIOD_MONTH = "2026-10-01";
+const EXTENDED_PERIOD_LAST_DATE = "2026-11-30";
+const RESCHEDULED_NEXT_PERIOD_START_DATE = "2026-12-01";
+const RESCHEDULED_NEXT_PERIOD_MONTH = "2026-11-01";
 
 function monthStart(year: number, monthIndex: number): Date {
   return new Date(Date.UTC(year, monthIndex, 1));
@@ -51,6 +55,9 @@ export function accountingPeriodMonthAt(instant = new Date()): string {
   const monthIndex = Number(parts.month) - 1;
   const localDate = `${parts.year}-${parts.month}-${parts.day}`;
   const localHour = Number(parts.hour) % 24;
+  if (localDate >= "2026-11-01" && localDate < RESCHEDULED_NEXT_PERIOD_START_DATE) {
+    return EXTENDED_PERIOD_MONTH;
+  }
   const openingCutoff = cutoffFridayForMonth(year, monthIndex);
   const isAtOrAfter = (date: string) => localDate > date || (localDate === date && localHour >= 19);
   const label = isAtOrAfter(openingCutoff)
@@ -67,11 +74,17 @@ export function periodSchedule(periodMonth: string): Readonly<{
   if (!match) throw new Error("El período debe tener formato YYYY-MM-01.");
   const year = Number(match[1]);
   const monthIndex = Number(match[2]) - 1;
-  const operationalStartOn = openingMondayForMonth(year, monthIndex);
-  const closeDate = cutoffFridayForMonth(year, monthIndex + 1);
+  const operationalStartOn = periodMonth === RESCHEDULED_NEXT_PERIOD_MONTH
+    ? RESCHEDULED_NEXT_PERIOD_START_DATE
+    : openingMondayForMonth(year, monthIndex);
+  const closeDate = periodMonth === EXTENDED_PERIOD_MONTH
+    ? EXTENDED_PERIOD_LAST_DATE
+    : cutoffFridayForMonth(year, monthIndex + 1);
   return {
     operationalStartOn,
-    scheduledCloseAt: `${closeDate}T19:00:00${BUENOS_AIRES_OFFSET}`,
+    scheduledCloseAt: periodMonth === EXTENDED_PERIOD_MONTH
+      ? `${closeDate}T23:59:59${BUENOS_AIRES_OFFSET}`
+      : `${closeDate}T19:00:00${BUENOS_AIRES_OFFSET}`,
   };
 }
 

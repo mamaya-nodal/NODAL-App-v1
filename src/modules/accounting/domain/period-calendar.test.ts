@@ -30,14 +30,19 @@ describe("calendario contable NODAL", () => {
     expect(openingMondayForMonth(2026, 10)).toBe("2026-11-16");
   });
 
-  it("mantiene octubre hasta el corte del viernes 13 de noviembre a las 19", () => {
-    expect(accountingPeriodMonthAt(new Date("2026-11-13T21:59:59Z"))).toBe("2026-10-01");
-    expect(accountingPeriodMonthAt(new Date("2026-11-13T22:00:00Z"))).toBe("2026-11-01");
+  it("extiende excepcionalmente octubre durante todo noviembre", () => {
+    expect(accountingPeriodMonthAt(new Date("2026-11-13T22:00:00Z"))).toBe("2026-10-01");
+    expect(accountingPeriodMonthAt(new Date("2026-12-01T02:59:59Z"))).toBe("2026-10-01");
+    expect(accountingPeriodMonthAt(new Date("2026-12-01T03:00:00Z"))).toBe("2026-11-01");
+    expect(periodSchedule("2026-10-01")).toEqual({
+      operationalStartOn: "2026-10-19",
+      scheduledCloseAt: "2026-11-30T23:59:59-03:00",
+    });
   });
 
   it("programa noviembre y diciembre alrededor del día 15", () => {
     expect(periodSchedule("2026-11-01")).toEqual({
-      operationalStartOn: "2026-11-16",
+      operationalStartOn: "2026-12-01",
       scheduledCloseAt: "2026-12-11T19:00:00-03:00",
     });
     expect(periodSchedule("2026-12-01")).toEqual({
@@ -47,6 +52,16 @@ describe("calendario contable NODAL", () => {
   });
 
   it("incluye los primeros días del mes siguiente en el período que está cerrando", () => {
+    expect(dateBelongsToPeriodSchedule(
+      "2026-11-30",
+      "2026-10-19",
+      "2026-11-30T23:59:59-03:00",
+    )).toBe(true);
+    expect(dateBelongsToPeriodSchedule(
+      "2026-12-01",
+      "2026-10-19",
+      "2026-11-30T23:59:59-03:00",
+    )).toBe(false);
     expect(dateBelongsToPeriodSchedule(
       "2026-12-11",
       "2026-11-16",
