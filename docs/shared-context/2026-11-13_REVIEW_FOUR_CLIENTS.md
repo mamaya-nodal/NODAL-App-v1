@@ -25,6 +25,7 @@ Los cuatro scripts aplicados son idempotentes por marca de auditoría. Antes de 
 - Servidor `84e15290236d`: el checkpoint prioriza número económico de control sobre fecha de guardado. Regresión con dos controles guardados en orden inverso; la primera operación de David pasa de bloqueada a lista sin modificar su resultado.
 - Servidor `65610e6c2f68`: conserva el trabajo/cursor de reconstrucción cuando el último ciclo está plano pero todavía estabilizando, para que la siguiente pasada lo cierre sin exigir otra ejecución. No convierte posiciones abiertas en cerradas.
 - 178 suites / 819 pruebas aprobadas; comprobación TypeScript aprobada. Salud de producción y base verificadas después de cada publicación. No se cambió versión del conector.
+- Comprobación productiva adicional: ninguna discrepancia de proyección entre conciliaciones cubiertas ya contabilizadas, participantes y asientos de los cuatro usuarios. Los seis controles nuevos tienen 18 asientos/participantes; el reparto automático de Baltazar conserva su diferencia de redondeo de dos centavos. Reejecución de los scripts sin nuevas operaciones ni auditorías duplicadas.
 - La prueba de recepción productiva anterior y estas reconstrucciones históricas son evidencias diferentes. Sigue pendiente observar una operación nueva posterior al despliegue desde Ninja hasta Cuentas.
 
 ## Riesgos, rollback e impacto para Nodalito
