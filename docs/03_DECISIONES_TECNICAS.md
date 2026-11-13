@@ -3805,3 +3805,22 @@ vigente sin aprobacion y evidencia suficiente.
   el historial junto con sus cuentas y la cobertura distribuida. La interfaz la
   identifica como recuperada y no inventa instrumentos, posiciones ni tiempos
   técnicos inexistentes.
+
+### APP-257 — La correlación admite la demora real de apertura de MIMICAL
+
+- **Fecha:** 2026-11-13.
+- **Hallazgo:** dos coberturas de David Zabaleta quedaron bloqueadas aunque el
+  conector había registrado broker y cinco cuentas Lucid. MIMICAL abrió las
+  réplicas entre 14 y 16 segundos después del broker; el correlador aceptaba
+  sólo 10 segundos y descartó cuentas que sí pertenecían a la misma operación.
+- **Decisión:** el margen de apertura aumenta a 20 segundos. Se mantienen como
+  condiciones obligatorias la dirección contraria, el mismo contrato lógico y
+  una sola participación por cuenta. Las operaciones separadas por minutos no
+  se agrupan.
+- **Reparación:** las operaciones del 12/11 (+US$ 959,10) y 13/11
+  (+US$ 83,10) quedaron conciliadas contra las cuentas 51–55, con cinco
+  participantes y asientos completos. La diferencia preoperativa de
+  -US$ 2.425,20 se conserva visible y pendiente de clasificación.
+- **Límite de evidencia:** el lote posterior del 13/11 por -US$ 324,40 no se
+  forzó como cobertura. El broker cerró cuatro minutos antes de que aparecieran
+  las cuentas 57–60, que además no estaban registradas en NODAL.

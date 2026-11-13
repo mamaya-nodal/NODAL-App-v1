@@ -295,12 +295,38 @@ describe("automatic operation batches", () => {
     });
   });
 
+  it("matches Lucid replicas that MIMICAL opens fifteen seconds after the broker", () => {
+    const props = Array.from({ length: 5 }, (_, index) => operation({
+      accountName: `LFE0509137232005${index + 1}`,
+      accountId: `david-${index + 1}`,
+      direction: "Long",
+      instruments: ["NQ DEC26"],
+      openedAt: "2026-11-13T16:16:44.100Z",
+      quantity: 1,
+      role: "prop",
+    }));
+    const broker = operation({
+      accountName: "2149906",
+      direction: "Short",
+      instruments: ["MNQ DEC26"],
+      openedAt: "2026-11-13T16:16:28.656Z",
+      quantity: 1,
+      role: "broker",
+    });
+
+    expect(countBrokerContextProps([...props, broker], broker)).toBe(5);
+    expect(correlateAutomaticOperationBatches([...props, broker])[0]).toMatchObject({
+      props: expect.arrayContaining(props.map((prop) => expect.objectContaining({ accountId: prop.accountId }))),
+      status: "ready",
+    });
+  });
+
   it("does not match operations whose openings and settlements are both unrelated", () => {
     const prop = operation({
       accountName: "LUCID1",
       direction: "Long",
       instruments: ["NQ DEC26"],
-      openedAt: "2026-09-08T14:00:12.000Z",
+      openedAt: "2026-09-08T14:00:25.000Z",
       settledAt: "2026-09-08T14:00:31.000Z",
       quantity: 1,
       role: "prop",

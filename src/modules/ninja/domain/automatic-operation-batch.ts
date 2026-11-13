@@ -17,7 +17,7 @@ export type AutomaticOperationBatch = Readonly<{
 
 // El copiador puede informar la apertura prop algunos segundos después que la
 // cobertura aun cuando pertenecen al mismo disparo operativo.
-const defaultOpeningToleranceMs = 10_000;
+const defaultOpeningToleranceMs = 20_000;
 const defaultSettlementToleranceMs = 2_000;
 
 function temporallyAligned(
