@@ -14,3 +14,5 @@ Rollback: revertir el commit de interfaz; no hay migraciones ni movimientos a re
 Nodalito: distinguir lectura, pendiente y confirmación; conservar fecha/importe/ID de cada evidencia. No presentar cualquier diferencia como retiro o depósito confirmado.
 
 Sincronización: pendiente. El conector Drive devolvió MCP startup failed / HTTP request failed: error decoding response body al consultar Estado e Índice. No se usó otra cuenta ni una carga manual. Restablecer la conexión para sincronizar.
+
+Estado operativo verificado: publicado en main, revisión productiva 4bb17eb5bc4c. /api/health?database=1 respondió status ok y database ok (73 ms). Se comprobó acceso y apertura de Contabilidad en sesión de Mauricio; esa sesión no tiene pendientes, por lo que no se declara validación interactiva de confirmación ni de múltiples pendientes reales. El orden/importes se verificaron con pruebas locales. Actualización pendiente de Estado vigente e Índice en Drive: interfaz desplegada; causa de supresión de eventos y confirmación histórica siguen pendientes de implementación.
