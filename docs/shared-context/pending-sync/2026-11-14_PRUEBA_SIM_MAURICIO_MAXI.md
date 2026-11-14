@@ -10,7 +10,7 @@ Whitelist temporal en temporary-simulation-scope.ts (14/11 20:45 UTC a 16/11 03:
 
 - Conector personal 4f72f0d2-c11f-4d26-85f7-4116f656c94a: Simbroker = broker; Sim101 = Lucid Flex 50k Evaluation de prueba.
 - Conector Maxi S ce4c4ef6-306f-4042-983f-85dae86b74ae, identidad 0bb58d74-905d-4eb5-9668-5d0f72e7b02f: SimSimbroker = otra subcuenta del mismo broker; Sim101 = otra prop de prueba.
-- Solo conexiones exactas Simulated Data Feed o Trasmision de datos simulados (espacios externos ignorados para whitelist).
+- Ambos nombres broker son válidos desde cualquiera de las dos instalaciones autorizadas si están conectados allí. La fuente física no determina propiedad del saldo. Solo conexiones exactas Simulated Data Feed o Trasmision de datos simulados (espacios externos ignorados para whitelist).
 - Cualquier otro usuario/conector/cuenta conserva exclusiones normales. No se cambian ZIP ni conector instalado.
 - La normalización de entrada elimina nodalTestPhysicalConnectorId del cliente. Solo el servidor lo agrega tras autenticar el origen. Se conservan nombres, importes, payload/hash original y origen físico. La clasificación aprobada se conserva en el inventario y se recupera por el origen real para sesiones/claim. No hay conciliador alternativo.
 
@@ -30,7 +30,7 @@ La conexión local trae espacio final. claim_ninja_broker_account comparaba conn
 
 ## Validación y estado
 
-300 pruebas Ninja aprobadas, 18 específicas de claim/alcance aprobadas, TypeScript y build webpack aprobados antes del último pequeño ajuste de recuperación de claim (ajuste validado por sus pruebas y TypeScript). Publicación y recepción real deben verificarse antes de declarar listo. Sin trades ejecutados por este chat.
+858 pruebas completas aprobadas, TypeScript y build webpack aprobados. Primer despliegue 1c0bc63e147b verificado por /api/health a las 20:50:55 UTC, base OK 86 ms. Migración de whitespace aplicada y RPC claim_ninja_broker_account probada con conexión de espacio final y usuario real, exitosamente con rollback completo. Sin trades ejecutados por este chat. Falta nueva captura del inventario: el cliente evita reenviar un inventario idéntico, por lo que se necesita reconectar el feed o reiniciar Ninja para ver las nuevas cuentas admitidas.
 
 Nodalito: diferenciar clasificación de prueba autorizada de cuentas reales. No extrapolar éxito SIM a latencias/ejecuciones reales. La confirmación de titular/subcuentas es independiente del origen físico de cobertura.
 

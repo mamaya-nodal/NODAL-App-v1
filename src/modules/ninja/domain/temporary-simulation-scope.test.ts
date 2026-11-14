@@ -15,10 +15,11 @@ describe("authorized temporary production rehearsal", () => {
     expect(classifyNinjaAccount(account("Simbroker"), at).type).toBe("simulator");
     expect(classifyNinjaAccount(account("Sim101"), at, "another-user-connector").type).toBe("simulator");
   });
-  it("permits only the exact broker on each approved installation", () => {
+  it("recognizes both subaccounts from either installation of the same owner", () => {
     expect(classifyNinjaAccount(account("Simbroker"), at, TEMPORARY_SIMULATION_CONNECTORS[0]).type).toBe("broker");
     expect(classifyNinjaAccount(account("SimSimbroker"), at, TEMPORARY_SIMULATION_CONNECTORS[1]).type).toBe("broker");
-    expect(classifyNinjaAccount(account("Simbroker"), at, TEMPORARY_SIMULATION_CONNECTORS[1]).type).toBe("simulator");
+    expect(classifyNinjaAccount(account("Simbroker"), at, TEMPORARY_SIMULATION_CONNECTORS[1]).type).toBe("broker");
+    expect(classifyNinjaAccount(account("SimSimbroker"), at, TEMPORARY_SIMULATION_CONNECTORS[0]).type).toBe("broker");
     expect(temporarySimulationRole(account("Simprop 2"), at, TEMPORARY_SIMULATION_CONNECTORS[0])).toBeNull();
   });
   it("reuses Lucid Flex evaluation classification while preserving raw names and balances", () => {

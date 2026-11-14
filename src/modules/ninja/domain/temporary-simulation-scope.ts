@@ -22,8 +22,9 @@ export function temporarySimulationRole(
   if (connection !== "simulated data feed" && connection !== "trasmision de datos simulados") return null;
   const name = account.accountName.trim().toUpperCase();
   if (name === "SIM101") return "prop";
-  if ((physical === TEMPORARY_SIMULATION_CONNECTORS[0] && name === "SIMBROKER")
-    || (physical === TEMPORARY_SIMULATION_CONNECTORS[1] && name === "SIMSIMBROKER")) return "broker";
+  // Either installation can observe either subaccount of the SAME broker.
+  // Physical origin groups the coverage; it does not own the broker balance.
+  if (name === "SIMBROKER" || name === "SIMSIMBROKER") return "broker";
   return null;
 }
 
