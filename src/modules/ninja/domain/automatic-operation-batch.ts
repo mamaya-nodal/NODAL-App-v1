@@ -5,6 +5,8 @@ export type ClassifiedTechnicalOperation = NinjaTechnicalOperation & Readonly<{
   accountId: string | null;
   role: "broker" | "prop";
   sourceConnectorId?: string;
+  /** Authenticated Ninja installation, never the accounting destination. */
+  physicalConnectorId?: string | null;
 }>;
 
 export type AutomaticOperationBatch = Readonly<{
@@ -20,6 +22,10 @@ export type AutomaticOperationBatch = Readonly<{
 // cobertura aun cuando pertenecen al mismo disparo operativo.
 const defaultOpeningToleranceMs = 20_000;
 const defaultSettlementToleranceMs = 2_000;
+
+function samePhysicalOrigin(left: ClassifiedTechnicalOperation, right: ClassifiedTechnicalOperation) {
+  return Boolean(left.physicalConnectorId && left.physicalConnectorId === right.physicalConnectorId);
+}
 
 function temporallyAligned(
   left: NinjaTechnicalOperation,
@@ -66,6 +72,7 @@ export function countBrokerContextProps(
 ): number {
   return new Set(operations.flatMap((operation, index) =>
     operation.role === "prop" &&
+      samePhysicalOrigin(operation, broker) &&
       temporallyAligned(operation, broker, openingToleranceMs) &&
       opposite(operation.direction, broker.direction) &&
       compatibleSingleInstrument(operation, broker)
@@ -81,7 +88,7 @@ export function correlateAutomaticOperationBatches(
   const closed = operations.filter((operation) => operation.status === "closed");
   const brokers = closed.filter((operation) => operation.role === "broker");
   const compatible = (prop: ClassifiedTechnicalOperation, broker: ClassifiedTechnicalOperation) =>
-    prop.role === "prop" && temporallyAligned(prop, broker, openingToleranceMs) &&
+    prop.role === "prop" && samePhysicalOrigin(prop, broker) && temporallyAligned(prop, broker, openingToleranceMs) &&
     opposite(prop.direction, broker.direction) && compatibleSingleInstrument(prop, broker);
   const sameBrokerObservation = (a: ClassifiedTechnicalOperation, b: ClassifiedTechnicalOperation) =>
     a.accountName === b.accountName && a.direction === b.direction && a.quantity === b.quantity &&
@@ -93,6 +100,7 @@ export function correlateAutomaticOperationBatches(
       .map((operation, index) => ({ index, operation }))
       .filter(({ operation }) =>
         operation.role === "prop" &&
+        samePhysicalOrigin(operation, broker) &&
         temporallyAligned(operation, broker, openingToleranceMs) &&
         opposite(operation.direction, broker.direction) &&
         compatibleSingleInstrument(operation, broker),
@@ -107,7 +115,13 @@ export function correlateAutomaticOperationBatches(
     const result = broker.result === null ? null : roundLikeSheets(broker.result * 100);
     const ambiguous = technicalCandidates.some(({ operation }) => brokers.some((other) =>
       other !== broker && !sameBrokerObservation(other, broker) && compatible(operation, other)));
-    const conflict = ambiguous || broker.instruments.length !== 1 || broker.direction === null || broker.quantity <= 0;
+    // Missing provenance is not evidence that the broker traded uncovered, nor
+    // permission to commit a partial group of the props whose origin is known.
+    const missingOrigin = !broker.physicalConnectorId || closed.some((operation) =>
+      operation.role === "prop" && !operation.physicalConnectorId &&
+      temporallyAligned(operation, broker, openingToleranceMs) &&
+      opposite(operation.direction, broker.direction) && compatibleSingleInstrument(operation, broker));
+    const conflict = missingOrigin || ambiguous || broker.instruments.length !== 1 || broker.direction === null || broker.quantity <= 0;
     if (candidates.length === 0 || result === null || conflict) {
       return {
         broker,

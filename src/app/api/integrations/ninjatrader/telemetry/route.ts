@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     const routed = await routeNinjaTelemetry(connector.connectorId, payload);
     if (routed === null) return response({ error: "No se pudo resolver el destino de la señal." }, 503);
     const results = await Promise.all(routed.map(async ({ batch, destinationConnectorId }) => {
-      const persistence = await persistNinjaTradeTelemetry(destinationConnectorId, batch);
+      const persistence = await persistNinjaTradeTelemetry(destinationConnectorId, batch, connector.connectorId);
       if (persistence.persisted && persistence.acceptedEvents > 0) await refreshNinjaTechnicalOperations(destinationConnectorId);
       return persistence;
     }));

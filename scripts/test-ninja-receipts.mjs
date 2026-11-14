@@ -28,6 +28,7 @@ for (const [file, table] of [
 await db.exec(readFileSync(new URL("../supabase/migrations/20261007000000_ninja_event_receipts.sql", import.meta.url), "utf8"));
 await db.exec("alter table ninja_connectors add column identity_id uuid");
 await db.exec(migration("20261113233000_shared_broker_receipt_recovery.sql"));
+await db.exec(migration("20261114190000_ninja_operation_physical_origin.sql"));
 const owner = "00000000-0000-0000-0000-000000000001";
 const physical = "00000000-0000-0000-0000-000000000002";
 const destination = "00000000-0000-0000-0000-000000000003";
@@ -41,6 +42,12 @@ const receive = async (events) => (await db.query("select * from receive_ninja_t
 const jobs = async () => (await db.query("select * from ninja_telemetry_rebuild_jobs")).rows;
 try {
   assert.equal((await receive([event("one")]))[0].status, "persisted");
+  const firstOrigin = (await db.query("select id,physical_connector_id from ninja_trade_telemetry_events where event_id='one'")).rows[0];
+  assert.equal(firstOrigin.physical_connector_id, physical);
+  assert.equal((await db.query("select * from get_ninja_telemetry_origins($1)", [[firstOrigin.id]])).rows[0].physical_connector_id, physical);
+  // Receipt-backed history can be resolved without rewriting its original row.
+  await db.query("update ninja_trade_telemetry_events set physical_connector_id=null where id=$1", [firstOrigin.id]);
+  assert.equal((await db.query("select * from get_ninja_telemetry_origins($1)", [[firstOrigin.id]])).rows[0].physical_connector_id, physical);
   assert.equal((await receive([event("one")]))[0].reason, "duplicate");
   assert.equal(Number((await jobs())[0].revision), 1);
   assert.equal((await receive([{ ...event("one"), sha256: "b".repeat(64) }]))[0].status, "conflict");
@@ -76,6 +83,7 @@ try {
   assert.equal((await db.query("select destination_connector_id from ninja_event_receipts where event_id='one'")).rows[0].destination_connector_id, destination);
   await db.exec("set role authenticated");
   await assert.rejects(db.query("select * from ninja_event_receipts"));
+  await assert.rejects(db.query("select * from get_ninja_telemetry_origins($1)", [[firstOrigin.id]]));
   await assert.rejects(receive([event("forbidden")]));
   await db.exec("reset role");
   await db.exec("update ninja_telemetry_rebuild_jobs set next_attempt_at=now()-interval '1 minute'");

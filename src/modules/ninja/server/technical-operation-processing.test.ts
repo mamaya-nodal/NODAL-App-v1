@@ -12,11 +12,31 @@ vi.mock("@supabase/supabase-js",()=>({createClient:()=>({from:(table:string)=>{
 }})}));
 import {refreshNinjaTechnicalOperations} from "./technical-operation-processing";
 afterEach(()=>{vi.useRealTimers();vi.unstubAllEnvs();});
+it("reconstructs separate physical observations before grouping accounting destinations",async()=>{
+  vi.useFakeTimers({toFake:["Date"]});
+  vi.setSystemTime(new Date("2026-11-13T12:00:20Z"));
+  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL","https://example.invalid");vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY","fixture");
+  mocks.upserts.length=0;
+  mocks.rows=["pc1","pc2"].flatMap((physical,index)=>{
+    const row=(id:number,time:string,event_type:string,payload:any)=>({id:id+index*100,physical_connector_id:physical,
+      occurred_at:`2026-11-13T${time}Z`,event_type,payload,instrument:event_type==="balance"?null:"NQ DEC26",connection_name:"c",account_name:"LFE050123"});
+    const result=20+10*index;
+    return [row(1,"11:59:55.000","balance",{cashValue:10000,netLiquidation:10000,realizedProfitLoss:0}),
+      row(2,"12:00:00.000","execution",{orderAction:"Buy",quantity:1,price:100}),
+      row(3,"12:00:00.001","position",{marketPosition:"Long",quantity:1}),
+      row(4,"12:00:02.000","execution",{orderAction:"Sell",quantity:1,price:101}),
+      row(5,"12:00:02.010","position",{marketPosition:"Flat",quantity:0}),
+      row(6,"12:00:02.020","balance",{cashValue:10000+result,netLiquidation:10000+result,realizedProfitLoss:result})];
+  });
+  await refreshNinjaTechnicalOperations("accounting-destination");
+  expect(mocks.upserts.flat().map(row=>({source:row.physical_connector_id,result:row.result,verified:row.result_verified})))
+    .toEqual([{source:"pc1",result:20,verified:true},{source:"pc2",result:30,verified:true}]);
+});
 it("keeps the rebuild pending until a flat final packet has passed its quiet window",async()=>{
   vi.useFakeTimers({toFake:["Date"]});
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL","https://example.invalid");vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY","fixture");
   mocks.upserts.length=0;
-  const row=(id:number,time:string,event_type:string,payload:any)=>({id,occurred_at:`2026-11-13T${time}Z`,event_type,payload,instrument:event_type==="balance"?null:"NQ DEC26",connection_name:"c",account_name:"LFE050123"});
+  const row=(id:number,time:string,event_type:string,payload:any)=>({id,physical_connector_id:"installation",occurred_at:`2026-11-13T${time}Z`,event_type,payload,instrument:event_type==="balance"?null:"NQ DEC26",connection_name:"c",account_name:"LFE050123"});
   mocks.rows=[row(1,"11:59:55.000","balance",{cashValue:10000,netLiquidation:10000,realizedProfitLoss:0}),
     row(2,"12:00:00.000","execution",{orderAction:"Buy",quantity:1,price:100}),
     row(3,"12:00:00.001","position",{marketPosition:"Long",quantity:1}),

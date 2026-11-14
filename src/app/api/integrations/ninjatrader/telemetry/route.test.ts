@@ -48,7 +48,7 @@ describe("Ninja telemetry transport and permissions", () => {
     }));
     expect(result.status).toBe(202);
     expect(mocks.routeNinjaTelemetry).toHaveBeenCalledWith("paired", payload);
-    expect(mocks.persistNinjaTradeTelemetry).toHaveBeenCalledWith("authorized-destination", payload);
+    expect(mocks.persistNinjaTradeTelemetry).toHaveBeenCalledWith("authorized-destination", payload, "paired");
     expect(await result.json()).toEqual({ accepted: true, acceptedEvents: 1, batchId: "batch-1", destinations: 1 });
     expect(result.headers.get("Cache-Control")).toContain("no-store");
   });

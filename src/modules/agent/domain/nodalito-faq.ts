@@ -187,7 +187,7 @@ export const NODALITO_GUIDES: readonly NodalitoGuide[] = [
     steps: [
       "Revisá cuenta broker, billetera, fecha, importe y comisión.",
       "Una diferencia de saldo puede ser una transferencia, una operación sin cobertura o una operación cuya información falta. No la clasifiques por el importe ni por el signo.",
-      "Para una operación de identidad, investigá tanto los eventos de esa identidad como los del broker de su titular. La señal de conexión no demuestra que se hayan guardado ejecuciones.",
+      "En una cobertura real, broker y cuentas prop se operan en el mismo Ninja y los observa un único conector físico, también cuando el titular accede remotamente a la PC de una identidad. Reuní los destinos contables conservando ese origen común; no mezcles instalaciones por pertenecer al mismo titular. La señal de conexión no demuestra recepción de ejecuciones.",
       "Si se recuperan eventos antiguos, comprobá primero si ya fueron registrados mediante una reparación. Debe quedar una sola operación económica.",
       "Si faltan ejecuciones, Nodalito debe contrastar los inventarios originales de broker y cuentas con el P&L realizado. Si faltan cuentas registradas o precios de compra, debe pedir esos datos antes de asignar importes.",
       "Si las cuentas pasaron de Evaluación a Funded, comprobá el vínculo histórico de ambas etapas: pueden faltar operaciones Funded aunque las de Evaluación estén conciliadas. Conservá la compra original y contá los días recuperados una sola vez.",

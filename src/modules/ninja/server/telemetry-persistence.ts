@@ -15,6 +15,7 @@ export type TelemetryPersistenceResult =
 export async function persistNinjaTradeTelemetry(
   connectorId: string,
   batch: NinjaTradeTelemetryBatch,
+  physicalConnectorId: string,
 ): Promise<TelemetryPersistenceResult> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -34,6 +35,7 @@ export async function persistNinjaTradeTelemetry(
         .from("ninja_trade_telemetry_events")
         .select("event_type,payload")
         .eq("connector_id", connectorId)
+        .eq("physical_connector_id", physicalConnectorId)
         .eq("connection_name", account.connectionName)
         .eq("account_name", account.accountName)
         .order("occurred_at", { ascending: false })
@@ -56,6 +58,7 @@ export async function persistNinjaTradeTelemetry(
     account_name: event.accountName,
     connection_name: event.connectionName,
     connector_id: connectorId,
+    physical_connector_id: physicalConnectorId,
     event_id: event.eventId,
     event_type: event.kind,
     instrument: event.kind === "balance" ? null : event.instrument,

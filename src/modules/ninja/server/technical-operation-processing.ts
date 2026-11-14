@@ -9,6 +9,7 @@ import { buildNinjaTechnicalOperations, type NinjaTechnicalOperation } from "../
 import { persistAutomaticOperationBatches } from "./automatic-operation-processing";
 import { processNinjaOperationBurns } from "./transition-processing";
 import { ninjaSessionResultEvidence } from "../domain/result-evidence";
+import { resolveTelemetryOrigins } from "./telemetry-origin";
 
 export async function refreshNinjaTechnicalOperations(
   connectorId: string,
@@ -125,7 +126,7 @@ export async function refreshNinjaTechnicalOperations(
     for (let offset = 0; offset < 10_000; offset += pageSize) {
       const { data: page, error } = await supabase
         .from("ninja_trade_telemetry_events")
-        .select("id,event_type,occurred_at,connection_name,account_name,instrument,payload")
+        .select("id,physical_connector_id,event_type,occurred_at,connection_name,account_name,instrument,payload")
         .eq("connector_id", connectorId)
         .eq("connection_name", account.connection_name)
         .eq("account_name", account.account_name)
@@ -143,6 +144,10 @@ export async function refreshNinjaTechnicalOperations(
     }
     if (!data.length) return 0;
 
+    const origins = await resolveTelemetryOrigins(supabase, data.map((row) => ({
+      id: Number(row.id), physical_connector_id: row.physical_connector_id as string | null,
+    })));
+
     const rows = data.map((row) => ({
       account_name: row.account_name,
       connection_name: row.connection_name,
@@ -152,11 +157,22 @@ export async function refreshNinjaTechnicalOperations(
       occurred_at: row.occurred_at,
       payload: row.payload,
     })) as NinjaTelemetryRow[];
-    const { data: baselineInventory } = await supabase
+    const sourceRows = new Map<string | null, NinjaTelemetryRow[]>();
+    for (const row of rows) {
+      const origin = origins.get(row.id) ?? null;
+      const group = sourceRows.get(origin);
+      if (group) group.push(row);
+      else sourceRows.set(origin, [row]);
+    }
+    const operations: Array<NinjaTechnicalOperation & { physicalConnectorId: string | null }> = [];
+    for (const [physicalConnectorId, originRows] of sourceRows) {
+    let baselineQuery = supabase
       .from("ninja_inventory_snapshots")
       .select("accounts,observed_at")
       .eq("connector_id", connectorId)
-      .lte("observed_at", rows[0].occurred_at)
+      .lte("observed_at", originRows[0].occurred_at);
+    if (physicalConnectorId) baselineQuery = baselineQuery.eq("physical_connector_id", physicalConnectorId);
+    const { data: baselineInventory } = await baselineQuery
       .order("observed_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -166,20 +182,23 @@ export async function refreshNinjaTechnicalOperations(
     const baselineBalance = baselineAccount?.cashValue !== null && baselineAccount?.cashValue !== undefined
       ? baselineAccount.cashValue
       : null;
-    const reconstructed = buildNinjaTechnicalOperations(rows,
+    // Never combine account events observed on separate Ninja installations.
+    const reconstructed = buildNinjaTechnicalOperations(originRows,
       capped ? new Date(rows.at(-1)!.occurred_at) : new Date(), baselineBalance);
     // Do not persist an artificial open tail cut by the page boundary. Replay
     // from the last complete operation, retaining the boundary's opening data.
-    const operations = capped ? reconstructed.filter((operation) => operation.status === "closed") : reconstructed;
+    const complete = capped ? reconstructed.filter((operation) => operation.status === "closed") : reconstructed;
+    operations.push(...complete.map((operation) => ({ ...operation, physicalConnectorId })));
     // A flat tail still inside its quiet window needs one later pass even if
     // Ninja sends no more trading events. The next heartbeat can finish it.
-    if (!capped) for (const operation of operations) {
+    if (!capped) for (const operation of complete) {
       if (operation.status === "settling" && operation.closingBalance !== null) replayCursors.push(operation.openedAt);
     }
     if (capped) {
-      const cursor = operations.at(-1)?.openedAt ?? (reconstructed.length ? null : rows.at(-1)!.occurred_at);
+      const cursor = complete.at(-1)?.openedAt ?? (reconstructed.length ? null : originRows.at(-1)!.occurred_at);
       if (cursor && Date.parse(cursor) > Date.parse(startAt) + 1_000) replayCursors.push(cursor);
       else replayStalled = true;
+    }
     }
     if (!operations.length) {
       const staleIds = unsettled
@@ -198,6 +217,7 @@ export async function refreshNinjaTechnicalOperations(
         closing_balance: operation.closingBalance,
         connection_name: operation.connectionName,
         connector_id: connectorId,
+        physical_connector_id: operation.physicalConnectorId,
         direction: operation.direction,
         execution_count: operation.executionCount,
         flat_at: operation.flatAt,
@@ -210,8 +230,8 @@ export async function refreshNinjaTechnicalOperations(
         opening_event_id: operation.openingEventId,
         quantity: operation.quantity,
         result: operation.result,
-        result_verified: ninjaSessionResultEvidence(rows, operation.openedAt, operation.settledAt, operation.result) === "verified",
-        result_conflict: ninjaSessionResultEvidence(rows, operation.openedAt, operation.settledAt, operation.result) === "conflict",
+        result_verified: ninjaSessionResultEvidence(sourceRows.get(operation.physicalConnectorId) ?? [], operation.openedAt, operation.settledAt, operation.result) === "verified",
+        result_conflict: ninjaSessionResultEvidence(sourceRows.get(operation.physicalConnectorId) ?? [], operation.openedAt, operation.settledAt, operation.result) === "conflict",
         settled_at: operation.settledAt,
         status: operation.status,
         updated_at: new Date().toISOString(),

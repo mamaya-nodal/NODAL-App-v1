@@ -1655,6 +1655,11 @@ vigente sin aprobacion y evidencia suficiente.
 
 ### APP-099 - Asignación manual de coberturas a cuentas sin telemetría prop
 
+> Aclaración 14/11/2026 (APP-258): el supuesto histórico de operar una cobertura
+> real desde otro Ninja no describe el flujo vigente. La asignación manual
+> corresponde a cobertura artificial o recuperación explícita; la cobertura
+> real completa se observa en una sola instalación.
+
 - **Caso:** Una cobertura broker puede quedar sin cuentas compatibles cuando
   las cuentas prop fueron creadas manualmente y se operaron desde otro Ninja.
 - **Decisión:** El usuario selecciona las cuentas que participaron desde la
@@ -2650,6 +2655,9 @@ vigente sin aprobacion y evidencia suficiente.
   esa observación no convierte al broker en propiedad de la identidad.
 
 ### APP-183 - Cuenta broker única por número entre conectores
+
+> Aclaración 14/11/2026 (APP-258): converger a un destino contable personal no
+> cambia el origen físico del broker ni permite asociarlo a props de otra PC.
 
 - **Fecha:** 2026-10-15. Regla funcional aclarada por Mauricio después de APP-182.
 - **Propiedad:** las cuentas prop pertenecen a la identidad con la que se compraron.
@@ -3824,3 +3832,22 @@ vigente sin aprobacion y evidencia suficiente.
 - **Límite de evidencia:** el lote posterior del 13/11 por -US$ 324,40 no se
   forzó como cobertura. El broker cerró cuatro minutos antes de que aparecieran
   las cuentas 57–60, que además no estaban registradas en NODAL.
+
+### APP-258 — Origen físico común antes de atribución contable
+
+- **Fecha:** 2026-11-14. Una cobertura real completa ocurre dentro del mismo
+  Ninja, observado por un único conector, propio o de una identidad operada
+  remotamente por el titular.
+- **Origen y destino:** el broker puede contabilizarse en el destino personal y
+  las props conservar la identidad. Esa separación nunca cambia su origen
+  físico ni permite cubrirlo con props observadas en otra instalación.
+- **Implementación:** eventos y sesiones conservan el origen autenticado;
+  reconstrucción, saldo inicial y PnL se separan por origen. La asociación lo
+  exige antes de comparar tiempo, instrumento y sentido. El historial v2 puede
+  resolverlo desde sus recibos originales; sin evidencia no se adivina.
+- **Otros flujos:** broker sin cobertura y cobertura artificial posterior
+  siguen requiriendo sus confirmaciones explícitas. No se alteran cuentas ni
+  conciliaciones históricas por este despliegue ni se dispara recuperación masiva.
+- **Verificación:** regresiones de destinos separados dentro de un origen,
+  conjuntos independientes, datos incompletos y reconstrucción sin mezcla de
+  observaciones. Recepción SQL real, permisos y compilación comprobados.

@@ -10,6 +10,7 @@ import {
 function operation(input: Partial<ClassifiedTechnicalOperation> & Pick<ClassifiedTechnicalOperation, "accountName" | "direction" | "quantity" | "role">): ClassifiedTechnicalOperation {
   return {
     accountId: input.role === "prop" ? `account-${input.accountName}` : null,
+    physicalConnectorId: "ninja-installation",
     closingBalance: 50_100,
     connectionName: "Ninja Mauri",
     executionCount: 2,
@@ -29,6 +30,49 @@ function operation(input: Partial<ClassifiedTechnicalOperation> & Pick<Classifie
 }
 
 describe("automatic operation batches", () => {
+  it("keeps broker and props together across accounting destinations of one identity installation", () => {
+    const broker = operation({ accountName: "broker", direction: "Short", quantity: 1, role: "broker", sourceConnectorId: "titular" });
+    const prop = operation({ accountName: "prop", direction: "Long", quantity: 1, role: "prop", sourceConnectorId: "identity" });
+    expect(correlateAutomaticOperationBatches([broker, prop])[0].props.map((p) => p.accountName)).toEqual(["prop"]);
+  });
+
+  it("does not attach another installation's props while its broker data is missing", () => {
+    const broker = operation({ accountName: "broker", direction: "Short", quantity: 1, role: "broker" });
+    const own = operation({ accountName: "own", direction: "Long", quantity: 1, role: "prop" });
+    const other = operation({ accountName: "other", direction: "Long", quantity: 1, role: "prop", physicalConnectorId: "other-pc" });
+    const batch = correlateAutomaticOperationBatches([broker, own, other])[0];
+    expect(batch.status).toBe("ready");
+    expect(batch.props.map((p) => p.accountName)).toEqual(["own"]);
+    expect(countBrokerContextProps([broker, own, other], broker)).toBe(1);
+  });
+
+  it("separates two complete physical blocks with overlapping times and different broker subaccounts", () => {
+    const first = operation({ accountName: "broker-a", direction: "Short", quantity: 1, role: "broker" });
+    const second = operation({ ...first, accountName: "broker-b", physicalConnectorId: "other-pc" });
+    const propA = operation({ accountName: "prop-a", direction: "Long", quantity: 1, role: "prop" });
+    const propB = operation({ ...propA, accountName: "prop-b", accountId: "prop-b", physicalConnectorId: "other-pc" });
+    expect(correlateAutomaticOperationBatches([first, second, propA, propB]).map((batch) => ({
+      status: batch.status, props: batch.props.map((p) => p.accountName),
+    }))).toEqual([{ status: "ready", props: ["prop-a"] }, { status: "ready", props: ["prop-b"] }]);
+  });
+
+  it("does not infer physical origin from the accounting destination or from two missing origins", () => {
+    const broker = operation({ accountName: "broker", direction: "Short", quantity: 1, role: "broker", physicalConnectorId: null });
+    const prop = operation({ accountName: "prop", direction: "Long", quantity: 1, role: "prop", physicalConnectorId: null });
+    expect(correlateAutomaticOperationBatches([broker, prop])[0].status).toBe("conflict");
+  });
+
+  it("does not commit a partial group when a compatible prop has unresolved origin", () => {
+    const broker = operation({ accountName: "broker", direction: "Short", quantity: 1, role: "broker" });
+    const own = operation({ accountName: "own", direction: "Long", quantity: 1, role: "prop" });
+    const unresolved = operation({ ...own, accountName: "unresolved", accountId: "unresolved", physicalConnectorId: null });
+    expect(correlateAutomaticOperationBatches([broker, own, unresolved])[0].status).toBe("conflict");
+  });
+
+  it("keeps a broker-only trade unmatched for explicit uncovered or artificial coverage confirmation", () => {
+    const broker = operation({ accountName: "broker", direction: "Short", quantity: 1, role: "broker" });
+    expect(correlateAutomaticOperationBatches([broker])[0].status).toBe("unmatched");
+  });
   it("links five prop legs with their opposite broker hedge without user assignment", () => {
     const props = Array.from({ length: 5 }, (_, index) => operation({
       accountName: `TFY${index + 35}`,

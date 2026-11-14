@@ -38,7 +38,7 @@ vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc, from: (tab
 } }) }));
 import { persistAutomaticOperationBatches } from "./automatic-operation-processing";
 
-const current = { id: 20, opening_event_id: 200, account_name: "2211575", connection_name: "En Vivo",
+const current = { id: 20, physical_connector_id: "identity-installation", opening_event_id: 200, account_name: "2211575", connection_name: "En Vivo",
   opened_at: "2026-09-30T15:43:06Z", flat_at: "2026-09-30T15:49:23Z", last_event_at: "2026-09-30T15:49:25Z",
   settled_at: "2026-09-30T15:49:35Z", status: "closed", opening_balance: 5384.74, closing_balance: 5224.1,
   minimum_net_liquidation: null, minimum_net_liquidation_at: null, result: -160.64, execution_count: 3,

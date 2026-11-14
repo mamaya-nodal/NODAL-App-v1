@@ -14,6 +14,7 @@ import {
   recordNinjaBrokerPreOperationBalance,
 } from "./broker-balance-processing";
 import { resolveSessionAccountLink } from "../domain/session-account-link";
+import { resolveTelemetryOrigins } from "./telemetry-origin";
 
 type AccountingPhase = AutomaticAccountingMember["phase"];
 
@@ -107,11 +108,14 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
   if (!scopeIds.includes(connectorId)) throw new Error("Instalación fuera del titular.");
 
   const [{ data: sessions, error: sessionsError }, { data: links, error: linksError }, { data: inventory }] = await Promise.all([
-    readAll(supabase.from("ninja_operation_probe_sessions").select("id,connector_id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,result_verified,result_conflict,execution_count,instruments,direction,quantity").in("connector_id", scopeIds).is("excluded_at", null).order("opened_at").order("id")),
+    readAll(supabase.from("ninja_operation_probe_sessions").select("id,connector_id,physical_connector_id,connection_name,account_name,opening_event_id,opened_at,flat_at,last_event_at,settled_at,status,opening_balance,closing_balance,minimum_net_liquidation,minimum_net_liquidation_at,result,result_verified,result_conflict,execution_count,instruments,direction,quantity").in("connector_id", scopeIds).is("excluded_at", null).order("opened_at").order("id")),
     supabase.from("ninja_account_links").select("connector_id,account_id,connection_name,external_account_name,first_seen_at,closed_at,phase,closure_reason,life_id,accounting_phase,completed_trade_days").in("connector_id", scopeIds),
     supabase.from("ninja_inventory_snapshots").select("accounts,observed_at").eq("connector_id", connectorId).order("observed_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (sessionsError || linksError || !sessions?.length) return { persistedBatches: 0 };
+  const physicalOrigins = await resolveTelemetryOrigins(supabase, sessions.map((session) => ({
+    id: Number(session.opening_event_id), physical_connector_id: session.physical_connector_id,
+  })));
   const linkedIds = [...new Set((links ?? []).map((link) => link.account_id))];
   const [purchasesResult, changesResult] = await Promise.all([
     linkedIds.length ? supabase.from("purchases").select("account_id,purchased_on,period_id").in("account_id", linkedIds)
@@ -163,6 +167,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
     return [{
       accountId,
       sourceConnectorId: session.connector_id ?? connectorId,
+      physicalConnectorId: physicalOrigins.get(Number(session.opening_event_id)) ?? null,
       accountName: session.account_name,
       closingBalance: session.closing_balance === null ? null : Number(session.closing_balance),
       connectionName: session.connection_name,
