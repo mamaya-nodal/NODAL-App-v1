@@ -20,7 +20,14 @@ describe("authorized temporary production rehearsal", () => {
     expect(classifyNinjaAccount(account("SimSimbroker"), at, TEMPORARY_SIMULATION_CONNECTORS[1]).type).toBe("broker");
     expect(classifyNinjaAccount(account("Simbroker"), at, TEMPORARY_SIMULATION_CONNECTORS[1]).type).toBe("broker");
     expect(classifyNinjaAccount(account("SimSimbroker"), at, TEMPORARY_SIMULATION_CONNECTORS[0]).type).toBe("broker");
-    expect(temporarySimulationRole(account("Simprop 2"), at, TEMPORARY_SIMULATION_CONNECTORS[0])).toBeNull();
+    expect(temporarySimulationRole(account("Simprop3"), at, TEMPORARY_SIMULATION_CONNECTORS[0])).toBeNull();
+  });
+  it.each(["Simprop1", "Simprop2", "Simprop 2"])("admits the explicitly authorized additional prop %s only in the rehearsal scope", (name) => {
+    for (const connector of TEMPORARY_SIMULATION_CONNECTORS) {
+      expect(classifyNinjaAccount(account(name), at, connector)).toMatchObject({ type: "prop", companyCode: "LUCID", phase: "Evaluation", accountSizeInCents: 5_000_000 });
+    }
+    expect(classifyNinjaAccount(account(name), at, "another-user-connector").type).toBe("simulator");
+    expect(temporarySimulationRole(account(name), "2026-11-16T03:00:00Z", TEMPORARY_SIMULATION_CONNECTORS[0])).toBeNull();
   });
   it("reuses Lucid Flex evaluation classification while preserving raw names and balances", () => {
     const source = account("Sim101");
