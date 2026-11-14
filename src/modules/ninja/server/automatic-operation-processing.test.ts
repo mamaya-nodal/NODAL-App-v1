@@ -78,6 +78,7 @@ beforeEach(() => {
       ninja_account_links: [{ connector_id:state.identityScope?"identity":undefined,account_id: "account", connection_name: prop.connection_name, external_account_name: prop.account_name,
         first_seen_at: "2026-09-30T15:46:55Z", closed_at: null, life_id: null, phase: null, closure_reason: null }],
       ninja_inventory_snapshots: null,
+      ninja_latest_inventory_by_origin: null,
       purchases: [{ account_id: "account", purchased_on: "2026-09-30" }],
       ninja_account_change_events: [],
       accounts: [{ id: "account", period_id: "period", company_id: "company" }],
@@ -112,6 +113,25 @@ it("correlates the titular broker with a prop session kept in its identity desti
   expect(result.previews?.[0].members.map(member=>member.accountId)).toEqual(["account"]);
   expect(rows).toHaveBeenCalledWith("ninja_operation_probe_sessions",expect.objectContaining({"in:connector_id":["connector","identity"]}),false);
   expect(rows).toHaveBeenCalledWith("ninja_connectors",expect.objectContaining({owner_user_id:"same-owner"}),false);
+});
+
+it("recognizes two broker subaccounts routed to the same destination from different installations", async () => {
+  state.identityScope = true;
+  state.currentOpeningBalance = 1000;
+  state.currentClosingBalance = 839.36;
+  const baseRead = rows.getMockImplementation()!;
+  const broker = (accountName: string) => ({accountName,connectionName:"Ninja",connectionStatus:"Connected",
+    providerName:"Broker",cashValue:1000,netLiquidation:1000,totalCashBalance:1000,
+    realizedProfitLoss:0,unrealizedProfitLoss:0});
+  rows.mockImplementation((table,filters,single) => table === "ninja_latest_inventory_by_origin"
+    ? {data:[
+      {connector_id:"connector",physical_connector_id:"personal-installation",observed_at:current.opened_at,accounts:[broker("2211575")]},
+      {connector_id:"connector",physical_connector_id:"identity-installation",observed_at:current.opened_at,accounts:[broker("2149906")]},
+    ],error:null}
+    : baseRead(table,filters,single));
+  const result = await persistAutomaticOperationBatches("connector",20,true);
+  expect(result.previews?.[0].projection).toMatchObject({status:"shadow_ready",reason:null});
+  expect(rows).toHaveBeenCalledWith("ninja_latest_inventory_by_origin",expect.objectContaining({"in:connector_id":["connector","identity"]}),false);
 });
 
 it("previews the late trade using the preceding committed balance, without writes", async () => {

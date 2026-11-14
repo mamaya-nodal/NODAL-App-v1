@@ -57,15 +57,15 @@ async function usesAggregateBrokerBalance(
   if (connectorIds.length === 0) return false;
 
   const { data: snapshots } = await supabase
-    .from("ninja_inventory_snapshots")
-    .select("connector_id,accounts,observed_at")
+    .from("ninja_latest_inventory_by_origin")
+    .select("connector_id,physical_connector_id,accounts,observed_at")
     .in("connector_id", connectorIds)
-    .order("observed_at", { ascending: false })
-    .limit(100);
+    .order("observed_at", { ascending: false });
   const latestConnectorSnapshots = new Map<string, { accounts: NinjaAccountSnapshot[]; observedAt: string }>();
   for (const snapshot of snapshots ?? []) {
-    if (!latestConnectorSnapshots.has(snapshot.connector_id)) {
-      latestConnectorSnapshots.set(snapshot.connector_id, {
+    const originKey = `${snapshot.connector_id}\u0000${snapshot.physical_connector_id ?? snapshot.connector_id}`;
+    if (!latestConnectorSnapshots.has(originKey)) {
+      latestConnectorSnapshots.set(originKey, {
         accounts: snapshot.accounts as NinjaAccountSnapshot[],
         observedAt: snapshot.observed_at,
       });
