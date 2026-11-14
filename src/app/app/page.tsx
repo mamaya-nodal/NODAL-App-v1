@@ -1609,6 +1609,8 @@ async function renderPrivateAppPage({
               accounts: inventory.accounts.map((account) => classifyNinjaAccount(
                 account,
                 account.firstSeenAt ?? inventory.observed_at,
+                undefined,
+                inventory.observed_at,
               )),
               connectorId: inventory.connector_id,
               online: Boolean(ninjaConnectors.find((connector) => connector.connectorId === inventory.connector_id)?.isOnline),

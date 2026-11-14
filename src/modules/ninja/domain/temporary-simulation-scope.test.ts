@@ -42,6 +42,12 @@ describe("authorized temporary production rehearsal", () => {
     expect(classifyNinjaAccount(normalized.accounts[0], at).type).toBe("simulator");
     expect(normalized.accounts[0]).not.toHaveProperty("nodalTestPhysicalConnectorId");
   });
+  it("uses the observed inventory time for test admission without rewriting an older first-seen date", () => {
+    const stamped = stampTemporarySimulationAccount(account("Simprop1"), TEMPORARY_SIMULATION_CONNECTORS[0], at);
+    const firstSeen = "2026-09-10T12:00:00Z";
+    expect(classifyNinjaAccount(stamped, firstSeen, undefined, at)).toMatchObject({ type: "prop", firstSeenAt: firstSeen });
+    expect(classifyNinjaAccount(stamped, firstSeen, undefined, "2026-11-16T03:00:00Z").type).not.toBe("prop");
+  });
   it.each(["2026-11-14T20:44:59Z", "2026-11-16T03:00:00Z", "invalid"])("rejects events outside the authorized window: %s", (date) => {
     expect(temporarySimulationRole(account("Simbroker"), date, TEMPORARY_SIMULATION_CONNECTORS[0])).toBeNull();
   });
