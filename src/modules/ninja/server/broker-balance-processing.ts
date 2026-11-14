@@ -76,6 +76,7 @@ export async function processNinjaBrokerBalance(
 export async function ensureNinjaBrokerBalanceBaseline(
   connectorId: string,
   snapshot: NinjaInventorySnapshot,
+  reviewChanges = true,
 ): Promise<BrokerBalanceProcessingResult> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -93,12 +94,15 @@ export async function ensureNinjaBrokerBalanceBaseline(
     .maybeSingle();
   if (error) return { created: false, processed: false, reason: "storage_error" };
   return data
-    ? observeNinjaBrokerInventoryDifference(connectorId, snapshot)
+    ? reviewChanges ? observeNinjaBrokerInventoryDifference(connectorId, snapshot) : { created: false, processed: true }
     : processNinjaBrokerBalance(connectorId, snapshot);
 }
 
 /** Inventory is evidence of a cash difference, never an automatic transfer. */
 async function observeNinjaBrokerInventoryDifference(connectorId: string, snapshot: NinjaInventorySnapshot): Promise<BrokerBalanceProcessingResult> {
+  // A page read/bootstrap must not reclassify historical inventory after a
+  // later repair. Delayed inventory stays raw; trade replay has its own guard.
+  if (Date.parse(snapshot.observedAt) < Date.now() - 5 * 60_000) return { created: false, processed: true };
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     global: { fetch: observedNinjaFetch }, auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -238,6 +242,6 @@ export async function bootstrapNinjaBrokerBalance(
     observedAt: latest.observed_at,
   };
   return isNinjaInventorySnapshot(snapshot)
-    ? ensureNinjaBrokerBalanceBaseline(connectorId, snapshot)
+    ? ensureNinjaBrokerBalanceBaseline(connectorId, snapshot, false)
     : { created: false, processed: false, reason: "storage_error" };
 }

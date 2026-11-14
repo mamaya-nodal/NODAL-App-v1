@@ -33,10 +33,23 @@ it("checks new inventory cash even when the connector already has a baseline", a
   reads.mockImplementation((table) => ({ data: table === "ninja_broker_balance_states" ? { connector_id: "personal" } : [], error: null }));
   rpc.mockResolvedValue({ data: true, error: null });
   await expect(ensureNinjaBrokerBalanceBaseline("personal", {
-    eventId: "inventory-new-cash", kind: "inventory_snapshot", observedAt: "2026-11-13T19:07:00Z",
+    eventId: "inventory-new-cash", kind: "inventory_snapshot", observedAt: new Date().toISOString(),
     accounts: [{ accountName: "2234971", connectionName: "Live", connectionStatus: "Connected", providerName: "NinjaTrader", cashValue: 9930.08, netLiquidation: 9930.08, totalCashBalance: null, realizedProfitLoss: 0, unrealizedProfitLoss: 0 }],
   })).resolves.toEqual({ created: true, processed: true });
   expect(rpc).toHaveBeenCalledWith("observe_ninja_broker_inventory_difference", expect.objectContaining({ target_balance_cents: 993008, target_realized_cents: 0 }));
+});
+
+it("does not re-open old inventory as a cash movement after later repairs", async () => {
+  reads.mockImplementation(() => ({ data: { connector_id: "personal" }, error: null }));
+  await expect(ensureNinjaBrokerBalanceBaseline("personal", { eventId: "old", kind: "inventory_snapshot", observedAt: new Date(Date.now() - 6 * 60_000).toISOString(), accounts: [] })).resolves.toEqual({ created: false, processed: true });
+  expect(rpc).not.toHaveBeenCalled();
+});
+
+it("keeps page bootstrap read-only when an existing broker baseline is present", async () => {
+  reads.mockImplementation((table) => ({ data: table === "ninja_connector_destinations" ? [] : table === "ninja_inventory_snapshots" ? { accounts: [], event_id: "latest", observed_at: new Date().toISOString() } : { connector_id: "personal" }, error: null }));
+  await expect(bootstrapNinjaBrokerBalance("personal")).resolves.toEqual({ created: false, processed: true });
+  expect(rpc).not.toHaveBeenCalled();
+  expect(reads).not.toHaveBeenCalledWith("ninja_connector_connection_reviews", false);
 });
 
 it("persists pre-operation differences atomically instead of stopping at any old pending event", async () => {
