@@ -8,6 +8,7 @@ import { clampDateToPeriodSchedule } from "@/modules/accounting/domain/period-ca
 import type { FundingWithdrawal, OperationalSummary } from "@/modules/summary/domain/operational-summary";
 import { presentWalletBalances } from "@/modules/wallets/domain/balance-presentation";
 import { buildWalletMovementHistoryCsv, orderWalletMovementHistory } from "@/modules/wallets/domain/movement-history";
+import { orderPendingBrokerTransfers, pendingBrokerDifference, type PendingBrokerTransfer } from "@/modules/wallets/domain/pending-broker-transfers";
 import { buildSummaryAlerts } from "@/modules/summary/domain/summary-alerts";
 import { buildConciliationBreakdown, sumConciliationLines } from "@/modules/summary/domain/conciliation-breakdown";
 import {
@@ -28,7 +29,8 @@ type Props = Readonly<{
   embedded?: boolean;
   economicTrace?: EconomicTraceItem[];
   liveBrokerBalance?: NinjaLiveBrokerBalance | null;
-  pendingBrokerTransfer?: PendingBrokerTransfer | null;
+  pendingBrokerTransfers?: readonly PendingBrokerTransfer[];
+  brokerTransferLoadFailed?: boolean;
   hasPendingNinjaOperation?: boolean;
   movementHistory?: OperationalSummary["walletMovements"];
   periodLabel?: string;
@@ -43,12 +45,7 @@ type Props = Readonly<{
   wallets: WalletView[];
 }>;
 
-export type PendingBrokerTransfer = Readonly<{
-  balanceInCents: number;
-  expectedBalanceInCents?: number;
-  eventId: string;
-  observedAt: string;
-}>;
+export type { PendingBrokerTransfer } from "@/modules/wallets/domain/pending-broker-transfers";
 
 export type WalletView = Readonly<{
   automatic: boolean;
@@ -113,7 +110,7 @@ const labels = {
 
 const MOVEMENT_HISTORY_PAGE_SIZE = 10;
 
-export function ProgressSummary({ accounts, economicTrace = [], embedded = false, hasPendingNinjaOperation = false, identities = [], liveBrokerBalance = null, movementHistory, payouts, pendingBrokerTransfer = null, periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, walletHistoryNames = {}, wallets }: Props) {
+export function ProgressSummary({ accounts, brokerTransferLoadFailed = false, economicTrace = [], embedded = false, hasPendingNinjaOperation = false, identities = [], liveBrokerBalance = null, movementHistory, payouts, pendingBrokerTransfers = [], periodId, periodLabel, periodOperationalStartOn, periodScheduledCloseAt, periods = [], summary, walletHistoryNames = {}, wallets }: Props) {
   const router = useRouter();
   const payoutAccounts = accounts.filter((account) => account.eligibleForPayout);
   const [message, setMessage] = useState<string | null>(null);
@@ -145,12 +142,19 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
   const visibleWalletMovements = orderedWalletMovements.slice(0, visibleMovementCount);
   const remainingMovementCount = Math.max(0, orderedWalletMovements.length - visibleWalletMovements.length);
   const displayedPayouts = payouts ?? summary.fundingWithdrawals;
-  const brokerDifferenceInCents = summary.brokerBalanceInCents !== null && (pendingBrokerTransfer || liveBalance)
-    ? (pendingBrokerTransfer?.balanceInCents ?? liveBalance!.balanceInCents) -
-      (pendingBrokerTransfer?.expectedBalanceInCents ?? summary.brokerBalanceInCents)
+  const brokerDifferenceInCents = summary.brokerBalanceInCents !== null && liveBalance
+    ? liveBalance.balanceInCents - summary.brokerBalanceInCents
     : 0;
-  const brokerTransferKind = brokerDifferenceInCents > 0 ? "wallet_to_broker" : "broker_to_wallet";
-  const hasBrokerTransferToReconcile = brokerDifferenceInCents !== 0 && (pendingBrokerTransfer !== null || !hasPendingNinjaOperation);
+  const orderedBrokerTransfers = orderPendingBrokerTransfers(pendingBrokerTransfers)
+    .filter((item) => pendingBrokerDifference(item) !== 0);
+  const hasLiveBrokerDifference = !brokerTransferLoadFailed && orderedBrokerTransfers.length === 0 && brokerDifferenceInCents !== 0 && !hasPendingNinjaOperation;
+  const brokerTransferItems = orderedBrokerTransfers.length ? orderedBrokerTransfers : hasLiveBrokerDifference ? [{
+    balanceInCents: liveBalance!.balanceInCents,
+    expectedBalanceInCents: summary.brokerBalanceInCents!,
+    eventId: "live",
+    observedAt: liveBalance!.observedAt,
+  }] : [];
+  const hasBrokerTransferToReconcile = brokerTransferItems.length > 0;
   const walletBalances = presentWalletBalances(wallets.map((wallet) => ({
     accountingInCents: wallet.balanceInCents,
     automatic: wallet.automatic,
@@ -225,16 +229,18 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
     }
   }
 
-  async function reconcileBrokerTransfer(event: FormEvent<HTMLFormElement>) {
+  async function reconcileBrokerTransfer(event: FormEvent<HTMLFormElement>, item: PendingBrokerTransfer) {
     event.preventDefault();
+    const difference = pendingBrokerDifference(item);
+    if (difference === null || difference === 0 || saving) return;
     const form = new FormData(event.currentTarget);
     setSaving(true);
     const result = await reconcileBrokerWalletTransfer({
       date: String(form.get("date") ?? ""),
       fee: String(form.get("fee") ?? ""),
-      kind: brokerTransferKind,
+      kind: difference > 0 ? "wallet_to_broker" : "broker_to_wallet",
       observation: String(form.get("observation") ?? ""),
-      eventId: pendingBrokerTransfer?.eventId ?? null,
+      eventId: item.eventId === "live" ? null : item.eventId,
       periodId,
       walletId: String(form.get("wallet") ?? ""),
     });
@@ -599,16 +605,25 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
         <details className="accounting-action-card demo-operation-disclosure" open={hasBrokerTransferToReconcile ? true : undefined}>
           <summary>
             <span>Movimientos de fondos</span>
-            <strong>{hasBrokerTransferToReconcile ? "1 pendiente" : summary.walletMovements.length}</strong>
+            <strong>{brokerTransferLoadFailed ? "Reintentar" : hasBrokerTransferToReconcile ? `${brokerTransferItems.length} ${brokerTransferItems.length === 1 ? "pendiente" : "pendientes"}` : summary.walletMovements.length}</strong>
           </summary>
-          {hasBrokerTransferToReconcile && (
-            <div className="broker-transfer-reconciliation" role="status">
-              <div className="broker-transfer-heading">
-                <strong>Diferencia de saldo pendiente</strong>
-                <span>{money(brokerDifferenceInCents)}</span>
-              </div>
+          {brokerTransferLoadFailed && <p role="alert">No pudimos cargar los movimientos pendientes. <button onClick={() => router.refresh()} type="button">Reintentar</button></p>}
+          {brokerTransferItems.map((item) => {
+            const difference = pendingBrokerDifference(item);
+            const observedDate = new Intl.DateTimeFormat("en-CA", {
+              year: "numeric", month: "2-digit", day: "2-digit", timeZone: "America/Argentina/Buenos_Aires",
+            }).format(new Date(item.observedAt));
+            const movementDate = periodOperationalStartOn && periodScheduledCloseAt
+              ? clampDateToPeriodSchedule(observedDate, periodOperationalStartOn, periodScheduledCloseAt) : observedDate;
+            return <details className="broker-transfer-reconciliation" key={item.eventId}>
+              <summary className="broker-transfer-heading">
+                <span><strong>{date(observedDate)}</strong><small>{difference === null ? "Diferencia por revisar" : difference > 0 ? "Aumento de saldo broker" : "Disminución de saldo broker"}</small></span>
+                <strong>{difference === null ? "Revisar" : money(difference)}</strong>
+                <i aria-hidden="true" />
+              </summary>
+              <div className="broker-transfer-content">
               <p>Si corresponde a una transferencia, completá sus datos. Si fue una operación, revisala con Nodalito.</p>
-              <form className="summary-form broker-transfer-form" onSubmit={reconcileBrokerTransfer}>
+              {difference === null ? <p>No se conserva un saldo de referencia para este registro. Pedile a Nodalito que lo revise.</p> : <form className="summary-form broker-transfer-form" onSubmit={(event) => reconcileBrokerTransfer(event, item)}>
                 <label>
                   <span>Billetera o cuenta bancaria relacionada</span>
                   <select defaultValue={wallets[0]?.id ?? ""} name="wallet" required>
@@ -618,11 +633,11 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                 </label>
                 <label>
                   <span>Fecha</span>
-                  <input defaultValue={defaultBusinessDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
+                  <input defaultValue={movementDate} max={maximumBusinessDate} min={periodOperationalStartOn} name="date" required type="date" />
                 </label>
                 <label>
                   <span>Importe detectado</span>
-                  <input disabled value={money(Math.abs(brokerDifferenceInCents))} />
+                  <input disabled value={money(Math.abs(difference))} />
                 </label>
                 <label>
                   <span>Comisión (opcional)</span>
@@ -633,9 +648,10 @@ export function ProgressSummary({ accounts, economicTrace = [], embedded = false
                   <input name="observation" placeholder="Agregar una nota" />
                 </label>
                 <button disabled={saving || wallets.length === 0}>Confirmar transferencia</button>
-              </form>
-            </div>
-          )}
+              </form>}
+              </div>
+            </details>;
+          })}
           <form className="summary-form" onSubmit={wallet}>
             <select name="wallet" onChange={(event) => setMovementWalletId(event.target.value)} required value={movementWalletId}>
               <option disabled value="">Billetera o cuenta bancaria</option>

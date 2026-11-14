@@ -8045,8 +8045,15 @@ html[data-theme="day"] .identity-accent { color: var(--identity-accent-day) !imp
 .payout-confirm-button:hover { filter: brightness(1.04); }
 .payout-confirm-button:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .payout-confirm-button:disabled { cursor: not-allowed; filter: saturate(0.45); opacity: 0.52; box-shadow: none; }
-.broker-transfer-reconciliation { display: grid; gap: 12px; margin-top: 10px; padding: 14px 16px 16px; border: 1px solid color-mix(in srgb, var(--app-warning) 45%, var(--app-border)); border-radius: 13px; background: color-mix(in srgb, var(--app-warning) 5%, var(--app-panel)); }
-.broker-transfer-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.broker-transfer-reconciliation { margin-top: 10px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-panel); }
+.broker-transfer-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; cursor: pointer; list-style: none; }
+.broker-transfer-heading::-webkit-details-marker { display: none; }
+.broker-transfer-heading > span { display: grid; gap: 4px; flex: 1; text-align: left; }
+.broker-transfer-heading small { color: var(--app-subtle); font-size: 10px; font-weight: 400; }
+.broker-transfer-heading > i::after { content: "+"; color: var(--app-subtle); font-size: 16px; font-style: normal; }
+.broker-transfer-reconciliation[open] > summary > i::after { content: "−"; }
+.broker-transfer-content { padding: 0 12px 12px; display: grid; gap: 12px; }
+.broker-transfer-content p { margin: 0; color: var(--app-subtle); font-size: 11px; }
 .broker-transfer-heading strong { color: var(--app-title); font-size: 11px; }
 .broker-transfer-heading span { color: var(--app-copy); font-size: 10px; font-weight: 700; text-align: right; }
 .broker-transfer-form { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
@@ -8274,7 +8281,7 @@ html[data-theme="day"] .demo-stage.live {
 }
 
 @media (max-width: 620px) {
-  .broker-transfer-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .broker-transfer-heading { gap: 8px; }
   .broker-transfer-heading span { text-align: left; }
   .broker-transfer-form { grid-template-columns: 1fr; }
   .broker-transfer-form > .broker-transfer-observation,

@@ -422,7 +422,8 @@ async function renderPrivateAppPage({
   let identitySummaries: IdentitySummary[] = [];
   let identitySignalStates: Record<string, boolean> = {};
   let pendingBrokerAccounts: PendingBrokerAccountView[] = [];
-  let pendingBrokerTransfer: PendingBrokerTransfer | null = null;
+  let pendingBrokerTransfers: PendingBrokerTransfer[] = [];
+  let brokerTransferLoadFailed = false;
   let openingSnapshot: PeriodOpeningRecord | null = null;
   let openingSetupEligible = false;
   let openingRevisionEligible = false;
@@ -458,6 +459,7 @@ async function renderPrivateAppPage({
       { data: ninjaTransitionRows },
       { data: ninjaRegistrationTransitionRows },
       { data: ninjaBrokerBalanceRows },
+      { data: pendingBrokerBalanceRows, error: pendingBrokerBalanceError },
       { data: ninjaBrokerAccountAliasRows },
       { data: historicalPurchaseRows },
       { data: historicalAccountRows },
@@ -522,6 +524,14 @@ async function renderPrivateAppPage({
           .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
           .order("observed_at", { ascending: false })
           .limit(30),
+        (privileged ?? supabase)
+          .from("ninja_broker_balance_events")
+          .select("id, observed_at, balance_cents, source_accounts")
+          .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
+          .eq("status", "pending")
+          .like("source_event_id", "ninja-preoperation:%")
+          .order("observed_at", { ascending: false })
+          .order("id"),
         supabase
           .from("ninja_broker_account_aliases")
           .select("connection_name,account_name,display_name"),
@@ -802,16 +812,14 @@ async function renderPrivateAppPage({
         toAccountName: row.to_account_name,
       }));
     const brokerRowsAscending = [...((ninjaBrokerBalanceRows ?? []) as NinjaBrokerBalanceRpcRow[])].reverse();
-    const pendingPreoperationRow = brokerRowsAscending.find((row) =>
-      row.status === "pending" && row.source_event_id.startsWith("ninja-preoperation:"),
-    );
-    pendingBrokerTransfer = pendingPreoperationRow ? {
-      balanceInCents: Number(pendingPreoperationRow.balance_cents),
-      expectedBalanceInCents: (pendingPreoperationRow.source_accounts as ReadonlyArray<{ expectedBalanceInCents?: number }>)
+    brokerTransferLoadFailed = !!pendingBrokerBalanceError;
+    pendingBrokerTransfers = (pendingBrokerBalanceRows ?? []).map((row) => ({
+      balanceInCents: Number(row.balance_cents),
+      expectedBalanceInCents: (row.source_accounts as ReadonlyArray<{ expectedBalanceInCents?: number }>)
         .find((source) => Number.isSafeInteger(source.expectedBalanceInCents))?.expectedBalanceInCents,
-      eventId: pendingPreoperationRow.id,
-      observedAt: pendingPreoperationRow.observed_at,
-    } : null;
+      eventId: row.id,
+      observedAt: row.observed_at,
+    }));
     incomingNinjaBalance = null;
     const accountsById = new Map(
       (accountRows ?? []).map((account) => [account.id, account]),
@@ -1749,7 +1757,8 @@ async function renderPrivateAppPage({
             hasPendingNinjaOperation={hasPendingNinjaOperation}
             liveBrokerBalance={liveNinjaBrokerBalance}
             movementHistory={walletMovementHistory}
-            pendingBrokerTransfer={pendingBrokerTransfer}
+            pendingBrokerTransfers={pendingBrokerTransfers}
+            brokerTransferLoadFailed={brokerTransferLoadFailed}
             periodId={selection.period.id}
             periodLabel={formatPeriodLabel(selection.period.periodMonth)}
             periodOperationalStartOn={selection.period.operationalStartOn}
