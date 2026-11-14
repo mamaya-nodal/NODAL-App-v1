@@ -162,7 +162,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       realizedProfitLoss: null,
       totalCashBalance: null,
       unrealizedProfitLoss: null,
-    }, session.opened_at);
+    }, session.opened_at, physicalOrigins.get(Number(session.opening_event_id)) ?? undefined);
     if (!accountId && detected.type !== "broker" && detected.type !== "prop") return [];
     return [{
       accountId,
@@ -339,7 +339,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
           realizedProfitLoss: null,
           totalCashBalance: null,
           unrealizedProfitLoss: null,
-        }, session.opened_at).phase;
+        }, session.opened_at, physicalOrigins.get(Number(session.opening_event_id)) ?? undefined).phase;
       const operationalBaseline = (links ?? [])
         .filter((link) => link.account_id === prop.accountId && link.accounting_phase &&
           Date.parse(link.first_seen_at) <= Date.parse(session.opened_at))

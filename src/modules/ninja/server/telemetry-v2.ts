@@ -56,7 +56,7 @@ export async function receiveTelemetryV2(physical: string, events: ReceivedEvent
       accountName: e.accountName, connectionName: e.connectionName, providerName: e.providerName,
       connectionStatus: "Connected", cashValue: null, netLiquidation: null, totalCashBalance: null,
       realizedProfitLoss: null, unrealizedProfitLoss: null,
-    }, e.occurredAt).type === "simulator";
+    }, e.occurredAt, physical).type === "simulator";
     return { ...event, destinationConnectorId: destinations.get(e.eventId) ?? null, excluded: simulated ? "simulator" : null };
   });
   const { data, error } = await client().rpc("receive_ninja_telemetry_v2", { target_physical: physical, target_events: planned });

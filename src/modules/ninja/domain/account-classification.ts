@@ -1,4 +1,5 @@
 import type { NinjaAccountSnapshot } from "./ingestion-payload";
+import { temporarySimulationRole } from "./temporary-simulation-scope";
 
 export type DetectedNinjaAccount = Readonly<{
   accountSizeInCents: number | null;
@@ -61,9 +62,13 @@ export function hasApprovedAutomaticRiskRule(account: DetectedNinjaAccount) {
     && (account.companyCode !== "FTMO" || account.product === "Growth");
 }
 
-export function classifyNinjaAccount(account: NinjaAccountSnapshot, firstSeenAt: string): DetectedNinjaAccount {
+export function classifyNinjaAccount(account: NinjaAccountSnapshot, firstSeenAt: string, authenticatedPhysicalConnectorId?: string): DetectedNinjaAccount {
   const name = account.accountName.trim().toUpperCase();
   const common = { accountName: account.accountName, connectionName: account.connectionName, firstSeenAt, suggestedPurchaseDate: dateInBuenosAires(firstSeenAt) };
+
+  const testRole = temporarySimulationRole(account, firstSeenAt, authenticatedPhysicalConnectorId);
+  if (testRole === "broker") return { ...common, accountSizeInCents: null, company: null, companyCode: null, phase: null, product: null, type: "broker" };
+  if (testRole === "prop") return { ...common, accountSizeInCents: 5_000_000, company: "Lucid", companyCode: "LUCID", phase: "Evaluation", product: "Flex", type: "prop" };
 
   if (/^SIM(?:\d+|BROKER)$/.test(name) || account.connectionName.toLowerCase().includes("simulated"))
     return { ...common, accountSizeInCents: null, company: null, companyCode: null, phase: null, product: null, type: "simulator" };

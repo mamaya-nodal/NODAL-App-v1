@@ -1,4 +1,6 @@
 export type NinjaAccountSnapshot = Readonly<{
+  /** Server-only provenance. normalizeNinjaInventorySnapshot strips client input. */
+  nodalTestPhysicalConnectorId?: string;
   accountName: string;
   cashValue: number | null;
   connectionName: string;

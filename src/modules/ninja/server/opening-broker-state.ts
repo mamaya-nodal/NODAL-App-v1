@@ -5,6 +5,7 @@ import { reportReadFailure } from "@/lib/supabase/read-with-retry";
 import { buildBrokerBalanceAfterClaim, deduplicatePendingBrokerAccounts, type ClaimedBrokerObservation, type PendingOpeningBrokerAccount } from "../domain/broker-claim-balance";
 import type { NinjaInventoryView } from "../domain/live-broker-balance";
 import { isNinjaTradeTelemetryBatch, type NinjaBalanceTelemetryEvent } from "../domain/trade-telemetry";
+import { stampTemporarySimulationAccount } from "../domain/temporary-simulation-scope";
 
 function requireBrokerRead(scope: string, result: { data?: unknown; error: { code?: string; status?: number } | null }) {
   if (!result.error) return;
@@ -71,7 +72,9 @@ export async function readOpeningBrokerState(userClient: SupabaseClient, userId:
     }
     if (!data) return null;
     const batch = { kind: "trade_telemetry_batch", batchId: "claim-read", observedAt: new Date().toISOString(), events: [data.payload] };
-    return isNinjaTradeTelemetryBatch(batch) && batch.events[0].kind === "balance" ? batch.events[0] as NinjaBalanceTelemetryEvent : null;
+    return isNinjaTradeTelemetryBatch(batch) && batch.events[0].kind === "balance"
+      ? stampTemporarySimulationAccount(batch.events[0] as NinjaBalanceTelemetryEvent, physicalId, batch.events[0].occurredAt)
+      : null;
   }
   const ownedKeys = new Set((ownershipResult.data ?? []).map((row) => `${row.physical_connector_id}\u0000${row.connection_name}\u0000${row.account_name}`));
   const ownedAccountNumbers = new Set((ownershipResult.data ?? []).map((row) => row.account_name.trim().toUpperCase()));

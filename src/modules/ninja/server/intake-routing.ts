@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { classifyNinjaAccount } from "../domain/account-classification";
+import { stampTemporarySimulationAccount } from "../domain/temporary-simulation-scope";
 import type { NinjaAccountSnapshot, NinjaInventorySnapshot } from "../domain/ingestion-payload";
 import { decideNinjaIntake, type NinjaIntakeEpoch } from "../domain/intake-routing";
 import type { NinjaTradeTelemetryBatch, NinjaTradeTelemetryEvent } from "../domain/trade-telemetry";
@@ -274,7 +275,8 @@ export async function routeNinjaInventory(
         `${row.destination_connector_id}\u0000${row.connection_name}\u0000${row.account_name}`,
       ) }));
   if (currentDestination) grouped.set(currentDestination, []);
-  for (const account of snapshot.accounts) {
+  for (const rawAccount of snapshot.accounts) {
+    const account = stampTemporarySimulationAccount(rawAccount, physicalConnectorId, snapshot.observedAt);
     const classified = classifyNinjaAccount(account, snapshot.observedAt);
     if (classified.type === "simulator") continue;
     if (classified.type === "broker"
@@ -337,7 +339,7 @@ export async function routeNinjaTelemetry(
       ) }));
   for (const event of batch.events) {
     const account = telemetryAccount(event);
-    const classified = classifyNinjaAccount(account, event.occurredAt);
+    const classified = classifyNinjaAccount(account, event.occurredAt, physicalConnectorId);
     if (classified.type === "simulator") continue;
     if (classified.type === "broker"
       && state.excludedBrokerAccountNames.has(brokerAccountKey(event.accountName))) continue;
