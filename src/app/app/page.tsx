@@ -755,12 +755,14 @@ async function renderPrivateAppPage({
     );
     const connectedBrokerAccounts = connectedNinjaAccounts.filter(
       (account) =>
-        classifyNinjaAccount(account, account.firstSeenAt ?? new Date().toISOString()).type ===
+        classifyNinjaAccount(account, account.firstSeenAt ?? new Date().toISOString(), undefined,
+          latestNinjaAccounts.get(`${account.connectionName}\u0000${account.accountName}`)?.observedAt ?? new Date().toISOString()).type ===
         "broker",
     );
     const connectedPropAccounts = connectedNinjaAccounts.filter(
       (account) =>
-        classifyNinjaAccount(account, account.firstSeenAt ?? new Date().toISOString()).type ===
+        classifyNinjaAccount(account, account.firstSeenAt ?? new Date().toISOString(), undefined,
+          latestNinjaAccounts.get(`${account.connectionName}\u0000${account.accountName}`)?.observedAt ?? new Date().toISOString()).type ===
         "prop",
     );
     connectedNinjaPropAccountNames = connectedPropAccounts.map((account) => account.accountName);
