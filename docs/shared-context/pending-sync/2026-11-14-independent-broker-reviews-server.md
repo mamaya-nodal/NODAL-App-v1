@@ -1,0 +1,24 @@
+# 2026-11-14 — Diferencias broker independientes y confirmación posterior
+Área: servidor / conciliación / Nodalito. Alcance general; caso de referencia Baltazar.
+
+Decisión: un pendiente anterior no debe ocultar otro movimiento. Cada diferencia se revisa y confirma individualmente. Registrar evidencia no equivale a clasificarla como transferencia.
+
+Causa confirmada: ingest guardaba inventario, pero ensureNinjaBrokerBalanceBaseline no revisaba cambios si existía estado. El fallback anterior a un trade dejaba de registrar toda diferencia si encontraba cualquier preoperation pending. Baltazar conservaba una diferencia del 30/10 de -1051.48 y no se generó el nuevo pendiente al informar Ninja 9930.08 contra la referencia 1379.08 (+8551). El pendiente de noviembre ya había sido conservado por la reparación previa; no atribuir su creación original al detector nuevo.
+
+Cambios: recepción de inventario plano verificado vuelve a observar diferencias; compara efectivo y PnL realizado contra referencias estables, espera 10 segundos y utiliza como respaldo el último saldo recibido/confirmado cuando no hay referencia intradía segura. El inventario histórico se consulta con ventana de 30 minutos para limitar carga. Un reinicio diario del PnL no se interpreta como transferencia. Los casos sin comparación segura permanecen como diferencias neutrales para investigar, no como depósitos/retiros económicos.
+
+Deduplicación: función atómica bloquea por conector; distingue la referencia temporal y cuenta broker. Mantiene pendientes anteriores y descuenta trades con resultado verificado al trasladar una observación entre operaciones. No genera otro movimiento por el mismo faltante arrastrado. Si faltan resultados intermedios fiables no inventa el desglose. El detector de inventario se limita al destino personal y a una única cuenta broker verificada; se conserva el fallback previo al trade. No se actualizó el conector.
+
+Confirmación: conserva el delta original aun después de trades posteriores; permite confirmar pendientes por separado, conservando el saldo recibido y la diferencia residual. Rechaza referencias que no encajan en el faltante actual. Se mantiene validación de propietario, período, billetera, saldo suficiente, dirección, comisión y auditoría. No se confirmó ninguna transferencia real ni se cambiaron saldos de usuarios durante el despliegue.
+
+Base de datos: migraciones 20261114130000 y 20261114131000 aplicadas y verificadas en producción. Respaldo privado con RLS y sin permisos anon/authenticated en private_broker_reviews_20261114.backup. La primera ejecución protegida detuvo la segunda migración al encontrar indentación acumulada en la función instalada; se normalizó sólo el formato y se reprodujo ese formato en la prueba. No se omitió el control ni se reemplazó una función parcialmente.
+
+Validación: suite completa 839 pruebas / 180 archivos aprobados con dos trabajadores. Primera ejecución masiva tuvo dos timeouts por carga local; ambas pruebas aprobaron al repetirse con concurrencia acotada. Catorce pruebas SQL cubren dos pendientes, saldo nuevo con anterior, PnL, callbacks desfasados, depósito durante trade, referencia faltante, confirmación posterior, diferencia residual, referencia obsoleta y permisos. TypeScript y compilación webpack aprobados. Producción: ambas migraciones instaladas, ambas funciones verificadas, dos objetos de respaldo; pendiente real de Baltazar 8551 coincide con diferencia actual 8551. No se ejecutó confirmación financiera real como prueba. Captura privada: client-audit-20261113/broker-reviews-server-verified-20261114.png.
+
+Nodalito: guía de Movimientos de fondos actualizada; no interpretar signo o importe como prueba de transferencia. Separar evidencia recibida, creación de pendiente y confirmación. Una diferencia antigua incompatible se investiga en vez de forzar un movimiento; la confirmación conserva el importe del evento y la diferencia residual.
+
+Rollback: revertir los cambios de aplicación y restaurar la función desde el respaldo privado. No borrar evidencias. Si ya se confirmaron transferencias con metadatos de saldo recibido, conservar esos metadatos y la restricción ampliada; no restaurar ciegamente una restricción que los rechace. No se modifican registros originales para hacer un rollback.
+
+Continuidad: observar el siguiente movimiento real, aún no ocurrido en esta validación de sábado. Los movimientos ambiguos siguen requiriendo investigación; el detector no prueba qué wallet fue origen. Sustituye los pendientes técnicos consignados en los registros anteriores de 2026-11-14; conserva su trazabilidad.
+
+Drive: sincronización pendiente por fallo del conector (MCP startup failed / HTTP request failed: error decoding response body). No se afirma sincronizado ni se sustituyó por otra cuenta o carga manual. Actualizar Estado vigente e Índice con esta corrección cuando se restablezca el conector.

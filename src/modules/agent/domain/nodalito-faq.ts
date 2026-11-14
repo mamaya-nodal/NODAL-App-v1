@@ -168,12 +168,14 @@ export const NODALITO_GUIDES: readonly NodalitoGuide[] = [
     href: "/app#contabilidad",
     id: "reconcile-transfer",
     question: "¿Cómo concilio una transferencia entre broker y billetera?",
-    summary: "Las transferencias detectadas se concilian en Contabilidad asignándoles la billetera y el importe neto correctos.",
+    summary: "Las diferencias de saldo se revisan por separado en Contabilidad. Confirmá como transferencia solamente la que efectivamente hiciste.",
     steps: [
       "Abrí Contabilidad y buscá “Movimientos de fondos”.",
+      "Los pendientes aparecen con fecha e importe, del más nuevo al más viejo. Desplegá el que quieras revisar; un pendiente anterior no debe ocultar los nuevos.",
       "Elegí la billetera o cuenta bancaria relacionada.",
       "Confirmá la fecha y el importe realmente acreditado.",
-      "Cargá la comisión por separado si el envío tuvo fee y presioná “Conciliar movimiento”.",
+      "Cargá la comisión por separado si el envío tuvo fee y presioná “Confirmar transferencia”.",
+      "Si hubo trades posteriores, se conserva el importe original del movimiento. Si ya quedó incluido en otra conciliación o no encaja en la diferencia restante, investigalo antes de confirmar; no inventes otra transferencia.",
     ],
   },
   {

@@ -77,6 +77,9 @@ export async function reconcileBrokerWalletTransfer(input: Readonly<{
       target_wallet_id: input.walletId,
     });
     if (error) {
+      if (error.message.includes("PREOPERATION_TRANSFER_REVIEW_REQUIRED") || error.message.includes("PREOPERATION_TRANSFER_BASELINE_CHANGED")) {
+        return { ok: false, message: "Esta diferencia necesita revisión antes de confirmarla. Pedile a Nodalito que compruebe si ya quedó incluida en otra conciliación." };
+      }
       if (error.message.includes("insufficient")) return { ok: false, message: "La billetera o cuenta bancaria no tiene saldo suficiente para el importe detectado y su fee." };
       if (error.message.includes("DIRECTION_MISMATCH")) return { ok: false, message: "El movimiento no coincide con la dirección de la transferencia detectada." };
       return { ok: false, message: "No se pudo conciliar la transferencia histórica con el broker." };

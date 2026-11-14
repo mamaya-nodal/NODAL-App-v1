@@ -437,6 +437,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
         expectedBalanceInCents: expectedOpeningBalanceInCents,
         observedAt: batch.broker.openedAt,
         openingEventId: batch.broker.openingEventId,
+        baselineObservedAt: expectedBalanceByPeriod.get(projectionPeriodId ?? "")?.effectiveAt,
       });
     }
     if (batch.broker.closingBalance !== null) {

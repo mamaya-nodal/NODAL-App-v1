@@ -35,10 +35,13 @@ export async function POST(request: Request) {
       if (process.env.NEXT_PUBLIC_APP_ENV === "local") rememberLocalNinjaSnapshot(destinationConnectorId, snapshot);
       const persistence = await persistNinjaSnapshot(destinationConnectorId, snapshot, connector.connectorId);
       if (!persistence.persisted) return persistence;
-      await Promise.all([
+      const [, balanceResult] = await Promise.all([
         processNinjaTransitions(destinationConnectorId, snapshot),
         ensureNinjaBrokerBalanceBaseline(destinationConnectorId, snapshot),
       ]);
+      if (!balanceResult.processed && balanceResult.reason === "storage_error") {
+        return { persisted: false as const, reason: "storage_error" as const };
+      }
       return persistence;
     }));
     const accepted = results.every((result) => result.persisted);

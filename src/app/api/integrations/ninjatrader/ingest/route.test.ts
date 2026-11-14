@@ -50,6 +50,14 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("POST /api/integrations/ninjatrader/ingest", () => {
+  it("requests a retry when the cash review could not be persisted", async () => {
+    ensureNinjaBrokerBalanceBaseline.mockResolvedValueOnce({ created: false, processed: false, reason: "storage_error" });
+    const result = await POST(new Request("https://app.test/ingest", {
+      method: "POST", body: JSON.stringify(payload), headers: { "content-type": "application/json" },
+    }));
+    expect(result.status).toBe(503);
+    expect(await result.json()).toMatchObject({ accepted: false });
+  });
   it("accepts an inventory from the paired connector", async () => {
     const request = new Request("http://localhost/api/integrations/ninjatrader/ingest", {
       body: JSON.stringify(payload),

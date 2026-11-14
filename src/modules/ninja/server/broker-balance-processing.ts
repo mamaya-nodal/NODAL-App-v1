@@ -93,8 +93,31 @@ export async function ensureNinjaBrokerBalanceBaseline(
     .maybeSingle();
   if (error) return { created: false, processed: false, reason: "storage_error" };
   return data
-    ? { created: false, processed: true }
+    ? observeNinjaBrokerInventoryDifference(connectorId, snapshot)
     : processNinjaBrokerBalance(connectorId, snapshot);
+}
+
+/** Inventory is evidence of a cash difference, never an automatic transfer. */
+async function observeNinjaBrokerInventoryDifference(connectorId: string, snapshot: NinjaInventorySnapshot): Promise<BrokerBalanceProcessingResult> {
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    global: { fetch: observedNinjaFetch }, auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: reviews, error: reviewError } = await supabase.from("ninja_connector_connection_reviews")
+    .select("connection_name,status").eq("connector_id", connectorId).eq("status", "isolated");
+  if (reviewError) return { created: false, processed: false, reason: "storage_error" };
+  const candidate = extractNinjaBrokerBalance(snapshot, isolatedNinjaConnectionNames(reviews ?? []));
+  // A changing aggregate account scope must not masquerade as a cash transfer.
+  if (!candidate || candidate.sourceAccounts.length !== 1) return { created: false, processed: true };
+  const source = candidate.sourceAccounts[0];
+  const account = snapshot.accounts.find((row) => row.accountName === source.accountName && row.connectionName === source.connectionName)!;
+  if (account.realizedProfitLoss === null || account.unrealizedProfitLoss !== 0) return { created: false, processed: true };
+  const { data, error } = await supabase.rpc("observe_ninja_broker_inventory_difference", {
+    target_connector_id: connectorId, target_source_event_id: snapshot.eventId,
+    target_account_name: source.accountName, target_connection_name: source.connectionName,
+    target_balance_cents: candidate.balanceInCents, target_realized_cents: Math.round(account.realizedProfitLoss * 100),
+    target_observed_at: snapshot.observedAt,
+  });
+  return error ? { created: false, processed: false, reason: "storage_error" } : { created: data === true, processed: true };
 }
 
 export async function recordNinjaBrokerOperationBalance(args: Readonly<{
@@ -149,6 +172,7 @@ export async function recordNinjaBrokerPreOperationBalance(args: Readonly<{
   expectedBalanceInCents: number;
   observedAt: string;
   openingEventId: number;
+  baselineObservedAt?: string;
 }>): Promise<BrokerBalanceProcessingResult> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -159,34 +183,16 @@ export async function recordNinjaBrokerPreOperationBalance(args: Readonly<{
     global: { fetch: observedNinjaFetch },
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { data: pending, error: pendingError } = await supabase
-    .from("ninja_broker_balance_events")
-    .select("id")
-    .eq("connector_id", args.connectorId)
-    .eq("status", "pending")
-    .like("source_event_id", "ninja-preoperation:%")
-    .order("observed_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (pendingError) return { created: false, processed: false, reason: "storage_error" };
-  if (pending) return { created: false, processed: true };
-
-  const { error } = await supabase.from("ninja_broker_balance_events").insert({
-    balance_cents: args.balanceInCents,
-    connector_id: args.connectorId,
-    observed_at: args.observedAt,
-    source_accounts: [{
-      accountName: args.accountName,
-      balanceInCents: args.balanceInCents,
-      connectionName: args.connectionName,
-      expectedBalanceInCents: args.expectedBalanceInCents,
-    }],
-    source_event_id: `ninja-preoperation:${args.openingEventId}`,
+  const { data, error } = await supabase.rpc("record_ninja_broker_balance_difference", {
+    target_connector_id: args.connectorId,
+    target_source_event_id: `ninja-preoperation:${args.openingEventId}`,
+    target_account_name: args.accountName, target_connection_name: args.connectionName,
+    target_balance_cents: args.balanceInCents, target_expected_cents: args.expectedBalanceInCents,
+    target_observed_at: args.observedAt, target_baseline_at: args.baselineObservedAt ?? null,
   });
-  if (error?.code === "23505") return { created: false, processed: true };
   return error
     ? { created: false, processed: false, reason: "storage_error" }
-    : { created: true, processed: true };
+    : { created: data === true, processed: true };
 }
 
 export async function bootstrapNinjaBrokerBalance(
