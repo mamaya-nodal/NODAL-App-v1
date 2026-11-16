@@ -19,6 +19,8 @@ export type TrackedNinjaAccount = Readonly<{
   product: string | null;
   reachedEvaluationTarget: boolean;
   riskRule?: NinjaAccountRiskRule;
+  /** EOD floor effective on each observed business date; never overwrite past dates. */
+  eodBurnFloors?: Readonly<Record<string, number>>;
 }>;
 
 export type NewNinjaAccount = Readonly<{
@@ -109,6 +111,8 @@ export function startTrackingNinjaAccount(account: NewNinjaAccount, businessDate
     highestEodBalanceInCents: account.balanceInCents,
     lastBusinessDate: businessDate,
     reachedEvaluationTarget: account.phase === "Evaluation" && account.balanceInCents >= evaluationTargetInCents(account),
+    eodBurnFloors: { [businessDate]: account.riskRule
+      ? account.accountSizeInCents - account.riskRule.maxLossLimitInCents : INITIAL_BURN_FLOOR_IN_CENTS },
   };
 }
 
@@ -117,6 +121,8 @@ export function observeTrackedNinjaAccount(
   balanceInCents: number,
   businessDate: string,
 ): TrackedNinjaAccount {
+  // A delayed snapshot cannot roll the EOD clock backwards.
+  if (businessDate < account.lastBusinessDate) return account;
   let highestEodBalanceInCents = account.highestEodBalanceInCents;
   let burnFloorInCents = account.burnFloorInCents;
 
@@ -144,7 +150,20 @@ export function observeTrackedNinjaAccount(
     lastBusinessDate: businessDate,
     reachedEvaluationTarget: account.reachedEvaluationTarget
       || (account.phase === "Evaluation" && balanceInCents >= evaluationTargetInCents(account)),
+    eodBurnFloors: {
+      ...account.eodBurnFloors,
+      [account.lastBusinessDate]: account.eodBurnFloors?.[account.lastBusinessDate] ?? account.burnFloorInCents,
+      [businessDate]: account.eodBurnFloors?.[businessDate] ?? burnFloorInCents,
+    },
   };
+}
+
+/** Missing historical evidence must not be replaced by today's higher EOD floor. */
+export function operationBurnFloor(account: TrackedNinjaAccount, minimumBusinessDate: string): number | null {
+  const eod = account.phase === "Evaluation" || isFtmoGrowth(account) || isLucidFlex(account);
+  if (!eod) return account.burnFloorInCents;
+  return account.eodBurnFloors?.[minimumBusinessDate]
+    ?? (minimumBusinessDate === account.lastBusinessDate ? account.burnFloorInCents : null);
 }
 
 export function detectNinjaAccountChanges(

@@ -9,6 +9,7 @@ import { isNinjaInventorySnapshot } from "../domain/ingestion-payload";
 import { resolveNinjaReferenceBalance } from "../domain/reference-balance";
 import { evolveNinjaTransitionState, type NinjaTransitionObservation, type NinjaTransitionState } from "../domain/transition-state";
 import type { NinjaAccountRiskRule } from "../domain/account-transition-engine";
+import { operationBurnFloor } from "../domain/account-transition-engine";
 import type { NinjaTechnicalOperation } from "../domain/technical-operation";
 
 export type TransitionProcessingResult = Readonly<{
@@ -182,11 +183,13 @@ export async function processNinjaOperationBurns(
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return { detectedChanges: 0, processed: false, reason: "not_configured" };
   const supabase = createClient(url, serviceRoleKey, { global: { fetch: observedNinjaFetch }, auth: { autoRefreshToken: false, persistSession: false } });
-  const burnSourceIds = candidates.map((operation) => `ninja-operation-burn:${operation.openingEventId}`);
+  const burnSourceIds = candidates.flatMap((operation) => [
+    `ninja-operation-burn:${operation.openingEventId}`, `ninja-operation-floor-review:${operation.openingEventId}`,
+  ]);
   const [{ data: storedState, error }, { data: priorBurnRows, error: priorBurnError }] = await Promise.all([
     supabase.from("ninja_transition_states").select("revision,state").eq("connector_id", connectorId).maybeSingle(),
     supabase.from("ninja_account_change_events").select("source_event_id,from_life_id")
-      .eq("connector_id", connectorId).eq("event_type", "burned").in("source_event_id", burnSourceIds),
+      .eq("connector_id", connectorId).in("event_type", ["burned", "review_disappearance"]).in("source_event_id", burnSourceIds),
   ]);
   if (error || priorBurnError || !storedState) {
     return { detectedChanges: 0, processed: false, reason: "storage_error" };
@@ -206,7 +209,18 @@ export async function processNinjaOperationBurns(
     const sourceEventId = `ninja-operation-burn:${operation.openingEventId}`;
     if (priorBurnKeys.has(`${sourceEventId}\u0000${life.lifeId}`)) return life;
     const minimumInCents = Math.round(operation.minimumNetLiquidation * 100);
-    if (minimumInCents > life.tracked.burnFloorInCents) return life;
+    const historicalFloor = operationBurnFloor(life.tracked, businessDate(operation.minimumNetLiquidationAt));
+    if (historicalFloor === null) {
+      if (priorBurnKeys.has(`ninja-operation-floor-review:${operation.openingEventId}\u0000${life.lifeId}`)) return life;
+      events.push({ automatic: false, connectionName: life.connectionName,
+        fromAccountName: life.tracked.externalAccountName, fromLifeId: life.lifeId,
+        kind: "review_disappearance", occurredAt: operation.minimumNetLiquidationAt,
+        reason: "Mínimo histórico pendiente de revisión: falta el piso EOD vigente en esa fecha. No se cerró la cuenta.",
+        sourceEventId: `ninja-operation-floor-review:${operation.openingEventId}`,
+        toAccountName: null, toLifeId: null });
+      return life;
+    }
+    if (minimumInCents > historicalFloor) return life;
     events.push({
       automatic: true,
       connectionName: life.connectionName,
