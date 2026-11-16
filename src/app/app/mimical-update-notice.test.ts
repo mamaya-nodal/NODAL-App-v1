@@ -11,7 +11,7 @@ describe("MIMICAL update notice", () => {
       reportedVersion: "1.1.0.7",
     }));
 
-    expect(html).toContain("Nueva versión de MIMICAL disponible (v1.1.0.8)");
+    expect(html).toContain("Nueva versión de MIMICAL disponible (v1.1.0.10)");
     expect(html).toContain('href="#configuracion"');
     expect(html).toContain("Descargar");
     expect(html).not.toContain("ACTUALIZACIÓN DISPONIBLE");
@@ -20,15 +20,15 @@ describe("MIMICAL update notice", () => {
   it("does not bypass Admin Master permissions when Configuración is disabled", () => {
     const html = renderToStaticMarkup(createElement(MimicalUpdateNotice, { configurationEnabled: false }));
 
-    expect(html).toContain("Nueva versión de MIMICAL disponible (v1.1.0.8)");
+    expect(html).toContain("Nueva versión de MIMICAL disponible (v1.1.0.10)");
     expect(html).toContain("se habilita desde Admin Master");
     expect(html).not.toContain('href="#configuracion"');
   });
 
-  it("disappears after NinjaTrader confirms version 1.1.0.8", () => {
+  it("disappears after NinjaTrader confirms version 1.1.0.10", () => {
     const html = renderToStaticMarkup(createElement(MimicalUpdateNotice, {
       configurationEnabled: true,
-      reportedVersion: "1.1.0.8",
+      reportedVersion: "1.1.0.10",
     }));
 
     expect(html).toBe("");

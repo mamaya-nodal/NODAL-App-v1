@@ -3851,3 +3851,6 @@ vigente sin aprobacion y evidencia suficiente.
 - **Verificación:** regresiones de destinos separados dentro de un origen,
   conjuntos independientes, datos incompletos y reconstrucción sin mezcla de
   observaciones. Recepción SQL real, permisos y compilación comprobados.
+
+## 2026-11-16 — MIMICAL 1.1.0.10
+Mauricio solicita publicar descarga titular e identidad. Se conserva la autorización existente. Se informa en Configuración que la validación SIM está pendiente, pese a las pruebas automáticas aprobadas. Ver docs/releases/MIMICAL-1.1.0.10.md para alcance, hashes y rollback.

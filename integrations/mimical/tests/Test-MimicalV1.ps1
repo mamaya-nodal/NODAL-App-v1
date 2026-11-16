@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
 $source = Join-Path $root 'src\Mimical.cs'
@@ -63,11 +63,11 @@ $cases = @(
     @{ Name = 'Orden Working siempre bloquea el inicio'; Actual = $workingMethod.Invoke($null, @($working)); Expected = $true }
 )
 
-$text = Get-Content -LiteralPath $source -Raw
+$text = Get-Content -LiteralPath $source -Raw -Encoding UTF8
 $displayVersion = $assembly.GetType('NinjaTrader.NinjaScript.AddOns.MimicalWindow', $true).GetProperty('DisplayVersion').GetValue($null, $null)
 $fileVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($output).FileVersion
 $checks = @(
-    @{ Name = 'La ventana muestra la versión exacta del DLL'; Pass = $displayVersion -eq $fileVersion -and $displayVersion -eq '1.1.0.8' -and $text.Contains('Caption = "MIMICAL · NodalBots " + DisplayVersion') -and $text.Contains('Text = "NodalBots  ·  " + DisplayVersion') },
+    @{ Name = 'La ventana muestra la versión exacta del DLL'; Pass = $displayVersion -eq $fileVersion -and $displayVersion -eq '1.1.0.10' -and $text.Contains('Caption = "MIMICAL · NodalBots " + DisplayVersion') -and $text.Contains('Text = "NodalBots  ·  " + DisplayVersion') },
     @{ Name = 'Menú agrupado bajo NodalBots'; Pass = $text.Contains('Header = "NodalBots"') -and $text.Contains('Header = "MIMICAL"') },
     @{ Name = 'Muestra sólo cuentas conectadas'; Pass = $text.Contains('a.Connection.Status == ConnectionStatus.Connected') -and $text.Contains('ConnectedAccounts()') },
     @{ Name = 'Actualiza la lista cuando cambia una conexión'; Pass = $text.Contains('followerRows.Children.Clear()') -and $text.Contains('leaderBox.Items.Clear()') -and $text.Contains('CONEXIÓN CAMBIÓ') },
@@ -114,7 +114,7 @@ $checks = @(
     @{ Name = 'El botón distingue visualmente apagado, activo y restaurando'; Pass = $text.Contains('trailingButton.Background = ColorBrush(52, 54, 60)') -and $text.Contains('trailingButton.Background = ColorBrush(36, 151, 91)') -and $text.Contains('trailingButton.Background = ColorBrush(180, 112, 28)') },
     @{ Name = 'El indicador dice OFF, ON o restaurando'; Pass = $text.Contains('trailingCheck.Text = "OFF"') -and $text.Contains('trailingCheck.Text = "✓ ON"') -and $text.Contains('trailingCheck.Text = "..."') },
     @{ Name = 'Un clic inválido explica la configuración faltante'; Pass = $text.Contains('trailingButton.IsEnabled = true') -and $text.Contains('El trailing exige exactamente una cuenta de cobertura con ratio negativo.') },
-    @{ Name = 'Distribución identificada como versión 1.1.0.8'; Pass = ([Reflection.AssemblyName]::GetAssemblyName($output).Version.ToString() -eq '1.1.0.8') }
+    @{ Name = 'Distribución identificada como versión 1.1.0.10'; Pass = ([Reflection.AssemblyName]::GetAssemblyName($output).Version.ToString() -eq '1.1.0.10') }
 )
 
 $failed = New-Object System.Collections.Generic.List[string]

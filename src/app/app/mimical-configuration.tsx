@@ -136,6 +136,7 @@ function MimicalAddonCard({ enabled, identityEmail = null, identityId, reportedV
               </div>
             ) : null}
             {message ? <p className="purchase-message success" role="status">{message}</p> : null}
+            <p className="addon-safety-note">v{MIMICAL_VERSION}: corrección de conciliación entre operaciones consecutivas. Pruebas automáticas aprobadas; validación operativa en SIM pendiente.</p>
             {isConfirmedMimicalVersion(reportedVersion)
               ? <p className="purchase-message success" role="status">Versión confirmada: MIMICAL {reportedVersion}</p>
               : <p className="addon-safety-note">La actualización se confirmará cuando MIMICAL informe su versión desde NinjaTrader.</p>}

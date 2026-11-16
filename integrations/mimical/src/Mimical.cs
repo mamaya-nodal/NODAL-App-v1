@@ -18,6 +18,98 @@ using NinjaTrader.Gui.Tools;
 
 namespace NinjaTrader.NinjaScript.AddOns
 {
+    // Keep historical order identities for late callbacks, but scope settlement
+    // evidence to a cycle. A cycle ends only with zero fills net in EVERY account
+    // and no pending order; manual closes count even though they have no Link.
+    public sealed class MimicalOrderCycles
+    {
+        private sealed class Seen
+        {
+            public long Cycle;
+            public string Account;
+            public int Sign, Filled;
+            public bool Terminal;
+        }
+        private readonly Dictionary<object, Seen> orders = new Dictionary<object, Seen>();
+        private readonly Dictionary<string, long> net = new Dictionary<string, long>();
+        private long cycle = 1;
+        private int pending;
+        private bool complete, invalid;
+
+        public void Reset()
+        {
+            orders.Clear(); net.Clear(); cycle = 1; pending = 0;
+            complete = false; invalid = false;
+        }
+
+        public void Observe(object order, string account, int sign, int filled, bool terminal)
+        {
+            if (order == null || account == null || Math.Abs(sign) != 1 || filled < 0)
+            { invalid = true; return; }
+            Seen seen;
+            if (!orders.TryGetValue(order, out seen))
+            {
+                if (complete) { cycle++; complete = false; net.Clear(); }
+                seen = new Seen { Cycle = cycle, Account = account, Sign = sign };
+                orders.Add(order, seen);
+                pending++;
+            }
+            if (seen.Account != account || seen.Sign != sign) { invalid = true; return; }
+            // A late duplicate is harmless. A NEW fill in a retired cycle is not:
+            // refuse the settlement exemption so ordinary reconciliation applies.
+            if (seen.Cycle != cycle)
+            { if (filled > seen.Filled) invalid = true; return; }
+            long balance;
+            net.TryGetValue(account, out balance);
+            net[account] = balance + (long)sign * Math.Max(0, filled - seen.Filled);
+            seen.Filled = Math.Max(filled, seen.Filled);
+            if (terminal && !seen.Terminal) { seen.Terminal = true; pending--; }
+            complete = pending == 0 && net.Values.All(value => value == 0);
+        }
+
+        public bool IsCurrent(object order)
+        {
+            Seen seen;
+            return !invalid && order != null && orders.TryGetValue(order, out seen) && seen.Cycle == cycle;
+        }
+    }
+
+    public sealed class MimicalExitFillPair
+    {
+        public bool IsExit;
+        public int LeaderSign, FollowerSign;
+        public int LeaderFilled, FollowerFilled, LeaderQuantity, FollowerQuantity;
+        public bool LeaderWorking, FollowerWorking;
+    }
+
+    public static class MimicalExitSettlement
+    {
+        // Accept divergence only when the linked fills reconstruct BOTH actual
+        // positions and only native OCO exits explain the different quantities.
+        // This does not exempt early entries, missing orders or external trades.
+        public static bool Explains(int leaderPosition, int followerPosition, decimal ratio, MimicalExitFillPair[] pairs)
+        {
+            if (pairs == null || pairs.Length == 0 || ratio == 0) return false;
+            long leaderNet = 0, followerNet = 0;
+            bool differentExit = false;
+            foreach (MimicalExitFillPair p in pairs)
+            {
+                if (p == null || Math.Abs(p.LeaderSign) != 1 || Math.Abs(p.FollowerSign) != 1
+                    || p.LeaderFilled < 0 || p.FollowerFilled < 0
+                    || p.LeaderFilled > p.LeaderQuantity || p.FollowerFilled > p.FollowerQuantity) return false;
+                leaderNet += (long)p.LeaderSign * p.LeaderFilled;
+                followerNet += (long)p.FollowerSign * p.FollowerFilled;
+                long scaled = (long)decimal.Truncate(p.LeaderSign * p.LeaderFilled * ratio);
+                if (scaled == (long)p.FollowerSign * p.FollowerFilled) continue;
+                if (!p.IsExit) return false;
+                if (p.LeaderFilled < p.LeaderQuantity && !p.LeaderWorking) return false;
+                if (p.FollowerFilled < p.FollowerQuantity && !p.FollowerWorking) return false;
+                differentExit = true;
+            }
+            return differentExit && leaderNet == leaderPosition && followerNet == followerPosition;
+        }
+    }
+
     // A mismatch is actionable only after the same pair has settled. A bounded
     // wait also catches a stalled market order rather than hiding it indefinitely.
     public sealed class MimicalPositionCheck
@@ -394,8 +486,10 @@ namespace NinjaTrader.NinjaScript.AddOns
         private readonly Dictionary<Order, Link> followerLinks = new Dictionary<Order, Link>();
         private readonly Dictionary<string, string> ocoByFollower = new Dictionary<string, string>(StringComparer.Ordinal);
         private readonly Dictionary<string, MimicalPositionCheck> mismatchSince = new Dictionary<string, MimicalPositionCheck>(StringComparer.Ordinal);
+        private readonly HashSet<string> settlingExits = new HashSet<string>(StringComparer.Ordinal);
         private readonly Dictionary<string, DateTime> positionProgress = new Dictionary<string, DateTime>(StringComparer.Ordinal);
         private readonly Dictionary<Order, int> observedFills = new Dictionary<Order, int>();
+        private readonly MimicalOrderCycles orderCycles = new MimicalOrderCycles();
         private readonly Dictionary<Order, OrderState> observedMarketStates = new Dictionary<Order, OrderState>();
         private long positionRevision;
         private readonly object gate = new object();
@@ -2604,9 +2698,11 @@ namespace NinjaTrader.NinjaScript.AddOns
 
         private void ResetPositionObservations()
         {
+            settlingExits.Clear();
             positionRevision++;
             positionProgress.Clear();
             observedFills.Clear();
+            orderCycles.Reset();
             observedMarketStates.Clear();
         }
 
@@ -2621,6 +2717,9 @@ namespace NinjaTrader.NinjaScript.AddOns
         {
             if (!IsPositionScope(order.Account, order.Instrument)) return;
             positionRevision++;
+            orderCycles.Observe(order, order.Account.Name + "|" + order.Instrument.FullName,
+                order.OrderAction == OrderAction.Buy || order.OrderAction == OrderAction.BuyToCover ? 1 : -1,
+                filled, IsTerminalState(state));
             int previous;
             observedFills.TryGetValue(order, out previous);
             bool progressed = filled > previous;
@@ -2658,6 +2757,35 @@ namespace NinjaTrader.NinjaScript.AddOns
                 }
                 finally { Interlocked.Exchange(ref reconciliationRunning, 0); }
             });
+        }
+
+        private bool LinkedExitsExplain(FollowerConfig follower, int leaderPosition, int followerPosition)
+        {
+            List<MimicalExitFillPair> evidence = new List<MimicalExitFillPair>();
+            foreach (KeyValuePair<Order, List<Link>> group in links)
+            {
+                if (!orderCycles.IsCurrent(group.Key)) continue;
+                Link[] copies = group.Value.Where(l => l.Follower == follower).ToArray();
+                if (copies.Length == 0) continue;
+                // Recovery/replacement paths have their own accounting; do not
+                // infer a second leader execution from multiple copies.
+                if (copies.Length != 1 || copies[0].IsRecoveryOrder || copies[0].Recovery != null) return false;
+                Order primary = group.Key;
+                Order copy = copies[0].Order;
+                if (copy == null || !orderCycles.IsCurrent(copy)) return false;
+                int primaryFilled, copyFilled;
+                observedFills.TryGetValue(primary, out primaryFilled);
+                observedFills.TryGetValue(copy, out copyFilled);
+                evidence.Add(new MimicalExitFillPair {
+                    IsExit = !String.IsNullOrWhiteSpace(primary.Oco),
+                    LeaderSign = primary.OrderAction == OrderAction.Buy || primary.OrderAction == OrderAction.BuyToCover ? 1 : -1,
+                    FollowerSign = copy.OrderAction == OrderAction.Buy || copy.OrderAction == OrderAction.BuyToCover ? 1 : -1,
+                    LeaderFilled = primaryFilled, FollowerFilled = copyFilled,
+                    LeaderQuantity = primary.Quantity, FollowerQuantity = copy.Quantity,
+                    LeaderWorking = IsWorking(primary.OrderState), FollowerWorking = IsWorking(copy.OrderState)
+                });
+            }
+            return MimicalExitSettlement.Explains(leaderPosition, followerPosition, follower.Ratio, evidence.ToArray());
         }
 
         private void Reconcile()
@@ -2786,9 +2914,20 @@ namespace NinjaTrader.NinjaScript.AddOns
                 {
                     if (check.Expected == Int32.MinValue || check.Expected == check.Actual)
                     {
+                        settlingExits.Remove(check.Key);
                         mismatchSince.Remove(check.Key);
                         continue;
                     }
+                    if (LinkedExitsExplain(check.Follower, leaderSigned, check.Actual))
+                    {
+                        mismatchSince.Remove(check.Key);
+                        if (settlingExits.Add(check.Key))
+                            Log("EXIT_SETTLEMENT", check.Follower.Account.Name, check.Follower.Instrument.FullName,
+                                "", "", "", "", 0, 0, 0, 0,
+                                "Diferencia explicada por ejecuciones de salidas vinculadas; leader=" + leaderSigned + ";actual=" + check.Actual);
+                        continue;
+                    }
+                    settlingExits.Remove(check.Key);
                     MimicalPositionCheck observation;
                     if (!mismatchSince.TryGetValue(check.Key, out observation))
                     {
