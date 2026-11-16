@@ -522,6 +522,7 @@ async function renderPrivateAppPage({
           .from("ninja_broker_balance_events")
           .select("id, observed_at, balance_cents, source_accounts, source_event_id, status, daily_control_id")
           .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
+          .is("superseded_at", null)
           .order("observed_at", { ascending: false })
           .limit(30),
         (privileged ?? supabase)
@@ -529,6 +530,7 @@ async function renderPrivateAppPage({
           .select("id, observed_at, balance_cents, source_accounts")
           .in("connector_id", ninjaConnectors.map((connector) => connector.connectorId))
           .eq("status", "pending")
+          .is("superseded_at", null)
           .like("source_event_id", "ninja-preoperation:%")
           .order("observed_at", { ascending: false })
           .order("id"),

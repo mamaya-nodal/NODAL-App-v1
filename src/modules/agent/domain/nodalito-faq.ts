@@ -172,6 +172,7 @@ export const NODALITO_GUIDES: readonly NodalitoGuide[] = [
     steps: [
       "Abrí Contabilidad y buscá “Movimientos de fondos”.",
       "Los pendientes aparecen con fecha e importe, del más nuevo al más viejo. Desplegá el que quieras revisar; un pendiente anterior no debe ocultar los nuevos.",
+      "Una lectura coherente puede crear un pendiente sin esperar otro envío idéntico. Es una revisión, no un asiento: si luego el P&L explica la diferencia, el aviso se retira conservando su evidencia.",
       "Elegí la billetera o cuenta bancaria relacionada.",
       "Confirmá la fecha y el importe realmente acreditado.",
       "Cargá la comisión por separado si el envío tuvo fee y presioná “Confirmar transferencia”.",

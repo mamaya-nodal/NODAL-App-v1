@@ -126,7 +126,7 @@ export async function runAccountingDiagnosticForOwner(
       db.from("ninja_operation_probe_sessions").select("id,connector_id,connection_name,account_name,opened_at,settled_at,status,execution_count,result_conflict")
         .in("connector_id", connectorIds).eq("status", "closed").is("excluded_at", null).gte("opened_at", cutoff).limit(MAX_ROWS),
       db.from("ninja_broker_balance_events").select("id,connector_id,observed_at")
-        .in("connector_id", connectorIds).eq("status", "pending").limit(MAX_ROWS),
+        .in("connector_id", connectorIds).eq("status", "pending").is("superseded_at", null).limit(MAX_ROWS),
     ]);
     assertComplete([batches, sessions, pendingBrokerEvents]);
     for (const session of sessions.data ?? []) if (session.result_conflict) findings.push({

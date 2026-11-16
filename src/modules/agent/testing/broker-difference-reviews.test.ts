@@ -15,6 +15,7 @@ beforeAll(async () => {
   // invalidate or partially apply a guarded function update.
   await db.exec(original.split("\n").map((line, index) => " ".repeat(index * 2) + line.trimStart()).join("\n"));
   await db.exec(readFileSync("supabase/migrations/20261114131000_confirm_independent_broker_reviews.sql", "utf8"));
+  await db.exec(readFileSync("supabase/migrations/20261116190000_broker_review_without_duplicate_inventory.sql", "utf8"));
 }, 120000);
 afterAll(async () => { if (db) await db.close(); vi.useRealTimers(); });
 beforeEach(async () => {
@@ -24,7 +25,7 @@ beforeEach(async () => {
 afterEach(async () => { await db.exec("rollback"); });
 const observe = async (id: string, actual: number, expected: number, at = "2026-11-13T19:51:04Z", baseline = "2026-11-11T19:00:00Z") =>
   (await db.query<{ created: boolean }>("select record_ninja_broker_balance_difference($1,$2,'2234971','Live',$3,$4,$5,$6) created", [connector, `ninja-preoperation:${id}`, actual, expected, at, baseline])).rows[0].created;
-const events = async () => (await db.query<{ balance_cents: number; source_accounts: { expectedBalanceInCents: number }[] }>("select balance_cents,source_accounts from ninja_broker_balance_events order by observed_at")).rows;
+const events = async () => (await db.query<{ balance_cents: number; source_accounts: { expectedBalanceInCents: number }[] }>("select balance_cents,source_accounts from ninja_broker_balance_events where superseded_at is null order by observed_at")).rows;
 async function inventory(id: string, at: string, cash: number, pnl: number) {
   if (id === "before") await inventory("baseline-heartbeat", new Date(Date.parse(at) - 15000).toISOString(), cash, pnl);
   await db.query("insert into ninja_inventory_snapshots(event_id,connector_id,observed_at,account_count,accounts) values($1,$2,$3,1,$4)",
@@ -59,9 +60,9 @@ it("carries a pending difference through a proven trade without presenting its l
 it("creates an inventory pending before any new trade and deduplicates its repeated readings", async () => {
   await inventory("before", "2026-11-13T19:00:00Z", 137908, 0);
   await inventory("after", "2026-11-13T19:07:00Z", 993008, 0);
-  expect(await inventoryReview("after", "2026-11-13T19:07:00Z", 993008, 0)).toBe(false);
+  expect(await inventoryReview("after", "2026-11-13T19:07:00Z", 993008, 0)).toBe(true);
   await inventory("stable", "2026-11-13T19:07:15Z", 993008, 0);
-  expect(await inventoryReview("stable", "2026-11-13T19:07:15Z", 993008, 0)).toBe(true);
+  expect(await inventoryReview("stable", "2026-11-13T19:07:15Z", 993008, 0)).toBe(false);
   await inventory("heartbeat", "2026-11-13T19:08:00Z", 993008, 0);
   expect(await inventoryReview("heartbeat", "2026-11-13T19:08:00Z", 993008, 0)).toBe(false);
   expect(await events()).toHaveLength(1);
@@ -90,14 +91,64 @@ it("does not derive cash movements from an overnight PnL reset", async () => {
   expect(await events()).toHaveLength(0);
 });
 
-it("does not turn separately arriving cash and PnL callbacks into a transfer", async () => {
+it("keeps delayed cash/PnL as a provisional review and removes it once PnL explains it", async () => {
   await inventory("before", "2026-11-13T19:00:00Z", 100000, 0);
   await inventory("cash-first", "2026-11-13T19:07:00Z", 110000, 0);
-  expect(await inventoryReview("cash-first", "2026-11-13T19:07:00Z", 110000, 0)).toBe(false);
+  expect(await inventoryReview("cash-first", "2026-11-13T19:07:00Z", 110000, 0)).toBe(true);
+  expect((await db.query("select * from wallet_movements")).rows).toHaveLength(0);
   await inventory("pnl-next", "2026-11-13T19:07:02Z", 110000, 10000);
+  expect(await inventoryReview("pnl-next", "2026-11-13T19:07:02Z", 110000, 10000)).toBe(false);
   await inventory("stable", "2026-11-13T19:07:15Z", 110000, 10000);
   expect(await inventoryReview("stable", "2026-11-13T19:07:15Z", 110000, 10000)).toBe(false);
   expect(await events()).toHaveLength(0);
+  expect((await db.query("select * from ninja_broker_balance_events where superseded_at is not null")).rows).toHaveLength(1);
+  await expect(confirm("inventory:cash-first")).rejects.toThrow("PREOPERATION_TRANSFER_EVENT_INVALID");
+});
+
+it("records Franco's first coherent deposit after a two-hour gap without a repeated inventory", async () => {
+  await inventory("before", "2026-11-13T19:07:00Z", 100000, 0);
+  await inventory("deposit", "2026-11-13T20:57:39Z", 597500, 0);
+  expect(await inventoryReview("deposit", "2026-11-13T20:57:39Z", 597500, 0)).toBe(true);
+  expect((await events())[0].source_accounts[0].expectedBalanceInCents).toBe(100000);
+  expect(await inventoryReview("deposit", "2026-11-13T20:57:39Z", 597500, 0)).toBe(false);
+  expect(await events()).toHaveLength(1);
+  expect((await db.query("select * from wallet_movements")).rows).toHaveLength(0);
+});
+
+it("rejects the mismatched cash/liquidation callback then accepts the coherent one two seconds later", async () => {
+  await inventory("before", "2026-11-13T19:00:00Z", 100000, 0);
+  await inventory("partial", "2026-11-13T19:07:00Z", 120000, 0);
+  await db.exec("update ninja_inventory_snapshots set accounts=jsonb_set(accounts,'{0,netLiquidation}','1000') where event_id='partial'");
+  expect(await inventoryReview("partial", "2026-11-13T19:07:00Z", 120000, 0)).toBe(false);
+  await inventory("coherent", "2026-11-13T19:07:02Z", 120000, 0);
+  expect(await inventoryReview("coherent", "2026-11-13T19:07:02Z", 120000, 0)).toBe(true);
+});
+
+it("does not classify a normal trade as a transfer even without repeating its close", async () => {
+  await inventory("before", "2026-11-13T19:00:00Z", 100000, 0);
+  await inventory("trade", "2026-11-13T19:07:00Z", 110000, 10000);
+  expect(await inventoryReview("trade", "2026-11-13T19:07:00Z", 110000, 10000)).toBe(false);
+  expect(await events()).toHaveLength(0);
+});
+
+it("retains a deposit during a trade as review after the first coherent close, subtracting its PnL", async () => {
+  await inventory("before", "2026-11-13T19:00:00Z", 100000, 0);
+  await inventory("open", "2026-11-13T19:07:00Z", 120000, 0);
+  await db.exec("update ninja_inventory_snapshots set accounts=jsonb_set(jsonb_set(accounts,'{0,unrealizedProfitLoss}','50'),'{0,netLiquidation}','1250') where event_id='open'");
+  expect(await inventoryReview("open", "2026-11-13T19:07:00Z", 120000, 0)).toBe(false);
+  await inventory("close", "2026-11-13T19:08:00Z", 119000, -1000);
+  expect(await inventoryReview("close", "2026-11-13T19:08:00Z", 119000, -1000)).toBe(true);
+  const row=(await events())[0];
+  expect(Number(row.balance_cents)-row.source_accounts[0].expectedBalanceInCents).toBe(20000);
+  expect((await db.query("select * from wallet_movements")).rows).toHaveLength(0);
+});
+
+it("rejects an older observation and an invented source instead of recreating reviews", async () => {
+  await inventory("before", "2026-11-13T19:00:00Z", 100000, 0);
+  await inventory("older", "2026-11-13T19:07:00Z", 120000, 0);
+  await inventory("newer", "2026-11-13T19:07:02Z", 100000, 0);
+  expect(await inventoryReview("older", "2026-11-13T19:07:00Z", 120000, 0)).toBe(false);
+  expect(await inventoryReview("missing", "2026-11-13T19:08:00Z", 130000, 0)).toBe(false);
 });
 
 it("retains a neutral difference against the confirmed balance when there is no same-day inventory reference", async () => {
