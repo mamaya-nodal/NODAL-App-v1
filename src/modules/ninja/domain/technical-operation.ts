@@ -93,6 +93,39 @@ type WorkingOperation = {
   sawOpenPosition: boolean;
 };
 
+/** A missing Flat notification must not override complete original fill evidence.
+ * Require one direction/instrument, a fully matched entry/exit, no later open
+ * position and an independently settled cash/net balance with zero floating P&L.
+ * This changes only the derived session; it never invents a telemetry event. */
+function recoverMissingFlat(operation: WorkingOperation) {
+  if (operation.flatAt || !operation.sawOpenPosition || !operation.direction || operation.instruments.size !== 1) return;
+  const instrument = [...operation.instruments][0];
+  const entryAction = operation.direction === "Long" ? "buy" : "sellshort";
+  const exitAction = operation.direction === "Long" ? "sell" : "buytocover";
+  let entered = 0;
+  let exited = 0;
+  let lastClose: NinjaTelemetryRow | null = null;
+  for (const execution of operation.rows.filter((row) => row.event_type === "execution")) {
+    const quantity = numeric(execution.payload.quantity);
+    const price = numeric(execution.payload.price);
+    const action = String(execution.payload.orderAction ?? "").toLowerCase();
+    if (execution.instrument !== instrument || quantity === null || !Number.isSafeInteger(quantity) || quantity <= 0 || price === null || price <= 0) return;
+    if (action === entryAction && exited === 0) entered += quantity;
+    else if (action === exitAction) {
+      exited += quantity;
+      lastClose = execution;
+      if (exited > entered) return;
+    } else return;
+  }
+  if (!lastClose || entered <= 0 || entered !== exited || entered !== operation.quantity) return;
+  if (operation.rows.some((row) => row.occurred_at > lastClose!.occurred_at && isOpenPosition(row))) return;
+  const balance = operation.rows.filter((row) => row.event_type === "balance").at(-1);
+  if (!balance || balance.occurred_at < lastClose.occurred_at || numeric(balance.payload.unrealizedProfitLoss) !== 0 ||
+    numeric(balance.payload.netLiquidation) === null || settledCashValue(balance) === null) return;
+  operation.flatAt = lastClose.occurred_at;
+  operation.closingBalance = settledCashValue(balance);
+}
+
 function finish(operation: WorkingOperation, settledAt: string | null): NinjaTechnicalOperation {
   const status = settledAt ? "closed" : operation.flatAt ? "settling" : "open";
   const result = operation.openingBalance !== null && operation.closingBalance !== null
@@ -291,6 +324,7 @@ export function buildNinjaTechnicalOperations(
   for (let rowIndex = 0; rowIndex < ordered.length; rowIndex += 1) {
     const row = ordered[rowIndex];
     const rowTime = Date.parse(row.occurred_at);
+    if (current && rowTime - Date.parse(current.lastEventAt) >= settlementWindowMs) recoverMissingFlat(current);
     if (current?.flatAt && current.closingBalance !== null
       && rowTime - Date.parse(current.lastEventAt) >= settlementWindowMs) {
       const settledAt = new Date(Date.parse(current.lastEventAt) + settlementWindowMs).toISOString();
@@ -374,6 +408,7 @@ export function buildNinjaTechnicalOperations(
 
   if (current) {
     const quietFor = now.getTime() - Date.parse(current.lastEventAt);
+    if (quietFor >= settlementWindowMs) recoverMissingFlat(current);
     const settledAt = current.flatAt && current.closingBalance !== null && quietFor >= settlementWindowMs
       ? new Date(Date.parse(current.lastEventAt) + settlementWindowMs).toISOString()
       : null;
