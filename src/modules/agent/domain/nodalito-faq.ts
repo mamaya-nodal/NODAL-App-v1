@@ -192,6 +192,7 @@ export const NODALITO_GUIDES: readonly NodalitoGuide[] = [
       "Si se recuperan eventos antiguos, comprobá primero si ya fueron registrados mediante una reparación. Debe quedar una sola operación económica.",
       "Si faltan ejecuciones, Nodalito debe contrastar los inventarios originales de broker y cuentas con el P&L realizado. Si faltan cuentas registradas o precios de compra, debe pedir esos datos antes de asignar importes.",
       "Si las cuentas pasaron de Evaluación a Funded, comprobá el vínculo histórico de ambas etapas: pueden faltar operaciones Funded aunque las de Evaluación estén conciliadas. Conservá la compra original y contá los días recuperados una sola vez.",
+      "Una actualización puede evitar un error nuevo sin reparar los cierres que ya estaban guardados. Ante una quema dudosa, contrastá la fecha del mínimo con el límite de pérdida vigente ese día y revisá las operaciones posteriores. Un aviso descartado no debe cerrar la cuenta otra vez; una quema real posterior sí se conserva.",
       "Al recuperar operaciones intermedias, revisá la cadena de saldos posteriores, los asientos por cuenta y su vuelta/día. Una diferencia cuyo origen ya se identificó todavía puede necesitar esa reparación contable.",
       "Confirmá que la cuenta tenga empresa, etapa, vuelta y día correctamente registrados.",
       "Verificá que la operación pertenezca al titular o a la identidad seleccionada.",
