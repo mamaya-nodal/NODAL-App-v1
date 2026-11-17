@@ -13,3 +13,13 @@ Nodalito: contrastar cierre técnico antes de pedir otra compra/registro; conser
 Estado inicial: 40pruebasdominio aprobadas. Pendiente build/despliegue y reproceso; completar aquí únicamente después de verificarlos. Rollback: revertir commitde código; si se materializó ledger correcto, no borrar su resultado al revertir código.
 
 Driveintegrado falló al leer Estado/Índice por MCPstartup/handshake HTTP decodingresponsebody. NOsincronizado. Evidencia local outputs/mauricio-missing-flat-20261117.json. La tarea de los tres casos anteriores y su cambio NQ/MNQ siguen suspendidos en otro worktree.
+
+## Cierre verificado
+
+Publicado en producción a4903ff6354a, /api/health?database=1 verificado17/11 19:13:22UTC, app/databaseok98ms. 52testsdominio/FAQ, TypeScript ybuildwebpack aprobados. Reproducción con telemetríaoriginal completa, no solo fixture: operación069 resultóclosed, cierre18:26:36.089UTC, cash51503, resultado1503,2ejecuciones. GuíaFAQ/corpusNodalito actualizados encommitpublicado; no actualización deconector.
+
+Se pidió únicamente reproceso persistente normal para conector4f72f0d2-c11f-4d26-85f7-4116f656c94a desde18:24:50UTC; audit missing_flat_normal_replay_requested_20261117. El siguiente heartbeat19:14:10UTC completó revisión50537/50537, sinerror. Resultadoindependiente: lote5c9da652-f3a0-4804-918a-4af66afa17b3 committed, bloqueoNULL, sesión4011244closed. No se aplicó SQL de recuperación manual de sesiones ni de resultados: el pipeline real hizo el cierre y el commit. BorradorSQLmanual no ejecutado fue retirado paraevitarusoaccidental.
+
+Cuentas verificado5filas: LFE05088021070068–072, cadauna state=live,1cargaEvaluacion,-8308c. Compras8620c cadauna, costo acumulado resultante16928c porcuenta (86.20+83.08), sin comprasduplicadas. Librobroker1195900→1154360 porresultado-41540c distribuidoexacto5×-8308. La cuenta prop sigueviva enEvaluación; lo cerrado es suposición/operación, no unaquema.
+
+Prueba visual outputs/mauricio-cinco-cargas-verificadas-20261117.jpg, datosJSONhomónimo. No se certifica causa localdelavisoFlatfaltante: sólo que no existeenlatelemetríarecibida yque laappya recupera estecierreconpruebasestrictas. No se requiere cambiarv18paraesta reparación. Drive NOsincronizado porfallodelconectorintegrado; este registroqueda pending-sync.
