@@ -379,7 +379,7 @@ export function TradeTelemetryProbe({
   const controlNumberById = new Map(recoveredReconciliations.map((row) => [row.controlId, row.controlNumber] as const));
   const technicalControlIds = new Set(currentBatches.flatMap((batch) => batch.daily_control_id ? [batch.daily_control_id] : []));
   const visibleRecoveredReconciliations = recoveredReconciliations.filter((row) => !technicalControlIds.has(row.controlId));
-  const probes = useMemo(() => buildNinjaOperationProbe(currentEvents, new Date()), [currentEvents]);
+  const probes = useMemo(() => buildNinjaOperationProbe(currentEvents, new Date(), currentOperations), [currentEvents, currentOperations]);
   const visibleProbes = probes.filter((probe) =>
     probe.status !== "waiting" || currentOperations.some((operation) =>
       operation.connection_name === probe.connectionName && operation.account_name === probe.accountName,

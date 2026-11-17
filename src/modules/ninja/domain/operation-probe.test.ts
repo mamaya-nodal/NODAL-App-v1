@@ -7,6 +7,26 @@ function row(id: number, eventType: NinjaTelemetryRow["event_type"], occurredAt:
 }
 
 describe("Ninja operation probe", () => {
+  const closure = { account_name: "Broker Ivo", connection_name: "Ninja Ivo", opened_at: "2026-09-07T18:00:00.000Z",
+    flat_at: "2026-09-07T18:00:05.000Z", settled_at: "2026-09-07T18:00:16.000Z", status: "closed", instruments: ["NQ 12-26"] };
+  const staleRows = () => [row(1, "position", closure.opened_at, { marketPosition: "Long", quantity: 2 }),
+    row(2, "balance", "2026-09-07T18:00:06.000Z", { cashValue: 51503, netLiquidation: 51503 })];
+  it("reflects a verified server closure without requiring a fabricated Flat event", () => {
+    expect(buildNinjaOperationProbe(staleRows(), new Date("2026-09-07T18:01:00Z"), [closure])[0]).toMatchObject({ status: "ready", openPositions: 0 });
+  });
+  it("does not hide a newer execution or position", () => {
+    for (const event of [row(3, "execution", "2026-09-07T18:00:07Z", {}), row(3, "position", "2026-09-07T18:00:07Z", { marketPosition: "Long", quantity: 1 })]) {
+      expect(buildNinjaOperationProbe([...staleRows(), event], new Date("2026-09-07T18:01:00Z"), [closure])[0].status).toBe("open");
+    }
+  });
+  it("does not hide an instrument absent from the closed session", () => {
+    const rows = [...staleRows(), row(3, "position", "2026-09-07T18:00:01Z", { marketPosition: "Long", quantity: 1 }, "ES 12-26")];
+    expect(buildNinjaOperationProbe(rows, new Date("2026-09-07T18:01:00Z"), [closure])[0].openPositions).toBe(1);
+  });
+  it("preserves a newer open technical session", () => {
+    const open = { ...closure, opened_at: "2026-09-07T18:00:07Z", status: "open", flat_at: null, settled_at: null };
+    expect(buildNinjaOperationProbe(staleRows(), new Date("2026-09-07T18:01:00Z"), [closure, open])[0].status).toBe("open");
+  });
   it("mantiene abierta una operación hasta que todas las posiciones quedan Flat", () => {
     const result = buildNinjaOperationProbe([
       row(1, "position", "2026-09-07T18:00:00.000Z", { marketPosition: "Long", quantity: 1 }),

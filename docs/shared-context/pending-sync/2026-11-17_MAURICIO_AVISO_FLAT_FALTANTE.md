@@ -23,3 +23,11 @@ Se pidió únicamente reproceso persistente normal para conector4f72f0d2-c11f-4d
 Cuentas verificado5filas: LFE05088021070068–072, cadauna state=live,1cargaEvaluacion,-8308c. Compras8620c cadauna, costo acumulado resultante16928c porcuenta (86.20+83.08), sin comprasduplicadas. Librobroker1195900→1154360 porresultado-41540c distribuidoexacto5×-8308. La cuenta prop sigueviva enEvaluación; lo cerrado es suposición/operación, no unaquema.
 
 Prueba visual outputs/mauricio-cinco-cargas-verificadas-20261117.jpg, datosJSONhomónimo. No se certifica causa localdelavisoFlatfaltante: sólo que no existeenlatelemetríarecibida yque laappya recupera estecierreconpruebasestrictas. No se requiere cambiarv18paraesta reparación. Drive NOsincronizado porfallodelconectorintegrado; este registroqueda pending-sync.
+
+## Corrección del indicador visual — prioridad solicitada por Mauricio
+
+El cierre contable y la sesión estaban correctos, pero TradeTelemetryProbe construía 'operando' únicamente desde el último evento position crudo (Long2). Por eso el panel mantuvo la069activa aunque su sesión derivada y su lote ya estuvieran cerrados. Cambio general: buildNinjaOperationProbe acepta las sesiones técnicas y respeta el último cierre estabilizado para el mismo instrumento y intervalo. Nunca oculta ejecuciones/posiciones posteriores, otra sesiónabierta másnueva ni otros instrumentos. Fuenteoriginal no se modifica.
+
+Regresión con todos los eventos reales de069: antesopenPositions1/statusopen; despuésopenPositions0/statusready. 14pruebasdominio yTypeScript/buildwebpack aprobados. La sesión del navegador no estaba autenticada enNODAL y por eso no se declara comprobaciónvisual de su sesiónpersonal; el comportamiento se reprodujo con su telemetría original en la mismafunción usada por el panel.
+
+Nueva evidencia de investigación causal: trace.20261117.00000.txt línea13262 registra15:26:37.639local, Cbi.Account.PositionUpdateCallback,069,NQDEC26,quantity0,MarketPositionFlat,OperationRemove. Por lo tanto Ninja SÍ procesó el cierre; la investigación del tramo callbackdelconector→cola→servidor sigue pendiente. No afirmar que Ninja nunca emitió el aviso. No hay eventos pendientes/cuarentena encola v2 local al consultar. No se reinstaló ni cambió conector durante este trabajo.
