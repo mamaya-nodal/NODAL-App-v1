@@ -394,6 +394,7 @@ export async function persistAutomaticOperationBatches(connectorId: string, targ
       expectedOpeningBalanceInCents,
       members: projectionMembers,
       technicalMemberCount: contextPropCount,
+      unsettledMemberCount: countBrokerContextProps(classified.filter((operation) => operation.status !== "closed"), batch.broker),
     });
     const operatedOn = dateInBuenosAires(batch.broker.settledAt ?? batch.broker.openedAt);
     // La cuenta viva ya fue trasladada de forma atómica al período abierto.

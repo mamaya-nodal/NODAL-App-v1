@@ -22,6 +22,7 @@ export type AutomaticAccountingProjection = Readonly<{
     | "initial_broker_balance_missing"
     | "member_distribution_mismatch"
     | "members_missing"
+    | "members_unsettled"
     | "no_members"
     | "period_mismatch"
     | "phase_mismatch"
@@ -42,10 +43,16 @@ type Input = Readonly<{
   expectedOpeningBalanceInCents: number | null;
   members: readonly AutomaticAccountingMember[];
   technicalMemberCount: number;
+  unsettledMemberCount?: number;
 }>;
 
 export function projectAutomaticAccounting(input: Input): AutomaticAccountingProjection {
   const base = { accountCount: input.members.length, companyId: null, phase: null, periodId: null };
+  if (input.batchStatus !== "conflict" && (input.unsettledMemberCount ?? 0) > 0) {
+    const pending = input.unsettledMemberCount!;
+    return { ...base, reason: `Falta confirmar el cierre de ${pending} ${pending === 1 ? "cuenta prop" : "cuentas prop"}.`,
+      reasonCode: "members_unsettled", status: "blocked" };
+  }
   if (input.batchStatus !== "ready") {
     return { ...base, reason: input.batchStatus === "conflict" ? "Cobertura ambigua" : "Cobertura sin cuentas prop compatibles", reasonCode: input.batchStatus === "conflict" ? "batch_conflict" : "batch_unmatched", status: "blocked" };
   }

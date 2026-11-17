@@ -11,6 +11,22 @@ const member = (accountId: string, allocatedBrokerResultInCents = 10_000): Autom
 });
 
 describe("automatic accounting projection", () => {
+  it("does not tell the user to register a prop whose close is still pending", () => {
+    for (const batchStatus of ["ready", "unmatched"] as const) {
+      expect(projectAutomaticAccounting({ batchStatus, brokerOpeningBalanceInCents: 1195900,
+        brokerClosingBalanceInCents: 1154360, brokerResultInCents: -41540,
+        expectedOpeningBalanceInCents: 1195900, members: [member("registered")],
+        technicalMemberCount: 5, unsettledMemberCount: 1 })).toMatchObject({
+        status: "blocked", reasonCode: "members_unsettled", reason: "Falta confirmar el cierre de 1 cuenta prop.",
+      });
+    }
+  });
+  it("retains the ambiguity guard even when one prop is still open", () => {
+    expect(projectAutomaticAccounting({ batchStatus: "conflict", brokerOpeningBalanceInCents: 1195900,
+      brokerClosingBalanceInCents: 1154360, brokerResultInCents: -41540,
+      expectedOpeningBalanceInCents: 1195900, members: [], technicalMemberCount: 5,
+      unsettledMemberCount: 1 })).toMatchObject({ status: "blocked", reasonCode: "batch_conflict" });
+  });
   it("continues an independently verified trade while leaving the earlier difference unresolved", () => {
     expect(projectAutomaticAccounting({batchStatus:"ready",brokerClosingBalanceInCents:94900,
       brokerOpeningBalanceInCents:95000,brokerResultInCents:-100,brokerResultVerified:true,
