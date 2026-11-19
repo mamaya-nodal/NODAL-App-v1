@@ -18,4 +18,8 @@ describe("independent session result",()=>{
     expect(verifiesNinjaSessionResult(rows.filter(r=>r.event_type==='balance'),time(1),time(21),-10)).toBe(false);
     expect(verifiesNinjaSessionResult(rows,time(1),null,-10)).toBe(false);
   });
+  it("does not use a baseline from before a possible daily P&L reset",()=>{
+    const priorDay = { ...balance(0,50), occurred_at: "2026-11-12T23:59:59Z" };
+    expect(verifiesNinjaSessionResult([priorDay,...rows.slice(1)],time(1),time(21),-10)).toBe(false);
+  });
 });

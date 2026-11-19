@@ -8,7 +8,7 @@ import type { NinjaAccountSnapshot } from "../domain/ingestion-payload";
 import { buildNinjaTechnicalOperations, type NinjaTechnicalOperation } from "../domain/technical-operation";
 import { persistAutomaticOperationBatches } from "./automatic-operation-processing";
 import { processNinjaOperationBurns } from "./transition-processing";
-import { ninjaSessionResultEvidence } from "../domain/result-evidence";
+import { inspectNinjaSessionResultEvidence } from "../domain/result-evidence";
 import { resolveTelemetryOrigins } from "./telemetry-origin";
 
 export async function refreshNinjaTechnicalOperations(
@@ -210,9 +210,36 @@ export async function refreshNinjaTechnicalOperations(
       return 0;
     }
 
-    const { error: upsertError } = await supabase
-      .from("ninja_operation_probe_sessions")
-      .upsert(operations.map((operation) => ({
+    const sessionRows = await Promise.all(operations.map(async (operation) => {
+      const originRows = sourceRows.get(operation.physicalConnectorId) ?? [];
+      let evidence = inspectNinjaSessionResultEvidence(
+        originRows, operation.openedAt, operation.settledAt, operation.result,
+      );
+      const openingDay = new Date(operation.openedAt).toISOString().slice(0, 10);
+      if (evidence === "missing_baseline" && operation.status === "closed"
+        && operation.physicalConnectorId && operation.settledAt?.slice(0, 10) === openingDay) {
+        // Fetch only a missing P&L baseline. Keep it out of position reconstruction.
+        const { data: baseline, error } = await supabase
+          .from("ninja_trade_telemetry_events")
+          .select("id,event_type,occurred_at,connection_name,account_name,instrument,payload")
+          .eq("connector_id", connectorId)
+          .eq("physical_connector_id", operation.physicalConnectorId)
+          .eq("connection_name", operation.connectionName)
+          .eq("account_name", operation.accountName)
+          .eq("event_type", "balance")
+          .not("payload->>realizedProfitLoss", "is", null)
+          .gte("occurred_at", `${openingDay}T00:00:00.000Z`)
+          .lt("occurred_at", operation.openedAt)
+          .order("occurred_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(1)
+          .maybeSingle<NinjaTelemetryRow>();
+        if (error) throw new Error("No se pudo verificar la referencia de P&L anterior a la operación.");
+        if (baseline) evidence = inspectNinjaSessionResultEvidence(
+          [baseline, ...originRows], operation.openedAt, operation.settledAt, operation.result,
+        );
+      }
+      return {
         account_name: operation.accountName,
         closing_balance: operation.closingBalance,
         connection_name: operation.connectionName,
@@ -230,12 +257,16 @@ export async function refreshNinjaTechnicalOperations(
         opening_event_id: operation.openingEventId,
         quantity: operation.quantity,
         result: operation.result,
-        result_verified: ninjaSessionResultEvidence(sourceRows.get(operation.physicalConnectorId) ?? [], operation.openedAt, operation.settledAt, operation.result) === "verified",
-        result_conflict: ninjaSessionResultEvidence(sourceRows.get(operation.physicalConnectorId) ?? [], operation.openedAt, operation.settledAt, operation.result) === "conflict",
+        result_verified: evidence === "verified",
+        result_conflict: evidence === "conflict",
         settled_at: operation.settledAt,
         status: operation.status,
         updated_at: new Date().toISOString(),
-      })), { onConflict: "connector_id,opening_event_id" });
+      };
+    }));
+    const { error: upsertError } = await supabase
+      .from("ninja_operation_probe_sessions")
+      .upsert(sessionRows, { onConflict: "connector_id,opening_event_id" });
     if (!upsertError) {
       const validOpeningIds = new Set(operations.map((operation) => operation.openingEventId));
       const staleIds = unsettled
